@@ -1,0 +1,221 @@
+.student-record-page {
+  width: 100%;
+  padding: 32px 24px;
+  background: #f1f5fb;
+}
+
+.student-record-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.student-header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.student-brand-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid #dbeafe;
+  background: #eef5ff;
+}
+
+.student-brand-subtitle {
+  font-size: 0.9rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.student-record-header h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 2vw, 2.4rem);
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.05;
+}
+
+.student-record-header p {
+  margin: 12px 0 0;
+  color: #475569;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.history-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e40af;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.history-icon {
+  font-size: 0.95rem;
+}
+
+.student-record-card {
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.05);
+  border: 1px solid #dbeafe;
+  padding: 28px;
+}
+
+.student-record-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field-group {
+  display: grid;
+  gap: 10px;
+}
+
+.field-group.full-width {
+  grid-column: span 2;
+}
+
+.student-record-grid label,
+.field-group label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.student-record-grid input,
+.student-record-grid select,
+.field-group input,
+.field-group select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 1rem;
+}
+
+.student-record-grid input[readonly],
+.field-group input[readonly] {
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.student-record-grid input:focus,
+.student-record-grid select:focus,
+.field-group input:focus,
+.field-group select:focus {
+  border-color: #1e40af;
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.08);
+}
+
+.documentation-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: #eef5ff;
+  border: 1px solid #dbeafe;
+}
+
+.documentation-icon {
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 1.1rem;
+}
+
+.documentation-title {
+  margin: 0;
+  font-weight: 700;
+  color: #334155;
+}
+
+.documentation-text {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.actions-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.secondary-button,
+.primary-button {
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 12px 20px;
+}
+
+.secondary-button {
+  background: #eef4fb;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.secondary-button:hover {
+  background: #e6ecf6;
+}
+
+.primary-button {
+  background: #1e40af;
+  color: #f8faf8;
+}
+
+.primary-button:hover {
+  background: #162f71;
+}
+
+@media (max-width: 900px) {
+  .student-record-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .history-link {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .student-record-page {
+    padding: 20px 16px;
+  }
+
+  .student-record-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-group.full-width {
+    grid-column: span 1;
+  }
+
+  .actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

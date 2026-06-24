@@ -1,0 +1,323 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #F8FAFC;
+  color: #1E293B;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background-color: #0B1120 !important;
+  color: #F8FAFC !important;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* ==========================================================================
+   PREMIUM CLINICAL DESIGN SYSTEM & SYSTEM-WIDE STYLING OVERRIDES (MODERN BLUE)
+   ========================================================================== */
+
+/* 1. Unify and Modernize Border Radii (Avoiding childish overly rounded elements) */
+.rounded-3xl,
+.rounded-\[2rem\],
+.rounded-\[2.5rem\] {
+  border-radius: 1.25rem !important;
+}
+
+.rounded-2xl {
+  border-radius: 1rem !important;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem !important;
+}
+
+/* 2. Sleek Custom Scrollbars (Clinical, thin, non-intrusive) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* 3. Global Modern Glassmorphism Cards & Lists */
+/* Light mode: subtle frosted glass */
+:not(.dark) .bg-white {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(12px) !important;
+  border-color: rgba(3, 78, 161, 0.08) !important;
+  box-shadow: 0 4px 20px -2px rgba(3, 78, 161, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Dark mode: deep navy glassmorphism for ALL card surfaces */
+.dark .bg-white,
+.dark .bg-white\/85,
+.dark .bg-white\/95 {
+  background-color: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(16px) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35) !important;
+  color: #F1F5F9 !important;
+}
+
+.dark .bg-\[\#1E293B\],
+.dark .bg-slate-900,
+.dark .bg-slate-800,
+.dark .bg-slate-850 {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(16px) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Texto general en tarjetas oscuras */
+.dark .bg-slate-800 *:not(button):not(span[class*="bg-"]),
+.dark .bg-\[\#1E293B\] *:not(button):not(span[class*="bg-"]) {
+  color: #E2E8F0;
+}
+
+/* Ensure slate text colors are visible in dark mode */
+.dark .text-slate-700 {
+  color: #CBD5E1 !important;
+}
+
+.dark .text-slate-600 {
+  color: #94A3B8 !important;
+}
+
+.dark .text-slate-500 {
+  color: #94A3B8 !important;
+}
+
+.dark .text-slate-800 {
+  color: #E2E8F0 !important;
+}
+
+.dark .text-slate-900 {
+  color: #F1F5F9 !important;
+}
+
+.dark .text-gray-700 {
+  color: #CBD5E1 !important;
+}
+
+.dark .text-gray-600 {
+  color: #94A3B8 !important;
+}
+
+.dark .text-gray-900 {
+  color: #F1F5F9 !important;
+}
+
+/* Global soften borders for Dark Mode */
+.dark .border-slate-700,
+.dark .border-slate-800,
+.dark .border-slate-700\/60,
+.dark .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Fondo del área de contenido principal en oscuro */
+.dark .bg-slate-50,
+.dark .bg-\[\#F8FAFC\] {
+  background-color: #0B1120 !important;
+}
+
+/* Hover effect on clickable system cards */
+.hover\:border-blue-400:hover,
+.hover\:border-[#034EA1]:hover {
+  border-color: rgba(3, 78, 161, 0.25) !important;
+  box-shadow: 0 10px 25px -4px rgba(3, 78, 161, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+/* 4. Signature Autism-Blue Button Overrides (#034EA1) - High contrast & professional */
+.bg-blue-600,
+.bg-\[\#007BFF\],
+.bg-blue-500 {
+  background: linear-gradient(90deg, #011C3F 0%, #034EA1 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(3, 78, 161, 0.16) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.bg-blue-600:hover,
+.bg-\[\#007BFF\]:hover,
+.bg-blue-500:hover {
+  background: linear-gradient(90deg, #022A5E 0%, #045CB8 100%) !important;
+  box-shadow: 0 8px 20px rgba(3, 78, 161, 0.26) !important;
+  transform: translateY(-1px) scale(1.02);
+}
+
+.dark .bg-blue-600:hover,
+.dark .bg-\[\#007BFF\]:hover,
+.dark .bg-blue-500:hover {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3) !important;
+  /* Neon glow in dark mode */
+}
+
+.bg-blue-600:active,
+.bg-\[\#007BFF\]:active,
+.bg-blue-500:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Disable state */
+.bg-blue-600:disabled,
+.bg-\[\#007BFF\]:disabled {
+  background-color: #CBD5E1 !important;
+  color: #94A3B8 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+.dark .bg-blue-600:disabled,
+.dark .bg-\[\#007BFF\]:disabled {
+  background-color: #334155 !important;
+  color: #64748B !important;
+}
+
+/* 5. Refined Form Elements (System inputs, selects, textareas) */
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+  border: 1px solid #E2E8F0 !important;
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+  border-radius: 0.625rem !important;
+  padding: 0.5rem 0.75rem !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+.dark input[type="text"],
+.dark input[type="number"],
+.dark input[type="password"],
+.dark input[type="email"],
+.dark select,
+.dark textarea {
+  border: 1px solid #334155 !important;
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #034EA1 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(3, 78, 161, 0.15) !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* 6. Main Titles (#003366 replaced by modern brand #034EA1 with Metallic Gradient) */
+h1.text-\[\#003366\],
+h2.text-\[\#003366\],
+h3.text-\[\#003366\],
+span.text-\[\#003366\],
+div.text-\[\#003366\] {
+  background: linear-gradient(90deg, #011C3F 0%, #034EA1 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  font-weight: 800 !important;
+}
+
+/* Ensure SVG icons don't lose their color */
+svg.text-\[\#003366\] {
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  -webkit-text-fill-color: #034EA1 !important;
+  color: #034EA1 !important;
+}
+
+.dark h1.text-\[\#003366\],
+.dark h2.text-\[\#003366\],
+.dark h3.text-\[\#003366\],
+.dark span.text-\[\#003366\],
+.dark div.text-\[\#003366\] {
+  background: linear-gradient(90deg, #93C5FD 0%, #3B82F6 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+.dark svg.text-\[\#003366\] {
+  -webkit-text-fill-color: #60A5FA !important;
+  color: #60A5FA !important;
+}
+
+/* 7. Checklist / Checkbox Refinements */
+input[type="checkbox"] {
+  accent-color: #034EA1 !important;
+  border-radius: 0.25rem !important;
+  cursor: pointer;
+}
