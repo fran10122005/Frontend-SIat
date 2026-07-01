@@ -1,12 +1,25 @@
+import { useMemo } from 'react'
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar } from 'recharts';
 
+const mockChartData = [
+  { name: 'Ene', pacientes: 12, horasTerapia: 45 },
+  { name: 'Feb', pacientes: 15, horasTerapia: 52 },
+  { name: 'Mar', pacientes: 18, horasTerapia: 48 },
+  { name: 'Abr', pacientes: 22, horasTerapia: 65 },
+  { name: 'May', pacientes: 20, horasTerapia: 58 },
+  { name: 'Jun', pacientes: 25, horasTerapia: 72 },
+]
+
 export default function AdminCharts({ metricas, isDark }) {
-  const activityData = metricas?.chartData || [];
+  const activityData = useMemo(() => {
+    const data = metricas?.chartData
+    return data && data.length > 0 ? data : mockChartData
+  }, [metricas])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       
-      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col h-[400px]">
+      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px]">
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Carga Clínica y Pacientes</h2>
@@ -34,7 +47,7 @@ export default function AdminCharts({ metricas, isDark }) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col h-[400px]">
+      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px]">
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Productividad Terapéutica</h2>

@@ -74,7 +74,7 @@ export default function PatientCrisisLog({
         </div>
 
         {/* Gráfico y Correlación */}
-        <div className="lg:col-span-8 bg-slate-50/50 dark:bg-slate-800/20 rounded-xl p-4 border border-slate-100 dark:border-slate-800 min-h-[350px] flex flex-col">
+        <div className="lg:col-span-8 bg-slate-50/50 dark:bg-slate-800/20 rounded-xl p-4 border border-slate-100 dark:border-slate-800 min-h-[250px] lg:min-h-[350px] flex flex-col">
           {selectedAlertId && crisisTelemetry && crisisTelemetry[selectedAlertId] ? (() => {
             const alertData = alertas.find(a => a.id_alert === selectedAlertId) || alertas[0];
             const chartData = crisisTelemetry[selectedAlertId];

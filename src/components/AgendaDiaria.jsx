@@ -265,7 +265,7 @@ export default function AgendaDiaria() {
                     </div>
 
                     {/* Agenda Checklist */}
-                    <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[350px]">
+                    <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[250px] md:min-h-[350px]">
                       <div className="mb-4">
                         <div className="flex justify-between items-center">
                           <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
@@ -335,7 +335,7 @@ export default function AgendaDiaria() {
                   </div>
 
                   {/* Columna Derecha: Catálogo de Terapias (7/12) */}
-                  <div className="lg:col-span-7 bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[500px]">
+                  <div className="lg:col-span-7 bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[350px] md:min-h-[500px]">
                     <div className="mb-6">
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
                         <Activity className="w-4 h-4 text-blue-500" />
@@ -382,7 +382,7 @@ export default function AgendaDiaria() {
             {/* Si hay sesión activa: Mostrar Live Monitor */}
             {activeSession && (
               <div className="animate-in fade-in zoom-in-95 duration-500 max-w-4xl mx-auto w-full mt-4">
-                <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-blue-200 dark:border-blue-900/50 shadow-2xl shadow-blue-500/10 overflow-hidden relative min-h-[550px] flex flex-col">
+                <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-blue-200 dark:border-blue-900/50 shadow-2xl shadow-blue-500/10 overflow-hidden relative min-h-[400px] md:min-h-[550px] flex flex-col">
                   
                   {/* Header Flotante */}
                   <div className="px-8 py-6 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-150 dark:border-slate-800 flex justify-between items-center shrink-0">

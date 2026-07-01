@@ -34,7 +34,7 @@ export default function PatientPeiGoals({ peiGoals, incrementPeiTrial }) {
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <div className="relative flex-1 min-w-[160px]">
+        <div className="relative w-full sm:flex-1 sm:min-w-[160px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input type="text" placeholder="Buscar meta..." value={searchGoal} onChange={e => setSearchGoal(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
         </div>

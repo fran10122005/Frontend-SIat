@@ -216,7 +216,7 @@ export default function MainDashboard() {
                 {/* Columna Lateral */}
                 <div className="flex flex-col gap-6">
                   {/* Últimos Eventos */}
-                  <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col h-[280px]">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[200px] md:h-[280px]">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide mb-4 flex items-center gap-2">
                       <Bell className="w-4 h-4 text-slate-400" /> Últimos Eventos
                     </h3>
@@ -239,7 +239,7 @@ export default function MainDashboard() {
                   </div>
 
                   {/* Estado del Wearable */}
-                  <div className="bg-gradient-to-br from-[#0B2545] via-[#134074] to-[#0B2545] rounded-2xl p-6 shadow-xl border border-blue-800/40 text-white flex flex-col justify-between min-h-[220px]">
+                  <div className="bg-gradient-to-br from-[#0B2545] via-[#134074] to-[#0B2545] rounded-2xl p-6 shadow-xl border border-blue-800/40 text-white flex flex-col justify-between min-h-[180px] md:min-h-[220px]">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <h3 className="text-xs font-bold uppercase tracking-wider opacity-90 flex items-center gap-1.5">

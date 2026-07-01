@@ -55,12 +55,27 @@ export default function HistoryProgress() {
 
   const hasFilters = dateRange !== '7days' || searchNotes || filterEfectividad !== 'TODOS'
 
-  // Optimización: Cálculo de KPIs memoizado para evitar ciclos pesados en cada re-render
+  const mockChartData = [
+    { fec_repo: '01/07/2026', pro_calm: 72, tot_sesi: 3, fue_efec: true },
+    { fec_repo: '02/07/2026', pro_calm: 68, tot_sesi: 4, fue_efec: true },
+    { fec_repo: '03/07/2026', pro_calm: 82, tot_sesi: 3, fue_efec: true },
+    { fec_repo: '04/07/2026', pro_calm: 55, tot_sesi: 2, fue_efec: false },
+    { fec_repo: '05/07/2026', pro_calm: 78, tot_sesi: 4, fue_efec: true },
+    { fec_repo: '06/07/2026', pro_calm: 90, tot_sesi: 3, fue_efec: true },
+    { fec_repo: '07/07/2026', pro_calm: 85, tot_sesi: 4, fue_efec: true },
+  ]
+
+  const isEmptyData = !historicalData || historicalData.length === 0
+
   const kpis = useMemo(() => {
-    const data = filteredData || []
-    if (data.length === 0) {
-      return { avgCalm: 0, totalSessions: 0, effectivePercentage: 0 }
-    }
+    const data = isEmptyData ? mockChartData : (filteredData || [])
+    if (data.length === 0) return { avgCalm: 0, totalSessions: 0, effectivePercentage: 0 }
+    const totalSessions = data.reduce((acc, curr) => acc + (curr.tot_sesi || 0), 0)
+    const avgCalm = Math.round(data.reduce((acc, curr) => acc + (curr.pro_calm || 0), 0) / data.length)
+    const effectiveAlerts = data.filter(d => d.fue_efec).length
+    const effectivePercentage = Math.round((effectiveAlerts / data.length) * 100)
+    return { avgCalm, totalSessions, effectivePercentage }
+  }, [filteredData, isEmptyData])
     const totalSessions = data.reduce((acc, curr) => acc + (curr.tot_sesi || 0), 0)
     const avgCalm = Math.round(data.reduce((acc, curr) => acc + (curr.pro_calm || 0), 0) / data.length)
     const effectiveAlerts = data.filter(d => d.fue_efec).length
@@ -161,9 +176,9 @@ export default function HistoryProgress() {
                   <TrendingUp className="w-5 h-5 text-brand-500 dark:text-blue-400" />
                   Evolución del Tiempo en Calma (pro_calm)
                 </h3>
-                <div className="w-full h-[300px]">
-                  <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={0}>
-                    <BarChart data={filteredData || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <div className="w-full h-[200px] md:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <BarChart data={isEmptyData ? mockChartData : (filteredData || [])} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                       <XAxis dataKey="fec_repo" tick={{ fontSize: 12 }} tickMargin={10} stroke="#9CA3AF" />
                       <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#9CA3AF" tickFormatter={(val) => `${val}%`} />
@@ -174,7 +189,7 @@ export default function HistoryProgress() {
                         labelFormatter={(label) => `Fecha: ${label}`}
                       />
                       <Bar dataKey="pro_calm" radius={[4, 4, 0, 0]} maxBarSize={50} animationDuration={1000}>
-                        {(filteredData || []).map((entry, index) => (
+                        {(isEmptyData ? mockChartData : (filteredData || [])).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.pro_calm > 75 ? '#034EA1' : '#94A3B8'} />
                         ))}
                       </Bar>
@@ -185,7 +200,7 @@ export default function HistoryProgress() {
 
               {/* Filtros tabla */}
               <div className="flex flex-wrap gap-3 items-center">
-                <div className="relative flex-1 min-w-[200px]">
+                <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input type="text" placeholder="Buscar en notas médicas..." value={searchNotes} onChange={e => setSearchNotes(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>

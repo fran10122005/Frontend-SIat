@@ -96,15 +96,36 @@ export default function HomeAnalytics() {
     setIsDark(!isDark)
   }
 
-  const avgCalma = homeHistoricalData.length ? Math.round(homeHistoricalData.reduce((s, d) => s + d.calma, 0) / homeHistoricalData.length) : 0
-  const worstDay = [...homeHistoricalData].sort((a, b) => a.calma - b.calma)[0] || { dia: '-', calma: 0, sobrecarga: 0 }
-  const bestDay  = [...homeHistoricalData].sort((a, b) => b.calma - a.calma)[0] || { dia: '-', calma: 0 }
+  // Mock data para visualizar gráficos cuando no hay datos reales
+  const mockHistoricalData = [
+    { dia: 'Lun', calma: 65, sobrecarga: 35 },
+    { dia: 'Mar', calma: 72, sobrecarga: 28 },
+    { dia: 'Mié', calma: 58, sobrecarga: 42 },
+    { dia: 'Jue', calma: 80, sobrecarga: 20 },
+    { dia: 'Vie', calma: 45, sobrecarga: 55 },
+    { dia: 'Sáb', calma: 70, sobrecarga: 30 },
+    { dia: 'Dom', calma: 85, sobrecarga: 15 },
+  ]
+  const mockBpmData = [
+    { hora: '08:00', bpm: 72 }, { hora: '10:00', bpm: 85 },
+    { hora: '12:00', bpm: 78 }, { hora: '14:00', bpm: 95 },
+    { hora: '16:00', bpm: 68 }, { hora: '18:00', bpm: 82 },
+    { hora: '20:00', bpm: 74 },
+  ]
+
+  const effectiveHomeData = homeHistoricalData.length > 0 ? homeHistoricalData : mockHistoricalData
+  const avgCalma = Math.round(effectiveHomeData.reduce((s, d) => s + d.calma, 0) / effectiveHomeData.length)
+  const worstDay = [...effectiveHomeData].sort((a, b) => a.calma - b.calma)[0] || { dia: '-', calma: 0, sobrecarga: 0 }
+  const bestDay  = [...effectiveHomeData].sort((a, b) => b.calma - a.calma)[0] || { dia: '-', calma: 0 }
   const dayNotes = parentNotes.filter(n => n.dia === selectedDay).sort((a, b) => a.time.localeCompare(b.time))
   
   // Extraer el historial real de BPM de los reportes ingresados por el padre en el diario de hogar
   const bpmChartData = dayNotes
     .filter(n => n.bpm)
     .map(n => ({ hora: n.time, bpm: n.bpm }))
+
+  const displayHistoricalData = homeHistoricalData.length > 0 ? homeHistoricalData : mockHistoricalData
+  const displayBpmData = bpmChartData.length > 0 ? bpmChartData : mockBpmData
 
   if (!selectedChildId) {
     return (
@@ -185,7 +206,7 @@ export default function HomeAnalytics() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {/* Balance Calma/Sobrecarga por día */}
-              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm h-[360px]">
+              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm min-h-[250px] md:h-[360px]">
                 <div className="mb-4 flex justify-between items-start">
                   <div>
                     <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Balance Emocional por Día</h2>
@@ -196,9 +217,9 @@ export default function HomeAnalytics() {
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>Sobrecarga</span>
                   </div>
                 </div>
-                <div style={{ height: 260 }}>
+                <div className="min-h-[180px] md:min-h-0" style={{ height: 260 }}>
                   <ResponsiveContainer width="100%" height={260} minWidth={0} minHeight={0}>
-                    <BarChart data={homeHistoricalData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                    <BarChart data={displayHistoricalData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} />
                       <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }} tickFormatter={v => `${v}%`} />
@@ -207,12 +228,12 @@ export default function HomeAnalytics() {
                         formatter={(value, name) => [`${value}%`, name === 'calma' ? 'Calma' : 'Sobrecarga']}
                       />
                       <Bar dataKey="calma" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={35}>
-                        {homeHistoricalData.map((entry, i) => (
+                        {displayHistoricalData.map((entry, i) => (
                           <Cell key={i} fill={entry.dia === selectedDay ? '#1D4ED8' : '#3B82F6'} onClick={() => setSelectedDay(entry.dia)} cursor="pointer" />
                         ))}
                       </Bar>
                       <Bar dataKey="sobrecarga" fill="#F87171" radius={[4, 4, 0, 0]} maxBarSize={35}>
-                        {homeHistoricalData.map((entry, i) => (
+                        {displayHistoricalData.map((entry, i) => (
                           <Cell key={i} fill={entry.dia === selectedDay ? '#DC2626' : '#F87171'} onClick={() => setSelectedDay(entry.dia)} cursor="pointer" />
                         ))}
                       </Bar>
@@ -222,37 +243,30 @@ export default function HomeAnalytics() {
               </div>
 
               {/* BPM a lo largo del día seleccionado */}
-              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm h-[360px]">
+              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm min-h-[250px] md:h-[360px]">
                 <div className="mb-4">
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Frecuencia Cardíaca — {selectedDay}</h2>
                   <p className="text-xs text-slate-500 mt-1">Distribución de BPM durante el día seleccionado en casa</p>
                 </div>
-                <div style={{ height: 260 }}>
-                  {bpmChartData.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                      <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
-                      <p className="text-sm">Sin registros de BPM reportados para este día.</p>
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={260} minWidth={0} minHeight={0}>
-                      <AreaChart data={bpmChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="bpmGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366F1" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} />
-                        <XAxis dataKey="hora" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} />
-                        <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} />
-                        <Tooltip
-                          contentStyle={{ borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#E2E8F0'}`, backgroundColor: isDark ? '#0F172A' : '#fff', color: isDark ? '#f8fafc' : '#0f172a', fontSize: '12px' }}
-                          formatter={v => [`${v} bpm`, 'Frec. Cardíaca']}
-                        />
-                        <Area type="monotone" dataKey="bpm" stroke="#6366F1" strokeWidth={3} fillOpacity={1} fill="url(#bpmGrad)" name="BPM" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  )}
+                <div className="min-h-[180px] md:min-h-0" style={{ height: 260 }}>
+                  <ResponsiveContainer width="100%" height={260} minWidth={0} minHeight={0}>
+                    <AreaChart data={displayBpmData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="bpmGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366F1" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} />
+                      <XAxis dataKey="hora" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} />
+                      <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#E2E8F0'}`, backgroundColor: isDark ? '#0F172A' : '#fff', color: isDark ? '#f8fafc' : '#0f172a', fontSize: '12px' }}
+                        formatter={v => [`${v} bpm`, 'Frec. Cardíaca']}
+                      />
+                      <Area type="monotone" dataKey="bpm" stroke="#6366F1" strokeWidth={3} fillOpacity={1} fill="url(#bpmGrad)" name="BPM" />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
@@ -278,7 +292,7 @@ export default function HomeAnalytics() {
                   <p className="text-sm">Sin reportes registrados para este día.</p>
                 </div>
               ) : (
-                <div className="overflow-hidden border border-slate-200 dark:border-slate-700 rounded-lg">
+                <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
                       <tr>

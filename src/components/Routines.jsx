@@ -207,7 +207,7 @@ export default function Routines() {
             {activeSession && (
               <div className="animate-in fade-in zoom-in-95 duration-500 max-w-4xl mx-auto w-full mt-4">
                 {/* Panel de Monitoreo Activo (El código se mantiene intacto y funcional) */}
-                <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-blue-200 dark:border-blue-900/50 shadow-2xl shadow-blue-500/10 overflow-hidden relative min-h-[600px] flex flex-col">
+                <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-blue-200 dark:border-blue-900/50 shadow-2xl shadow-blue-500/10 overflow-hidden relative min-h-[400px] md:min-h-[600px] flex flex-col">
                   
                   {/* Header Flotante */}
                   <div className="px-8 py-6 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">

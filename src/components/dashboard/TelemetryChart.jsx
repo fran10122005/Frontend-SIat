@@ -26,7 +26,7 @@ export default function TelemetryChart({ telemetryHistory, isDark }) {
         </div>
       </div>
       
-      <div className="h-[250px] w-full">
+      <div className="min-h-[180px] md:h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={telemetryHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>

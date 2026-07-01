@@ -78,7 +78,7 @@ export default function SpecialistGlobalView({
       {/* Global Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
         {/* Agenda */}
-        <div className="lg:col-span-8 bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[400px]">
+        <div className="lg:col-span-8 bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[250px] lg:min-h-[400px]">
           <div className="mb-4">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-emerald-500" />
@@ -88,7 +88,7 @@ export default function SpecialistGlobalView({
 
           {/* Filtros Agenda */}
           <div className="flex flex-wrap gap-2 mb-4">
-            <div className="relative flex-1 min-w-[160px]">
+            <div className="relative w-full sm:flex-1 sm:min-w-[160px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input type="text" placeholder="Buscar paciente..." value={searchAgenda} onChange={e => setSearchAgenda(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
@@ -167,7 +167,7 @@ export default function SpecialistGlobalView({
         </div>
 
         {/* Alertas Globales */}
-        <div className="lg:col-span-4 bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[400px]">
+        <div className="lg:col-span-4 bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[250px] lg:min-h-[400px]">
           <div className="mb-4">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-rose-500" />

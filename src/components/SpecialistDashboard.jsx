@@ -256,7 +256,7 @@ export default function SpecialistDashboard() {
                 {/* ==== VISTA DE PACIENTE SELECCIONADO ==== */}
                 {activeChild && (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 md:p-8 pt-0 w-full max-w-[1400px] mx-auto animate-in slide-in-from-bottom-5 duration-300 delay-150">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in slide-in-from-bottom-5 duration-300 delay-150">
                       <PatientPeiGoals 
                         peiGoals={peiGoals} 
                         incrementPeiTrial={handleIncrementPeiTrial} 

@@ -1,8 +1,20 @@
+import { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import { Zap } from 'lucide-react'
 
+const mockSensoryData = [
+  { name: 'Berrinche', value: 8, color: '#F43F5E' },
+  { name: 'Estereotipia', value: 12, color: '#8B5CF6' },
+  { name: 'Agresión', value: 4, color: '#F59E0B' },
+  { name: 'Ansiedad', value: 6, color: '#3B82F6' },
+  { name: 'Autoestimulación', value: 10, color: '#10B981' },
+]
+
 export default function PatientSensoryChart({ sensoryData = [], isDark }) {
-  const totalEventos = sensoryData.reduce((acc, curr) => acc + curr.value, 0);
+  const chartData = useMemo(() => {
+    return sensoryData.length > 0 ? sensoryData : mockSensoryData
+  }, [sensoryData])
+  const totalEventos = chartData.reduce((acc, curr) => acc + curr.value, 0);
 
   return (
     <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 transition-all duration-200">
@@ -10,11 +22,11 @@ export default function PatientSensoryChart({ sensoryData = [], isDark }) {
         <Zap className="w-5 h-5 text-amber-500" />
         Análisis de Sensibilidad Sensorial (Últimos 7 días)
       </h2>
-      <div className="h-[250px] w-full flex items-center justify-center relative">
+      <div className="min-h-[200px] md:h-[250px] w-full flex items-center justify-center relative">
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <PieChart>
             <Pie
-              data={sensoryData}
+              data={chartData}
               cx="50%"
               cy="50%"
               innerRadius={60}
@@ -24,7 +36,7 @@ export default function PatientSensoryChart({ sensoryData = [], isDark }) {
               label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
               labelLine={false}
             >
-              {sensoryData.map((entry, index) => (
+              {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>

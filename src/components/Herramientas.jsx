@@ -535,7 +535,7 @@ export default function Herramientas() {
                 </div>
 
                 <div className="flex flex-wrap gap-3 items-center">
-                  <div className="relative flex-1 min-w-[200px]">
+                  <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input type="text" placeholder="Buscar pictograma..." value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
@@ -823,7 +823,7 @@ export default function Herramientas() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                   {/* Col 1: Balance */}
                   <div className="lg:col-span-4 flex flex-col gap-4">
-                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center text-center justify-center min-h-[250px]">
+                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center text-center justify-center min-h-[180px] lg:min-h-[250px]">
                       <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-4">
                         <Star className="w-8 h-8 text-amber-500 fill-amber-500 drop-shadow-md" />
                       </div>
@@ -856,7 +856,7 @@ export default function Herramientas() {
 
                   {/* Col 2: Tasks */}
                   <div className="lg:col-span-4 flex flex-col gap-4">
-                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col min-h-[400px]">
+                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col min-h-[250px] lg:min-h-[400px]">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
                           <CheckCircle2 className="w-4 h-4 text-indigo-500" /> Tareas Diarias
@@ -907,7 +907,7 @@ export default function Herramientas() {
 
                   {/* Col 3: Rewards */}
                   <div className="lg:col-span-4 flex flex-col gap-4">
-                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col min-h-[400px]">
+                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col min-h-[250px] lg:min-h-[400px]">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
                           <Award className="w-4 h-4 text-blue-500" /> Recompensas

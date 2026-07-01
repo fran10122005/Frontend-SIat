@@ -171,7 +171,7 @@ export default function EspecialistasTab({
 
             {/* Filtros */}
             <div className="flex flex-wrap gap-3 mb-4">
-              <div className="relative flex-1 min-w-[200px]">
+              <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input type="text" placeholder="Buscar por nombre o correo..." value={searchEsp} onChange={e => setSearchEsp(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
@@ -301,7 +301,7 @@ export default function EspecialistasTab({
             </div>
 
             <div className="flex flex-wrap gap-3 mb-4">
-              <div className="relative flex-1 min-w-[180px]">
+              <div className="relative w-full sm:flex-1 sm:min-w-[180px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input type="text" placeholder="Buscar especialidad..." value={searchEspCat} onChange={e => setSearchEspCat(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
               </div>

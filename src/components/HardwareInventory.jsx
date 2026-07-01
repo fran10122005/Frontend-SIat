@@ -377,7 +377,7 @@ export default function HardwareInventory() {
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Ventana deslizante de telemetría (muestras cada 10s)</p>
                       </div>
 
-                      <div className="h-[300px] w-full">
+                      <div className="min-h-[200px] md:h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <LineChart data={telemetryHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#F1F5F9'} />
