@@ -19,8 +19,6 @@ export default function HardwareInventory() {
     hardware, addHardware, navigate, userRole, saveCalibrationBaseline, 
     valMini, valMaxi, nomNino, showToast, isOnline, calculateStressIndex 
   } = useGlobalContext()
-  
-  const { simulateTelemetry } = useTelemetry()
 
   const [isDark, setIsDark] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState(null)
