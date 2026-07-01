@@ -76,13 +76,6 @@ export default function HistoryProgress() {
     const effectivePercentage = Math.round((effectiveAlerts / data.length) * 100)
     return { avgCalm, totalSessions, effectivePercentage }
   }, [filteredData, isEmptyData])
-    const totalSessions = data.reduce((acc, curr) => acc + (curr.tot_sesi || 0), 0)
-    const avgCalm = Math.round(data.reduce((acc, curr) => acc + (curr.pro_calm || 0), 0) / data.length)
-    const effectiveAlerts = data.filter(d => d.fue_efec).length
-    const effectivePercentage = Math.round((effectiveAlerts / data.length) * 100)
-
-    return { avgCalm, totalSessions, effectivePercentage }
-  }, [filteredData])
 
   const handleExportPDF = () => {
     exportHistoryToPDF(filteredData || [])
