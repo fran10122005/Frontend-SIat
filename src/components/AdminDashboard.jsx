@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { useGlobalContext } from '../context/GlobalState';
 import AdminSidebar from './AdminSidebar';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { exportEspecialistasToPDF as expEspPDF, exportAsignacionesToPDF as expAsigPDF, exportEspecialidadesToPDF as expCatPDF } from '../utils/pdfExporter';
 import { 
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line
 } from 'recharts';
@@ -21,6 +20,8 @@ import EspecialistasTab from './admin/EspecialistasTab';
 import AsignacionesTab from './admin/AsignacionesTab';
 import CatalogosTab from './admin/CatalogosTab';
 import UsuariosTab from './admin/UsuariosTab';
+import ManualUsuario from './admin/ManualUsuario';
+import ConfirmDialog from './ConfirmDialog';
 import Topbar from './Topbar'
 
 function AdminDashboard({ onNavigate }) {
@@ -40,10 +41,10 @@ function AdminDashboard({ onNavigate }) {
   
   // Forms state
   const [newEsp, setNewEsp] = useState({
-    nombre: '',
-    apellido: '',
-    email: '',
-    password: '',
+    esp_nomb: '',
+    esp_apel: '',
+    usu_crro: '',
+    usu_clve: '',
     esp_licencia: '',
     esp_telf: '',
     esc_codi: '',
@@ -64,8 +65,6 @@ function AdminDashboard({ onNavigate }) {
     esc_codi: '', esc_nomb: '', esc_desc: ''
   });
   const [editingEspCat, setEditingEspCat] = useState(null);
-
-  const [activeCatalogo, setActiveCatalogo] = useState('instituciones');
   
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -163,7 +162,7 @@ function AdminDashboard({ onNavigate }) {
       await api.post('/admin/especialistas', newEsp);
       setMessage('✅ Especialista creado con éxito. Contraseña por defecto: SiatDoc2026*');
       setNewEsp({ 
-        email: '', nombre: '', apellido: '', 
+        usu_crro: '', esp_nomb: '', esp_apel: '', usu_clve: '',
         esp_codi: '', esp_licencia: '', esp_telf: '', 
         esc_codi: '', ins_codi: catalogos.instituciones && catalogos.instituciones.length > 0 ? catalogos.instituciones[0].ins_codi : ''
       });
@@ -239,17 +238,25 @@ function AdminDashboard({ onNavigate }) {
     });
   };
 
-  const handleToggleUser = async (usu_codi, targetState) => {
-    try {
-      setLoading(true);
-      await api.patch(`/admin/users/${usu_codi}/estado`, { activo: targetState });
-      setMessage(`✅ Estado de usuario actualizado exitosamente.`);
-      fetchData();
-    } catch (err) {
-      setMessage(`❌ Error al cambiar estado del usuario: ${err.response?.data?.error || err.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const handleToggleUser = (usu_codi, currentState) => {
+    setModalConfig({
+      isOpen: true,
+      title: currentState ? 'Desactivar Usuario' : 'Activar Usuario',
+      message: `¿Estás seguro de que deseas <b>${currentState ? 'desactivar' : 'activar'}</b> a este usuario?`,
+      type: currentState ? 'danger' : 'success',
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await api.patch(`/admin/users/${usu_codi}/estado`, { activo: !currentState });
+          setMessage(`✅ Estado de usuario actualizado exitosamente.`);
+          fetchData();
+        } catch (err) {
+          setMessage(`❌ Error al cambiar estado del usuario: ${err.response?.data?.error || err.message}`);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const handleToggleAsignacion = (asi_codi, currentState) => {
@@ -294,7 +301,13 @@ function AdminDashboard({ onNavigate }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.put(`/admin/instituciones/${editingInst.ins_codi}`, editingInst);
+      const originalCodi = catalogos.instituciones?.[0]?.ins_codi;
+      await api.put(`/admin/instituciones/${originalCodi}`, {
+        ins_nomb: editingInst.ins_nomb,
+        ins_dire: editingInst.ins_dire,
+        ins_telf: editingInst.ins_telf,
+        ins_pers: editingInst.ins_pers
+      });
       setMessage('✅ Institución actualizada con éxito.');
       setEditingInst(null);
       fetchData();
@@ -310,8 +323,9 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
     setMessage('');
     try {
-      await api.post('/admin/especialidades', newEspCat);
-      setMessage('✅ Especialidad registrada con éxito.');
+      const esc_codi = `ESP-${Date.now()}`;
+      await api.post('/admin/especialidades', { ...newEspCat, esc_codi });
+      setMessage(`✅ Especialidad registrada con éxito. Código: ${esc_codi}`);
       setNewEspCat({ esc_codi: '', esc_nomb: '', esc_desc: '' });
       fetchData();
     } catch (err) {
@@ -356,30 +370,7 @@ function AdminDashboard({ onNavigate }) {
   };
 
   // Export Functions
-  const exportEspecialistasToPDF = () => {
-    const doc = new jsPDF();
-    doc.text('Directorio de Especialistas - SIAT', 14, 15);
-    
-    const tableColumn = ["Nombre", "Especialidad", "Clínica", "Teléfono", "Estado"];
-    const tableRows = [];
-
-    especialistas.forEach(esp => {
-      const especialidad = esp.tm_especi?.esc_nomb || 'General';
-      const clinica = esp.tm_insti?.ins_nomb || '-';
-      const prefix = esp.esp_gner === 'M' ? 'Dr.' : 'Dra.';
-      const nombreCompleto = `${prefix} ${esp.esp_nomb} ${esp.esp_apel}`;
-      const estado = esp.tm_usuar?.usu_estd !== false ? 'Activo' : 'Inactivo';
-      tableRows.push([nombreCompleto, especialidad, clinica, esp.esp_telf || '-', estado]);
-    });
-
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20,
-    });
-    doc.save('especialistas_siat.pdf');
-  };
-
+  const exportEspecialistasToPDF = () => expEspPDF(especialistas);
   const exportEspecialistasToExcel = () => {
     const data = especialistas.map(esp => ({
       'Código': esp.esp_codi,
@@ -397,32 +388,7 @@ function AdminDashboard({ onNavigate }) {
     XLSX.writeFile(workbook, "especialistas_siat.xlsx");
   };
 
-
-
-  const exportAsignacionesToPDF = () => {
-    const doc = new jsPDF();
-    doc.text('Listado de Asignaciones - SIAT', 14, 15);
-    const tableColumn = ["Paciente (ID)", "Especialista", "Fecha", "Estado"];
-    const tableRows = [];
-    asignaciones.forEach(asi => {
-      const paciente = `${asi.tm_ninos?.nin_nomb || ''} ${asi.tm_ninos?.nin_apel || ''}`.trim();
-      const pacienteInfo = paciente ? `${paciente}\n(ID: ${asi.tm_ninos?.nin_codi || ''})` : 'Desconocido';
-      
-      const prefix = asi.tm_espec?.esp_gner === 'M' ? 'Dr.' : 'Dra.';
-      const especialista = `${prefix} ${asi.tm_espec?.esp_nomb || ''} ${asi.tm_espec?.esp_apel || ''}`.trim();
-      const espInfo = especialista ? `${especialista}\n(ID: ${asi.tm_espec?.esp_codi || ''})` : 'Desconocido';
-      
-      tableRows.push([
-        pacienteInfo,
-        espInfo,
-        new Date(asi.asi_inic).toLocaleDateString(),
-        asi.asi_stdo
-      ]);
-    });
-    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
-    doc.save('asignaciones_siat.pdf');
-  };
-
+  const exportAsignacionesToPDF = () => expAsigPDF(asignaciones);
   const exportAsignacionesToExcel = () => {
     const data = asignaciones.map(asi => ({
       'ID Paciente': asi.tm_ninos?.nin_codi || 'N/A',
@@ -438,18 +404,7 @@ function AdminDashboard({ onNavigate }) {
     XLSX.writeFile(workbook, "asignaciones_siat.xlsx");
   };
 
-  const exportEspecialidadesToPDF = () => {
-    const doc = new jsPDF();
-    doc.text('Directorio de Especialidades - SIAT', 14, 15);
-    const tableColumn = ["Código", "Nombre", "Descripción", "Estado"];
-    const tableRows = [];
-    catalogos.especialidades.forEach(esc => {
-      const estado = esc.esc_estd !== false ? 'Activo' : 'Inactivo';
-      tableRows.push([esc.esc_codi, esc.esc_nomb, esc.esc_desc || '-', estado]);
-    });
-    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
-    doc.save('especialidades_siat.pdf');
-  };
+  const exportEspecialidadesToPDF = () => expCatPDF(catalogos.especialidades);
 
   const exportEspecialidadesToExcel = () => {
     const data = catalogos.especialidades.map(esc => ({
@@ -482,24 +437,26 @@ function AdminDashboard({ onNavigate }) {
           <div className="max-w-7xl w-full mx-auto p-6 md:p-8 flex flex-col gap-8 pb-12">
             
             <header className="flex flex-col gap-2">
-              <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                <Building2 className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+              <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                <Building2 className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                 {activeTab === 'dashboard' && 'Panel Clínico Institucional'}
                 {activeTab === 'especialistas' && 'Directorio de Especialistas'}
                 {activeTab === 'asignaciones' && 'Control de Casos y Asignaciones'}
-                {activeTab === 'catalogos' && 'Configuración de Parámetros Clínicos'}
+                {activeTab === 'catalogos' && 'Configuración de Mi Fundación'}
                 {activeTab === 'infraestructura' && 'Monitoreo de Infraestructura'}
                 {activeTab === 'auditoria' && 'Bitácora de Auditoría de Seguridad'}
                 {activeTab === 'usuarios' && 'Control de Acceso y Cuentas de Usuario'}
+                {activeTab === 'manual' && 'Manual de Usuario'}
               </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 {activeTab === 'dashboard' && 'Visión general de la operación clínica, rendimiento de terapias y reportes de incidentes.'}
                 {activeTab === 'especialistas' && 'Administración del personal de salud, acreditaciones y especialidades médicas.'}
                 {activeTab === 'asignaciones' && 'Vinculación formal entre pacientes pediátricos y el personal clínico.'}
-                {activeTab === 'catalogos' && 'Mantenimiento del catálogo de diagnósticos y sedes anexas.'}
+                {activeTab === 'catalogos' && 'Datos de la institución: RIF, dirección y contacto principal.'}
                 {activeTab === 'infraestructura' && 'Estado operativo de los servicios de telemetría, bases de datos y respuesta de red.'}
                 {activeTab === 'auditoria' && 'Registro histórico e inmutable de eventos de seguridad y accesos clínicos.'}
                 {activeTab === 'usuarios' && 'Gestión de credenciales, roles, fecha de creación y estado de activación de cuentas vinculadas.'}
+                {activeTab === 'manual' && 'Guía de referencia completa del módulo de administrador SIAT.'}
               </p>
             </header>
 
@@ -534,6 +491,13 @@ function AdminDashboard({ onNavigate }) {
                 handleToggleActivo={handleToggleActivo}
                 exportEspecialistasToPDF={exportEspecialistasToPDF}
                 exportEspecialistasToExcel={exportEspecialistasToExcel}
+                newEspCat={newEspCat}
+                setNewEspCat={setNewEspCat}
+                editingEspCat={editingEspCat}
+                setEditingEspCat={setEditingEspCat}
+                handleCreateEspecialidad={handleCreateEspecialidad}
+                handleUpdateEspecialidad={handleUpdateEspecialidad}
+                handleToggleEspecialidad={handleToggleEspecialidad}
               />
             )}
 
@@ -558,19 +522,10 @@ function AdminDashboard({ onNavigate }) {
             {activeTab === 'catalogos' && (
               <CatalogosTab
                 catalogos={catalogos}
-                activeCatalogo={activeCatalogo}
-                setActiveCatalogo={setActiveCatalogo}
-                newEspCat={newEspCat}
-                setNewEspCat={setNewEspCat}
-                editingEspCat={editingEspCat}
-                setEditingEspCat={setEditingEspCat}
                 editingInst={editingInst}
                 setEditingInst={setEditingInst}
                 loading={loading}
                 handleUpdateInstitucion={handleUpdateInstitucion}
-                handleCreateEspecialidad={handleCreateEspecialidad}
-                handleUpdateEspecialidad={handleUpdateEspecialidad}
-                handleToggleEspecialidad={handleToggleEspecialidad}
               />
             )}
 
@@ -583,9 +538,9 @@ function AdminDashboard({ onNavigate }) {
               />
             )}
 
-            {/* AUDITORIA TAB (Resumen Clínico) */}
-            {activeTab === 'auditoria' && (
-              <AdminActivityLog userName={userName} logs={auditLogs} />
+            {/* MANUAL TAB */}
+            {activeTab === 'manual' && (
+              <ManualUsuario />
             )}
 
 
@@ -647,92 +602,21 @@ function AdminDashboard({ onNavigate }) {
 
             {/* AUDITORÍA TAB */}
             {activeTab === 'auditoria' && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm">
-                  <div className="flex justify-between items-center mb-6">
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">Registro de Auditoría de Seguridad de la Institución</h3>
-                      <p className="text-sm text-slate-500">Historial inmutable de eventos críticos.</p>
-                    </div>
-                    <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                      <Download className="w-4 h-4" /> Exportar CSV
-                    </button>
-                  </div>
-                  
-                  <div className="overflow-hidden border border-slate-200 dark:border-slate-700 rounded-lg">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
-                        <tr>
-                          <th className="px-4 py-3 font-semibold">Timestamp</th>
-                          <th className="px-4 py-3 font-semibold">Nivel</th>
-                          <th className="px-4 py-3 font-semibold">Evento</th>
-                          <th className="px-4 py-3 font-semibold">Actor / IP</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                        {auditLogs.map((log) => {
-                          const levelColors = {
-                            INFO: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                            WARN: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                            SUCCESS: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-                            INCIDENTE: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-                            ASIGNACION: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                          };
-                          const badgeColor = levelColors[log.aud_tipo] || "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
-                          const actorEmail = log.tm_usuar?.usu_crro || "Sistema";
-                          const dateStr = new Date(log.aud_time).toLocaleString();
-
-                          return (
-                            <tr key={log.aud_codi} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                              <td className="px-4 py-3 text-slate-500 font-mono text-xs">{dateStr}</td>
-                              <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-bold ${badgeColor}`}>{log.aud_tipo}</span></td>
-                              <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{log.aud_desc}</td>
-                              <td className="px-4 py-3 text-slate-500 text-xs">{actorEmail}<br/>{log.aud_ip || 'Interno'}</td>
-                            </tr>
-                          );
-                        })}
-                        {auditLogs.length === 0 && (
-                          <tr>
-                            <td colSpan="4" className="px-4 py-8 text-center text-slate-500">No hay registros de auditoría recientes.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <AdminActivityLog userName={userName} logs={auditLogs} />
             )}
 
           </div>
         </div>
       </main>
 
-      {/* UX Confirmation Modal */}
-      {modalConfig.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#1E293B] rounded-xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-800/60">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{modalConfig.title}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{modalConfig.message}</p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-semibold transition-colors"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={() => {
-                  modalConfig.onConfirm();
-                  setModalConfig({ ...modalConfig, isOpen: false });
-                }}
-                className={`px-4 py-2 text-white rounded-lg text-sm font-semibold transition-colors ${modalConfig.type === 'danger' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        onConfirm={modalConfig.onConfirm || (() => {})}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+      />
 
       {/* MODAL: Registrar Niño & Invitar Representante */}
       {showRegModal && (

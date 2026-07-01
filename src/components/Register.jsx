@@ -12,7 +12,7 @@ function Register({ onNavigate }) {
           <div className="flex md:hidden items-center gap-3 mb-2 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
             <img src={funautaLogo} alt="Logo FUNAUTA" className="w-12 h-12 object-contain" />
             <div className="text-left">
-              <span className="block text-sm font-extrabold text-[#003366] dark:text-blue-400 tracking-wider">SIAT-TEA</span>
+              <span className="block text-sm font-extrabold text-brand-700 dark:text-blue-400 tracking-wider">SIAT-TEA</span>
               <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">FUNAUTA</span>
             </div>
           </div>
@@ -20,7 +20,7 @@ function Register({ onNavigate }) {
             <Sparkles className="w-3.5 h-3.5" />
             Acceso Institucional Seguro
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#003366] dark:text-blue-400 tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-brand-700 dark:text-blue-400 tracking-tight leading-tight">
             ¿Cómo ingresar a SIAT-TEA?
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm max-w-xl leading-relaxed">
@@ -34,7 +34,7 @@ function Register({ onNavigate }) {
           {/* Step 1 */}
           <div className="relative">
             {/* Bullet icon */}
-            <div className="absolute -left-[39px] sm:-left-[47px] top-0.5 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#007BFF] text-white text-xs font-bold shadow-lg shadow-blue-500/30">
+            <div className="absolute -left-[39px] sm:-left-[47px] top-0.5 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-brand-500 text-white text-xs font-bold shadow-lg shadow-blue-500/30">
               1
             </div>
             <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 sm:p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group hover:-translate-y-0.5">
@@ -53,7 +53,7 @@ function Register({ onNavigate }) {
           {/* Step 2 */}
           <div className="relative">
             {/* Bullet icon */}
-            <div className="absolute -left-[39px] sm:-left-[47px] top-0.5 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#007BFF] text-white text-xs font-bold shadow-lg shadow-blue-500/30">
+            <div className="absolute -left-[39px] sm:-left-[47px] top-0.5 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-brand-500 text-white text-xs font-bold shadow-lg shadow-blue-500/30">
               2
             </div>
             <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 sm:p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group hover:-translate-y-0.5">
@@ -72,7 +72,7 @@ function Register({ onNavigate }) {
           {/* Step 3 */}
           <div className="relative">
             {/* Bullet icon */}
-            <div className="absolute -left-[39px] sm:-left-[47px] top-0.5 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-[#007BFF] text-white text-xs font-bold shadow-lg shadow-blue-500/30">
+            <div className="absolute -left-[39px] sm:-left-[47px] top-0.5 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-brand-500 text-white text-xs font-bold shadow-lg shadow-blue-500/30">
               3
             </div>
             <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 sm:p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group hover:-translate-y-0.5">
@@ -110,7 +110,7 @@ function Register({ onNavigate }) {
             <div className="flex flex-wrap gap-2.5 pt-2">
               <a 
                 href="mailto:contacto@funauta.org" 
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-[#003366] hover:bg-slate-100 text-xxs sm:text-xs font-bold transition-all hover:scale-105 active:scale-100 shadow-md shadow-black/10"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-brand-700 hover:bg-slate-100 text-xxs sm:text-xs font-bold transition-all hover:scale-105 active:scale-100 shadow-md shadow-black/10"
               >
                 <Mail className="w-3.5 h-3.5 text-blue-600" />
                 contacto@funauta.org

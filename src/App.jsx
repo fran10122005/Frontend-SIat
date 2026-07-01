@@ -7,6 +7,8 @@ import Routines from './components/Routines'
 import Herramientas from './components/Herramientas'
 import DiarioHogar from './components/DiarioHogar'
 import AgendaDiaria from './components/AgendaDiaria'
+import ManualUsuarioRepresentante from './components/parent/ManualUsuarioRepresentante'
+import ManualUsuarioEspecialista from './components/specialist/ManualUsuarioEspecialista'
 
 import HistoryProgress from './components/HistoryProgress'
 import PatientManagement from './components/PatientManagement'
@@ -30,16 +32,7 @@ export default function App() {
     setUserRole, setSelectedChildId, setNomNino
   } = useGlobalContext()
 
-  const [syncing, setSyncing] = useState(false)
   const [showSessionExpired, setShowSessionExpired] = useState(false)
-
-  const toggleOnline = () => {
-    if (!isOnline) {
-      setSyncing(true)
-      setTimeout(() => setSyncing(false), 3000)
-    }
-    setIsOnline(!isOnline)
-  }
 
   const handleLogout = () => {
     setShowSessionExpired(false)
@@ -72,8 +65,8 @@ export default function App() {
     // Matriz estricta de permisos por rol
     const rolePermissions = {
       'ADMIN_INSTITUCION': ['admin', 'inventario', 'sensores', 'profile'],
-      'ESPECIALISTA': ['dashboard', 'student', 'patients', 'rutinas', 'agenda', 'herramientas', 'inventario', 'sensores', 'historial', 'home_analytics', 'profile'],
-      'REPRESENTANTE': ['dashboard', 'rutinas', 'agenda', 'perfil_padre', 'diario_hogar', 'historial', 'profile']
+      'ESPECIALISTA': ['dashboard', 'student', 'patients', 'rutinas', 'agenda', 'herramientas', 'inventario', 'sensores', 'historial', 'home_analytics', 'profile', 'manual_especialista'],
+      'REPRESENTANTE': ['dashboard', 'rutinas', 'agenda', 'perfil_padre', 'diario_hogar', 'historial', 'profile', 'sensores', 'herramientas', 'manual_repre']
     };
 
     const allowedViews = rolePermissions[role] || [];
@@ -123,6 +116,8 @@ export default function App() {
     if (safeView === 'inventario' || safeView === 'sensores') return <HardwareInventory />
     if (safeView === 'historial') return <HistoryProgress onNavigate={navigate} />
     if (safeView === 'home_analytics') return <HomeAnalytics />
+    if (safeView === 'manual_repre') return <ManualUsuarioRepresentante />
+    if (safeView === 'manual_especialista') return <ManualUsuarioEspecialista />
 
     return <Auth currentView="login" onNavigate={navigate} />
   }
@@ -135,23 +130,7 @@ export default function App() {
           Modo Local: Guardando datos en Edge
         </div>
       )}
-      {syncing && isOnline && (
-        <div className="fixed top-0 left-0 right-0 bg-emerald-500 text-white py-1.5 px-4 text-center text-sm font-semibold shadow-md z-[100] flex items-center justify-center gap-2 animate-in slide-in-from-top-full duration-300">
-          <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          Sincronizando con Nube...
-        </div>
-      )}
-
       {renderPage()}
-
-      {/* Demo Hidden Toggle Button */}
-      <button 
-        onClick={toggleOnline} 
-        className="fixed bottom-2 left-2 w-8 h-8 rounded-full bg-gray-200/50 hover:bg-gray-300/80 z-[100] flex items-center justify-center opacity-30 hover:opacity-100 transition-all text-xs"
-        title="Demo: Toggle WiFi"
-      >
-        📶
-      </button>
 
       {/* Auto Logout Modal */}
       {showSessionExpired && (
@@ -170,7 +149,7 @@ export default function App() {
               <button onClick={handleLogout} className="px-4 py-2 font-semibold text-sm bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-slate-600 rounded-lg transition-colors">
                 Cerrar Sesión
               </button>
-              <button onClick={handleContinueSession} className="px-4 py-2 font-semibold text-sm bg-[#003366] text-white hover:bg-[#002244] rounded-lg shadow-sm transition-colors">
+              <button onClick={handleContinueSession} className="px-4 py-2 font-semibold text-sm bg-brand-800 text-white hover:bg-brand-900 rounded-lg shadow-sm transition-colors">
                 Continuar Sesión
               </button>
             </div>

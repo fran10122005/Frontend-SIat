@@ -15,10 +15,11 @@ import PatientBehaviorChart from './specialist/PatientBehaviorChart'
 import SoapNoteModal from './specialist/SoapNoteModal'
 import IncidentModal from './specialist/IncidentModal'
 import IndicacionModal from './specialist/IndicacionModal'
+import { DashboardSkeleton } from './dashboard/Skeleton'
 
 export default function SpecialistDashboard() {
-  const { navigate, userName, listaNinos, selectedChildId, setSelectedChildId, setNomNino, showToast, crearIndicacion, clinicalAlerts = [], globalPeiGoals = [], incrementPeiTrial } = useGlobalContext()
-  const [isDark, setIsDark] = useState(false)
+  const { navigate, userName, listaNinos, selectedChildId, setSelectedChildId, setNomNino, showToast, crearIndicacion, clinicalAlerts = [], globalPeiGoals = [], incrementPeiTrial, isDark } = useGlobalContext()
+  const [loading, setLoading] = useState(true)
   
   // Modals state
   const [showSoapModal, setShowSoapModal] = useState(false)
@@ -41,12 +42,6 @@ export default function SpecialistDashboard() {
     return listaNinos.find(n => n.id_ninos === selectedChildId) || null
   }, [listaNinos, selectedChildId])
 
-  useEffect(() => {
-    if (document.documentElement.classList.contains('dark')) {
-      setIsDark(true)
-    }
-  }, [])
-
   // ==== MOCK DATA: GLOBAL ====
   const globalStats = useMemo(() => ({
     pacientesActivos: listaNinos.length || 0,
@@ -65,6 +60,12 @@ export default function SpecialistDashboard() {
       console.error('Error fetching agenda:', err)
     }
   }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    const timer = setTimeout(() => setLoading(false), 700)
+    return () => clearTimeout(timer)
+  }, [selectedChildId])
 
   useEffect(() => {
     if (!activeChild) {
@@ -138,18 +139,30 @@ export default function SpecialistDashboard() {
   }, [clinicalAlerts, activeChild]);
 
   // ==== HANDLERS ====
-  const handleSoapSubmit = (e) => {
+  const handleSoapSubmit = async (e) => {
     e.preventDefault()
-    setShowSoapModal(false)
-    setSoapData({ s: '', o: '', a: '', p: '' })
-    showToast("✅ Nota SOAP registrada en el expediente clínico.")
+    if (!activeChild) return
+    try {
+      await api.post(`/ninos/${activeChild.id_ninos}/soap`, soapData)
+      setShowSoapModal(false)
+      setSoapData({ s: '', o: '', a: '', p: '' })
+      showToast("✅ Nota SOAP registrada en el expediente clínico.")
+    } catch (err) {
+      showToast("❌ Error al guardar la nota SOAP.")
+    }
   }
 
-  const handleIncidentSubmit = (e) => {
+  const handleIncidentSubmit = async (e) => {
     e.preventDefault()
-    setShowIncidentModal(false)
-    setIncidentData({ tipo: 'Berrinche', duracion: '5 min', detonante: 'Ruido', rutina: 'Ninguna', observacion: '' })
-    showToast("🚨 Incidente conductual registrado y tabulado.")
+    if (!activeChild) return
+    try {
+      await api.post(`/ninos/${activeChild.id_ninos}/incidentes`, incidentData)
+      setShowIncidentModal(false)
+      setIncidentData({ tipo: 'Berrinche', duracion: '5 min', detonante: 'Ruido', rutina: 'Ninguna', observacion: '' })
+      showToast("🚨 Incidente conductual registrado y tabulado.")
+    } catch (err) {
+      showToast("❌ Error al registrar el incidente.")
+    }
   }
 
   const handleIndicacionSubmit = async (e) => {
@@ -186,8 +199,8 @@ export default function SpecialistDashboard() {
             {/* Header Title Area */}
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                  <Users className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+                <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                  <Users className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   {activeChild ? `Panel Clínico: ${activeChild.nom_nino} ${activeChild.ape_nino}` : 'Panel Global de Especialista'}
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -224,37 +237,43 @@ export default function SpecialistDashboard() {
               )}
             </div>
 
-            {/* ==== VISTA GLOBAL ==== */}
-            {!activeChild && (
-              <SpecialistGlobalView 
-                globalStats={globalStats}
-                agendaHoy={agendaHoy}
-                globalAlertsFeed={globalAlertsFeed}
-                setSelectedChildId={setSelectedChildId}
-                setNomNino={setNomNino}
-                handleCompleteCita={handleCompleteCita}
-              />
-            )}
-
-            {/* ==== VISTA DE PACIENTE SELECCIONADO ==== */}
-            {activeChild && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 md:p-8 pt-0 w-full max-w-[1600px] mx-auto animate-in slide-in-from-bottom-5 duration-300 delay-150">
-                  <PatientPeiGoals 
-                    peiGoals={peiGoals} 
-                    incrementPeiTrial={handleIncrementPeiTrial} 
+            {loading ? (
+              <DashboardSkeleton />
+            ) : (
+              <>
+                {/* ==== VISTA GLOBAL ==== */}
+                {!activeChild && (
+                  <SpecialistGlobalView 
+                    globalStats={globalStats}
+                    agendaHoy={agendaHoy}
+                    globalAlertsFeed={globalAlertsFeed}
+                    setSelectedChildId={setSelectedChildId}
+                    setNomNino={setNomNino}
+                    handleCompleteCita={handleCompleteCita}
                   />
-                  <PatientSensoryChart 
-                    sensoryData={sensoryData}
-                    isDark={isDark}
-                  />
-                </div>
+                )}
 
-                <PatientBehaviorChart 
-                  behaviorHistory={behaviorHistory}
-                  isDark={isDark}
-                />
-              </div>
+                {/* ==== VISTA DE PACIENTE SELECCIONADO ==== */}
+                {activeChild && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 md:p-8 pt-0 w-full max-w-[1400px] mx-auto animate-in slide-in-from-bottom-5 duration-300 delay-150">
+                      <PatientPeiGoals 
+                        peiGoals={peiGoals} 
+                        incrementPeiTrial={handleIncrementPeiTrial} 
+                      />
+                      <PatientSensoryChart 
+                        sensoryData={sensoryData}
+                        isDark={isDark}
+                      />
+                    </div>
+
+                    <PatientBehaviorChart 
+                      behaviorHistory={behaviorHistory}
+                      isDark={isDark}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
           </div>
@@ -262,14 +281,16 @@ export default function SpecialistDashboard() {
       </main>
 
       {/* ==== MODALS ==== */}
-      <SoapNoteModal 
-        showSoapModal={showSoapModal}
-        setShowSoapModal={setShowSoapModal}
-        activeChild={activeChild}
-        soapData={soapData}
-        setSoapData={setSoapData}
-        handleSoapSubmit={handleSoapSubmit}
-      />
+      {showSoapModal && (
+        <SoapNoteModal 
+          showSoapModal={showSoapModal}
+          setShowSoapModal={setShowSoapModal}
+          activeChild={activeChild}
+          soapData={soapData}
+          setSoapData={setSoapData}
+          handleSoapSubmit={handleSoapSubmit}
+        />
+      )}
 
       {showIncidentModal && (
         <IncidentModal 

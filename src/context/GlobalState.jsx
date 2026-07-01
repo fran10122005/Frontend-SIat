@@ -1,21 +1,68 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../api/axios'
+import useIdleTimer from '../hooks/useIdleTimer'
 
 const GlobalContext = createContext()
 
 export const useGlobalContext = () => useContext(GlobalContext)
 
+const viewToPath = {
+  login: '/login', register: '/register', forgot: '/forgot',
+  'reset-password': '/reset-password', 'register-repre': '/register-repre',
+  dashboard: '/dashboard', admin: '/admin',
+  student: '/student', patients: '/patients',
+  rutinas: '/rutinas', agenda: '/agenda',
+  herramientas: '/herramientas', perfil_padre: '/perfil-padre',
+  diario_hogar: '/diario-hogar', profile: '/profile',
+  inventario: '/inventario', sensores: '/sensores',
+  historial: '/historial', home_analytics: '/home-analytics',
+  manual_repre: '/manual-repre', manual_especialista: '/manual-especialista'
+}
+
+const pathToView = Object.fromEntries(
+  Object.entries(viewToPath).map(([k, v]) => [v, k])
+)
+
 export const GlobalProvider = ({ children }) => {
-  const [currentView, setCurrentView] = useState(() => localStorage.getItem('currentView') || 'login')
+  const routerNavigate = useNavigate()
+  const location = useLocation()
+  const [currentView, setCurrentView] = useState(() => {
+    const path = window.location.pathname
+    return pathToView[path] || localStorage.getItem('currentView') || 'login'
+  })
   const [nomNino, setNomNino] = useState(null)
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || 'ESPECIALISTA')
   const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '')
   const [adminActiveTab, setAdminActiveTab] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'))
+
+  const toggleTheme = () => {
+    if (isDark) {
+      document.documentElement.classList.remove('dark')
+    } else {
+      document.documentElement.classList.add('dark')
+    }
+    setIsDark(!isDark)
+  }
 
   useEffect(() => {
     localStorage.setItem('currentView', currentView)
   }, [currentView])
+
+  useEffect(() => {
+    const path = location.pathname
+    if (path === '/') {
+      const target = viewToPath[currentView]
+      if (target) routerNavigate(target, { replace: true })
+      return
+    }
+    const view = pathToView[path]
+    if (view && view !== currentView) {
+      setCurrentView(view)
+    }
+  }, [location.pathname])
 
   useEffect(() => {
     localStorage.setItem('userRole', userRole)
@@ -24,6 +71,26 @@ export const GlobalProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('userName', userName)
   }, [userName])
+
+  // Idle session timeout (default: 15 min)
+  const IDLE_TIMEOUT = Number(import.meta.env.VITE_IDLE_TIMEOUT) || 900
+  const publicViews = ['login', 'register', 'forgot', 'reset-password', 'register-repre']
+  const hasToken = !!localStorage.getItem('token')
+  const isPublicView = publicViews.includes(currentView)
+  const idleActive = hasToken && !isPublicView
+
+  const handleIdleTimeout = useCallback(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('userRole')
+    localStorage.removeItem('userName')
+    localStorage.removeItem('currentView')
+    setCurrentView('login')
+    routerNavigate('/login', { replace: true })
+    showToast('⏱️ Sesión cerrada por inactividad')
+  }, [routerNavigate])
+
+  useIdleTimer(IDLE_TIMEOUT, handleIdleTimeout, idleActive)
+
   const [selectedChildId, setSelectedChildId] = useState(null)
   const [isOnline, setIsOnline] = useState(true)
   const [showEmergencyGuard, setShowEmergencyGuard] = useState(false)
@@ -178,10 +245,10 @@ export const GlobalProvider = ({ children }) => {
   const [parentNotes, setParentNotes] = useState([])
 
   const addHomeReport = (report) => {
-    // report: { date, sleepHours, sleepQuality, mood, appetite, bpm, text }
-    const d = new Date(report.date + 'T00:00:00')
+    const [y, m, day] = (report.date || '').split('-').map(Number)
+    const d = new Date(y, m - 1, day)
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-    const dia = days[d.getDay()]
+    const dia = d instanceof Date && !isNaN(d) ? days[d.getDay()] : 'Hoy'
 
     const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     const bpm = report.bpm ? parseInt(report.bpm) : (report.mood === 'Crisis / Sobrecarga' ? 120 : 80)
@@ -395,18 +462,14 @@ export const GlobalProvider = ({ children }) => {
   }
 
   const navigate = (view) => {
-    // Validaciones de integridad
     if (view === 'student' && userRole !== 'ESPECIALISTA') {
       showToast('⚠️ Acceso denegado: Se requiere rol de Especialista.')
-      return // Bloqueamos la navegación
-    }
-
-    // Auto-login check para el demo
-    if ((currentView === 'login' || currentView === 'register') && view !== 'login' && view !== 'register') {
-      // Remover mock assignment
+      return
     }
 
     setCurrentView(view)
+    const path = viewToPath[view]
+    if (path) routerNavigate(path)
   }
 
   const addFeedback = (fue_efec) => {
@@ -453,6 +516,8 @@ export const GlobalProvider = ({ children }) => {
       setAdminActiveTab,
       isSidebarOpen,
       setIsSidebarOpen,
+      isDark,
+      toggleTheme,
       listaNinos,
       valMini,
       valMaxi,
@@ -499,9 +564,9 @@ export const GlobalProvider = ({ children }) => {
       {children}
       {/* Toast Notification simulando Shadcn */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-white dark:bg-slate-800 border-l-4 border-[#007BFF] p-4 rounded-lg shadow-xl z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-6 right-6 bg-white dark:bg-slate-800 border-l-4 border-brand-500 p-4 rounded-lg shadow-xl z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
           <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <svg className="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{toastMessage}</p>
           </div>
         </div>

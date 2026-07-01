@@ -68,10 +68,10 @@ export default function AacBoardDrawer({ showAac, setShowAac }) {
               onClick={() => {
                 if (sentence.length < 5) setSentence([...sentence, word])
               }}
-              className="bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95"
+              className="bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95"
             >
               <span className="text-3xl">{word.emoji}</span>
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-350">{word.label}</span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{word.label}</span>
             </button>
           ))}
         </div>

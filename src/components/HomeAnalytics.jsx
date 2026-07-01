@@ -136,8 +136,8 @@ export default function HomeAnalytics() {
           <div className="max-w-7xl w-full mx-auto p-6 md:p-8 flex flex-col gap-8 pb-12">
 
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                <LCIcon className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+              <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                <LCIcon className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                 Análisis del Hogar
               </h1>
               <p className="text-sm text-slate-500 mt-1">Datos del wearable fuera de la clínica, cruzados con las notas del representante.</p>
@@ -197,7 +197,7 @@ export default function HomeAnalytics() {
                   </div>
                 </div>
                 <div style={{ height: 260 }}>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                  <ResponsiveContainer width="100%" height={260} minWidth={0} minHeight={0}>
                     <BarChart data={homeHistoricalData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} />
                       <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12 }} />
@@ -234,7 +234,7 @@ export default function HomeAnalytics() {
                       <p className="text-sm">Sin registros de BPM reportados para este día.</p>
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <ResponsiveContainer width="100%" height={260} minWidth={0} minHeight={0}>
                       <AreaChart data={bpmChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="bpmGrad" x1="0" y1="0" x2="0" y2="1">

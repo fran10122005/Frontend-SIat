@@ -1,6 +1,6 @@
 import { useGlobalContext } from '../context/GlobalState';
 import funautaLogo from '../../Logo.png';
-import { LayoutDashboard, Stethoscope, Link2, Settings, LogOut, Server, ShieldCheck, Building2, Users } from 'lucide-react';
+import { LayoutDashboard, Stethoscope, Link2, Settings, LogOut, Server, ShieldCheck, Building2, Users, BookOpen } from 'lucide-react';
 
 export default function AdminSidebar({ activeTab, setActiveTab }) {
   const { setUserRole, setSelectedChildId, setNomNino, userRole, isSidebarOpen, setIsSidebarOpen } = useGlobalContext();
@@ -13,7 +13,8 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
       { id: 'usuarios', icon: Users, label: 'Usuarios' },
       { id: 'auditoria', icon: ShieldCheck, label: 'Auditoría' },
       { id: 'infraestructura', icon: Server, label: 'Infraestructura' },
-      { id: 'catalogos', icon: Settings, label: 'Catálogos' }
+      { id: 'catalogos', icon: Building2, label: 'Mi Fundación' },
+      { id: 'manual', icon: BookOpen, label: 'Manual de Usuario' }
     ] : []),
   ];
 

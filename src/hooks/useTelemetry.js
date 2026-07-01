@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { io } from 'socket.io-client'
+import { getSocket } from './socket'
 import { generateInitialData } from '../utils/dashboardMocks'
 
 export function useTelemetry(wsUrl = 'http://localhost:3000') {
@@ -12,19 +12,19 @@ export function useTelemetry(wsUrl = 'http://localhost:3000') {
   useEffect(() => {
     setTelemetryHistory(generateInitialData())
 
-    const socket = io(wsUrl)
+    const socket = getSocket()
 
-    socket.on('connect', () => {
+    const onConnect = () => {
       console.log('✅ Conectado al stream de telemetría')
       setIsWebSocketActive(true)
-    })
+    }
 
-    socket.on('disconnect', () => {
+    const onDisconnect = () => {
       console.log('❌ Desconectado de la telemetría')
       setIsWebSocketActive(false)
-    })
+    }
 
-    socket.on('new_telemetry', (data) => {
+    const onTelemetry = (data) => {
       setIsWebSocketActive(true)
       setLiveBpm(data.bpm)
       setLiveStress(data.stress)
@@ -42,12 +42,22 @@ export function useTelemetry(wsUrl = 'http://localhost:3000') {
         }
         return [...history.slice(1), newRecord]
       })
-    })
+    }
+
+    socket.on('connect', onConnect)
+    socket.on('disconnect', onDisconnect)
+    socket.on('new_telemetry', onTelemetry)
+
+    if (socket.connected) {
+      setIsWebSocketActive(true)
+    }
 
     return () => {
-      socket.disconnect()
+      socket.off('connect', onConnect)
+      socket.off('disconnect', onDisconnect)
+      socket.off('new_telemetry', onTelemetry)
     }
-  }, [wsUrl])
+  }, [])
 
   return { liveBpm, liveStress, liveMov, isWebSocketActive, telemetryHistory }
 }

@@ -3,7 +3,6 @@ import funautaLogo from '../../Logo.png'
 import { useGlobalContext } from '../context/GlobalState'
 import api from '../api/axios'
 import { KeyRound, Phone, UserCheck, AlertCircle } from 'lucide-react'
-import './Login.css'
 
 export default function RegisterRepre({ onNavigate }) {
   const { setUserRole, setUserName, setSelectedChildId, setNomNino, showToast } = useGlobalContext()

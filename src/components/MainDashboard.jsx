@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import { useGlobalContext } from '../context/GlobalState'
@@ -19,8 +19,7 @@ import BreathingProtocolModal from './dashboard/BreathingProtocolModal'
 import AacBoardDrawer from './dashboard/AacBoardDrawer'
 
 export default function MainDashboard() {
-  const { nomNino, navigate, weeklyGoal } = useGlobalContext()
-  const [isDark, setIsDark] = useState(false)
+  const { nomNino, navigate, weeklyGoal, isDark } = useGlobalContext()
   const [showTelemetry, setShowTelemetry] = useState(false)
   const [showBreathing, setShowBreathing] = useState(false)
   const [showAac, setShowAac] = useState(false)
@@ -33,10 +32,6 @@ export default function MainDashboard() {
   const [showCitaModal, setShowCitaModal] = useState(false)
   const [citaData, setCitaData] = useState({ esp_codi: '', fecha: '', hora: '', tipo: 'Consulta Regular', notas: '' })
   const [especialistasCita, setEspecialistasCita] = useState([])
-
-  useEffect(() => {
-    if (document.documentElement.classList.contains('dark')) setIsDark(true)
-  }, [])
 
   const fetchEspecialistasCita = async () => {
     try {
@@ -122,8 +117,8 @@ export default function MainDashboard() {
             {/* Header del Dashboard */}
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                  <LayoutDashboard className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+                <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                  <LayoutDashboard className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   Panel Principal
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -143,7 +138,7 @@ export default function MainDashboard() {
                 </button>
                 <button 
                   onClick={() => navigate('diario_hogar')} 
-                  className="px-4 py-2.5 bg-[#007BFF] hover:bg-blue-600 text-white font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
+                  className="px-4 py-2.5 bg-brand-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
                 >
                   <NotebookPen className="w-4 h-4" /> Registrar Diario de Hoy
                 </button>
@@ -206,7 +201,7 @@ export default function MainDashboard() {
                         "{weeklyGoal}"
                       </h4>
                       <p className="text-xs text-slate-400 mt-1">
-                        Establecido por: <span className="font-semibold text-slate-500">Dra. Elena Ramos</span>
+                        Establecido por: <span className="font-semibold text-slate-500">Especialista</span>
                       </p>
                     </div>
                     <button 

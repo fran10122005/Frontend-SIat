@@ -9,7 +9,7 @@ import {
   Heart, Activity, ShieldCheck, Zap, Battery, Wifi, 
   AlertTriangle, Cpu, Brain, CheckCircle, Moon, Sun
 } from 'lucide-react'
-import { io } from 'socket.io-client'
+import { getSocket } from '../hooks/socket'
 import Topbar from './Topbar'
 import api from '../api/axios'
 
@@ -147,23 +147,21 @@ export default function HardwareInventory() {
     return () => clearTimeout(timer)
   }, [calibStep, calibCountdown])
 
-  // WebSocket Telemetry Connection Effect
+  // WebSocket Telemetry Connection Effect (shared socket)
   useEffect(() => {
-    if (userRole === 'ESPECIALISTA') return;
+    const socket = getSocket();
 
-    const socket = io('http://localhost:3000');
-
-    socket.on('connect', () => {
+    const onConnect = () => {
       console.log('🔌 Conectado al stream de telemetría por WebSockets');
       setIsWebSocketActive(true);
-    });
+    };
 
-    socket.on('disconnect', () => {
+    const onDisconnect = () => {
       console.log('🔌 Desconectado del stream de telemetría');
       setIsWebSocketActive(false);
-    });
+    };
 
-    socket.on('new_telemetry', (data) => {
+    const onTelemetry = (data) => {
       setIsWebSocketActive(true);
       setTelemetryHistory(prev => {
         const history = prev.length > 0 ? prev : generateInitialData();
@@ -173,13 +171,22 @@ export default function HardwareInventory() {
           mov: data.mov,
           stress: data.stress
         };
-        // Mantener ventana de 10 muestras
         return [...history.slice(1), newRecord];
       });
-    });
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('new_telemetry', onTelemetry);
+
+    if (socket.connected) {
+      setIsWebSocketActive(true);
+    }
 
     return () => {
-      socket.disconnect();
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('new_telemetry', onTelemetry);
     };
   }, [userRole]);
 
@@ -255,8 +262,8 @@ export default function HardwareInventory() {
                 {/* Header parent */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
                   <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                      <Activity className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+                    <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                      <Activity className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                       Seguimiento en Vivo
                     </h1>
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-1">
@@ -428,8 +435,8 @@ export default function HardwareInventory() {
                 {/* Header Specialist */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
                   <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                      <Cpu className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+                    <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                      <Cpu className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                       Calibración de Dispositivos
                     </h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -439,7 +446,7 @@ export default function HardwareInventory() {
 
                   <button 
                     onClick={() => setShowNewSensorModal(true)}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#007BFF] hover:bg-[#0056b3] text-white font-medium rounded-lg shadow-sm transition-colors text-sm"
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg shadow-sm transition-colors text-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
                     Nuevo Sensor
@@ -518,7 +525,7 @@ export default function HardwareInventory() {
                             onClick={() => openCalibration(device)}
                             className="w-full py-2 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2"
                           >
-                            <ShieldCheck className="w-4 h-4 text-[#007BFF]" />
+                            <ShieldCheck className="w-4 h-4 text-brand-500" />
                             Calibrar Sensor
                           </button>
                         </div>
@@ -654,7 +661,7 @@ export default function HardwareInventory() {
                       setCalibCountdown(15)
                       setCalibStep('measuring')
                     }} 
-                    className="px-4 py-2 font-semibold text-xs bg-[#007BFF] text-white hover:bg-blue-600 rounded-lg shadow-sm transition-colors"
+                    className="px-4 py-2 font-semibold text-xs bg-brand-500 text-white hover:bg-blue-600 rounded-lg shadow-sm transition-colors"
                   >
                     Iniciar Calibración
                   </button>
@@ -753,7 +760,7 @@ export default function HardwareInventory() {
                   setShowNewSensorModal(false);
                   setNewSensorForm({ name: '', type: 'Pulsera Biométrica MAX30102' });
                 }} 
-                className="px-4 py-2 font-semibold text-xs bg-[#007BFF] hover:bg-blue-600 text-white rounded-lg shadow-sm transition-colors"
+                className="px-4 py-2 font-semibold text-xs bg-brand-500 hover:bg-blue-600 text-white rounded-lg shadow-sm transition-colors"
               >
                 Crear Sensor
               </button>

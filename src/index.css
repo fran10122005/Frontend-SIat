@@ -4,7 +4,13 @@
 
 :root {
   color-scheme: light;
-  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-brand: #034EA1;
+  --color-brand-dark: #011C3F;
+  --color-brand-light: #E8F0FE;
+  --radius-card: 0.75rem;
+  --radius-button: 0.5rem;
+  --shadow-card: 0 1px 3px rgba(3,78,161,0.06), 0 1px 2px rgba(0,0,0,0.04);
 }
 
 * {
@@ -187,9 +193,10 @@ img {
   transform: translateY(-1px);
 }
 
-/* 4. Signature Autism-Blue Button Overrides (#034EA1) - High contrast & professional */
+/* 4. Signature Autism-Blue Button Overrides — Professional */
 .bg-blue-600,
 .bg-\[\#007BFF\],
+.bg-brand-500,
 .bg-blue-500 {
   background: linear-gradient(90deg, #011C3F 0%, #034EA1 100%) !important;
   color: #FFFFFF !important;
@@ -201,6 +208,7 @@ img {
 
 .bg-blue-600:hover,
 .bg-\[\#007BFF\]:hover,
+.bg-brand-500:hover,
 .bg-blue-500:hover {
   background: linear-gradient(90deg, #022A5E 0%, #045CB8 100%) !important;
   box-shadow: 0 8px 20px rgba(3, 78, 161, 0.26) !important;
@@ -209,20 +217,21 @@ img {
 
 .dark .bg-blue-600:hover,
 .dark .bg-\[\#007BFF\]:hover,
+.dark .bg-brand-500:hover,
 .dark .bg-blue-500:hover {
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.3) !important;
-  /* Neon glow in dark mode */
 }
 
 .bg-blue-600:active,
 .bg-\[\#007BFF\]:active,
+.bg-brand-500:active,
 .bg-blue-500:active {
   transform: translateY(0) scale(0.98);
 }
 
-/* Disable state */
 .bg-blue-600:disabled,
-.bg-\[\#007BFF\]:disabled {
+.bg-\[\#007BFF\]:disabled,
+.bg-brand-500:disabled {
   background-color: #CBD5E1 !important;
   color: #94A3B8 !important;
   box-shadow: none !important;
@@ -231,7 +240,8 @@ img {
 }
 
 .dark .bg-blue-600:disabled,
-.dark .bg-\[\#007BFF\]:disabled {
+.dark .bg-\[\#007BFF\]:disabled,
+.dark .bg-brand-500:disabled {
   background-color: #334155 !important;
   color: #64748B !important;
 }
@@ -278,46 +288,71 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
 }
 
-/* 6. Main Titles (#003366 replaced by modern brand #034EA1 with Metallic Gradient) */
-h1.text-\[\#003366\],
-h2.text-\[\#003366\],
-h3.text-\[\#003366\],
-span.text-\[\#003366\],
-div.text-\[\#003366\] {
-  background: linear-gradient(90deg, #011C3F 0%, #034EA1 100%) !important;
+/* 6. Main Titles (Brand gradient) */
+h1.text-brand-700,
+h2.text-brand-700,
+h3.text-brand-700,
+span.text-brand-700,
+div.text-brand-700 {
+  background: linear-gradient(90deg, #00264D 0%, #034EA1 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   color: transparent !important;
   font-weight: 800 !important;
 }
 
-/* Ensure SVG icons don't lose their color */
-svg.text-\[\#003366\] {
+svg.text-brand-700 {
   background: none !important;
   -webkit-background-clip: border-box !important;
   -webkit-text-fill-color: #034EA1 !important;
   color: #034EA1 !important;
 }
 
-.dark h1.text-\[\#003366\],
-.dark h2.text-\[\#003366\],
-.dark h3.text-\[\#003366\],
-.dark span.text-\[\#003366\],
-.dark div.text-\[\#003366\] {
+.dark h1.text-brand-700,
+.dark h2.text-brand-700,
+.dark h3.text-brand-700,
+.dark span.text-brand-700,
+.dark div.text-brand-700 {
   background: linear-gradient(90deg, #93C5FD 0%, #3B82F6 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   color: transparent !important;
 }
 
-.dark svg.text-\[\#003366\] {
+.dark svg.text-brand-700 {
   -webkit-text-fill-color: #60A5FA !important;
   color: #60A5FA !important;
 }
 
-/* 7. Checklist / Checkbox Refinements */
+/* 7. Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 8. Shimmer animation for Skeletons */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 9. Checklist / Checkbox Refinements */
 input[type="checkbox"] {
   accent-color: #034EA1 !important;
   border-radius: 0.25rem !important;
   cursor: pointer;
+}
+
+/* 9. Focus visible global */
+*:focus-visible {
+  outline: 2px solid #034EA1;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
 }

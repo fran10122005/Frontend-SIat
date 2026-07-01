@@ -185,7 +185,7 @@ export default function UserProfile() {
 
     setSaving(true);
     try {
-      await api.put('/auth/me', {
+      await api.put('/auth/me/password', {
         currentPassword: passwordData.currentPassword,
         password: passwordData.newPassword
       });
@@ -223,8 +223,8 @@ export default function UserProfile() {
           <div className="max-w-5xl mx-auto p-6 md:p-8 lg:p-10 flex flex-col gap-8 pb-12">
             
             <header>
-              <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                <UserCircle className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+              <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                 Mi Perfil
               </h1>
               <p className="text-sm text-slate-500 mt-1 pl-11">

@@ -2,7 +2,7 @@ import funautaLogo from '../../Logo.png'
 import { useGlobalContext } from '../context/GlobalState'
 import { 
   LayoutDashboard, Users, Activity, Puzzle, TrendingUp, 
-  Cpu, UserCircle, LogOut, Lock, LineChart, CheckSquare, Wrench, NotebookPen
+  Cpu, UserCircle, LogOut, Lock, LineChart, CheckSquare, Wrench, NotebookPen, BookOpen
 } from 'lucide-react'
 
 export default function Sidebar() {
@@ -17,6 +17,7 @@ export default function Sidebar() {
     { id: 'home_analytics', icon: LineChart,     label: 'Análisis en Casa' },
     { id: 'rutinas',     icon: Puzzle,           label: 'Asignación de Actividades' },
     { id: 'inventario',  icon: Cpu,              label: 'Calibración de Sensores' },
+    { id: 'manual_especialista', icon: BookOpen, label: 'Manual de Usuario' },
   ]
 
   const parentItems = [
@@ -26,6 +27,7 @@ export default function Sidebar() {
     { id: 'diario_hogar', icon: NotebookPen,      label: 'Diario de Hogar' },
     { id: 'herramientas', icon: Puzzle,           label: 'Herramientas de Apoyo' },
     { id: 'perfil_padre', icon: UserCircle,       label: 'Expediente Clínico' },
+    { id: 'manual_repre', icon: BookOpen,         label: 'Manual de Usuario' },
   ]
 
   const menuItems = userRole === 'ESPECIALISTA' ? specialistItems : parentItems

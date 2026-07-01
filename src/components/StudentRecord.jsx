@@ -130,8 +130,8 @@ export default function StudentRecord() {
           <div className="max-w-[1400px] w-full mx-auto p-6 md:p-8 lg:p-10 flex flex-col gap-8">
 
             <header className="mb-8">
-               <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                 <UserCircle className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+               <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                 <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                  Ficha Clínica del Estudiante
                </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors">
@@ -145,7 +145,7 @@ export default function StudentRecord() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
 
                     <div className="space-y-6">
-                      <h3 className="text-sm font-semibold text-[#003366] dark:text-blue-300 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 transition-colors">
+                      <h3 className="text-sm font-semibold text-brand-700 dark:text-blue-300 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 transition-colors">
                         Datos de Identidad
                       </h3>
 
@@ -169,7 +169,7 @@ export default function StudentRecord() {
                           onChange={handleChange}
                           disabled={!isEditing}
                           placeholder="Ej. Juan Alberto"
-                          className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : ''}`}
+                          className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : ''}`}
                         />
                       </div>
 
@@ -182,7 +182,7 @@ export default function StudentRecord() {
                           onChange={handleChange}
                           disabled={!isEditing}
                           placeholder="Ej. Pérez Gómez"
-                          className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : ''}`}
+                          className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : ''}`}
                         />
                       </div>
 
@@ -195,7 +195,7 @@ export default function StudentRecord() {
                             value={formData.fec_naci}
                             onChange={handleChange}
                             disabled={!isEditing}
-                            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 text-gray-800 dark:text-white appearance-none relative z-10 [color-scheme:light] dark:[color-scheme:dark] ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : ''}`}
+                            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white appearance-none relative z-10 [color-scheme:light] dark:[color-scheme:dark] ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : ''}`}
                           />
                           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 z-0 pointer-events-none">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +207,7 @@ export default function StudentRecord() {
                     </div>
 
                     <div className="space-y-6">
-                      <h3 className="text-sm font-semibold text-[#003366] dark:text-blue-300 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 transition-colors">
+                      <h3 className="text-sm font-semibold text-brand-700 dark:text-blue-300 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 transition-colors">
                         Parámetros Clínicos
                       </h3>
 
@@ -222,7 +222,7 @@ export default function StudentRecord() {
                               checked={formData.gen_nino === 'M'}
                               onChange={handleChange}
                               disabled={!isEditing}
-                              className="w-4 h-4 text-[#007BFF] border-gray-300 dark:border-slate-600 focus:ring-[#007BFF] bg-white dark:bg-slate-900 disabled:opacity-50"
+                              className="w-4 h-4 text-brand-500 border-gray-300 dark:border-slate-600 focus:ring-brand-500 bg-white dark:bg-slate-900 disabled:opacity-50"
                             />
                             <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Masculino [M]</span>
                           </label>
@@ -234,7 +234,7 @@ export default function StudentRecord() {
                               checked={formData.gen_nino === 'F'}
                               onChange={handleChange}
                               disabled={!isEditing}
-                              className="w-4 h-4 text-[#007BFF] border-gray-300 dark:border-slate-600 focus:ring-[#007BFF] bg-white dark:bg-slate-900 disabled:opacity-50"
+                              className="w-4 h-4 text-brand-500 border-gray-300 dark:border-slate-600 focus:ring-brand-500 bg-white dark:bg-slate-900 disabled:opacity-50"
                             />
                             <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">Femenino [F]</span>
                           </label>
@@ -249,7 +249,7 @@ export default function StudentRecord() {
                             value={formData.niv_desa}
                             onChange={handleChange}
                             disabled={!isEditing}
-                            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 text-gray-800 dark:text-white appearance-none ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : 'cursor-pointer'}`}
+                            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white appearance-none ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : 'cursor-pointer'}`}
                           >
                             <option value="" disabled>Seleccionar nivel clínico...</option>
                             <option value="nivel-1">Nivel 1 - Necesita Ayuda</option>
@@ -270,7 +270,7 @@ export default function StudentRecord() {
                             value={formData.Id_sensi}
                             onChange={handleChange}
                             disabled={!isEditing}
-                            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-[#007BFF] focus:ring-2 focus:ring-[#007BFF]/20 text-gray-800 dark:text-white appearance-none ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : 'cursor-pointer'}`}
+                            className={`w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none transition-all duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white appearance-none ${!isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed dark:bg-slate-800/50 dark:text-gray-400' : 'cursor-pointer'}`}
                           >
                             <option value="" disabled>Seleccionar perfil de sensibilidad...</option>
                             <option value="hipo-auditiva">S1 - Hipo-reactividad Auditiva</option>
@@ -318,7 +318,7 @@ export default function StudentRecord() {
                         </button>
                         <button
                           type="submit"
-                          className="flex-1 md:flex-none px-6 py-2.5 bg-[#007BFF] text-white font-medium rounded-lg hover:bg-[#0062cc] transition-colors shadow-sm shadow-[#007BFF]/40"
+                          className="flex-1 md:flex-none px-6 py-2.5 bg-brand-500 text-white font-medium rounded-lg hover:bg-brand-600 transition-colors shadow-sm shadow-[#007BFF]/40"
                         >
                           Guardar Cambios
                         </button>
@@ -330,14 +330,14 @@ export default function StudentRecord() {
             </form>
 
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 mt-2 pl-2">
-              <a href="#" className="flex items-center text-sm font-medium text-[#007BFF] hover:text-[#0056b3] dark:text-blue-400 dark:hover:text-blue-300 transition-colors group">
+              <button className="flex items-center text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors group cursor-pointer">
                 <svg className="w-4 h-4 mr-1.5 opacity-70 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Ver historial de sensibilidades vinculadas
-              </a>
-              <a href="#" className="flex items-center text-sm font-medium text-[#007BFF] hover:text-[#0056b3] dark:text-blue-400 dark:hover:text-blue-300 transition-colors group">
+              </button>
+              <button className="flex items-center text-sm font-medium text-brand-500 hover:text-brand-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors group cursor-pointer">
                 <svg className="w-4 h-4 mr-1.5 opacity-70 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
                 Consultar manual de niveles TEA
-              </a>
+              </button>
             </div>
 
           </div>

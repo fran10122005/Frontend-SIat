@@ -1,33 +1,17 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { useGlobalContext } from '../context/GlobalState'
 import { Sun, Moon, Menu } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 
 export default function Topbar() {
-  const { userRole, userName, setCurrentView, isSidebarOpen, setIsSidebarOpen } = useGlobalContext()
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    if (document.documentElement.classList.contains('dark')) {
-      setIsDark(true)
-    }
-  }, [])
-
-  const toggleTheme = () => {
-    if (isDark) {
-      document.documentElement.classList.remove('dark')
-    } else {
-      document.documentElement.classList.add('dark')
-    }
-    setIsDark(!isDark)
-  }
+  const { userRole, userName, setCurrentView, isSidebarOpen, setIsSidebarOpen, isDark, toggleTheme } = useGlobalContext()
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800/60 bg-white/80 dark:bg-[#0F172A]/80 px-6 backdrop-blur-md transition-colors duration-200">
       {/* Botón menú hamburguesa en móvil */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="flex md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-655 dark:text-slate-300 transition-colors"
+        className="flex md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
         aria-label="Abrir Menú"
       >
         <Menu className="w-5.5 h-5.5" />

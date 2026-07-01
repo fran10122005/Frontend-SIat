@@ -72,7 +72,7 @@ export default function ParentProfile() {
           </div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">Acceso Denegado</h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">Módulo exclusivo para Representantes (Padres).</p>
-          <button onClick={() => navigate('dashboard')} className="px-6 py-2 bg-[#007BFF] text-white rounded-lg hover:bg-blue-600 transition-colors">Volver al Inicio</button>
+          <button onClick={() => navigate('dashboard')} className="px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Volver al Inicio</button>
         </div>
       </div>
     )
@@ -91,15 +91,15 @@ export default function ParentProfile() {
           {/* Header & Tabs */}
           <div className="pt-4 md:pt-5 px-6 md:px-8 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shrink-0">
             <div className="max-w-[1400px] mx-auto">
-              <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors mb-4">
-                <UserCircle className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+              <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors mb-4">
+                <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                 Expediente Clínico
               </h1>
 
               <div className="flex gap-6 overflow-x-auto no-scrollbar">
                 <button 
                   onClick={() => setActiveTab('perfil')}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'perfil' ? 'border-[#007BFF] text-[#007BFF]' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'perfil' ? 'border-brand-500 text-brand-500' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
                   <span className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -108,7 +108,7 @@ export default function ParentProfile() {
                 </button>
                 <button 
                   onClick={() => setActiveTab('alertas')}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'alertas' ? 'border-[#007BFF] text-[#007BFF]' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'alertas' ? 'border-brand-500 text-brand-500' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
                   <span className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
@@ -117,7 +117,7 @@ export default function ParentProfile() {
                 </button>
                 <button 
                   onClick={() => setActiveTab('indicaciones')}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'indicaciones' ? 'border-[#007BFF] text-[#007BFF]' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'indicaciones' ? 'border-brand-500 text-brand-500' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                 >
                   <span className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 102-2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
@@ -134,7 +134,7 @@ export default function ParentProfile() {
               <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors duration-200">
                   <div className="p-6 md:p-8">
-                    <h3 className="text-sm font-semibold text-[#003366] dark:text-blue-300 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 mb-6 transition-colors">
+                    <h3 className="text-sm font-semibold text-brand-700 dark:text-blue-300 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 mb-6 transition-colors">
                       Datos Clínicos Registrados
                     </h3>
                     
@@ -190,8 +190,8 @@ export default function ParentProfile() {
                           <div>
                             <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Especialista Asignado</p>
                             <p className="text-md text-gray-800 dark:text-gray-200 mt-1 flex items-center gap-2">
-                              <svg className="w-4 h-4 text-[#007BFF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                              {childProfile.especialista || 'Dra. Elena Ramos'}
+                              <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                              {childProfile.especialista || 'Especialista asignado'}
                             </p>
                           </div>
                         </div>

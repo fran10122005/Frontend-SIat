@@ -41,14 +41,14 @@ export default function BreathingProtocolModal({ showBreathing, setShowBreathing
         
         {/* Animación de fondo calmante */}
         <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-          <div className={`w-72 h-72 bg-blue-500/20 rounded-full blur-3xl transition-transform duration-[4000ms] ease-in-out ${breathActive && breathCycle === 'Inhala' ? 'scale-150' : 'scale-50'}`}></div>
+          <div className={`w-72 h-72 bg-blue-500/20 rounded-full blur-3xl motion-safe:transition-transform motion-safe:duration-[4000ms] motion-safe:ease-in-out ${breathActive && breathCycle === 'Inhala' ? 'scale-150' : 'scale-50'}`}></div>
         </div>
 
         <h3 className="text-xl font-black text-white relative z-10">Respiración de la Tortuga</h3>
         <p className="text-xs text-slate-400 mb-8 max-w-xs relative z-10">Técnica de anclaje para regular el sistema nervioso parasimpático en crisis sensoriales.</p>
 
         <div className="relative z-10 flex flex-col items-center mb-8">
-          <div className={`w-36 h-36 rounded-full border-4 flex items-center justify-center transition-all duration-[4000ms] ease-in-out ${
+          <div className={`w-36 h-36 rounded-full border-4 flex items-center justify-center motion-safe:transition-all motion-safe:duration-[4000ms] motion-safe:ease-in-out ${
             breathCycle === 'Inhala' ? 'scale-110 border-emerald-400 bg-emerald-400/25' :
             breathCycle === 'Retén' ? 'scale-110 border-amber-400 bg-amber-400/25' :
             'scale-90 border-blue-400 bg-blue-400/25'

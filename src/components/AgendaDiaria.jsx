@@ -12,11 +12,22 @@ import api from '../api/axios'
 
 export default function AgendaDiaria() {
   const { nomNino, userRole, weeklyGoal, reportGoalProgress, showToast, selectedChildId, routines, createRoutine } = useGlobalContext()
-  const [isDark, setIsDark] = useState(false)
   const [goalProgressReported, setGoalProgressReported] = useState(false)
 
-  // 1. Visual Agenda State
-  const [agenda, setAgenda] = useState([])
+  // 1. Visual Agenda State — inicializada con tareas por defecto del día
+  const today = new Date().toLocaleDateString('es-ES')
+  const [agenda, setAgenda] = useState(() => {
+    const saved = localStorage.getItem(`agenda_${today}`)
+    if (saved) return JSON.parse(saved)
+    return [
+      { id: 1, task: 'Lavarse los dientes', time: '08:00', done: false, icon: 'wash' },
+      { id: 2, task: 'Desayuno terapéutico', time: '08:30', done: false, icon: 'food' },
+      { id: 3, task: 'Integración sensorial', time: '10:00', done: false, icon: 'puzzle' },
+      { id: 4, task: 'Actividad educativa', time: '14:00', done: false, icon: 'study' },
+      { id: 5, task: 'Ordenar habitación', time: '17:00', done: false, icon: 'cleanup' },
+      { id: 6, task: 'Rutina de descanso', time: '20:30', done: false, icon: 'sleep' },
+    ]
+  })
 
 
   // 3. Active Session Player States
@@ -165,6 +176,10 @@ export default function AgendaDiaria() {
 
   const handleCreateRoutine = async (e) => {
     e.preventDefault()
+    if (userRole === 'REPRESENTANTE') {
+      showToast('⚠️ Solo el especialista puede crear nuevas terapias.')
+      return
+    }
     await createRoutine(formData)
     setIsModalOpen(false)
     setFormData({ 
@@ -174,14 +189,13 @@ export default function AgendaDiaria() {
     setActiveTab('general')
   }
 
+  // Persistir agenda en localStorage al cambiar
   useEffect(() => {
-    if (document.documentElement.classList.contains('dark')) {
-      setIsDark(true)
-    }
-  }, [])
+    localStorage.setItem(`agenda_${new Date().toLocaleDateString('es-ES')}`, JSON.stringify(agenda))
+  }, [agenda])
 
   const completedTasksCount = agenda.filter(t => t.done).length
-  const progressPercent = Math.round((completedTasksCount / agenda.length) * 100)
+  const progressPercent = agenda.length > 0 ? Math.round((completedTasksCount / agenda.length) * 100) : 0
 
   return (
     <div className="flex h-screen w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
@@ -200,20 +214,22 @@ export default function AgendaDiaria() {
                 {/* Header del Módulo */}
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                   <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-[#003366] dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                      <CheckSquare className="w-6 h-6 text-[#003366] dark:text-blue-400" />
+                    <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                      <CheckSquare className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                       Día a Día (Agenda y Terapias)
                     </h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                       Gestiona el cronograma de {nomNino || 'el niño'} y lanza las guías clínicas en casa en un solo lugar.
                     </p>
                   </div>
-                  <button 
-                    onClick={() => setIsModalOpen(true)} 
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm flex items-center gap-2 text-sm transition-transform hover:scale-102 shrink-0"
-                  >
-                    <Plus className="w-5 h-5" /> Crear Nueva Terapia
-                  </button>
+                  {userRole !== 'REPRESENTANTE' && (
+                    <button 
+                      onClick={() => setIsModalOpen(true)} 
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm flex items-center gap-2 text-sm transition-transform hover:scale-102 shrink-0"
+                    >
+                      <Plus className="w-5 h-5" /> Crear Nueva Terapia
+                    </button>
+                  )}
                 </div>
 
                 {/* Grid principal de dos columnas */}
@@ -231,7 +247,7 @@ export default function AgendaDiaria() {
                         "{weeklyGoal}"
                       </h4>
                       <p className="text-[10px] text-slate-400 mt-1 pb-4">
-                        Asignado por: Dra. Elena Ramos
+                        Asignado por: Especialista
                       </p>
                       
                       <button

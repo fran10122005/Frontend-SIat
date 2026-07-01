@@ -67,11 +67,11 @@ function ResetPassword({ onNavigate }) {
           <div className="flex items-center gap-3 mb-6 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
             <img src={funautaLogo} alt="Logo FUNAUTA" className="w-12 h-12 object-contain" />
             <div className="text-left">
-              <span className="block text-sm font-extrabold text-[#003366] dark:text-blue-400 tracking-wider">SIAT-TEA</span>
+              <span className="block text-sm font-extrabold text-brand-700 dark:text-blue-400 tracking-wider">SIAT-TEA</span>
               <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">FUNAUTA</span>
             </div>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#003366] dark:text-blue-400 mb-2 transition-colors">Crear Nueva Contraseña</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-700 dark:text-blue-400 mb-2 transition-colors">Crear Nueva Contraseña</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors">Ingresa tu nueva contraseña para acceder al sistema SIAT.</p>
         </div>
 
@@ -84,7 +84,7 @@ function ResetPassword({ onNavigate }) {
                 placeholder="••••••••"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-[#007BFF] focus:ring-4 focus:ring-[#007BFF]/10 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                 required
               />
             </div>
@@ -98,7 +98,7 @@ function ResetPassword({ onNavigate }) {
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-[#007BFF] focus:ring-4 focus:ring-[#007BFF]/10 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                 required
               />
             </div>
@@ -119,7 +119,7 @@ function ResetPassword({ onNavigate }) {
           <button 
             type="submit" 
             disabled={isLoading || !token}
-            className="w-full bg-[#007BFF] hover:bg-[#0062cc] text-white font-semibold py-3 px-4 rounded-xl shadow-[0_4px_14px_0_rgba(0,123,255,0.39)] dark:shadow-none transition-all duration-200 hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center"
+            className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 px-4 rounded-xl shadow-button dark:shadow-none transition-all duration-200 hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center"
           >
             {isLoading ? 'Actualizando...' : 'Restablecer Contraseña'}
           </button>

@@ -1,3 +1,7 @@
+import { useState, useMemo } from 'react'
+import { Search, X } from 'lucide-react'
+import StatusBadge from '../StatusBadge';
+
 export default function AsignacionesTab({
   asignacion,
   setAsignacion,
@@ -11,6 +15,36 @@ export default function AsignacionesTab({
   exportAsignacionesToExcel,
   onRegisterClick
 }) {
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('TODOS')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const filtered = useMemo(() => {
+    return asignaciones.filter(asi => {
+      const paciente = `${asi.tm_ninos?.nin_nomb || ''} ${asi.tm_ninos?.nin_apel || ''}`.toLowerCase()
+      const especialista = `${asi.tm_espec?.esp_nomb || ''} ${asi.tm_espec?.esp_apel || ''}`.toLowerCase()
+      const q = search.toLowerCase()
+      if (search && !paciente.includes(q) && !especialista.includes(q)) return false
+      if (statusFilter !== 'TODOS' && asi.asi_stdo !== statusFilter) return false
+      if (dateFrom && asi.asi_inic && new Date(asi.asi_inic) < new Date(dateFrom)) return false
+      if (dateTo && asi.asi_inic) {
+        const end = new Date(dateTo); end.setHours(23, 59, 59, 999)
+        if (new Date(asi.asi_inic) > end) return false
+      }
+      return true
+    })
+  }, [asignaciones, search, statusFilter, dateFrom, dateTo])
+
+  const hasFilters = search || statusFilter !== 'TODOS' || dateFrom || dateTo
+
+  const clearFilters = () => {
+    setSearch('')
+    setStatusFilter('TODOS')
+    setDateFrom('')
+    setDateTo('')
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60">
@@ -54,16 +88,39 @@ export default function AsignacionesTab({
         </form>
       </div>
 
+      {/* Filtros */}
+      <div className="bg-white dark:bg-[#1E293B] p-4 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input type="text" placeholder="Buscar por paciente o especialista..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+          <option value="TODOS">Todos los estados</option>
+          <option value="Activo">Activo</option>
+          <option value="Inactivo">Inactivo</option>
+        </select>
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" title="Fecha ingreso desde" />
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" title="Fecha ingreso hasta" />
+        {hasFilters && (
+          <button onClick={clearFilters} className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0">
+            <X className="w-3.5 h-3.5" /> Limpiar
+          </button>
+        )}
+      </div>
+
       <div className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Casos Clínicos Activos</h2>
-          <div className="flex gap-2">
-            <button onClick={exportAsignacionesToPDF} className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 rounded-lg text-xs font-semibold transition-colors">
-              PDF
-            </button>
-            <button onClick={exportAsignacionesToExcel} className="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg text-xs font-semibold transition-colors">
-              Excel
-            </button>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Casos Clínicos</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full">{filtered.length} registros</span>
+            <div className="flex gap-2">
+              <button onClick={exportAsignacionesToPDF} className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 rounded-lg text-xs font-semibold transition-colors">
+                PDF
+              </button>
+              <button onClick={exportAsignacionesToExcel} className="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg text-xs font-semibold transition-colors">
+                Excel
+              </button>
+            </div>
           </div>
         </div>
 
@@ -79,7 +136,7 @@ export default function AsignacionesTab({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {asignaciones.map(asi => (
+              {filtered.map(asi => (
                 <tr key={asi.asi_codi} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="py-3 px-4">
                     <div className="font-semibold text-slate-900 dark:text-white">{asi.tm_ninos?.nin_nomb} {asi.tm_ninos?.nin_apel}</div>
@@ -93,9 +150,7 @@ export default function AsignacionesTab({
                     {new Date(asi.asi_inic).toLocaleDateString()}
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${asi.asi_stdo === 'Activo' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'}`}>
-                      {asi.asi_stdo}
-                    </span>
+                    <StatusBadge active={asi.asi_stdo === 'Activo'} />
                   </td>
                   <td className="py-3 px-4 text-right">
                     <button onClick={() => handleToggleAsignacion(asi.asi_codi, asi.asi_stdo)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${asi.asi_stdo === 'Activo' ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20' : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}>

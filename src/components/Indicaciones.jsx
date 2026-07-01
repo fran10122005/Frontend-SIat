@@ -32,7 +32,7 @@ export default function Indicaciones() {
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-center mb-1">
-                    <h4 className="font-semibold text-gray-800 dark:text-gray-200">Dra. Elena Ramos</h4>
+                    <h4 className="font-semibold text-gray-800 dark:text-gray-200">Especialista</h4>
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-md">
                       {new Date(report.fec_repo).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </span>
@@ -45,7 +45,7 @@ export default function Indicaciones() {
                     <div className="mt-4">
                       <button 
                         onClick={() => navigate('rutinas')}
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-[#007BFF] hover:text-[#0056b3] transition-colors"
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-brand-500 hover:text-brand-600 transition-colors"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                         [Ver Rutina asociada]

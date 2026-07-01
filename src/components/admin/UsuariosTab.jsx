@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Search, ToggleLeft, ToggleRight, User, AlertTriangle, ShieldCheck, Mail, Calendar, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Search, User, Mail, Calendar, Clock, X } from 'lucide-react';
+import StatusBadge from '../StatusBadge';
 
 export default function UsuariosTab({
   usuarios,
@@ -8,23 +9,19 @@ export default function UsuariosTab({
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [filterEstado, setFilterEstado] = useState('TODOS');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
-  // Formatear la fecha
   const formatDate = (dateString) => {
     if (!dateString) return 'Nunca';
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 
-  // Obtener el nombre del usuario según su rol
   const getUserName = (user) => {
     if (user.rol_codi === 'ROL_ESP' && user.tm_espec) {
       return `${user.tm_espec.esp_gner === 'M' ? 'Dr.' : 'Dra.'} ${user.tm_espec.esp_nomb} ${user.tm_espec.esp_apel}`;
@@ -51,62 +48,62 @@ export default function UsuariosTab({
     }
   };
 
-  // Filtrar los usuarios
+  const hasFilters = searchTerm || roleFilter !== 'ALL' || filterEstado !== 'TODOS' || dateFrom || dateTo
+
   const filteredUsers = usuarios.filter(user => {
     const name = getUserName(user).toLowerCase();
     const email = user.usu_crro.toLowerCase();
     const search = searchTerm.toLowerCase();
-    const matchesSearch = name.includes(search) || email.includes(search);
-    const matchesRole = roleFilter === 'ALL' || user.rol_codi === roleFilter;
-    return matchesSearch && matchesRole;
+    if (searchTerm && !name.includes(search) && !email.includes(search)) return false
+    if (roleFilter !== 'ALL' && user.rol_codi !== roleFilter) return false
+    if (filterEstado === 'ACTIVO' && !user.usu_estd) return false
+    if (filterEstado === 'INACTIVO' && user.usu_estd) return false
+    if (dateFrom && user.usu_crea && new Date(user.usu_crea) < new Date(dateFrom)) return false
+    if (dateTo && user.usu_crea) {
+      const end = new Date(dateTo); end.setHours(23, 59, 59, 999)
+      if (new Date(user.usu_crea) > end) return false
+    }
+    return true;
   });
 
-  const confirmToggle = (user) => {
-    setSelectedUser(user);
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirmToggle = async () => {
-    if (selectedUser) {
-      await handleToggleUser(selectedUser.usu_codi, !selectedUser.usu_estd);
-      setShowConfirmModal(false);
-      setSelectedUser(null);
-    }
-  };
+  const clearFilters = () => {
+    setSearchTerm('')
+    setRoleFilter('ALL')
+    setFilterEstado('TODOS')
+    setDateFrom('')
+    setDateTo('')
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Controles de búsqueda y filtros */}
-      <div className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-slate-400" />
+      {/* Filtros */}
+      <div className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input type="text" placeholder="Buscar por nombre o correo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors" />
           </div>
-          <input
-            type="text"
-            placeholder="Buscar por nombre o correo..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-          />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Filtrar Rol:</label>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer"
-          >
+          <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
             <option value="ALL">Todos los Roles</option>
             <option value="ROL_ADM">Administradores</option>
             <option value="ROL_ESP">Especialistas</option>
             <option value="ROL_REP">Representantes</option>
           </select>
+          <select value={filterEstado} onChange={(e) => setFilterEstado(e.target.value)} className="px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="TODOS">Todos los estados</option>
+            <option value="ACTIVO">Activo</option>
+            <option value="INACTIVO">Inactivo</option>
+          </select>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" title="Creación desde" />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" title="Creación hasta" />
+          {hasFilters && (
+            <button onClick={clearFilters} className="flex items-center gap-1 px-4 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0">
+              <X className="w-3.5 h-3.5" /> Limpiar
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Listado de Usuarios */}
       <div className="bg-white dark:bg-[#1E293B] rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Cuentas de Acceso al Sistema</h2>
@@ -172,22 +169,14 @@ export default function UsuariosTab({
                       </td>
                       <td className="px-6 py-4 text-center whitespace-nowrap">
                         <button
-                          onClick={() => confirmToggle(user)}
+                          onClick={() => handleToggleUser(user.usu_codi, user.usu_estd)}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${
                             isActive 
                               ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50 hover:bg-emerald-100' 
                               : 'text-rose-700 bg-rose-50 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200/50 hover:bg-rose-100'
                           }`}
                         >
-                          {isActive ? (
-                            <>
-                              <ShieldCheck className="h-3.5 w-3.5" /> Activo
-                            </>
-                          ) : (
-                            <>
-                              <AlertTriangle className="h-3.5 w-3.5" /> Inactivo
-                            </>
-                          )}
+                          <StatusBadge active={isActive} />
                         </button>
                       </td>
                     </tr>
@@ -198,41 +187,6 @@ export default function UsuariosTab({
           </div>
         )}
       </div>
-
-      {/* Modal de Confirmación */}
-      {showConfirmModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#1E293B] rounded-xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-800/60 animate-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Confirmar cambio de estado
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              ¿Estás seguro de que deseas <b>{selectedUser.usu_estd ? 'DESACTIVAR' : 'ACTIVAR'}</b> la cuenta del usuario <b>{getUserName(selectedUser)}</b> ({selectedUser.usu_crro})? 
-              {selectedUser.usu_estd && ' Si la desactivas, no podrá acceder al sistema hasta ser reactivado.'}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  setSelectedUser(null);
-                }}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-semibold transition-colors"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleConfirmToggle}
-                className={`px-4 py-2 text-white rounded-lg text-sm font-semibold transition-colors ${
-                  selectedUser.usu_estd ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
-                }`}
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import { getSocket } from '../hooks/socket';
 import { useGlobalContext } from '../context/GlobalState';
 import api from '../api/axios';
 import { Bell, AlertTriangle, Trash2 } from 'lucide-react';
@@ -9,10 +9,12 @@ export default function NotificationBell() {
   const [isVibrating, setIsVibrating] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const { showToast } = useGlobalContext();
+  const { showToast, userRole } = useGlobalContext();
 
   // Cargar historial inicial de alertas desde la base de datos
   useEffect(() => {
+    if (userRole !== 'REPRESENTANTE') return;
+    
     api.get('/reportes/alertas-representante')
       .then(res => {
         const list = res.data.data.map(alert => ({
@@ -25,23 +27,53 @@ export default function NotificationBell() {
         setNotifications(list);
       })
       .catch(err => console.error('Error al cargar historial de notificaciones:', err));
-  }, []);
+  }, [userRole]);
+
+  const playAlertSound = () => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      const playTone = (freq, startTime, duration) => {
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        
+        gainNode.gain.setValueAtTime(0.12, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration - 0.05);
+        
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+      
+      const now = ctx.currentTime;
+      // High-pitched therapeutic alarm chimes (clean and clear)
+      playTone(987.77, now, 0.2); // B5 note
+      playTone(1318.51, now + 0.15, 0.3); // E6 note
+    } catch (e) {
+      console.warn('Audio Context block/failed:', e);
+    }
+  };
 
   useEffect(() => {
-    // Conectar a WebSockets en el backend
-    const socket = io('http://localhost:3000');
+    const socket = getSocket();
 
-    socket.on('connect', () => {
-      console.log('✅ Conectado a notificaciones en tiempo real');
-    });
-
-    socket.on('new_alert', (data) => {
+    const onAlert = (data) => {
       // Incrementar contador
       setUnreadCount((prev) => prev + 1);
       
       // Activar animación de vibración
       setIsVibrating(true);
       setTimeout(() => setIsVibrating(false), 1000);
+
+      // Reproducir sonido de alerta
+      playAlertSound();
 
       // Prependear nueva alerta al historial de notificaciones
       const newNotif = {
@@ -57,10 +89,12 @@ export default function NotificationBell() {
       const bpmDetail = data.bpm_max ? ` | BPM Máx: ${data.bpm_max}` : '';
       const stressDetail = data.stress_index ? ` | Estrés: ${data.stress_index}%` : '';
       showToast(`🚨 ALERTA: ${data.est_dete} en ${data.niño}${bpmDetail}${stressDetail}`);
-    });
+    };
+
+    socket.on('new_alert', onAlert);
 
     return () => {
-      socket.disconnect();
+      socket.off('new_alert', onAlert);
     };
   }, [showToast]);
 
