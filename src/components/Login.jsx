@@ -6,6 +6,7 @@ import api from '../api/axios';
 function Login({ onNavigate }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -59,14 +60,14 @@ function Login({ onNavigate }) {
   }
 
   return (
-    <div className="w-full min-h-full flex flex-col justify-center px-6 sm:px-10 lg:px-14 py-8 bg-white dark:bg-slate-900 transition-colors duration-200">
-      <div className="w-full max-w-sm mx-auto">
+    <div className="w-full flex flex-col justify-center px-5 sm:px-8 py-6 sm:py-8 bg-white dark:bg-slate-900 transition-colors duration-200">
+      <div className="w-full">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20 mx-auto mb-4">
-            <img src={funautaLogo} alt="Logo" className="w-9 h-9 object-contain brightness-0 invert" />
+        <div className="mb-6 sm:mb-8 text-center">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20 mx-auto mb-3 sm:mb-4">
+            <img src={funautaLogo} alt="Logo" className="w-8 h-8 sm:w-9 sm:h-9 object-contain brightness-0 invert" />
           </div>
-          <h1 className="text-xl font-bold text-brand-700 dark:text-blue-400">SIAT-TEA</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-brand-700 dark:text-blue-400">SIAT-TEA</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ingresa a tu portal de acompañamiento terapéutico</p>
         </div>
 
@@ -74,20 +75,20 @@ function Login({ onNavigate }) {
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Correo Electrónico</label>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                  <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-              </div>
               <input
                 type="email"
                 placeholder="ejemplo@correo.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                 required
               />
+              <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </div>
             </div>
           </div>
 
@@ -102,20 +103,32 @@ function Login({ onNavigate }) {
               </button>
             </div>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-              </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                {showPassword ? (
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
 
