@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import api from '../api/axios'
 import PedirCitaModal from './parent/PedirCitaModal'
+import Footer from './Footer'
 
 // Custom Hooks
 import { useTelemetry } from '../hooks/useTelemetry'
@@ -25,7 +26,7 @@ export default function MainDashboard() {
   const [showAac, setShowAac] = useState(false)
 
   // Custom Hooks data
-  const { liveBpm, liveStress, liveMov, isWebSocketActive, telemetryHistory } = useTelemetry()
+  const { liveBpm, liveStress, liveMov, isWebSocketActive, telemetryHistory, simulateTelemetry } = useTelemetry()
   const { alertsList, chartDataList } = useClinicalData()
 
   // Modal Citas
@@ -107,7 +108,7 @@ export default function MainDashboard() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
+    <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
       <Sidebar />
       <main className="flex-1 flex flex-col h-full overflow-hidden">
         <Topbar />
@@ -141,6 +142,12 @@ export default function MainDashboard() {
                   className="px-4 py-2.5 bg-brand-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
                 >
                   <NotebookPen className="w-4 h-4" /> Registrar Diario de Hoy
+                </button>
+                <button 
+                  onClick={simulateTelemetry} 
+                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
+                >
+                  <Activity className="w-4 h-4" /> Simular Telemetría
                 </button>
               </div>
             </div>
@@ -271,6 +278,7 @@ export default function MainDashboard() {
               </div>
             </div>
           </div>
+          <Footer />
         </div>
       </main>
 

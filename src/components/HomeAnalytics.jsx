@@ -129,7 +129,7 @@ export default function HomeAnalytics() {
 
   if (!selectedChildId) {
     return (
-      <div className="flex h-screen w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden">
+      <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center p-10 bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-800/60 shadow-sm max-w-md mx-4">
@@ -146,7 +146,7 @@ export default function HomeAnalytics() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
+    <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
       <Sidebar />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden">

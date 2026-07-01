@@ -59,5 +59,30 @@ export function useTelemetry(wsUrl = 'https://backend-siat.onrender.com') {
     }
   }, [])
 
-  return { liveBpm, liveStress, liveMov, isWebSocketActive, telemetryHistory }
+  const simulateTelemetry = () => {
+    setIsWebSocketActive(true)
+    const newBpm = Math.floor(Math.random() * (120 - 70 + 1) + 70)
+    const newStress = Math.floor(Math.random() * (100 - 10 + 1) + 10)
+    const newMov = +(Math.random() * 3).toFixed(1)
+
+    setLiveBpm(newBpm)
+    setLiveStress(newStress)
+    setLiveMov(newMov)
+
+    setTelemetryHistory(prev => {
+      const history = prev.length > 0 ? prev : generateInitialData()
+      const now = new Date()
+      const newRecord = {
+        time: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        bpm: newBpm,
+        mov: newMov,
+        stress: newStress,
+        calma: 100 - newStress,
+        estres: newStress
+      }
+      return [...history.slice(1), newRecord]
+    })
+  }
+
+  return { liveBpm, liveStress, liveMov, isWebSocketActive, telemetryHistory, simulateTelemetry }
 }

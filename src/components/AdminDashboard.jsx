@@ -23,6 +23,7 @@ import UsuariosTab from './admin/UsuariosTab';
 import ManualUsuario from './admin/ManualUsuario';
 import ConfirmDialog from './ConfirmDialog';
 import Topbar from './Topbar'
+import Footer from './Footer';
 
 function AdminDashboard({ onNavigate }) {
   const { userRole, userName, adminActiveTab: activeTab, setAdminActiveTab: setActiveTab } = useGlobalContext();
@@ -85,12 +86,12 @@ function AdminDashboard({ onNavigate }) {
   });
 
   const mockUptimeData = [
-    { name: '00:00', uptime: 99.9, latency: 45 },
-    { name: '04:00', uptime: 99.9, latency: 42 },
-    { name: '08:00', uptime: 100, latency: 60 },
-    { name: '12:00', uptime: 100, latency: 85 },
-    { name: '16:00', uptime: 99.9, latency: 55 },
-    { name: '20:00', uptime: 100, latency: 40 },
+    { name: '00:00', uptime: 99.9, latencia: 45 },
+    { name: '04:00', uptime: 99.9, latencia: 42 },
+    { name: '08:00', uptime: 100, latencia: 60 },
+    { name: '12:00', uptime: 100, latencia: 85 },
+    { name: '16:00', uptime: 99.9, latencia: 55 },
+    { name: '20:00', uptime: 100, latencia: 40 },
   ];
 
   window.__navigate = onNavigate;
@@ -423,7 +424,7 @@ function AdminDashboard({ onNavigate }) {
   const mockActivityData = [];
 
   return (
-    <div className="flex h-screen w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
+    <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
       
       {/* Sidebar */}
       <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -606,6 +607,7 @@ function AdminDashboard({ onNavigate }) {
             )}
 
           </div>
+          <Footer />
         </div>
       </main>
 

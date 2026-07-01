@@ -11,9 +11,9 @@ export default function Auth({ currentView, onNavigate }) {
   }, [currentView]);
 
   return (
-    <div className="relative min-h-screen w-full bg-[#F4F7F9] dark:bg-slate-900 overflow-hidden font-sans">
+    <div className="relative min-h-[100dvh] w-full bg-[#F4F7F9] dark:bg-slate-900 overflow-hidden font-sans">
       {/* Mobile Layout: simple centered */}
-      <div className="flex md:hidden min-h-screen w-full items-center justify-center p-4 bg-gradient-to-br from-brand-500/60 to-blue-600/40 dark:from-slate-900 dark:to-slate-950">
+      <div className="flex md:hidden min-h-[100dvh] w-full items-center justify-center p-4 bg-gradient-to-br from-brand-500/60 to-blue-600/40 dark:from-slate-900 dark:to-slate-950">
         <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-brand-500/10 dark:shadow-black/30 overflow-hidden">
           <div className="h-1.5 bg-gradient-to-r from-brand-500 via-blue-500 to-indigo-500"></div>
           {isLogin ? <Login onNavigate={onNavigate} /> : <Register onNavigate={onNavigate} />}
@@ -21,7 +21,7 @@ export default function Auth({ currentView, onNavigate }) {
       </div>
 
       {/* Desktop Layout: split with brand panel */}
-      <div className="hidden md:flex relative w-full h-full min-h-screen">
+      <div className="hidden md:flex relative w-full h-full min-h-[100dvh]">
         {/* Forms Container */}
         <div 
           className={`absolute top-0 w-1/2 h-full transition-transform duration-700 ease-in-out z-10 bg-white dark:bg-slate-900 shadow-2xl

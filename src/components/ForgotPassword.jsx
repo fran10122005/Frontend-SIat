@@ -32,7 +32,7 @@ function ForgotPassword({ onNavigate }) {
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#F4F7F9] dark:bg-slate-900 flex flex-col justify-center items-center px-4 transition-colors duration-200">
+    <div className="w-full min-h-[100dvh] bg-[#F4F7F9] dark:bg-slate-900 flex flex-col justify-center items-center px-4 transition-colors duration-200">
       <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-slate-700">
         <div className="mb-8 text-center flex flex-col items-center">
           {/* Mobile Logo Badge */}
