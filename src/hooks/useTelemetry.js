@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getSocket } from './socket'
 import { generateInitialData } from '../utils/dashboardMocks'
 
-export function useTelemetry(wsUrl = 'http://localhost:3000') {
+export function useTelemetry(wsUrl = 'https://backend-siat.onrender.com') {
   const [liveBpm, setLiveBpm] = useState(74)
   const [liveStress, setLiveStress] = useState(25)
   const [liveMov, setLiveMov] = useState(1.2)

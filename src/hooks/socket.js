@@ -11,7 +11,7 @@ export function getSocket() {
   const token = getToken()
   if (!socket || !socket.connected) {
     if (socket) socket.removeAllListeners()
-    socket = io('http://localhost:3000', {
+    socket = io('https://backend-siat.onrender.com', {
       auth: { token }
     })
   }
