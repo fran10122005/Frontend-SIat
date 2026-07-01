@@ -284,7 +284,6 @@ export default function SpecialistDashboard() {
             )}
 
             {/* Vistas Dinámicas */}
-            <div className="mt-2">
             {loading ? (
               <DashboardSkeleton />
             ) : (
