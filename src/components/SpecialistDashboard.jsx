@@ -17,6 +17,11 @@ import SoapNoteModal from './specialist/SoapNoteModal'
 import IncidentModal from './specialist/IncidentModal'
 import IndicacionModal from './specialist/IndicacionModal'
 import { DashboardSkeleton } from './dashboard/Skeleton'
+import AlertCenter from './AlertCenter'
+import TelemetryChart from './dashboard/TelemetryChart'
+
+// Hooks
+import { useTelemetry } from '../hooks/useTelemetry'
 
 export default function SpecialistDashboard() {
   const { navigate, userName, listaNinos, selectedChildId, setSelectedChildId, setNomNino, showToast, crearIndicacion, clinicalAlerts = [], globalPeiGoals = [], incrementPeiTrial, isDark } = useGlobalContext()
@@ -51,6 +56,9 @@ export default function SpecialistDashboard() {
     porcentajeCumplimiento: 0
   }), [listaNinos.length])
 
+  // Telemetry for testing
+  const { telemetryHistory, simulateTelemetry, isWebSocketActive } = useTelemetry()
+
   const [agendaHoy, setAgendaHoy] = useState([])
 
   const fetchAgenda = useCallback(async () => {
@@ -62,18 +70,18 @@ export default function SpecialistDashboard() {
       } else {
         // Fallback dummy records
         setAgendaHoy([
-          { id_cita: 'C01', hora: '09:00', tipo: 'Terapia Ocupacional', estado: 'Completada', nin_nomb: nomNino || 'El Paciente', nin_apel: '' },
-          { id_cita: 'C02', hora: '11:30', tipo: 'Evaluación Psicológica', estado: 'Programada', nin_nomb: nomNino || 'El Paciente', nin_apel: '' },
-          { id_cita: 'C03', hora: '14:00', tipo: 'Terapia de Lenguaje', estado: 'Programada', nin_nomb: nomNino || 'El Paciente', nin_apel: '' },
-          { id_cita: 'C04', hora: '16:00', tipo: 'Sesión Sensorial', estado: 'Programada', nin_nomb: nomNino || 'El Paciente', nin_apel: '' },
+          { id_cita: 'C01', hora: '09:00', tipo: 'Terapia Ocupacional', estado: 'Completada', nin_nomb: 'El Paciente', nin_apel: '' },
+          { id_cita: 'C02', hora: '11:30', tipo: 'Evaluación Psicológica', estado: 'Programada', nin_nomb: 'El Paciente', nin_apel: '' },
+          { id_cita: 'C03', hora: '14:00', tipo: 'Terapia de Lenguaje', estado: 'Programada', nin_nomb: 'El Paciente', nin_apel: '' },
+          { id_cita: 'C04', hora: '16:00', tipo: 'Sesión Sensorial', estado: 'Programada', nin_nomb: 'El Paciente', nin_apel: '' },
         ])
       }
     } catch (err) {
       console.error('Error fetching agenda:', err)
       // Fallback dummy records on error
       setAgendaHoy([
-        { id_cita: 'C01', hora: '09:00', tipo: 'Terapia Ocupacional', estado: 'Completada', nin_nomb: nomNino || 'El Paciente', nin_apel: '' },
-        { id_cita: 'C02', hora: '11:30', tipo: 'Evaluación Psicológica', estado: 'Programada', nin_nomb: nomNino || 'El Paciente', nin_apel: '' },
+        { id_cita: 'C01', hora: '09:00', tipo: 'Terapia Ocupacional', estado: 'Completada', nin_nomb: 'El Paciente', nin_apel: '' },
+        { id_cita: 'C02', hora: '11:30', tipo: 'Evaluación Psicológica', estado: 'Programada', nin_nomb: 'El Paciente', nin_apel: '' },
       ])
     }
   }, [])
@@ -244,6 +252,20 @@ export default function SpecialistDashboard() {
                     Anotar Indicación
                   </button>
                   <button 
+                    onClick={simulateTelemetry}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded shadow flex items-center gap-2 transition-colors"
+                  >
+                    <Activity className="w-4 h-4" />
+                    Simular Telemetría
+                  </button>
+                  <button 
+                    onClick={() => navigate('historial')}
+                    className="px-4 py-2 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white font-bold text-xs rounded shadow flex items-center gap-2 transition-colors"
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    Ver Historial Completo
+                  </button>
+                  <button 
                     onClick={() => setShowSoapModal(true)}
                     className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold text-[11px] rounded flex items-center gap-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                   >
@@ -254,6 +276,15 @@ export default function SpecialistDashboard() {
               )}
             </div>
 
+            {/* Test Chart Area for Tutor */}
+            {activeChild && (
+              <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <TelemetryChart telemetryHistory={telemetryHistory} isDark={isDark} />
+              </div>
+            )}
+
+            {/* Vistas Dinámicas */}
+            <div className="mt-2">
             {loading ? (
               <DashboardSkeleton />
             ) : (

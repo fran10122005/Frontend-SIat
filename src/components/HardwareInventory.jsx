@@ -10,6 +10,7 @@ import {
   AlertTriangle, Cpu, Brain, CheckCircle, Moon, Sun
 } from 'lucide-react'
 import { getSocket } from '../hooks/socket'
+import { useTelemetry } from '../hooks/useTelemetry'
 import Topbar from './Topbar'
 import api from '../api/axios'
 
@@ -18,6 +19,8 @@ export default function HardwareInventory() {
     hardware, addHardware, navigate, userRole, saveCalibrationBaseline, 
     valMini, valMaxi, nomNino, showToast, isOnline, calculateStressIndex 
   } = useGlobalContext()
+  
+  const { simulateTelemetry } = useTelemetry()
 
   const [isDark, setIsDark] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState(null)
@@ -287,6 +290,12 @@ export default function HardwareInventory() {
                       <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
                       {isOnline ? 'Pulsera En Línea' : 'Pulsera Desconectada'}
                     </span>
+                    <button 
+                      onClick={simulateTelemetry} 
+                      className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-full shadow-sm transition-all flex items-center gap-2 text-xs"
+                    >
+                      <Activity className="w-3.5 h-3.5" /> Simular Telemetría
+                    </button>
                   </div>
                 </div>
 
