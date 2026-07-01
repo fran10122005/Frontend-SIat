@@ -18,7 +18,6 @@ import IncidentModal from './specialist/IncidentModal'
 import IndicacionModal from './specialist/IndicacionModal'
 import { DashboardSkeleton } from './dashboard/Skeleton'
 import AlertCenter from './AlertCenter'
-import TelemetryChart from './dashboard/TelemetryChart'
 
 // Hooks
 import { useTelemetry } from '../hooks/useTelemetry'
@@ -252,13 +251,6 @@ export default function SpecialistDashboard() {
                     Anotar Indicación
                   </button>
                   <button 
-                    onClick={simulateTelemetry}
-                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded shadow flex items-center gap-2 transition-colors"
-                  >
-                    <Activity className="w-4 h-4" />
-                    Simular Telemetría
-                  </button>
-                  <button 
                     onClick={() => navigate('historial')}
                     className="px-4 py-2 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white font-bold text-xs rounded shadow flex items-center gap-2 transition-colors"
                   >
@@ -275,13 +267,6 @@ export default function SpecialistDashboard() {
                 </div>
               )}
             </div>
-
-            {/* Test Chart Area for Tutor */}
-            {activeChild && (
-              <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <TelemetryChart telemetryHistory={telemetryHistory} isDark={isDark} />
-              </div>
-            )}
 
             {/* Vistas Dinámicas */}
             {loading ? (

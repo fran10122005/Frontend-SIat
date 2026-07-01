@@ -37,30 +37,10 @@ export default function HardwareInventory() {
   const [calibMin, setCalibMin] = useState(67)
   const [calibMax, setCalibMax] = useState(108)
 
-  // Live Biotelemetry Simulation States (Representative)
-  const [telemetryHistory, setTelemetryHistory] = useState([])
-  const [isSpikeSimulated, setIsSpikeSimulated] = useState(false)
-  const [isWebSocketActive, setIsWebSocketActive] = useState(false)
+  // Use global telemetry hook instead of duplicating state
+  const { telemetryHistory, simulateTelemetry, isWebSocketActive } = useTelemetry()
+  
   const [backendSimulationCrisis, setBackendSimulationCrisis] = useState(false)
-
-  // Generate initial sliding window data for Recharts (Representative)
-  const generateInitialData = () => {
-    const data = []
-    const now = new Date()
-    for (let i = 9; i >= 0; i--) {
-      const timeStr = new Date(now.getTime() - i * 5000).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      const bpmVal = Math.floor(Math.random() * (80 - 70 + 1) + 70)
-      const movVal = Number((Math.random() * (2.0 - 0.8) + 0.8).toFixed(1))
-      const stressVal = calculateStressIndex(bpmVal, movVal)
-      data.push({
-        time: timeStr.substring(3), // mm:ss format
-        bpm: bpmVal,
-        mov: movVal,
-        stress: stressVal
-      })
-    }
-    return data
-  }
 
   // Effect to load theme
   useEffect(() => {
@@ -69,8 +49,6 @@ export default function HardwareInventory() {
     }
     // Set initial representative telemetry data
     if (userRole !== 'ESPECIALISTA') {
-      setTelemetryHistory(generateInitialData())
-      
       // Obtener el estado inicial de simulación del backend
       api.get('/monitoreo/simular-estado')
         .then(res => {
@@ -97,13 +75,9 @@ export default function HardwareInventory() {
         showToast('❌ Error al cambiar el estado del simulador en el backend.')
       }
     } else {
-      // Sin WebSocket: alternar localmente
-      setIsSpikeSimulated(shouldCrisis)
-      showToast(
-        shouldCrisis
-          ? '🚨 Simulación local de crisis activada.'
-          : '🟢 Simulación local de calma activada.'
-      )
+      // Fallback a simulación visual directa usando simulateTelemetry
+      simulateTelemetry()
+      showToast('🟢 Se inyectó un pulso de telemetría local.')
     }
   }
 
@@ -128,7 +102,7 @@ export default function HardwareInventory() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isWebSocketActive, backendSimulationCrisis, isSpikeSimulated, userRole]);
+  }, [isWebSocketActive, backendSimulationCrisis, userRole]);
 
   // Specialist Calibration Timer Effect
   useEffect(() => {
@@ -150,54 +124,7 @@ export default function HardwareInventory() {
     return () => clearTimeout(timer)
   }, [calibStep, calibCountdown])
 
-  // WebSocket Telemetry Connection Effect (shared socket)
-  useEffect(() => {
-    const socket = getSocket();
 
-    const onConnect = () => {
-      console.log('🔌 Conectado al stream de telemetría por WebSockets');
-      setIsWebSocketActive(true);
-    };
-
-    const onDisconnect = () => {
-      console.log('🔌 Desconectado del stream de telemetría');
-      setIsWebSocketActive(false);
-    };
-
-    const onTelemetry = (data) => {
-      setIsWebSocketActive(true);
-      setTelemetryHistory(prev => {
-        const history = prev.length > 0 ? prev : generateInitialData();
-        const newRecord = {
-          time: data.time,
-          bpm: data.bpm,
-          mov: data.mov,
-          stress: data.stress
-        };
-        return [...history.slice(1), newRecord];
-      });
-    };
-
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
-    socket.on('new_telemetry', onTelemetry);
-
-    if (socket.connected) {
-      setIsWebSocketActive(true);
-    }
-
-    return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
-      socket.off('new_telemetry', onTelemetry);
-    };
-  }, [userRole]);
-
-  // Representative Telemetry Simulator Effect (Fallback if WebSocket is disconnected)
-  useEffect(() => {
-    // Eliminado a petición: no se simularán datos locales si el WebSocket está desconectado.
-    // Solo se mostrarán datos reales provenientes del servidor o el historial inyectado.
-  }, [isSpikeSimulated, nomNino, userRole, isWebSocketActive])
 
   const toggleTheme = () => {
     if (isDark) {

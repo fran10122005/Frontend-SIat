@@ -143,12 +143,6 @@ export default function MainDashboard() {
                 >
                   <NotebookPen className="w-4 h-4" /> Registrar Diario de Hoy
                 </button>
-                <button 
-                  onClick={simulateTelemetry} 
-                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
-                >
-                  <Activity className="w-4 h-4" /> Simular Telemetría
-                </button>
               </div>
             </div>
 
