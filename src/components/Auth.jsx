@@ -13,8 +13,8 @@ export default function Auth({ currentView, onNavigate }) {
   return (
     <div className="relative min-h-[100dvh] w-full bg-[#F4F7F9] dark:bg-slate-900 overflow-hidden font-sans">
       {/* Mobile Layout: simple centered */}
-      <div className="flex md:hidden min-h-[100dvh] w-full items-center justify-center p-4 overflow-y-auto bg-gradient-to-br from-brand-500/60 to-blue-600/40 dark:from-slate-900 dark:to-slate-950">
-        <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-brand-500/10 dark:shadow-black/30 my-auto">
+      <div className="flex flex-col md:hidden h-[100dvh] w-full p-4 overflow-y-auto bg-gradient-to-br from-brand-500/60 to-blue-600/40 dark:from-slate-900 dark:to-slate-950">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-brand-500/10 dark:shadow-black/30 m-auto shrink-0">
           <div className="h-1.5 bg-gradient-to-r from-brand-500 via-blue-500 to-indigo-500"></div>
           {isLogin ? <Login onNavigate={onNavigate} /> : <Register onNavigate={onNavigate} />}
         </div>

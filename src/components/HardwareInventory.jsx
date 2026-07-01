@@ -216,7 +216,7 @@ export default function HardwareInventory() {
                       {isOnline ? 'Pulsera En Línea' : 'Pulsera Desconectada'}
                     </span>
                     <button 
-                      onClick={simulateTelemetry} 
+                      onClick={() => handleSimulationToggle(true)} 
                       className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-full shadow-sm transition-all flex items-center gap-2 text-xs"
                     >
                       <Activity className="w-3.5 h-3.5" /> Simular Telemetría
@@ -311,8 +311,8 @@ export default function HardwareInventory() {
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Ventana deslizante de telemetría (muestras cada 10s)</p>
                       </div>
 
-                      <div className="min-h-[200px] md:h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <div className="h-[250px] md:h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={telemetryHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#F1F5F9'} />
                             <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: isDark ? '#94A3B8' : '#64748B' }} dy={10} />
