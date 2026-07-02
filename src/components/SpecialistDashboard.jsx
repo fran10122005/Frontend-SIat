@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import Sidebar from './Sidebar'
 import { useGlobalContext } from '../context/GlobalState'
 import { 
-  FileText, AlertCircle, Users, FilePlus
+  FileText, AlertCircle, Users, FilePlus, TrendingUp
 } from 'lucide-react'
 import Topbar from './Topbar'
 import api from '../api/axios'
@@ -23,7 +23,7 @@ import AlertCenter from './AlertCenter'
 import { useTelemetry } from '../hooks/useTelemetry'
 
 export default function SpecialistDashboard() {
-  const { navigate, userName, listaNinos, selectedChildId, setSelectedChildId, setNomNino, showToast, crearIndicacion, clinicalAlerts = [], globalPeiGoals = [], incrementPeiTrial, isDark } = useGlobalContext()
+  const { navigate, userName, listaNinos, selectedChildId, setSelectedChildId, setNomNino, showToast, crearIndicacion, clinicalAlerts = [], globalPeiGoals = [], incrementPeiTrial, isDark, userRole } = useGlobalContext()
   const [loading, setLoading] = useState(true)
   
   // Modals state
@@ -60,28 +60,37 @@ export default function SpecialistDashboard() {
 
   const [agendaHoy, setAgendaHoy] = useState([])
 
+  function normalizarCitas(items) {
+    return (items || []).map(c => ({
+      id: c.id_cita || c.id,
+      hora: c.hora || c.hor_cita || '',
+      tipo: c.tipo || c.tip_cita || '',
+      estado: c.estado || c.est_cita || 'Programada',
+      paciente: c.nin_nomb || c.paciente || `${c.nin_nomb || ''} ${c.nin_apel || ''}`.trim() || 'Paciente',
+      childId: c.nin_codi || c.childId || c.id_ninos
+    }))
+  }
+
   const fetchAgenda = useCallback(async () => {
     try {
       const res = await api.get('/citas/agenda-hoy')
       const data = res.data.data
       if (data && data.length > 0) {
-        setAgendaHoy(data)
+        setAgendaHoy(normalizarCitas(data))
       } else {
-        // Fallback dummy records
-        setAgendaHoy([
-          { id_cita: 'C01', hora: '09:00', tipo: 'Terapia Ocupacional', estado: 'Completada', nin_nomb: 'El Paciente', nin_apel: '' },
-          { id_cita: 'C02', hora: '11:30', tipo: 'Evaluación Psicológica', estado: 'Programada', nin_nomb: 'El Paciente', nin_apel: '' },
-          { id_cita: 'C03', hora: '14:00', tipo: 'Terapia de Lenguaje', estado: 'Programada', nin_nomb: 'El Paciente', nin_apel: '' },
-          { id_cita: 'C04', hora: '16:00', tipo: 'Sesión Sensorial', estado: 'Programada', nin_nomb: 'El Paciente', nin_apel: '' },
-        ])
+        setAgendaHoy(normalizarCitas([
+          { id_cita: 'C01', hora: '09:00', tipo: 'Terapia Ocupacional', estado: 'Completada', nin_nomb: 'Paciente Uno' },
+          { id_cita: 'C02', hora: '11:30', tipo: 'Evaluación Psicológica', estado: 'Programada', nin_nomb: 'Paciente Dos' },
+          { id_cita: 'C03', hora: '14:00', tipo: 'Terapia de Lenguaje', estado: 'Programada', nin_nomb: 'Paciente Tres' },
+          { id_cita: 'C04', hora: '16:00', tipo: 'Sesión Sensorial', estado: 'Programada', nin_nomb: 'Paciente Cuatro' },
+        ]))
       }
     } catch (err) {
       console.error('Error fetching agenda:', err)
-      // Fallback dummy records on error
-      setAgendaHoy([
-        { id_cita: 'C01', hora: '09:00', tipo: 'Terapia Ocupacional', estado: 'Completada', nin_nomb: 'El Paciente', nin_apel: '' },
-        { id_cita: 'C02', hora: '11:30', tipo: 'Evaluación Psicológica', estado: 'Programada', nin_nomb: 'El Paciente', nin_apel: '' },
-      ])
+      setAgendaHoy(normalizarCitas([
+        { id_cita: 'C01', hora: '09:00', tipo: 'Terapia Ocupacional', estado: 'Completada', nin_nomb: 'Paciente Uno' },
+        { id_cita: 'C02', hora: '11:30', tipo: 'Evaluación Psicológica', estado: 'Programada', nin_nomb: 'Paciente Dos' },
+      ]))
     }
   }, [])
 
@@ -225,7 +234,7 @@ export default function SpecialistDashboard() {
               <div>
                 <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
                   <Users className="w-6 h-6 text-brand-700 dark:text-blue-400" />
-                  {activeChild ? `Panel Clínico: ${activeChild.nom_nino} ${activeChild.ape_nino}` : 'Panel Global de Especialista'}
+                  {activeChild ? `Panel Clínico: ${activeChild.nom_nino} ${activeChild.ape_nino}` : `Bienvenido, ${userName || 'Especialista'}`}
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                   {activeChild 

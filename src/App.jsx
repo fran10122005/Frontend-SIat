@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useGlobalContext } from './context/GlobalState'
 import Auth from './components/Auth'
+import SplashScreen from './components/SplashScreen'
+import api from './api/axios'
 import StudentRecord from './components/StudentRecord'
 import MainDashboard from './components/MainDashboard'
 import Routines from './components/Routines'
@@ -32,7 +34,39 @@ export default function App() {
     setUserRole, setSelectedChildId, setNomNino
   } = useGlobalContext()
 
+  const [splashDone, setSplashDone] = useState(false)
   const [showSessionExpired, setShowSessionExpired] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
+
+    async function warmUp() {
+      try {
+        await api.get('/health', { signal: controller.signal, timeout: 45000 })
+      } catch {
+        // Ignorar errores, el servidor puede tardar en responder
+      } finally {
+        if (!cancelled) {
+          setTimeout(() => setSplashDone(true), 3000)
+        }
+      }
+    }
+
+    warmUp()
+
+    const fallbackTimer = setTimeout(() => {
+      if (!cancelled) {
+        setSplashDone(true)
+      }
+    }, 15000)
+
+    return () => {
+      cancelled = true
+      controller.abort()
+      clearTimeout(fallbackTimer)
+    }
+  }, [])
 
   const handleLogout = () => {
     setShowSessionExpired(false)
@@ -121,6 +155,8 @@ export default function App() {
 
     return <Auth currentView="login" onNavigate={navigate} />
   }
+
+  if (!splashDone) return <SplashScreen />
 
   return (
     <div className="app-shell relative">

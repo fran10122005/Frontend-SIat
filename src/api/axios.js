@@ -6,7 +6,7 @@ const API_BASE = rawBase.endsWith('/api') ? rawBase : `${rawBase.replace(/\/+$/,
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 45000,
 });
 
 function clearAuth() {

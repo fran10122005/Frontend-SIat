@@ -45,7 +45,7 @@ function Register({ onNavigate }) {
                 </h3>
               </div>
               <p className="text-gray-500 dark:text-gray-400 text-xxs sm:text-xs leading-relaxed">
-                Tu centro terapéutico, fundación o especialista tratante debe estar incorporado en el sistema multi-tenant de SIAT.
+                El centro terapéutico o fundación donde asistes debe estar registrado en nuestro sistema. Tu especialista te indicará si ya lo están.
               </p>
             </div>
           </div>
@@ -64,7 +64,7 @@ function Register({ onNavigate }) {
                 </h3>
               </div>
               <p className="text-gray-500 dark:text-gray-400 text-xxs sm:text-xs leading-relaxed">
-                El especialista o administrador de la fundación ingresará tu información y la del menor para vincular de forma segura el hardware del wearable sensor.
+                El especialista o la fundación registrará tus datos y los del niño en el sistema para que puedas acceder a toda la información de sus terapias.
               </p>
             </div>
           </div>
@@ -83,7 +83,7 @@ function Register({ onNavigate }) {
                 </h3>
               </div>
               <p className="text-gray-500 dark:text-gray-400 text-xxs sm:text-xs leading-relaxed">
-                Recibirás un enlace de activación en tu correo. Al abrirlo, podrás asignar tu contraseña y comenzar a ver telemetría cardíaca y de estrés de inmediato.
+                Recibirás un enlace en tu correo electrónico. Al abrirlo, podrás crear tu contraseña y empezar a usar el sistema de inmediato.
               </p>
             </div>
           </div>

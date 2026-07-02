@@ -137,13 +137,23 @@ export default function UserProfile() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.put('/auth/me', {
-        nomb: profile.nomb,
-        apel: profile.apel,
-        telf: profile.telf,
-        licencia: profile.licencia,
-        rela: profile.rela
-      });
+      const payload = {};
+      if (userRole === 'ADMIN_INSTITUCION') {
+        payload.adm_nomb = profile.nomb;
+        payload.adm_apel = profile.apel;
+        payload.adm_telf = profile.telf;
+      } else if (userRole === 'ESPECIALISTA') {
+        payload.esp_nomb = profile.nomb;
+        payload.esp_apel = profile.apel;
+        payload.esp_telf = profile.telf;
+        payload.esp_licencia = profile.licencia;
+      } else {
+        payload.rep_nomb = profile.nomb;
+        payload.rep_apel = profile.apel;
+        payload.rep_telf = profile.telf;
+        payload.rep_rela = profile.rela;
+      }
+      await api.put('/auth/me', payload);
       let updatedName = `${profile.nomb} ${profile.apel}`;
       if (userRole === 'ESPECIALISTA') {
         updatedName = `${profile.gner === 'M' ? 'Dr.' : 'Dra.'} ${profile.nomb} ${profile.apel}`;
