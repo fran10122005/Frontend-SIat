@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Heart, Sparkles, Shield, Star, Sun, Brain, Smile } from 'lucide-react'
+import logo from '../../Logo.png'
 
 const mensajes = [
   'Preparando un espacio seguro para tu hijo...',
@@ -29,7 +30,7 @@ export default function SplashScreen() {
   return (
     <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-[#F4F7F9] to-blue-50 dark:from-slate-900 dark:to-slate-950 flex flex-col items-center justify-center transition-opacity duration-700">
       <div className="w-28 h-28 mb-8 rounded-full bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center animate-pulse">
-        <img src="/Logo.png" alt="SIAT-TEA" className="w-20 h-20 object-contain" />
+        <img src={logo} alt="SIAT-TEA" className="w-20 h-20 object-contain" />
       </div>
 
       <div className="flex gap-1.5 mb-10">
