@@ -119,15 +119,40 @@ export default function SpecialistDashboard() {
 
   const globalAlertsFeed = []
 
+  const mockPeiGoals = [
+    { id: 'MOCK1', goal: 'Mantener contacto visual 5 segundos', category: 'Social', progress: 45, trials: 9, totalTrials: 20 },
+    { id: 'MOCK2', goal: 'Señalar objetos con el dedo índice', category: 'Motor', progress: 70, trials: 14, totalTrials: 20 },
+    { id: 'MOCK3', goal: 'Seguir instrucciones de dos pasos', category: 'Cognitivo', progress: 30, trials: 6, totalTrials: 20 },
+    { id: 'MOCK4', goal: 'Realizar transiciones sin berrinche', category: 'Conductual', progress: 55, trials: 11, totalTrials: 20 },
+  ]
+
+  const mockAlerts = [
+    { fec_hora: new Date(Date.now() - 86400000), est_dete: 'Berrinche', bpm_max: 130, mov_max: 8, stress_index: 85 },
+    { fec_hora: new Date(Date.now() - 172800000), est_dete: 'Estereotipia', bpm_max: 100, mov_max: 6, stress_index: 45 },
+    { fec_hora: new Date(Date.now() - 259200000), est_dete: 'Agresión', bpm_max: 120, mov_max: 9, stress_index: 78 },
+    { fec_hora: new Date(Date.now() - 345600000), est_dete: 'Estereotipia', bpm_max: 95, mov_max: 5, stress_index: 40 },
+    { fec_hora: new Date(Date.now() - 432000000), est_dete: 'Berrinche', bpm_max: 125, mov_max: 7, stress_index: 72 },
+    { fec_hora: new Date(Date.now() - 518400000), est_dete: 'Ansiedad', bpm_max: 110, mov_max: 3, stress_index: 60 },
+    { fec_hora: new Date(Date.now() - 604800000), est_dete: 'Estereotipia', bpm_max: 92, mov_max: 4, stress_index: 35 },
+  ]
+
   // ==== DATOS DEL PACIENTE (MEMOIZADOS) ====
   
-  const peiGoals = useMemo(() => globalPeiGoals.map(g => ({
-    id: g.met_codi,
-    text: g.met_desc,
-    progress: g.met_prog,
-    trials: g.met_trial,
-    totalTrials: g.met_ttria
-  })), [globalPeiGoals]);
+  const peiGoals = useMemo(() => {
+    if (globalPeiGoals.length > 0) {
+      return globalPeiGoals.map(g => ({
+        id: g.met_codi,
+        goal: g.met_desc,
+        category: g.tm_categ?.cat_nomb || 'General',
+        progress: g.met_prog,
+        trials: g.met_trial,
+        totalTrials: g.met_ttria
+      }))
+    }
+    return activeChild ? mockPeiGoals : []
+  }, [globalPeiGoals, activeChild]);
+
+  const alertsSource = clinicalAlerts.length > 0 ? clinicalAlerts : mockAlerts
 
   // Historial Conductual (BarChart) - Optimizado para evitar recálculos en re-renders
   const behaviorHistory = useMemo(() => {
@@ -140,7 +165,7 @@ export default function SpecialistDashboard() {
       histMap[d.toISOString().substring(0, 10)] = { dia: diasSemana[d.getDay()], Berrinche: 0, Estereotipia: 0, Agresión: 0 };
     }
 
-    clinicalAlerts.forEach(alert => {
+    alertsSource.forEach(alert => {
       if (!alert.fec_hora) return;
       const dateStr = new Date(alert.fec_hora).toISOString().substring(0, 10);
       if (histMap[dateStr] && histMap[dateStr][alert.est_dete] !== undefined) {
@@ -149,13 +174,13 @@ export default function SpecialistDashboard() {
     });
 
     return Object.values(histMap);
-  }, [clinicalAlerts, activeChild]);
+  }, [alertsSource, activeChild]);
 
   // Análisis Sensorial (PieChart) - Optimizado
   const sensoryData = useMemo(() => {
     if (!activeChild) return [];
     const sensoryCount = {};
-    clinicalAlerts.forEach(alert => {
+    alertsSource.forEach(alert => {
       if (alert.est_dete) {
         sensoryCount[alert.est_dete] = (sensoryCount[alert.est_dete] || 0) + 1;
       }
