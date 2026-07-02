@@ -173,7 +173,9 @@ export default function SpecialistDashboard() {
       }
     });
 
-    return Object.values(histMap);
+    const result = Object.values(histMap);
+    const totalCount = result.reduce((sum, d) => sum + d.Berrinche + d.Estereotipia + d.Agresión, 0);
+    return totalCount === 0 ? [] : result;
   }, [alertsSource, activeChild]);
 
   // Análisis Sensorial (PieChart) - Optimizado
@@ -194,7 +196,7 @@ export default function SpecialistDashboard() {
           color: colors[i % colors.length]
         }))
       : [{ name: 'Sin eventos', value: 1, color: '#e2e8f0' }];
-  }, [clinicalAlerts, activeChild]);
+  }, [alertsSource, activeChild]);
 
   // ==== HANDLERS ====
   const handleSoapSubmit = async (e) => {
