@@ -643,7 +643,7 @@ function AdminDashboard({ onNavigate }) {
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm min-h-[300px] lg:h-[400px]">
+                <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm h-[300px] lg:h-[400px]">
                   <div className="mb-6 flex justify-between items-start">
                     <div>
                       <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Latencia de Red (Últimas 24h)</h2>
