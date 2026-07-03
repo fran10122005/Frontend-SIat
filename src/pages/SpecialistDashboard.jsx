@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Sidebar from '../components/layout/Sidebar'
 import { useGlobalContext } from '../context/GlobalState'
 import { 
@@ -22,6 +22,13 @@ import LoadingState from '../components/dashboard/LoadingState'
 // Hooks
 import { useTelemetry } from '../hooks/useTelemetry'
 
+const mockPeiGoals = [
+  { id: 'MOCK1', goal: 'Mantener contacto visual 5 segundos', category: 'Social', progress: 45, trials: 9, totalTrials: 20 },
+  { id: 'MOCK2', goal: 'Señalar objetos con el dedo índice', category: 'Motor', progress: 70, trials: 14, totalTrials: 20 },
+  { id: 'MOCK3', goal: 'Seguir instrucciones de dos pasos', category: 'Cognitivo', progress: 30, trials: 6, totalTrials: 20 },
+  { id: 'MOCK4', goal: 'Realizar transiciones sin berrinche', category: 'Conductual', progress: 55, trials: 11, totalTrials: 20 },
+]
+
 export default function SpecialistDashboard() {
   const { navigate, userName, listaNinos, selectedChildId, setSelectedChildId, setNomNino, showToast, crearIndicacion, clinicalAlerts = [], globalPeiGoals = [], incrementPeiTrial, isDark, userRole } = useGlobalContext()
   const [loading, setLoading] = useState(true)
@@ -31,6 +38,9 @@ export default function SpecialistDashboard() {
   const [showIndicacionModal, setShowIndicacionModal] = useState(false)
   const [indicacionText, setIndicacionText] = useState('')
   
+  // Local state for mock PEI goals (editable)
+  const [localMockPeiGoals, setLocalMockPeiGoals] = useState(mockPeiGoals)
+
   // Form States
   const [incidentData, setIncidentData] = useState({ 
     tipo: 'Berrinche', 
@@ -59,6 +69,7 @@ export default function SpecialistDashboard() {
   // View state
   const [showCalendario, setShowCalendario] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const loadingTimerRef = useRef(null)
 
   const [agendaHoy, setAgendaHoy] = useState([])
 
@@ -98,8 +109,13 @@ export default function SpecialistDashboard() {
 
   useEffect(() => {
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 700)
-    return () => clearTimeout(timer)
+    loadingTimerRef.current = setTimeout(() => setLoading(false), 700)
+    return () => {
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current)
+        loadingTimerRef.current = null
+      }
+    }
   }, [selectedChildId])
 
   useEffect(() => {
@@ -120,13 +136,6 @@ export default function SpecialistDashboard() {
   }
 
   const globalAlertsFeed = []
-
-  const mockPeiGoals = [
-    { id: 'MOCK1', goal: 'Mantener contacto visual 5 segundos', category: 'Social', progress: 45, trials: 9, totalTrials: 20 },
-    { id: 'MOCK2', goal: 'Señalar objetos con el dedo índice', category: 'Motor', progress: 70, trials: 14, totalTrials: 20 },
-    { id: 'MOCK3', goal: 'Seguir instrucciones de dos pasos', category: 'Cognitivo', progress: 30, trials: 6, totalTrials: 20 },
-    { id: 'MOCK4', goal: 'Realizar transiciones sin berrinche', category: 'Conductual', progress: 55, trials: 11, totalTrials: 20 },
-  ]
 
   const mockAlerts = [
     { fec_hora: new Date(Date.now() - 86400000), est_dete: 'Berrinche', bpm_max: 130, mov_max: 8, stress_index: 85 },
@@ -151,8 +160,8 @@ export default function SpecialistDashboard() {
         totalTrials: g.met_ttria
       }))
     }
-    return activeChild ? mockPeiGoals : []
-  }, [globalPeiGoals, activeChild]);
+    return activeChild ? localMockPeiGoals : []
+  }, [globalPeiGoals, activeChild, localMockPeiGoals]);
 
   const alertsSource = clinicalAlerts.length > 0 ? clinicalAlerts : mockAlerts
 
@@ -253,6 +262,14 @@ export default function SpecialistDashboard() {
   }
 
   const handleIncrementPeiTrial = async (id) => {
+    if (id.toString().startsWith('MOCK')) {
+      setLocalMockPeiGoals(prev => prev.map(g =>
+        g.id === id
+          ? { ...g, trials: Math.min(g.totalTrials, g.trials + 1), progress: Math.min(100, Math.round((g.trials + 1) / g.totalTrials * 100)) }
+          : g
+      ))
+      return
+    }
     try {
       await incrementPeiTrial(id, selectedChildId)
     } catch (err) {
@@ -284,8 +301,8 @@ export default function SpecialistDashboard() {
                 </p>
               </div>
               
-              {activeChild && (
-                <div className="flex gap-2">
+              {activeChild ? (
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={handleExportDashboard}
                     disabled={exporting}
@@ -315,12 +332,28 @@ export default function SpecialistDashboard() {
                     Ver Historial Completo
                   </button>
                 </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setShowCalendario(!showCalendario)}
+                    className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
+                  >
+                    <Calendar className="w-4 h-4" /> {showCalendario ? 'Ocultar Calendario' : 'Ver Calendario'}
+                  </button>
+                  <button
+                    onClick={handleExportDashboard}
+                    disabled={exporting}
+                    className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg shadow-sm border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center gap-2 text-sm disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4" /> {exporting ? 'Generando...' : 'Generar Reporte'}
+                  </button>
+                </div>
               )}
             </div>
 
             {/* Vistas Dinámicas */}
             {loading ? (
-              <LoadingState variant="dashboard" />
+              <LoadingState variant="dashboard" role={userRole} />
             ) : (
               <>
                 {/* ==== VISTA GLOBAL ==== */}
@@ -334,21 +367,6 @@ export default function SpecialistDashboard() {
                       setNomNino={setNomNino}
                       handleCompleteCita={handleCompleteCita}
                     />
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => setShowCalendario(!showCalendario)}
-                        className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
-                      >
-                        <Calendar className="w-4 h-4" /> {showCalendario ? 'Ocultar Calendario' : 'Ver Calendario'}
-                      </button>
-                      <button
-                        onClick={handleExportDashboard}
-                        disabled={exporting}
-                        className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg shadow-sm border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center gap-2 text-sm disabled:opacity-50"
-                      >
-                        <Download className="w-4 h-4" /> {exporting ? 'Generando...' : 'Generar Reporte'}
-                      </button>
-                    </div>
                     {showCalendario && <CalendarioCitas citas={agendaHoy.map(c => ({ ...c, fecha: new Date().toISOString().split('T')[0] }))} />}
                   </>
                 )}

@@ -33,11 +33,7 @@ export default function LoadingState({
   count,
   className = '',
 }) {
-  const { userRole } = typeof window !== 'undefined'
-    ? { userRole: localStorage.getItem('userRole') || 'REPRESENTANTE' }
-    : { userRole: 'REPRESENTANTE' }
-
-  const currentRole = role || userRole
+  const currentRole = role || 'REPRESENTANTE'
   const msgs = roleMessages[currentRole] || roleMessages.REPRESENTANTE
   const resolvedMessage = message || msgs[variant] || msgs.default
 

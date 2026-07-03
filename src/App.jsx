@@ -40,6 +40,8 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
+    let warmUpTimer = null
+    let fallbackTimer = null
 
     async function warmUp() {
       try {
@@ -48,14 +50,14 @@ export default function App() {
         // Ignorar errores, el servidor puede tardar en responder
       } finally {
         if (!cancelled) {
-          setTimeout(() => setSplashDone(true), 3000)
+          warmUpTimer = setTimeout(() => setSplashDone(true), 3000)
         }
       }
     }
 
     warmUp()
 
-    const fallbackTimer = setTimeout(() => {
+    fallbackTimer = setTimeout(() => {
       if (!cancelled) {
         setSplashDone(true)
       }
@@ -64,7 +66,8 @@ export default function App() {
     return () => {
       cancelled = true
       controller.abort()
-      clearTimeout(fallbackTimer)
+      if (warmUpTimer) clearTimeout(warmUpTimer)
+      if (fallbackTimer) clearTimeout(fallbackTimer)
     }
   }, [])
 

@@ -22,8 +22,8 @@ export default function PatientSensoryChart({ sensoryData = [], isDark }) {
         <Zap className="w-5 h-5 text-amber-500" />
         Análisis de Sensibilidad Sensorial (Últimos 7 días)
       </h2>
-      <div className="min-h-[200px] md:h-[250px] w-full flex items-center justify-center relative">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+      <div className="w-full relative h-[200px] md:h-[250px]">
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={chartData}

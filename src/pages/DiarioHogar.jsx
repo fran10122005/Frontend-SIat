@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Sidebar from '../components/layout/Sidebar'
 import { useGlobalContext } from '../context/GlobalState'
 import api from '../api/axios'
@@ -8,6 +8,7 @@ import Topbar from '../components/layout/Topbar'
 import Pagination from '../components/shared/Pagination'
 
 const mockBitacoras = [
+  { bit_codi: 0, bit_fech: new Date().toISOString().split('T')[0], bit_anim: 'Estable', bit_crisi: 0, bit_suen: 8, bit_apet: 'Bueno', bit_dese: '', bit_obse: 'Sin novedades aún.' },
   { bit_codi: 1, bit_fech: new Date(Date.now() - 86400000).toISOString().split('T')[0], bit_anim: 'Estable', bit_crisi: 0, bit_suen: 8, bit_apet: 'Bueno', bit_dese: 'Ruido de aspiradora', bit_obse: 'Buena jornada, completó todas las rutinas.' },
   { bit_codi: 2, bit_fech: new Date(Date.now() - 172800000).toISOString().split('T')[0], bit_anim: 'Irritable', bit_crisi: 2, bit_suen: 6, bit_apet: 'Regular', bit_dese: 'Cambio en la rutina de la tarde', bit_obse: 'Dos crisis breves, se recuperó con respiración.' },
   { bit_codi: 3, bit_fech: new Date(Date.now() - 259200000).toISOString().split('T')[0], bit_anim: 'Muy Calmo', bit_crisi: 0, bit_suen: 9, bit_apet: 'Bueno', bit_dese: '', bit_obse: 'Sin novedades.' },
@@ -67,7 +68,7 @@ export default function DiarioHogar() {
 
   const hasFilters = filterDateFrom || filterDateTo || filterMood !== 'TODOS' || filterCrisisOnly
 
-  const fetchBitacoras = async () => {
+  const fetchBitacoras = useCallback(async () => {
     try {
       setLoadingBitacoras(true)
       const endpoint = userRole === 'ESPECIALISTA' && selectedChildId
@@ -81,7 +82,7 @@ export default function DiarioHogar() {
     } finally {
       setLoadingBitacoras(false)
     }
-  }
+  }, [userRole, selectedChildId])
 
   const handleReportSubmit = async (e) => {
     e.preventDefault()
@@ -118,7 +119,7 @@ export default function DiarioHogar() {
     if (userRole === 'REPRESENTANTE') {
       fetchBitacoras()
     }
-  }, [userRole, fetchBitacoras])
+  }, [userRole, fetchBitacoras, selectedChildId])
 
   // Security Guard
   if (userRole !== 'REPRESENTANTE') {
