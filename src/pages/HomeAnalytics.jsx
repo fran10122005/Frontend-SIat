@@ -113,7 +113,12 @@ export default function HomeAnalytics() {
     { hora: '20:00', bpm: 74 },
   ]
 
-  const effectiveHomeData = homeHistoricalData.length > 0 ? homeHistoricalData : mockHistoricalData
+  // Fusionar datos reales con mock para cubrir siempre los últimos 7 días
+  const mergedHistoricalData = mockHistoricalData.map(mockDay => {
+    const realDay = homeHistoricalData.find(d => d.rawDate === mockDay.rawDate)
+    return realDay || mockDay
+  })
+  const effectiveHomeData = mergedHistoricalData
   const avgCalma = Math.round(effectiveHomeData.reduce((s, d) => s + d.calma, 0) / effectiveHomeData.length)
   const worstDay = [...effectiveHomeData].sort((a, b) => a.calma - b.calma)[0] || { dia: '-', calma: 0, sobrecarga: 0 }
   const bestDay  = [...effectiveHomeData].sort((a, b) => b.calma - a.calma)[0] || { dia: '-', calma: 0 }
@@ -124,7 +129,7 @@ export default function HomeAnalytics() {
     .filter(n => n.bpm)
     .map(n => ({ hora: n.time, bpm: n.bpm }))
 
-  const displayHistoricalData = homeHistoricalData.length > 0 ? homeHistoricalData : mockHistoricalData
+  const displayHistoricalData = effectiveHomeData
   const displayBpmData = bpmChartData.length > 0 ? bpmChartData : mockBpmData
 
   if (!selectedChildId) {
