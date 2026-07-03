@@ -285,8 +285,9 @@ function AdminDashboard({ onNavigate }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const originalCodi = catalogos.instituciones?.[0]?.ins_codi;
-      await api.put(`/admin/instituciones/${originalCodi}`, {
+      const codi = editingInst?.ins_codi || catalogos.instituciones?.[0]?.ins_codi;
+      await api.put(`/admin/instituciones/${codi}`, {
+        ins_codi: editingInst.ins_codi,
         ins_nomb: editingInst.ins_nomb,
         ins_dire: editingInst.ins_dire,
         ins_telf: editingInst.ins_telf,
