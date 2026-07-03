@@ -96,16 +96,16 @@ export default function HomeAnalytics() {
     setIsDark(!isDark)
   }
 
-  // Mock data para visualizar gráficos cuando no hay datos reales
-  const mockHistoricalData = [
-    { dia: 'Lun', calma: 65, sobrecarga: 35 },
-    { dia: 'Mar', calma: 72, sobrecarga: 28 },
-    { dia: 'Mié', calma: 58, sobrecarga: 42 },
-    { dia: 'Jue', calma: 80, sobrecarga: 20 },
-    { dia: 'Vie', calma: 45, sobrecarga: 55 },
-    { dia: 'Sáb', calma: 70, sobrecarga: 30 },
-    { dia: 'Dom', calma: 85, sobrecarga: 15 },
-  ]
+  // Mock data dinámica con fechas reales de los últimos 7 días
+  const mockHistoricalData = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (6 - i))
+    const diaSemana = d.toLocaleDateString('es-ES', { weekday: 'short' })
+    const diaFormato = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+    const dia = `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)} ${diaFormato}`
+    const calma = [65, 72, 58, 80, 45, 70, 85][i]
+    return { dia, rawDate: d.getTime(), calma, sobrecarga: 100 - calma }
+  })
   const mockBpmData = [
     { hora: '08:00', bpm: 72 }, { hora: '10:00', bpm: 85 },
     { hora: '12:00', bpm: 78 }, { hora: '14:00', bpm: 95 },
