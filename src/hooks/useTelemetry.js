@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { getSocket } from './socket'
 import { generateInitialData } from '../utils/dashboardMocks'
 
@@ -8,6 +8,68 @@ export function useTelemetry(wsUrl = 'https://backend-siat.onrender.com') {
   const [liveMov, setLiveMov] = useState(1.2)
   const [isWebSocketActive, setIsWebSocketActive] = useState(false)
   const [telemetryHistory, setTelemetryHistory] = useState([])
+  const [simulationMode, setSimulationMode] = useState(null)
+  const intervalRef = useRef(null)
+
+  const stopSimulation = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    setSimulationMode(null)
+  }, [])
+
+  useEffect(() => {
+    if (simulationMode === null) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      return
+    }
+
+    const tick = () => {
+      const isCrisis = simulationMode === 'CRISIS'
+      const newBpm = isCrisis
+        ? Math.floor(Math.random() * (140 - 110 + 1) + 110)
+        : Math.floor(Math.random() * (80 - 60 + 1) + 60)
+      const newStress = isCrisis
+        ? Math.floor(Math.random() * (100 - 76 + 1) + 76)
+        : Math.floor(Math.random() * (30 - 5 + 1) + 5)
+      const newMov = isCrisis
+        ? +(Math.random() * (3 - 1.5) + 1.5).toFixed(1)
+        : +(Math.random() * 1.2).toFixed(1)
+
+      setIsWebSocketActive(true)
+      setLiveBpm(newBpm)
+      setLiveStress(newStress)
+      setLiveMov(newMov)
+
+      setTelemetryHistory(prev => {
+        const history = prev.length > 0 ? prev : generateInitialData()
+        const now = new Date()
+        const newRecord = {
+          time: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          bpm: newBpm,
+          mov: newMov,
+          stress: newStress,
+          calma: 100 - newStress,
+          estres: newStress
+        }
+        return [...history.slice(1), newRecord]
+      })
+    }
+
+    tick()
+    intervalRef.current = setInterval(tick, 10000)
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [simulationMode])
 
   useEffect(() => {
     setTelemetryHistory(generateInitialData())
@@ -26,6 +88,7 @@ export function useTelemetry(wsUrl = 'https://backend-siat.onrender.com') {
 
     const onTelemetry = (data) => {
       setIsWebSocketActive(true)
+      stopSimulation()
       setLiveBpm(data.bpm)
       setLiveStress(data.stress)
       setLiveMov(data.mov)
@@ -57,32 +120,7 @@ export function useTelemetry(wsUrl = 'https://backend-siat.onrender.com') {
       socket.off('disconnect', onDisconnect)
       socket.off('new_telemetry', onTelemetry)
     }
-  }, [])
+  }, [stopSimulation])
 
-  const simulateTelemetry = () => {
-    setIsWebSocketActive(true)
-    const newBpm = Math.floor(Math.random() * (120 - 70 + 1) + 70)
-    const newStress = Math.floor(Math.random() * (100 - 10 + 1) + 10)
-    const newMov = +(Math.random() * 3).toFixed(1)
-
-    setLiveBpm(newBpm)
-    setLiveStress(newStress)
-    setLiveMov(newMov)
-
-    setTelemetryHistory(prev => {
-      const history = prev.length > 0 ? prev : generateInitialData()
-      const now = new Date()
-      const newRecord = {
-        time: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        bpm: newBpm,
-        mov: newMov,
-        stress: newStress,
-        calma: 100 - newStress,
-        estres: newStress
-      }
-      return [...history.slice(1), newRecord]
-    })
-  }
-
-  return { liveBpm, liveStress, liveMov, isWebSocketActive, telemetryHistory, simulateTelemetry }
+  return { liveBpm, liveStress, liveMov, isWebSocketActive, telemetryHistory, simulationMode, setSimulationMode, stopSimulation }
 }

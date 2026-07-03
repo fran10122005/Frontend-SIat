@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { useGlobalContext } from '../../context/GlobalState';
-import api from '../../api/axios';
-import StatusBadge from '../StatusBadge';
+import StatusBadge from '../shared/StatusBadge';
+import Pagination from '../shared/Pagination';
 
 export default function EspecialistasTab({
   especialistas,
@@ -25,7 +25,7 @@ export default function EspecialistasTab({
   handleUpdateEspecialidad,
   handleToggleEspecialidad
 }) {
-  const { userRole, setAdminActiveTab } = useGlobalContext();
+  const { userRole } = useGlobalContext();
   const [subView, setSubView] = useState('especialistas');
   const [searchEsp, setSearchEsp] = useState('')
   const [filterEspecialidad, setFilterEspecialidad] = useState('TODAS')
@@ -63,6 +63,17 @@ export default function EspecialistasTab({
       return true
     })
   }, [catalogos.especialidades, searchEspCat, filterEspCatEstado])
+
+  const PAGE_SIZE = 8
+  const [pageEsp, setPageEsp] = useState(0)
+  const [pageEspCat, setPageEspCat] = useState(0)
+  const totalEspPages = Math.ceil(filteredEspecialistas.length / PAGE_SIZE)
+  const pagedEspecialistas = filteredEspecialistas.slice(pageEsp * PAGE_SIZE, (pageEsp + 1) * PAGE_SIZE)
+  const totalEspCatPages = Math.ceil(filteredEspecialidades.length / PAGE_SIZE)
+  const pagedEspecialidades = filteredEspecialidades.slice(pageEspCat * PAGE_SIZE, (pageEspCat + 1) * PAGE_SIZE)
+
+  useEffect(() => { setPageEsp(0) }, [searchEsp, filterEspecialidad, filterEstado, filterGenero, dateFrom, dateTo])
+  useEffect(() => { setPageEspCat(0) }, [searchEspCat, filterEspCatEstado])
 
   const hasEspFilters = searchEsp || filterEspecialidad !== 'TODAS' || filterEstado !== 'TODOS' || filterGenero !== 'TODOS' || dateFrom || dateTo
   const hasEspCatFilters = searchEspCat || filterEspCatEstado !== 'TODOS'
@@ -172,8 +183,8 @@ export default function EspecialistasTab({
             {/* Filtros */}
             <div className="flex flex-wrap gap-3 mb-4">
               <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input type="text" placeholder="Buscar por nombre o correo..." value={searchEsp} onChange={e => setSearchEsp(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input type="text" placeholder="Buscar por nombre o correo..." value={searchEsp} onChange={e => setSearchEsp(e.target.value)} className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <select value={filterEspecialidad} onChange={e => setFilterEspecialidad(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                 <option value="TODAS">Todas las especialidades</option>
@@ -211,7 +222,9 @@ export default function EspecialistasTab({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                  {filteredEspecialistas.map(esp => (
+                  {pagedEspecialistas.length === 0 ? (
+                    <tr><td colSpan="4" className="py-8 text-center text-slate-500">No se encontraron especialistas.</td></tr>
+                  ) : pagedEspecialistas.map(esp => (
                     <tr key={esp.esp_codi} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                       {editingEsp?.esp_codi === esp.esp_codi ? (
                         <td colSpan="4" className="py-3 px-4">
@@ -253,9 +266,9 @@ export default function EspecialistasTab({
                             <StatusBadge active={esp.tm_usuar?.usu_estd} />
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => setEditingEsp({ esp_codi: esp.esp_codi, esp_nomb: esp.esp_nomb, esp_apel: esp.esp_apel, usu_crro: esp.tm_usuar?.usu_crro || '' })} className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors">Editar</button>
-                              <button onClick={() => handleToggleActivo(esp.esp_codi, esp.tm_usuar?.usu_estd)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${esp.tm_usuar?.usu_estd ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20' : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}>
+                            <div className="flex justify-end gap-2">
+                              <button onClick={() => setEditingEsp({ esp_codi: esp.esp_codi, esp_nomb: esp.esp_nomb, esp_apel: esp.esp_apel, usu_crro: esp.tm_usuar?.usu_crro || '' })} className="px-3 py-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors">Editar</button>
+                              <button onClick={() => handleToggleActivo(esp.esp_codi, esp.tm_usuar?.usu_estd)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${esp.tm_usuar?.usu_estd ? 'text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20' : 'text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}>
                                 {esp.tm_usuar?.usu_estd ? 'Desactivar' : 'Activar'}
                               </button>
                             </div>
@@ -267,6 +280,7 @@ export default function EspecialistasTab({
                 </tbody>
               </table>
             </div>
+            <Pagination currentPage={pageEsp} totalPages={totalEspPages} onPageChange={setPageEsp} />
           </div>
         </>
       )}
@@ -302,8 +316,8 @@ export default function EspecialistasTab({
 
             <div className="flex flex-wrap gap-3 mb-4">
               <div className="relative w-full sm:flex-1 sm:min-w-[180px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input type="text" placeholder="Buscar especialidad..." value={searchEspCat} onChange={e => setSearchEspCat(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input type="text" placeholder="Buscar especialidad..." value={searchEspCat} onChange={e => setSearchEspCat(e.target.value)} className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <select value={filterEspCatEstado} onChange={e => setFilterEspCatEstado(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                 <option value="TODOS">Todos los estados</option>
@@ -332,7 +346,7 @@ export default function EspecialistasTab({
                     <tr>
                       <td colSpan="4" className="py-8 text-center text-slate-500 dark:text-slate-400">No se encontraron especialidades con los filtros aplicados.</td>
                     </tr>
-                  ) : filteredEspecialidades.map(esc => (
+                  ) : pagedEspecialidades.map(esc => (
                     <tr key={esc.esc_codi} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 group">
                       {editingEspCat?.esc_codi === esc.esc_codi ? (
                         <td colSpan="4" className="py-3 px-4">
@@ -358,9 +372,9 @@ export default function EspecialistasTab({
                             <StatusBadge active={esc.esc_estd !== false} activeLabel="Activa" inactiveLabel="Inactivo" />
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => setEditingEspCat(esc)} className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors">Editar</button>
-                              <button onClick={() => handleToggleEspecialidad(esc.esc_codi, esc.esc_estd)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${esc.esc_estd !== false ? 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}>
+                            <div className="flex justify-end gap-2">
+                              <button onClick={() => setEditingEspCat(esc)} className="px-3 py-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors">Editar</button>
+                              <button onClick={() => handleToggleEspecialidad(esc.esc_codi, esc.esc_estd)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${esc.esc_estd !== false ? 'text-slate-500/70 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' : 'text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}>
                                 {esc.esc_estd !== false ? 'Archivar' : 'Restaurar'}
                               </button>
                             </div>
@@ -372,6 +386,7 @@ export default function EspecialistasTab({
                 </tbody>
               </table>
             </div>
+            <Pagination currentPage={pageEspCat} totalPages={totalEspCatPages} onPageChange={setPageEspCat} />
           </div>
         </div>
       )}

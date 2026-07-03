@@ -89,8 +89,8 @@ export default function SpecialistGlobalView({
           {/* Filtros Agenda */}
           <div className="flex flex-wrap gap-2 mb-4">
             <div className="relative w-full sm:flex-1 sm:min-w-[160px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input type="text" placeholder="Buscar paciente..." value={searchAgenda} onChange={e => setSearchAgenda(e.target.value)} className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input type="text" placeholder="Buscar paciente..." value={searchAgenda} onChange={e => setSearchAgenda(e.target.value)} className="w-full pl-3 pr-8 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} className="px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
               <option value="TODOS">Todos los estados</option>

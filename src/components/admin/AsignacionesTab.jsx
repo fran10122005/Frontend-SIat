@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, X } from 'lucide-react'
-import StatusBadge from '../StatusBadge';
+import StatusBadge from '../shared/StatusBadge';
+import Pagination from '../shared/Pagination';
 
 export default function AsignacionesTab({
   asignacion,
@@ -36,6 +37,13 @@ export default function AsignacionesTab({
     })
   }, [asignaciones, search, statusFilter, dateFrom, dateTo])
 
+  const PAGE_SIZE = 8
+  const [page, setPage] = useState(0)
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  useEffect(() => { setPage(0) }, [search, statusFilter, dateFrom, dateTo])
+
   const hasFilters = search || statusFilter !== 'TODOS' || dateFrom || dateTo
 
   const clearFilters = () => {
@@ -48,15 +56,15 @@ export default function AsignacionesTab({
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Asignar Paciente a Especialista</h2>
           {onRegisterClick && (
             <button 
               type="button"
               onClick={onRegisterClick}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5"
             >
-              <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
               </svg>
               Registrar Nuevo Niño
@@ -91,8 +99,8 @@ export default function AsignacionesTab({
       {/* Filtros */}
       <div className="bg-white dark:bg-[#1E293B] p-4 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-wrap gap-3 items-center">
         <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input type="text" placeholder="Buscar por paciente o especialista..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input type="text" placeholder="Buscar por paciente o especialista..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
           <option value="TODOS">Todos los estados</option>
@@ -135,8 +143,10 @@ export default function AsignacionesTab({
                 <th className="py-3 px-4 font-semibold uppercase text-right">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {filtered.map(asi => (
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+              {paged.length === 0 ? (
+                <tr><td colSpan="5" className="py-8 text-center text-slate-500">No se encontraron asignaciones.</td></tr>
+              ) : paged.map(asi => (
                 <tr key={asi.asi_codi} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="py-3 px-4">
                     <div className="font-semibold text-slate-900 dark:text-white">{asi.tm_ninos?.nin_nomb} {asi.tm_ninos?.nin_apel}</div>
@@ -162,6 +172,7 @@ export default function AsignacionesTab({
             </tbody>
           </table>
         </div>
+        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
     </div>
   );

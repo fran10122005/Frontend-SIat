@@ -482,7 +482,12 @@ export const GlobalProvider = ({ children }) => {
       ...prev,
       [currentChildId]: { ...prev[currentChildId], valMini: Number(min), valMaxi: Number(max) }
     }))
-    showToast('Umbrales de sensibilidad actualizados.')
+    api.put(`/ninos/${currentChildId}/umbrales`, { val_mini: Number(min), val_maxi: Number(max) })
+      .then(() => showToast('Umbrales de sensibilidad guardados correctamente.'))
+      .catch(err => {
+        console.error('Error al guardar umbrales en el servidor:', err)
+        showToast('⚠️ Umbrales guardados localmente. Error al sincronizar con el servidor.')
+      })
   }
 
   const calculateStressIndex = (bpm, movimiento) => {

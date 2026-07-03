@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, User, Mail, Calendar, Clock, X } from 'lucide-react';
-import StatusBadge from '../StatusBadge';
+import StatusBadge from '../shared/StatusBadge';
+import Pagination from '../shared/Pagination';
+import LoadingState from '../dashboard/LoadingState';
 
 export default function UsuariosTab({
   usuarios,
   loading,
-  handleToggleUser
+  handleToggleUser,
+  exportUsuariosToPDF,
+  exportUsuariosToExcel
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -50,7 +54,7 @@ export default function UsuariosTab({
 
   const hasFilters = searchTerm || roleFilter !== 'ALL' || filterEstado !== 'TODOS' || dateFrom || dateTo
 
-  const filteredUsers = usuarios.filter(user => {
+  const filteredUsers = useMemo(() => usuarios.filter(user => {
     const name = getUserName(user).toLowerCase();
     const email = user.usu_crro.toLowerCase();
     const search = searchTerm.toLowerCase();
@@ -64,7 +68,14 @@ export default function UsuariosTab({
       if (new Date(user.usu_crea) > end) return false
     }
     return true;
-  });
+  }), [usuarios, searchTerm, roleFilter, filterEstado, dateFrom, dateTo]);
+
+  const PAGE_SIZE = 8
+  const [page, setPage] = useState(0)
+  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE)
+  const pagedUsers = filteredUsers.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  useEffect(() => { setPage(0) }, [searchTerm, roleFilter, filterEstado, dateFrom, dateTo])
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -80,8 +91,8 @@ export default function UsuariosTab({
       <div className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60">
         <div className="flex flex-wrap gap-3">
           <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input type="text" placeholder="Buscar por nombre o correo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors" />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input type="text" placeholder="Buscar por nombre o correo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-4 pr-9 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors" />
           </div>
           <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
             <option value="ALL">Todos los Roles</option>
@@ -113,10 +124,7 @@ export default function UsuariosTab({
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-slate-500">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            Cargando usuarios del sistema...
-          </div>
+          <LoadingState variant="table" rows={5} role="ADMIN_INSTITUCION" />
         ) : filteredUsers.length === 0 ? (
           <div className="p-12 text-center text-slate-500 dark:text-slate-400">
             No se encontraron usuarios con los criterios de búsqueda establecidos.
@@ -134,7 +142,9 @@ export default function UsuariosTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {filteredUsers.map((user) => {
+                {pagedUsers.length === 0 ? (
+                  <tr><td colSpan="5" className="py-8 text-center text-slate-500">No se encontraron usuarios.</td></tr>
+                ) : pagedUsers.map((user) => {
                   const name = getUserName(user);
                   const isActive = user.usu_estd;
                   return (
@@ -186,6 +196,7 @@ export default function UsuariosTab({
             </table>
           </div>
         )}
+        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
     </div>
   );
