@@ -286,13 +286,7 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
     try {
       const codi = editingInst?.ins_codi || catalogos.instituciones?.[0]?.ins_codi;
-      await api.put(`/admin/instituciones/${codi}`, {
-        ins_codi: editingInst.ins_codi,
-        ins_nomb: editingInst.ins_nomb,
-        ins_dire: editingInst.ins_dire,
-        ins_telf: editingInst.ins_telf,
-        ins_pers: editingInst.ins_pers
-      });
+      await api.put(`/admin/instituciones/${codi}`, editingInst);
       setMessage('✅ Institución actualizada con éxito.');
       setEditingInst(null);
       fetchData();
