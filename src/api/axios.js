@@ -17,6 +17,10 @@ function clearAuth() {
   localStorage.removeItem('currentView');
 }
 
+function showGlobalToast(message) {
+  window.dispatchEvent(new CustomEvent('global-toast', { detail: { message } }));
+}
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -36,10 +40,19 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !isRedirecting) {
       isRedirecting = true;
       clearAuth();
-      window.location.href = '/login';
+      showGlobalToast('⏱️ Sesión expirada. Redirigiendo al inicio...');
+      setTimeout(() => { window.location.href = '/login'; }, 2000);
+      return Promise.reject(error);
     }
     if (error.response?.status === 403) {
+      showGlobalToast('⛔ Acceso denegado. No tienes permisos para esta acción.');
       console.warn('Acceso denegado por RBAC');
+    }
+    if (error.response?.status >= 500) {
+      showGlobalToast('⚠️ Error del servidor. Intenta de nuevo más tarde.');
+    }
+    if (!error.response) {
+      showGlobalToast('🔌 Error de conexión. Verifica tu red.');
     }
     return Promise.reject(error);
   }

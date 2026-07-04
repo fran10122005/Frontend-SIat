@@ -1,21 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import { useGlobalContext } from '../context/GlobalState';
 import AdminSidebar from '../components/layout/AdminSidebar';
 import * as XLSX from 'xlsx';
 import { exportEspecialistasToPDF as expEspPDF, exportAsignacionesToPDF as expAsigPDF, exportEspecialidadesToPDF as expCatPDF } from '../utils/pdfExporter';
 import { 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line
-} from 'recharts';
-import { 
-  Building2, Activity, AlertTriangle, CheckCircle, FileText, Server, Monitor
+  Building2, FileText, ShieldAlert, Users, Stethoscope, Link2, Clock
 } from 'lucide-react';
 
 import AdminKPIs from '../components/admin/AdminKPIs';
 import AdminCharts from '../components/admin/AdminCharts';
 import AdminActivityLog from '../components/admin/AdminActivityLog';
+import InfraestructuraTab from '../components/admin/InfraestructuraTab';
 
 import EspecialistasTab from '../components/admin/EspecialistasTab';
+import RepresentantesTab from '../components/admin/RepresentantesTab';
 import AsignacionesTab from '../components/admin/AsignacionesTab';
 import CatalogosTab from '../components/admin/CatalogosTab';
 import UsuariosTab from '../components/admin/UsuariosTab';
@@ -26,7 +25,7 @@ import Footer from '../components/layout/Footer';
 import LoadingState from '../components/dashboard/LoadingState';
 
 function AdminDashboard({ onNavigate }) {
-  const { userRole, userName, adminActiveTab: activeTab, setAdminActiveTab: setActiveTab, isDark } = useGlobalContext();
+  const { userRole, userName, adminActiveTab: activeTab, setAdminActiveTab: setActiveTab, isDark, showToast } = useGlobalContext();
   
   const [especialistas, setEspecialistas] = useState([]);
   const [ninos, setNinos] = useState([]);
@@ -34,6 +33,7 @@ function AdminDashboard({ onNavigate }) {
   const [metricas, setMetricas] = useState(null);
   const [catalogos, setCatalogos] = useState({ especialidades: [], instituciones: [] });
   const [usuarios, setUsuarios] = useState([]);
+  const [representantes, setRepresentantes] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   
   // UX State
@@ -63,10 +63,14 @@ function AdminDashboard({ onNavigate }) {
   const [editingEspCat, setEditingEspCat] = useState(null);
   
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
   
   // Clinical Invitation States
   const [showRegModal, setShowRegModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleConfig, setScheduleConfig] = useState(() => {
+    const saved = localStorage.getItem('reportSchedule')
+    return saved ? JSON.parse(saved) : { enabled: false, frequency: 'weekly', day: 'monday', email: '' }
+  });
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   const [formData, setFormData] = useState({
@@ -91,41 +95,47 @@ function AdminDashboard({ onNavigate }) {
 
   window.__navigate = onNavigate;
 
+  const mountedRef = useRef(true);
+
   useEffect(() => {
     if (userRole !== 'ADMIN_INSTITUCION') {
       onNavigate('login');
       return;
     }
-    fetchData();
+    mountedRef.current = true;
+    const controller = new AbortController();
+    fetchData(controller);
+    return () => {
+      mountedRef.current = false;
+      controller.abort();
+    };
   }, [userRole]);
 
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => {
-        setMessage('');
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
-
-
-  const fetchData = async () => {
+  const fetchData = async (controller) => {
     try {
       const [espRes, ninosRes, asignacionesRes, metricasRes, catRes, usersRes, auditRes] = await Promise.all([
-        api.get('/admin/especialistas'),
-        api.get('/admin/ninos'),
-        api.get('/admin/asignaciones'),
-        api.get('/admin/metricas'),
-        api.get('/admin/catalogos'),
-        api.get('/admin/users'),
-        api.get('/admin/auditoria')
+        api.get('/admin/especialistas', { signal: controller?.signal }),
+        api.get('/admin/ninos', { signal: controller?.signal }),
+        api.get('/admin/asignaciones', { signal: controller?.signal }),
+        api.get('/admin/metricas', { signal: controller?.signal }),
+        api.get('/admin/catalogos', { signal: controller?.signal }),
+        api.get('/admin/users', { signal: controller?.signal }),
+        api.get('/admin/auditoria', { signal: controller?.signal }),
       ]);
+      if (!mountedRef.current) return;
       setEspecialistas(espRes.data.data);
       setNinos(ninosRes.data.data);
       setAsignaciones(asignacionesRes.data.data);
       setMetricas(metricasRes.data.data);
       setUsuarios(usersRes.data.data);
       setAuditLogs(auditRes.data.data || []);
+      setRepresentantes(usersRes.data.data.filter(u => u.rol_codi === 'ROL_REP').map(u => ({
+        ...u.tm_repre,
+        usu_codi: u.usu_codi,
+        usu_crro: u.usu_crro,
+        usu_estd: u.usu_estd,
+        tm_ninos: u.tm_repre?.tm_ninos || null,
+      })));
       const catData = catRes.data.data;
       setCatalogos(catData);
       if (catData.instituciones && catData.instituciones.length > 0) {
@@ -133,18 +143,19 @@ function AdminDashboard({ onNavigate }) {
         setEditingInst(catData.instituciones[0]);
       }
     } catch (err) {
+      if (!mountedRef.current) return;
       console.error('API Error:', err.response || err);
-      setMessage(`Error cargando datos del panel: ${err.response?.data?.error || err.message}`);
+      showToast(`Error cargando datos del panel: ${err.response?.data?.error || err.message}`);
     }
   };
 
   const handleCreateEspecialista = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    
     try {
       await api.post('/admin/especialistas', newEsp);
-      setMessage('✅ Especialista creado con éxito. Contraseña por defecto: SiatDoc2026*');
+      showToast('✅ Especialista creado con éxito. Contraseña por defecto: SiatDoc2026*');
       setNewEsp({ 
         usu_crro: '', esp_nomb: '', esp_apel: '', usu_clve: '',
         esp_codi: '', esp_licencia: '', esp_telf: '', 
@@ -152,7 +163,7 @@ function AdminDashboard({ onNavigate }) {
       });
       fetchData();
     } catch (err) {
-      setMessage(`❌ Error: ${err.response?.data?.error || err.message}`);
+      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -161,14 +172,14 @@ function AdminDashboard({ onNavigate }) {
   const handleAssign = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    
     try {
       await api.post('/admin/asignar', asignacion);
-      setMessage('✅ Paciente asignado al especialista exitosamente.');
+      showToast('✅ Paciente asignado al especialista exitosamente.');
       setAsignacion({ nin_codi: '', esp_codi: '' });
       fetchData(); 
     } catch (err) {
-      setMessage(`❌ Error: ${err.response?.data?.error || err.message}`);
+      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -177,14 +188,14 @@ function AdminDashboard({ onNavigate }) {
   const handleInviteSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    
     try {
       const res = await api.post('/ninos/invite-representative', formData);
       const respData = res.data.data;
       setGeneratedLink(respData.invitationUrl);
       setShowRegModal(false);
       setShowLinkModal(true);
-      setMessage('✅ Invitación clínica de niño y representante creada con éxito');
+      showToast('✅ Invitación clínica de niño y representante creada con éxito');
       setFormData({
         nin_nomb: '',
         nin_apel: '',
@@ -198,7 +209,7 @@ function AdminDashboard({ onNavigate }) {
       fetchData();
     } catch (err) {
       console.error(err);
-      setMessage(`❌ Error: ${err.response?.data?.error || err.message}`);
+      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -213,10 +224,10 @@ function AdminDashboard({ onNavigate }) {
       onConfirm: async () => {
         try {
           await api.patch(`/admin/especialistas/${esp_codi}/estado`, { activo: !currentState });
-          setMessage(`✅ Especialista ${!currentState ? 'activado' : 'desactivado'} exitosamente.`);
+          showToast(`✅ Especialista ${!currentState ? 'activado' : 'desactivado'} exitosamente.`);
           fetchData();
         } catch (err) {
-          setMessage(`❌ Error al cambiar estado: ${err.response?.data?.error || err.message}`);
+          showToast(`❌ Error al cambiar estado: ${err.response?.data?.error || err.message}`);
         }
       }
     });
@@ -232,15 +243,24 @@ function AdminDashboard({ onNavigate }) {
         try {
           setLoading(true);
           await api.patch(`/admin/users/${usu_codi}/estado`, { activo: !currentState });
-          setMessage(`✅ Estado de usuario actualizado exitosamente.`);
+          showToast(`✅ Estado de usuario actualizado exitosamente.`);
           fetchData();
         } catch (err) {
-          setMessage(`❌ Error al cambiar estado del usuario: ${err.response?.data?.error || err.message}`);
+          showToast(`❌ Error al cambiar estado del usuario: ${err.response?.data?.error || err.message}`);
         } finally {
           setLoading(false);
         }
       }
     });
+  };
+
+  const handleResetPassword = async (esp_codi, email) => {
+    try {
+      await api.post(`/admin/especialistas/${esp_codi}/password`, {});
+      showToast(`✅ Contraseña restablecida para ${email}. Nueva contraseña: SiatDoc2026*`);
+    } catch (err) {
+      showToast(`❌ Error al restablecer contraseña: ${err.response?.data?.error || err.message}`);
+    }
   };
 
   const handleToggleAsignacion = (asi_codi, currentState) => {
@@ -253,10 +273,10 @@ function AdminDashboard({ onNavigate }) {
       onConfirm: async () => {
         try {
           await api.patch(`/admin/asignaciones/${asi_codi}/estado`, { estado: nextState });
-          setMessage(`✅ Asignación marcada como ${nextState}.`);
+          showToast(`✅ Asignación marcada como ${nextState}.`);
           fetchData();
         } catch (err) {
-          setMessage(`❌ Error al modificar asignación: ${err.response?.data?.error || err.message}`);
+          showToast(`❌ Error al modificar asignación: ${err.response?.data?.error || err.message}`);
         }
       }
     });
@@ -271,11 +291,11 @@ function AdminDashboard({ onNavigate }) {
         esp_apel: editingEsp.esp_apel,
         usu_crro: editingEsp.usu_crro
       });
-      setMessage('✅ Especialista actualizado con éxito.');
+      showToast('✅ Especialista actualizado con éxito.');
       setEditingEsp(null);
       fetchData();
     } catch (err) {
-      setMessage(`❌ Error al actualizar: ${err.response?.data?.error || err.message}`);
+      showToast(`❌ Error al actualizar: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -286,12 +306,28 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
     try {
       const codi = editingInst?.ins_codi || catalogos.instituciones?.[0]?.ins_codi;
-      await api.put(`/admin/instituciones/${codi}`, editingInst);
-      setMessage('✅ Institución actualizada con éxito.');
+      const body = {
+        ins_codi: codi,
+        ins_nomb: editingInst.ins_nomb,
+        ins_dire: editingInst.ins_dire,
+        ins_telf: editingInst.ins_telf,
+        ins_pers: editingInst.ins_pers || '',
+        ins_emai: editingInst.ins_emai || '',
+        ins_web: editingInst.ins_web || '',
+        ins_esta: 'Activa',
+      };
+      console.log('PUT institucion — body enviado:', JSON.stringify(body));
+      await api.put(`/admin/instituciones/${codi}`, body);
+      showToast('✅ Institución actualizada con éxito.');
       setEditingInst(null);
       fetchData();
     } catch (err) {
-      setMessage(`❌ Error al actualizar: ${err.response?.data?.error || err.message}`);
+      const errResp = err.response?.data;
+      const errMsg = errResp?.error || err.message || 'Error desconocido';
+      showToast(`❌ Error al actualizar: ${errMsg}`);
+      console.error('PUT institucion error — full response:', JSON.stringify(errResp, null, 2));
+      console.error('PUT institucion error — status:', err.response?.status);
+      console.error('PUT institucion error — body sent:', JSON.stringify(body, null, 2));
     } finally {
       setLoading(false);
     }
@@ -300,15 +336,15 @@ function AdminDashboard({ onNavigate }) {
   const handleCreateEspecialidad = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    
     try {
       const esc_codi = `ESP-${Date.now()}`;
       await api.post('/admin/especialidades', { ...newEspCat, esc_codi });
-      setMessage(`✅ Especialidad registrada con éxito. Código: ${esc_codi}`);
+      showToast(`✅ Especialidad registrada con éxito. Código: ${esc_codi}`);
       setNewEspCat({ esc_codi: '', esc_nomb: '', esc_desc: '' });
       fetchData();
     } catch (err) {
-      setMessage(`❌ Error: ${err.response?.data?.error || err.message}`);
+      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -319,11 +355,11 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
     try {
       await api.put(`/admin/especialidades/${editingEspCat.esc_codi}`, editingEspCat);
-      setMessage('✅ Especialidad actualizada con éxito.');
+      showToast('✅ Especialidad actualizada con éxito.');
       setEditingEspCat(null);
       fetchData();
     } catch (err) {
-      setMessage(`❌ Error al actualizar: ${err.response?.data?.error || err.message}`);
+      showToast(`❌ Error al actualizar: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
@@ -339,10 +375,10 @@ function AdminDashboard({ onNavigate }) {
       onConfirm: async () => {
         try {
           await api.patch(`/admin/especialidades/${esc_codi}/estado`, { activo: !nextState });
-          setMessage(`✅ Especialidad ${!nextState ? 'activada' : 'desactivada'} exitosamente.`);
+          showToast(`✅ Especialidad ${!nextState ? 'activada' : 'desactivada'} exitosamente.`);
           fetchData();
         } catch (err) {
-          setMessage(`❌ Error al cambiar estado: ${err.response?.data?.error || err.message}`);
+          showToast(`❌ Error al cambiar estado: ${err.response?.data?.error || err.message}`);
         }
       }
     });
@@ -445,7 +481,16 @@ function AdminDashboard({ onNavigate }) {
     <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
       
       {/* Sidebar */}
-      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <AdminSidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        counts={{
+          especialistas: especialistas.length,
+          representantes: representantes.length,
+          asignaciones: asignaciones.filter(a => a.asi_stdo === 'Activo').length,
+          usuarios: usuarios.length,
+        }}
+      />
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-full overflow-hidden">
@@ -461,6 +506,8 @@ function AdminDashboard({ onNavigate }) {
                   <Building2 className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   {activeTab === 'dashboard' && 'Panel Clínico Institucional'}
                   {activeTab === 'especialistas' && 'Directorio de Especialistas'}
+                  {activeTab === 'representantes' && 'Gestión de Representantes Legales'}
+                  {activeTab === 'historial_clinico' && 'Historial Clínico Global'}
                   {activeTab === 'asignaciones' && 'Control de Casos y Asignaciones'}
                   {activeTab === 'catalogos' && 'Configuración de Mi Fundación'}
                   {activeTab === 'infraestructura' && 'Monitoreo de Infraestructura'}
@@ -470,6 +517,8 @@ function AdminDashboard({ onNavigate }) {
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   {activeTab === 'dashboard' && 'Visión general de la operación clínica, rendimiento de terapias y reportes de incidentes.'}
                   {activeTab === 'especialistas' && 'Administración del personal de salud, acreditaciones y especialidades médicas.'}
+                  {activeTab === 'representantes' && 'Listado de padres, madres y tutores legales vinculados a los pacientes.'}
+                  {activeTab === 'historial_clinico' && 'Registro de incidentes, crisis y alertas fisiológicas de todos los pacientes.'}
                   {activeTab === 'asignaciones' && 'Vinculación formal entre pacientes pediátricos y el personal clínico.'}
                   {activeTab === 'catalogos' && 'Datos de la institución: RIF, dirección y contacto principal.'}
                   {activeTab === 'infraestructura' && 'Estado operativo de los servicios de telemetría, bases de datos y respuesta de red.'}
@@ -478,53 +527,91 @@ function AdminDashboard({ onNavigate }) {
                 </p>
               </div>
               {activeTab === 'dashboard' && (
-                <button
-                  onClick={async () => {
-                    try {
-                      const { exportDashboardReport } = await import('../utils/pdfExporter')
-                      const alertsFromLogs = auditLogs
-                        .filter(log => log.aud_tipo === 'INCIDENTE' || log.aud_tipo === 'WARN')
-                        .slice(0, 20)
-                        .map(log => ({
-                          time: new Date(log.aud_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                          message: log.aud_desc
-                        }))
-                      const totalCrisis = metricas?.totalCrisis || 0
-                      await exportDashboardReport({
-                        userName,
-                        userRole,
-                        kpis: [
-                          { label: 'Especialistas', value: especialistas.length.toString() },
-                          { label: 'Pacientes', value: ninos.length.toString() },
-                          { label: 'Asignaciones Activas', value: asignaciones.filter(a => a.asi_stdo === 'Activo').length.toString() },
-                          { label: 'Usuarios del Sistema', value: usuarios.length.toString() },
-                          ...(totalCrisis > 0 ? [{ label: 'Incidentes (Mes)', value: totalCrisis.toString() }] : []),
-                        ],
-                        alerts: alertsFromLogs,
-                        titulo: 'Reporte del Dashboard — Administración',
-                      })
-                    } catch (err) {
-                      console.error('Error al exportar:', err)
-                    }
-                  }}
-                  className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg shadow-sm border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center gap-2 text-sm shrink-0"
-                >
-                  <FileText className="w-4 h-4" /> Exportar Dashboard
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { exportDashboardReport } = await import('../utils/pdfExporter')
+                        const alertsFromLogs = auditLogs
+                          .filter(log => log.aud_tipo === 'INCIDENTE' || log.aud_tipo === 'WARN')
+                          .slice(0, 20)
+                          .map(log => ({
+                            time: new Date(log.aud_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                            message: log.aud_desc
+                          }))
+                        const totalCrisis = metricas?.totalCrisis || 0
+                        await exportDashboardReport({
+                          userName,
+                          userRole,
+                          kpis: [
+                            { label: 'Especialistas', value: especialistas.length.toString() },
+                            { label: 'Pacientes', value: ninos.length.toString() },
+                            { label: 'Asignaciones Activas', value: asignaciones.filter(a => a.asi_stdo === 'Activo').length.toString() },
+                            { label: 'Usuarios del Sistema', value: usuarios.length.toString() },
+                            ...(totalCrisis > 0 ? [{ label: 'Incidentes (Mes)', value: totalCrisis.toString() }] : []),
+                          ],
+                          alerts: alertsFromLogs,
+                          titulo: 'Reporte del Dashboard — Administración',
+                        })
+                      } catch (err) {
+                        console.error('Error al exportar:', err)
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg shadow-sm border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center gap-2 text-sm shrink-0"
+                  >
+                    <FileText className="w-4 h-4" /> Exportar
+                  </button>
+                  <button onClick={() => setShowScheduleModal(true)} className="px-4 py-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded-lg shadow-sm border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all flex items-center gap-2 text-sm shrink-0">
+                    <Clock className="w-4 h-4" /> Programar
+                  </button>
+                </div>
               )}
             </header>
-
-            {message && (
-              <div className={`p-4 rounded-lg text-sm font-medium flex items-center gap-2 border ${message.includes('Error') || message.includes('❌') ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:border-red-900/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-900/30'}`}>
-                {message.includes('Error') || message.includes('❌') ? <AlertTriangle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
-                {message.replace(/[✅❌]/g, '')}
-              </div>
-            )}
 
             {/* DASHBOARD TAB */}
             {activeTab === 'dashboard' && (metricas ? (
               <div className="space-y-6 animate-in fade-in duration-300">
                 <AdminKPIs metricas={metricas} />
+
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <button onClick={() => setActiveTab('especialistas')} className="flex items-center gap-3 p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left">
+                    <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" /></div>
+                    <div><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Gestionar</p><p className="text-sm font-bold text-slate-900 dark:text-white">Especialistas</p></div>
+                  </button>
+                  <button onClick={() => setActiveTab('asignaciones')} className="flex items-center gap-3 p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left">
+                    <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg"><Link2 className="w-5 h-5 text-purple-600 dark:text-purple-400" /></div>
+                    <div><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Crear</p><p className="text-sm font-bold text-slate-900 dark:text-white">Asignaciones</p></div>
+                  </button>
+                  <button onClick={() => setActiveTab('usuarios')} className="flex items-center gap-3 p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left">
+                    <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"><Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /></div>
+                    <div><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Administrar</p><p className="text-sm font-bold text-slate-900 dark:text-white">Usuarios</p></div>
+                  </button>
+                  <button onClick={() => setActiveTab('catalogos')} className="flex items-center gap-3 p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left">
+                    <div className="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg"><Building2 className="w-5 h-5 text-amber-600 dark:text-amber-400" /></div>
+                    <div><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Configurar</p><p className="text-sm font-bold text-slate-900 dark:text-white">Institución</p></div>
+                  </button>
+                </div>
+
+                {/* Recent Alerts */}
+                {auditLogs.filter(l => l.aud_tipo === 'INCIDENTE' || l.aud_tipo === 'WARN').length > 0 && (
+                  <div className="bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 text-amber-500" />
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Alertas Recientes</h3>
+                    </div>
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                      {auditLogs.filter(l => l.aud_tipo === 'INCIDENTE' || l.aud_tipo === 'WARN').slice(0, 5).map(log => (
+                        <div key={log.aud_codi} className="px-6 py-3 flex items-center gap-3">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${log.aud_tipo === 'INCIDENTE' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                          <p className="text-sm text-slate-700 dark:text-slate-300 flex-1">{log.aud_desc}</p>
+                          <span className="text-xs text-slate-400 shrink-0">{new Date(log.aud_time).toLocaleDateString('es-ES')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <AdminCharts metricas={metricas} isDark={isDark} />
                 <AdminActivityLog userName={userName} logs={auditLogs} />
               </div>
@@ -545,6 +632,7 @@ function AdminDashboard({ onNavigate }) {
                 handleCreateEspecialista={handleCreateEspecialista}
                 handleUpdateEsp={handleUpdateEsp}
                 handleToggleActivo={handleToggleActivo}
+                handleResetPassword={handleResetPassword}
                 exportEspecialistasToPDF={exportEspecialistasToPDF}
                 exportEspecialistasToExcel={exportEspecialistasToExcel}
                 newEspCat={newEspCat}
@@ -554,6 +642,15 @@ function AdminDashboard({ onNavigate }) {
                 handleCreateEspecialidad={handleCreateEspecialidad}
                 handleUpdateEspecialidad={handleUpdateEspecialidad}
                 handleToggleEspecialidad={handleToggleEspecialidad}
+              />
+            )}
+
+            {/* REPRESENTANTES TAB */}
+            {activeTab === 'representantes' && (
+              <RepresentantesTab
+                representantes={representantes}
+                loading={loading}
+                onRefresh={fetchData}
               />
             )}
 
@@ -607,57 +704,7 @@ function AdminDashboard({ onNavigate }) {
 
             {/* INFRAESTRUCTURA TAB */}
             {activeTab === 'infraestructura' && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                      <Server className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado API Core</p>
-                      <p className="text-xl font-bold text-slate-900 dark:text-white">Operativo (100%)</p>
-                    </div>
-                  </div>
-                  <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                      <Monitor className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Nodos Edge (Telemetría)</p>
-                      <p className="text-xl font-bold text-slate-900 dark:text-white">Activos</p>
-                    </div>
-                  </div>
-                  <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                      <Activity className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Latencia Promedio</p>
-                      <p className="text-xl font-bold text-slate-900 dark:text-white">48 ms</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm h-[300px] lg:h-[400px]">
-                  <div className="mb-6 flex justify-between items-start">
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">Latencia de Red (Últimas 24h)</h2>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Tiempo de respuesta en la transmisión de datos biométricos</p>
-                    </div>
-                  </div>
-                  <ResponsiveContainer width="100%" height="85%">
-                    <LineChart data={mockUptimeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#E2E8F0'} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12}} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: isDark ? '#94A3B8' : '#64748B', fontSize: 12}} />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: `1px solid ${isDark ? '#334155' : '#E2E8F0'}`, backgroundColor: isDark ? '#0F172A' : '#fff', color: isDark ? '#f8fafc' : '#0f172a', fontSize: '12px' }} 
-                      />
-                      <Line type="monotone" dataKey="latencia" stroke="#8B5CF6" strokeWidth={3} dot={{r: 4, fill: '#8B5CF6'}} name="Latencia (ms)" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+              <InfraestructuraTab isDark={isDark} mockUptimeData={mockUptimeData} />
             )}
 
           </div>
@@ -767,7 +814,7 @@ function AdminDashboard({ onNavigate }) {
                 <button 
                   onClick={() => {
                     navigator.clipboard.writeText(generatedLink);
-                    setMessage('📋 Enlace copiado al portapapeles');
+                    showToast('📋 Enlace copiado al portapapeles');
                   }}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold"
                 >
@@ -779,6 +826,66 @@ function AdminDashboard({ onNavigate }) {
                 >
                   Cerrar
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Programar Reporte */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 bg-gradient-to-r from-blue-700 to-blue-600 text-white flex items-center justify-between">
+              <h3 className="text-lg font-bold flex items-center gap-2"><Clock className="w-5 h-5" /> Programar Reporte</h3>
+              <button onClick={() => setShowScheduleModal(false)} className="text-white/80 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-500 dark:text-slate-400">Configura el envío automático del reporte del dashboard por correo electrónico.</p>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={scheduleConfig.enabled} onChange={e => setScheduleConfig({...scheduleConfig, enabled: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Activar reporte automático</span>
+              </label>
+
+              {scheduleConfig.enabled && (
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Frecuencia</label>
+                    <select value={scheduleConfig.frequency} onChange={e => setScheduleConfig({...scheduleConfig, frequency: e.target.value})} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="daily">Diario</option>
+                      <option value="weekly">Semanal</option>
+                      <option value="monthly">Mensual</option>
+                    </select>
+                  </div>
+                  {scheduleConfig.frequency === 'weekly' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Día de la semana</label>
+                      <select value={scheduleConfig.day} onChange={e => setScheduleConfig({...scheduleConfig, day: e.target.value})} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                        {['lunes','martes','miércoles','jueves','viernes','sábado','domingo'].map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Correo destino</label>
+                    <input type="email" value={scheduleConfig.email} onChange={e => setScheduleConfig({...scheduleConfig, email: e.target.value})} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="admin@fundacion.org" />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button onClick={() => setShowScheduleModal(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold">Cancelar</button>
+                <button onClick={() => {
+                  setShowScheduleModal(false)
+                  localStorage.setItem('reportSchedule', JSON.stringify(scheduleConfig))
+                  if (scheduleConfig.enabled && scheduleConfig.email) {
+                    api.post('/admin/reportes/programados', scheduleConfig)
+                      .then(() => showToast('✅ Reporte programado exitosamente.'))
+                      .catch(() => showToast('⚠️ Configuración guardada localmente. El envío automático estará disponible cuando el backend esté conectado.'))
+                  } else {
+                    showToast('📋 Configuración guardada.')
+                  }
+                }} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold">Guardar Configuración</button>
               </div>
             </div>
           </div>

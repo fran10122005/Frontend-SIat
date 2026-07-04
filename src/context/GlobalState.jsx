@@ -461,6 +461,12 @@ export const GlobalProvider = ({ children }) => {
     setTimeout(() => setToastMessage(null), 3000)
   }
 
+  useEffect(() => {
+    const handler = (e) => showToast(e.detail.message)
+    window.addEventListener('global-toast', handler)
+    return () => window.removeEventListener('global-toast', handler)
+  }, [])
+
   const navigate = (view) => {
     if (view === 'student' && userRole !== 'ESPECIALISTA') {
       showToast('⚠️ Acceso denegado: Se requiere rol de Especialista.')

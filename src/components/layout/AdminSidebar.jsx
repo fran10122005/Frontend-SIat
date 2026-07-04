@@ -1,19 +1,20 @@
 import { useGlobalContext } from '../../context/GlobalState';
 import funautaLogo from '../../assets/Logo.png';
-import { LayoutDashboard, Stethoscope, Link2, LogOut, Server, Building2, Users, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Stethoscope, Link2, LogOut, Server, Building2, Users, BookOpen, UserRound } from 'lucide-react';
 
-export default function AdminSidebar({ activeTab, setActiveTab }) {
+export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
   const { setUserRole, setSelectedChildId, setNomNino, userRole, isSidebarOpen, setIsSidebarOpen } = useGlobalContext();
 
   const menuItems = [
-    { id: 'dashboard',    icon: LayoutDashboard, label: 'Panel Principal' },
-    { id: 'especialistas', icon: Stethoscope,    label: 'Especialistas' },
-    { id: 'asignaciones', icon: Link2,           label: 'Asignaciones' },
+    { id: 'dashboard',      icon: LayoutDashboard, label: 'Panel Principal', count: null },
+    { id: 'especialistas',  icon: Stethoscope,    label: 'Especialistas',   count: counts.especialistas },
+    { id: 'representantes',  icon: UserRound,    label: 'Representantes',  count: counts.representantes },
+    { id: 'asignaciones',    icon: Link2,         label: 'Asignaciones',   count: counts.asignaciones },
     ...(userRole === 'ADMIN_INSTITUCION' ? [
-      { id: 'usuarios', icon: Users, label: 'Usuarios' },
-      { id: 'infraestructura', icon: Server, label: 'Infraestructura' },
-      { id: 'catalogos', icon: Building2, label: 'Mi Fundación' },
-      { id: 'manual', icon: BookOpen, label: 'Manual de Usuario' }
+      { id: 'usuarios',       icon: Users,          label: 'Usuarios',        count: counts.usuarios },
+      { id: 'infraestructura',icon: Server,         label: 'Infraestructura', count: null },
+      { id: 'catalogos',      icon: Building2,      label: 'Mi Fundación',    count: null },
+      { id: 'manual',         icon: BookOpen,       label: 'Manual',          count: null }
     ] : []),
   ];
 
@@ -71,6 +72,15 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
                   activeTab === item.id ? 'text-white' : 'text-blue-200 group-hover:text-white'
                 }`} />
                 <span className="text-sm tracking-wide flex-1">{item.label}</span>
+                {item.count != null && (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
+                    activeTab === item.id
+                      ? 'bg-white/25 text-white'
+                      : 'bg-white/10 text-blue-200'
+                  }`}>
+                    {item.count}
+                  </span>
+                )}
               </button>
             );
           })}

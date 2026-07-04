@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, X, KeyRound } from 'lucide-react';
 import { useGlobalContext } from '../../context/GlobalState';
 import StatusBadge from '../shared/StatusBadge';
 import Pagination from '../shared/Pagination';
@@ -15,6 +15,7 @@ export default function EspecialistasTab({
   handleCreateEspecialista,
   handleUpdateEsp,
   handleToggleActivo,
+  handleResetPassword,
   exportEspecialistasToPDF,
   exportEspecialistasToExcel,
   newEspCat,
@@ -181,34 +182,36 @@ export default function EspecialistasTab({
             </div>
 
             {/* Filtros */}
-            <div className="flex flex-wrap gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4">
               <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input type="text" placeholder="Buscar por nombre o correo..." value={searchEsp} onChange={e => setSearchEsp(e.target.value)} className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              <select value={filterEspecialidad} onChange={e => setFilterEspecialidad(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                <option value="TODAS">Todas las especialidades</option>
-                {catalogos.especialidades.map(es => (
-                  <option key={es.esc_codi} value={es.esc_codi}>{es.esc_nomb}</option>
-                ))}
-              </select>
-              <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                <option value="TODOS">Todos los estados</option>
-                <option value="ACTIVO">Activo</option>
-                <option value="INACTIVO">Inactivo</option>
-              </select>
-              <select value={filterGenero} onChange={e => setFilterGenero(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                <option value="TODOS">Todos los géneros</option>
-                <option value="M">Masculino</option>
-                <option value="F">Femenino</option>
-              </select>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" title="Fecha desde" />
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" title="Fecha hasta" />
-              {hasEspFilters && (
-                <button onClick={() => { setSearchEsp(''); setFilterEspecialidad('TODAS'); setFilterEstado('TODOS'); setFilterGenero('TODOS'); setDateFrom(''); setDateTo('') }} className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0">
-                  <X className="w-3.5 h-3.5" /> Limpiar
-                </button>
-              )}
+              <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                <select value={filterEspecialidad} onChange={e => setFilterEspecialidad(e.target.value)} className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option value="TODAS">Todas las especialidades</option>
+                  {catalogos.especialidades.map(es => (
+                    <option key={es.esc_codi} value={es.esc_codi}>{es.esc_nomb}</option>
+                  ))}
+                </select>
+                <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option value="TODOS">Todos los estados</option>
+                  <option value="ACTIVO">Activo</option>
+                  <option value="INACTIVO">Inactivo</option>
+                </select>
+                <select value={filterGenero} onChange={e => setFilterGenero(e.target.value)} className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                  <option value="TODOS">Todos los géneros</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Femenino</option>
+                </select>
+                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" title="Fecha desde" />
+                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" title="Fecha hasta" />
+                {hasEspFilters && (
+                  <button onClick={() => { setSearchEsp(''); setFilterEspecialidad('TODAS'); setFilterEstado('TODOS'); setFilterGenero('TODOS'); setDateFrom(''); setDateTo('') }} className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0">
+                    <X className="w-3.5 h-3.5" /> Limpiar
+                  </button>
+                )}
+              </div>
             </div>
             
             <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
@@ -227,12 +230,12 @@ export default function EspecialistasTab({
                   ) : pagedEspecialistas.map(esp => (
                     <tr key={esp.esp_codi} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                       {editingEsp?.esp_codi === esp.esp_codi ? (
-                        <td colSpan="4" className="py-3 px-4">
-                          <form onSubmit={handleUpdateEsp} className="flex gap-2 items-center w-full bg-slate-50 dark:bg-slate-900 p-2 rounded-lg">
-                            <input required type="text" value={editingEsp.esp_nomb} onChange={e => setEditingEsp({...editingEsp, esp_nomb: e.target.value})} className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-1/4 outline-none focus:border-blue-500" placeholder="Nombre" />
-                            <input required type="text" value={editingEsp.esp_apel} onChange={e => setEditingEsp({...editingEsp, esp_apel: e.target.value})} className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-1/4 outline-none focus:border-blue-500" placeholder="Apellido" />
-                            <input required type="email" value={editingEsp.usu_crro} onChange={e => setEditingEsp({...editingEsp, usu_crro: e.target.value})} className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-1/3 outline-none focus:border-blue-500" placeholder="Correo" />
-                            <div className="flex gap-2 ml-auto">
+                          <td colSpan="4" className="py-3 px-4">
+                            <form onSubmit={handleUpdateEsp} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full bg-slate-50 dark:bg-slate-900 p-2 rounded-lg">
+                              <input required type="text" value={editingEsp.esp_nomb} onChange={e => setEditingEsp({...editingEsp, esp_nomb: e.target.value})} className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 sm:w-1/4 outline-none focus:border-blue-500" placeholder="Nombre" />
+                              <input required type="text" value={editingEsp.esp_apel} onChange={e => setEditingEsp({...editingEsp, esp_apel: e.target.value})} className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 sm:w-1/4 outline-none focus:border-blue-500" placeholder="Apellido" />
+                              <input required type="email" value={editingEsp.usu_crro} onChange={e => setEditingEsp({...editingEsp, usu_crro: e.target.value})} className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 sm:w-1/3 outline-none focus:border-blue-500" placeholder="Correo" />
+                              <div className="flex gap-2 sm:ml-auto">
                               <button type="submit" className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm font-semibold transition-colors">Guardar</button>
                               <button type="button" onClick={() => setEditingEsp(null)} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md text-sm font-semibold transition-colors">Cancelar</button>
                             </div>
@@ -268,6 +271,7 @@ export default function EspecialistasTab({
                           <td className="py-4 px-4 text-right">
                             <div className="flex justify-end gap-2">
                               <button onClick={() => setEditingEsp({ esp_codi: esp.esp_codi, esp_nomb: esp.esp_nomb, esp_apel: esp.esp_apel, usu_crro: esp.tm_usuar?.usu_crro || '' })} className="px-3 py-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors">Editar</button>
+                              <button onClick={() => handleResetPassword(esp.esp_codi, esp.tm_usuar?.usu_crro || '')} className="px-3 py-1.5 text-purple-600/70 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1" title="Resetear contraseña"><KeyRound className="w-3.5 h-3.5" /> Pass</button>
                               <button onClick={() => handleToggleActivo(esp.esp_codi, esp.tm_usuar?.usu_estd)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${esp.tm_usuar?.usu_estd ? 'text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20' : 'text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}>
                                 {esp.tm_usuar?.usu_estd ? 'Desactivar' : 'Activar'}
                               </button>
@@ -314,12 +318,12 @@ export default function EspecialistasTab({
               <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full">{filteredEspecialidades.length} de {catalogos.especialidades.length} registradas</span>
             </div>
 
-            <div className="flex flex-wrap gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4">
               <div className="relative w-full sm:flex-1 sm:min-w-[180px]">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input type="text" placeholder="Buscar especialidad..." value={searchEspCat} onChange={e => setSearchEspCat(e.target.value)} className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              <select value={filterEspCatEstado} onChange={e => setFilterEspCatEstado(e.target.value)} className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+              <select value={filterEspCatEstado} onChange={e => setFilterEspCatEstado(e.target.value)} className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
                 <option value="TODOS">Todos los estados</option>
                 <option value="ACTIVA">Activa</option>
                 <option value="INACTIVA">Inactivo</option>

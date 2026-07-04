@@ -54,11 +54,11 @@ export default function MainDashboard() {
         cit_tipo: citaData.tipo,
         cit_nota: citaData.notas
       })
-      alert('Solicitud de cita enviada con éxito')
+      showToast('✅ Solicitud de cita enviada con éxito')
       setShowCitaModal(false)
       setCitaData({ esp_codi: especialistasCita.length > 0 ? especialistasCita[0].esp_codi : '', fecha: '', hora: '', tipo: 'Consulta Regular', notas: '' })
     } catch (err) {
-      alert(err.response?.data?.error ? err.response.data.error : 'Error al solicitar cita')
+      showToast(err.response?.data?.error ? `❌ ${err.response.data.error}` : '❌ Error al solicitar cita')
     }
   }
 
@@ -94,7 +94,7 @@ export default function MainDashboard() {
     id: a.ale_codi,
     time: new Date(a.ale_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
     type: 'warning',
-    message: `Alerta: ${a.ale_meto.replace(/_/g, ' ')}`,
+    message: `Alerta: ${(a.ale_meto || '').replace(/_/g, ' ')}`,
     icon: AlertTriangle
   }))
 

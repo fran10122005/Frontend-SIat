@@ -30,9 +30,9 @@ export default function CatalogosTab({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60">
+      <div className="bg-white dark:bg-[#1E293B] p-4 md:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Configuración de Mi Fundación</h2>
+          <h2 className="text-base md:text-lg font-bold text-slate-900 dark:text-white">Configuración de Mi Fundación</h2>
           <button
             type="button"
             onClick={() => setIsEditing(!isEditing)}
@@ -43,11 +43,11 @@ export default function CatalogosTab({
             }`}
             title={isEditing ? 'Deshabilitar edición' : 'Habilitar edición'}
           >
-            <Pencil className="w-5 h-5" />
+            <Pencil className="w-4 h-4 md:w-5 md:h-5" />
           </button>
         </div>
-        <form onSubmit={handleUpdateInstitucion} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <form onSubmit={handleUpdateInstitucion} className="space-y-4 md:space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">RIF / Código Fiscal</label>
               <input required type="text" value={inst.ins_codi || ''} onChange={set('ins_codi')} readOnly={!isEditing} className={inputClass(isEditing)} />
@@ -58,25 +58,36 @@ export default function CatalogosTab({
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Dirección Física</label>
               <input required type="text" value={inst.ins_dire || ''} onChange={set('ins_dire')} readOnly={!isEditing} className={inputClass(isEditing)} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Teléfono Administrativo</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Teléfono</label>
               <input required type="text" value={inst.ins_telf || ''} onChange={set('ins_telf')} readOnly={!isEditing} className={inputClass(isEditing)} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Correo Electrónico</label>
+              <input type="email" value={inst.ins_emai || ''} onChange={set('ins_emai')} readOnly={!isEditing} className={inputClass(isEditing)} placeholder="admin@fundacion.org" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Sitio Web</label>
+              <input type="text" value={inst.ins_web || ''} onChange={set('ins_web')} readOnly={!isEditing} className={inputClass(isEditing)} placeholder="https://fundacion.org" />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">Contacto Principal</label>
-            <input type="text" value={inst.ins_pers || ''} onChange={set('ins_pers')} readOnly={!isEditing} className={inputClass(isEditing)} />
+            <input type="text" value={inst.ins_pers || ''} onChange={set('ins_pers')} readOnly={!isEditing} className={inputClass(isEditing)} placeholder="Nombre del responsable" />
           </div>
 
           {isEditing && (
             <div className="flex justify-end pt-2">
-              <button disabled={loading} type="submit" className="md:w-auto px-8 w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">
+              <button disabled={loading} type="submit" className="w-full md:w-auto px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">
                 Guardar Cambios
               </button>
             </div>
