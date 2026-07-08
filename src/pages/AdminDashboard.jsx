@@ -154,12 +154,25 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
     
     try {
-      await api.post('/admin/especialistas', newEsp);
+      // Mapear los campos del formulario a los que espera el backend
+      const payload = {
+        nombre: newEsp.esp_nomb,
+        apellido: newEsp.esp_apel,
+        email: newEsp.usu_crro,
+        password: newEsp.usu_clve || undefined,
+        esp_licencia: newEsp.esp_licencia || undefined,
+        esp_telf: newEsp.esp_telf || undefined,
+        esc_codi: newEsp.esc_codi,
+        esp_gner: newEsp.esp_gner || 'M',
+        ins_codi: newEsp.ins_codi || undefined,
+      };
+      await api.post('/admin/especialistas', payload);
       showToast('✅ Especialista creado con éxito. Contraseña por defecto: SiatDoc2026*');
       setNewEsp({ 
         usu_crro: '', esp_nomb: '', esp_apel: '', usu_clve: '',
         esp_codi: '', esp_licencia: '', esp_telf: '', 
-        esc_codi: '', ins_codi: catalogos.instituciones && catalogos.instituciones.length > 0 ? catalogos.instituciones[0].ins_codi : ''
+        esc_codi: '', esp_gner: 'M',
+        ins_codi: catalogos.instituciones && catalogos.instituciones.length > 0 ? catalogos.instituciones[0].ins_codi : ''
       });
       fetchData();
     } catch (err) {
@@ -338,7 +351,7 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
     
     try {
-      const esc_codi = `ESP-${Date.now()}`;
+      const esc_codi = `E${Date.now().toString(36).toUpperCase()}`;
       await api.post('/admin/especialidades', { ...newEspCat, esc_codi });
       showToast(`✅ Especialidad registrada con éxito. Código: ${esc_codi}`);
       setNewEspCat({ esc_codi: '', esc_nomb: '', esc_desc: '' });
