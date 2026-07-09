@@ -39,36 +39,33 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    const controller = new AbortController()
-    let warmUpTimer = null
-    let fallbackTimer = null
+    let attempts = 0
+    const MAX_ATTEMPTS = 10
+    const INTERVAL = 5000
 
-    async function warmUp() {
-      try {
-        await api.get('/health', { signal: controller.signal, timeout: 45000 })
-      } catch {
-        // Ignorar errores, el servidor puede tardar en responder
-      } finally {
-        if (!cancelled) {
-          warmUpTimer = setTimeout(() => setSplashDone(true), 3000)
+    async function pollHealth() {
+      while (!cancelled && attempts < MAX_ATTEMPTS) {
+        attempts++
+        try {
+          await api.get('/health', { timeout: 5000 })
+          if (!cancelled) {
+            setTimeout(() => setSplashDone(true), 1500)
+          }
+          return
+        } catch {
+          if (!cancelled && attempts < MAX_ATTEMPTS) {
+            await new Promise(r => setTimeout(r, INTERVAL))
+          }
         }
       }
-    }
-
-    warmUp()
-
-    fallbackTimer = setTimeout(() => {
       if (!cancelled) {
         setSplashDone(true)
       }
-    }, 15000)
-
-    return () => {
-      cancelled = true
-      controller.abort()
-      if (warmUpTimer) clearTimeout(warmUpTimer)
-      if (fallbackTimer) clearTimeout(fallbackTimer)
     }
+
+    pollHealth()
+
+    return () => { cancelled = true }
   }, [])
 
   const handleLogout = () => {

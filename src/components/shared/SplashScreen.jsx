@@ -2,8 +2,17 @@ import { useState, useEffect } from 'react'
 import { Heart, Sparkles, Shield, Star, Sun, Brain, Smile, Building2, Stethoscope } from 'lucide-react'
 import logo from '../../assets/Logo.png'
 
+const wakeMessages = [
+  'Despertando el servidor...',
+  'Estableciendo conexión segura...',
+  'El servidor se está iniciando...',
+  'Preparando la base de datos...',
+  'Casi listo, un momento más...',
+]
+
 const roleMessages = {
   ADMIN_INSTITUCION: [
+    ...wakeMessages,
     'Inicializando panel de administración...',
     'Cargando configuración del sistema...',
     'Verificando módulos institucionales...',
@@ -14,6 +23,7 @@ const roleMessages = {
     'Cada gestión cuenta para mejorar el acompañamiento...',
   ],
   ESPECIALISTA: [
+    ...wakeMessages,
     'Preparando tu dashboard clínico...',
     'Cargando herramientas de evaluación terapéutica...',
     'Conectando con expedientes de pacientes...',
@@ -24,6 +34,7 @@ const roleMessages = {
     'Cada terapia es un paso adelante...',
   ],
   REPRESENTANTE: [
+    ...wakeMessages,
     'Preparando un espacio seguro para tu hijo...',
     'Cargando herramientas de apoyo terapéutico...',
     'Conectando con tu equipo de especialistas...',
