@@ -67,19 +67,35 @@ function Login({ onNavigate }) {
     }
   };
 
+  const webAuthnSupported = () =>
+    typeof window !== "undefined" && !!window.PublicKeyCredential;
+
   const handleFingerprint = async () => {
     setError("");
+    if (!webAuthnSupported()) {
+      setError(
+        "Tu navegador o dispositivo no soporta el acceso por huella. Inicia sesión con tu contraseña.",
+      );
+      return;
+    }
     setIsFp(true);
     try {
       const { token, user } = await loginWithFingerprint();
       finalizeSession(user, token);
     } catch (err) {
       console.error(err);
-      setError(
-        err?.name === "NotAllowedError"
-          ? "Autenticación cancelada o huella no disponible."
-          : err.response?.data?.error || "No se pudo iniciar con la huella.",
-      );
+      const name = err?.name;
+      const serverMsg = err.response?.data?.error;
+      if (name === "NotAllowedError" || name === "AbortError") {
+        setError(
+          serverMsg ||
+            "Autenticación cancelada o no se encontró la huella en este dispositivo. Si aún no la has configurado, inicia sesión con tu contraseña y regístrala en Mi Perfil → Acceso rápido con huella.",
+        );
+      } else if (err?.code === 400 && serverMsg) {
+        setError(serverMsg);
+      } else {
+        setError(serverMsg || "No se pudo completar el acceso con huella.");
+      }
     } finally {
       setIsFp(false);
     }
@@ -255,50 +271,62 @@ function Login({ onNavigate }) {
           type="button"
           onClick={handleFingerprint}
           disabled={isLoading || isFp}
-          className="w-full flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold py-3 px-4 rounded-xl transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 disabled:opacity-70 disabled:cursor-not-allowed"
+          className="group w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl border border-brand-200 dark:border-blue-700/50 bg-brand-50/60 dark:bg-slate-800/70 text-brand-700 dark:text-blue-300 font-semibold transition-all duration-200 hover:bg-brand-100/70 dark:hover:bg-blue-900/30 hover:border-brand-300 dark:hover:border-blue-600 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
-          {isFp ? (
-            <svg
-              className="animate-spin h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500/10 dark:bg-blue-500/15 text-brand-600 dark:text-blue-400 ring-1 ring-brand-500/20 dark:ring-blue-500/20 transition-all duration-200 group-hover:bg-brand-500/15 dark:group-hover:bg-blue-500/20">
+            {isFp ? (
+              <svg
+                className="animate-spin h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
                 stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571" />
-              <path d="M19 6.862C19 10.65 18.5 14.2 17.6 17.5" />
-              <path d="M5 6.862C5 10.65 5.5 14.2 6.4 17.5" />
-              <path d="M12 5.5a1 1 0 0 1 2 0c0 3.4-1 6.8-2.5 10" />
-              <path d="M8 8a4 4 0 0 1 4-4" />
-              <path d="M6 8a6 6 0 0 1 .35-2" />
-            </svg>
-          )}
-          {isFp
-            ? "Verificando con tu huella..."
-            : "Iniciar con acceso rápido (huella)"}
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+                <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+                <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+                <path d="M2 12a10 10 0 0 1 18-6" />
+                <path d="M2 16h.01" />
+                <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+                <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+                <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+                <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
+              </svg>
+            )}
+          </span>
+          <span className="text-left leading-tight">
+            {isFp ? "Verificando con tu huella..." : "Ingresar con huella"}
+            <span className="block text-[11px] font-normal text-brand-500/80 dark:text-blue-400/70">
+              Usa tu huella o reconocimiento facial
+            </span>
+          </span>
         </button>
+        <p className="mt-3 text-center text-[11px] text-slate-400 dark:text-slate-500">
+          Si aún no la configuras, inicia sesión con tu contraseña y regístrala
+          en tu perfil.
+        </p>
 
         <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
           ¿No tienes cuenta?{" "}

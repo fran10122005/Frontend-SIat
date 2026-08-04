@@ -5,7 +5,7 @@ import {
 import api from "./axios";
 
 export async function beginRegister() {
-  const res = await api.post("/auth/passkey/register/start");
+  const res = await api.post("/auth/passkey/register/start", {});
   return res.data.options;
 }
 
@@ -18,7 +18,7 @@ export async function finishRegister(credential, pk_nomb) {
 }
 
 export async function beginLogin() {
-  const res = await api.post("/auth/passkey/login/start");
+  const res = await api.post("/auth/passkey/login/start", {});
   return res.data.options;
 }
 

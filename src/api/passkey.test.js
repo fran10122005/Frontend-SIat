@@ -42,6 +42,7 @@ describe("Módulo de acceso rápido (passkey)", () => {
     expect(mockedApi.post).toHaveBeenNthCalledWith(
       1,
       "/auth/passkey/register/start",
+      {},
     );
     expect(startRegistration).toHaveBeenCalledWith(options);
     expect(mockedApi.post).toHaveBeenNthCalledWith(
@@ -69,6 +70,7 @@ describe("Módulo de acceso rápido (passkey)", () => {
     expect(mockedApi.post).toHaveBeenNthCalledWith(
       1,
       "/auth/passkey/login/start",
+      {},
     );
     expect(startAuthentication).toHaveBeenCalledWith(options);
     expect(mockedApi.post).toHaveBeenNthCalledWith(
