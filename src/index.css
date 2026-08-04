@@ -64,8 +64,8 @@ img {
 
 /* 1. Unify and Modernize Border Radii (Avoiding childish overly rounded elements) */
 .rounded-3xl,
-.rounded-\[2rem\],
-.rounded-\[2.5rem\] {
+[class*="rounded-[2rem]"],
+[class*="rounded-[2.5rem]"] {
   border-radius: 1.25rem !important;
 }
 
@@ -88,20 +88,20 @@ img {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 999px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: rgba(148, 163, 184, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.5);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: rgba(71, 85, 105, 0.7);
 }
 
 /* 3. Global Modern Glassmorphism Cards & Lists */
@@ -190,7 +190,7 @@ img {
 
 /* Hover effect on clickable system cards */
 .hover\:border-blue-400:hover,
-.hover\:border-[#034EA1]:hover {
+[class*="hover:border-[#034EA1]"]:hover {
   border-color: rgba(3, 78, 161, 0.25) !important;
   box-shadow: 0 10px 25px -4px rgba(3, 78, 161, 0.08) !important;
   transform: translateY(-1px);

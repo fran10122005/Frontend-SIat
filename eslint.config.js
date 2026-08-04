@@ -31,6 +31,7 @@ export default [
         AbortController: 'readonly',
         URLSearchParams: 'readonly',
         alert: 'readonly',
+        CustomEvent: 'readonly',
         SpeechSynthesisUtterance: 'readonly',
         speechSynthesis: 'readonly',
         performance: 'readonly',
