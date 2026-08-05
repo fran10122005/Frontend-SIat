@@ -42,7 +42,9 @@ export default function Sidebar() {
         />
       )}
 
-      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+      <aside
+        id={userRole === 'ESPECIALISTA' ? 'tour-specialist-sidebar' : 'tour-parent-sidebar'}
+        className={`fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Cabecera - Logo integrado al gradiente */}
@@ -74,6 +76,7 @@ export default function Sidebar() {
             return (
               <button
                 key={item.id}
+                id={`tour-sidebar-${item.id}`}
                 onClick={() => {
                   if (isBlocked) {
                     showToast('⚠️ Selecciona un paciente primero')

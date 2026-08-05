@@ -6,6 +6,7 @@ import { Users } from 'lucide-react'
 import { useDebounce } from '../hooks/useDebounce'
 import Topbar from '../components/layout/Topbar'
 import Pagination from '../components/shared/Pagination'
+import RegisterChildModal from '../components/shared/RegisterChildModal'
 
 export default function PatientManagement() {
   const { listaNinos, setSelectedChildId, setNomNino, navigate, fetchNinos, showToast } = useGlobalContext()
@@ -34,52 +35,17 @@ export default function PatientManagement() {
   const [showRegModal, setShowRegModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [generatedLink, setGeneratedLink] = useState('')
-  const [loading, setLoading] = useState(false)
   
-  const [formData, setFormData] = useState({
-    nin_nomb: '',
-    nin_apel: '',
-    nin_fnac: '',
-    nin_gner: 'M',
-    nin_nivd: 'Nivel 1',
-    rep_nomb: '',
-    rep_apel: '',
-    usu_crro: ''
-  })
-
   const handleManagePatient = (nino) => {
     setSelectedChildId(nino.id_ninos)
     setNomNino(`${nino.nom_nino} ${nino.ape_nino}`) // Set legacy nomNino for consistency
     navigate('student')
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const res = await api.post('/ninos/invite-representative', formData)
-      const respData = res.data.data
-      setGeneratedLink(respData.invitationUrl)
-      setShowRegModal(false)
-      setShowLinkModal(true)
-      showToast('✅ Invitación clínica creada con éxito')
-      setFormData({
-        nin_nomb: '',
-        nin_apel: '',
-        nin_fnac: '',
-        nin_gner: 'M',
-        nin_nivd: 'Nivel 1',
-        rep_nomb: '',
-        rep_apel: '',
-        usu_crro: ''
-      })
-      fetchNinos()
-    } catch (err) {
-      console.error(err)
-      showToast(`❌ Error: ${err.response?.data?.error || err.message}`)
-    } finally {
-      setLoading(false)
-    }
+  const handleRegistrationSuccess = (invitationUrl) => {
+    setGeneratedLink(invitationUrl)
+    setShowLinkModal(true)
+    fetchNinos()
   }
 
   // Obtener iniciales
@@ -223,79 +189,14 @@ export default function PatientManagement() {
         </div>
       </main>
 
-      {/* Modal: Registrar Niño & Invitar Representante */}
-      {showRegModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 bg-[#034EA1] text-white flex items-center justify-between">
-              <h3 className="text-lg font-bold">Registrar Niño e Invitar Representante</h3>
-              <button onClick={() => setShowRegModal(false)} className="text-white/80 hover:text-white text-xl font-bold">&times;</button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1">Información del Paciente (Niño)</h4>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Nombres</label>
-                  <input required type="text" value={formData.nin_nomb} onChange={e => setFormData({...formData, nin_nomb: e.target.value})} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej. Juanito" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Apellidos</label>
-                  <input required type="text" value={formData.nin_apel} onChange={e => setFormData({...formData, nin_apel: e.target.value})} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej. Pérez" />
-                </div>
-              </div>
+      {/* Modal Premium: Registrar Niño & Invitar Representante */}
+      <RegisterChildModal 
+        isOpen={showRegModal}
+        onClose={() => setShowRegModal(false)}
+        onSuccess={handleRegistrationSuccess}
+      />
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">F. Nacimiento</label>
-                  <input required type="date" value={formData.nin_fnac} onChange={e => setFormData({...formData, nin_fnac: e.target.value})} className="w-full px-2 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Género</label>
-                  <select value={formData.nin_gner} onChange={e => setFormData({...formData, nin_gner: e.target.value})} className="w-full px-2 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                    <option value="M">Masculino</option>
-                    <option value="F">Femenino</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Nivel TEA</label>
-                  <select value={formData.nin_nivd} onChange={e => setFormData({...formData, nin_nivd: e.target.value})} className="w-full px-2 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                    <option value="Nivel 1">Nivel 1 (Leve)</option>
-                    <option value="Nivel 2">Nivel 2 (Moderado)</option>
-                    <option value="Nivel 3">Nivel 3 (Severo)</option>
-                  </select>
-                </div>
-              </div>
-
-              <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b pb-1 pt-2">Información de la Invitación (Representante)</h4>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Nombres Padre/Madre</label>
-                  <input required type="text" value={formData.rep_nomb} onChange={e => setFormData({...formData, rep_nomb: e.target.value})} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej. Carlos" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Apellidos Padre/Madre</label>
-                  <input required type="text" value={formData.rep_apel} onChange={e => setFormData({...formData, rep_apel: e.target.value})} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej. Pérez" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Correo Electrónico (Representante)</label>
-                <input required type="email" value={formData.usu_crro} onChange={e => setFormData({...formData, usu_crro: e.target.value})} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="correo@repre.com" />
-                <p className="text-[10px] text-slate-400 mt-1">El sistema pre-registrará al representante y le enviará un enlace de activación por correo.</p>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t">
-                <button type="button" onClick={() => setShowRegModal(false)} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold hover:bg-slate-200">Cancelar</button>
-                <button type="submit" disabled={loading} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50">{loading ? 'Procesando...' : 'Crear Registro'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Enlace de Activación Generado (Demo Fallback) */}
+      {/* Modal de Enlace Generado */}
       {showLinkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">

@@ -1,10 +1,16 @@
 import React from 'react'
 import { useGlobalContext } from '../../context/GlobalState'
-import { Sun, Moon, Menu } from 'lucide-react'
+import { useTourContext } from '../../context/TourContext'
+import { Sun, Moon, Menu, HelpCircle } from 'lucide-react'
 import NotificationBell from './NotificationBell'
 
 export default function Topbar() {
   const { userRole, userName, setCurrentView, isSidebarOpen, setIsSidebarOpen, isDark, toggleTheme } = useGlobalContext()
+  const { startRoleTour } = useTourContext()
+
+  const handleStartTour = () => {
+    startRoleTour(userRole)
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800/60 bg-white/80 dark:bg-[#0F172A]/80 px-6 backdrop-blur-md transition-colors duration-200">
@@ -20,6 +26,13 @@ export default function Topbar() {
       {/* Contenedor derecho de acciones */}
       <div className="flex items-center gap-4 ml-auto">
         <NotificationBell />
+        <button
+          onClick={handleStartTour}
+          className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+          title="Ver Tutorial"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
         <button 
           onClick={toggleTheme}
           className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"

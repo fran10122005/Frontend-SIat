@@ -54,7 +54,7 @@ const kpiConfig = [
 export default function AdminKPIs({ metricas }) {
   if (!metricas) return null;
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+    <div id="tour-admin-kpis" className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       {kpiConfig.map((cfg, i) => {
         const Icon = cfg.icon
         const value = metricas[cfg.key]

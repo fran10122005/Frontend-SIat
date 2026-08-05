@@ -22,6 +22,7 @@
   "dependencies": {
     "@simplewebauthn/browser": "^13.3.0",
     "axios": "^1.16.1",
+    "driver.js": "^1.8.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.17.0",

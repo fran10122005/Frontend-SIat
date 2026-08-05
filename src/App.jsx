@@ -11,6 +11,7 @@ import DiarioHogar from './pages/DiarioHogar'
 import AgendaDiaria from './pages/AgendaDiaria'
 import ManualUsuarioRepresentante from './components/manuals/ManualUsuarioRepresentante'
 import ManualUsuarioEspecialista from './components/manuals/ManualUsuarioEspecialista'
+import WelcomeTourModal from './components/shared/WelcomeTourModal'
 
 import HistoryProgress from './pages/HistoryProgress'
 import PatientManagement from './pages/PatientManagement'
@@ -169,6 +170,7 @@ export default function App() {
       {renderPage()}
 
       {/* Auto Logout Modal */}
+      <WelcomeTourModal />
       {showSessionExpired && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-blue-200 dark:border-blue-900/30 animate-in zoom-in-95 duration-200">

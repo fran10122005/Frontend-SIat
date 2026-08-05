@@ -90,6 +90,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
       )}
 
       <aside
+        id="tour-admin-sidebar"
         className={`fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
