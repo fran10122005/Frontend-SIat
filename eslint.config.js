@@ -25,6 +25,7 @@ export default [
         fetch: 'readonly',
         navigator: 'readonly',
         localStorage: 'readonly',
+        sessionStorage: 'readonly',
         URL: 'readonly',
         Image: 'readonly',
         HTMLUnknownElement: 'readonly',

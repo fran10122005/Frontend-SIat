@@ -18,6 +18,7 @@ import {
   X,
   Fingerprint,
   Trash2,
+  Info,
 } from "lucide-react";
 import LoadingState from "../components/dashboard/LoadingState";
 import {
@@ -155,6 +156,7 @@ export default function UserProfile() {
           rol_nomb: userData.tm_roles?.rol_nomb || "Usuario",
         });
       } catch (error) {
+        console.error(error);
         showToast("⚠️ No se pudo cargar la información del perfil");
       } finally {
         setLoading(false);
@@ -162,6 +164,7 @@ export default function UserProfile() {
     };
 
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleProfileChange = (e) => {
@@ -412,6 +415,18 @@ export default function UserProfile() {
                               </div>
                             ))
                           )}
+
+                          <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg mt-2 mb-2">
+                            <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+                              SIAT{" "}
+                              <strong>no almacena tu huella dactilar</strong> ni
+                              datos biométricos. Solo se guarda una clave
+                              criptográfica pública en nuestros servidores. Tu
+                              huella permanece en tu dispositivo de forma
+                              segura.
+                            </p>
+                          </div>
 
                           <button
                             type="button"
