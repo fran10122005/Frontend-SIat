@@ -326,7 +326,7 @@ export default function EspecialistasTab({
                 <button
                   disabled={loading}
                   type="submit"
-                  className="md:w-auto px-8 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="md:w-auto px-8 w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   Registrar Especialista
                 </button>
@@ -435,7 +435,7 @@ export default function EspecialistasTab({
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-sm responsive-table">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
                   <tr>
                     <th className="py-3 px-4 font-semibold uppercase">
@@ -516,7 +516,7 @@ export default function EspecialistasTab({
                               <div className="flex gap-2 sm:ml-auto">
                                 <button
                                   type="submit"
-                                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm font-semibold transition-colors"
+                                  className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-semibold transition-colors"
                                 >
                                   Guardar
                                 </button>
@@ -532,7 +532,7 @@ export default function EspecialistasTab({
                           </td>
                         ) : (
                           <>
-                            <td className="py-4 px-4">
+                            <td className="py-4 px-4" data-label="Profesional">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold shrink-0 text-sm shadow-sm">
                                   {esp.esp_nomb.charAt(0)}
@@ -552,7 +552,7 @@ export default function EspecialistasTab({
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-4">
+                            <td className="py-4 px-4" data-label="Información">
                               <div className="text-sm text-slate-700 dark:text-slate-300 font-medium">
                                 {esp.tm_especi?.esc_nomb}
                               </div>
@@ -574,10 +574,13 @@ export default function EspecialistasTab({
                                 </div>
                               )}
                             </td>
-                            <td className="py-4 px-4">
+                            <td className="py-4 px-4" data-label="Estado">
                               <StatusBadge active={esp.tm_usuar?.usu_estd} />
                             </td>
-                            <td className="py-4 px-4 text-right">
+                            <td
+                              className="py-4 px-4 text-right"
+                              data-label="Acciones"
+                            >
                               <div className="flex justify-end gap-2">
                                 <button
                                   onClick={() =>
@@ -736,7 +739,7 @@ export default function EspecialistasTab({
             </div>
 
             <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-sm responsive-table">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
                   <tr>
                     <th className="py-3 px-4 font-semibold uppercase">
@@ -774,7 +777,7 @@ export default function EspecialistasTab({
                           <td colSpan="4" className="py-3 px-4">
                             <form
                               onSubmit={handleUpdateEspecialidad}
-                              className="flex gap-3 w-full bg-slate-50 dark:bg-slate-900 p-2 rounded-lg"
+                              className="flex flex-col sm:flex-row gap-3 w-full bg-slate-50 dark:bg-slate-900 p-2 rounded-lg"
                             >
                               <input
                                 required
@@ -786,7 +789,7 @@ export default function EspecialistasTab({
                                     esc_nomb: e.target.value,
                                   })
                                 }
-                                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-1/3"
+                                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 sm:w-1/3"
                                 placeholder="Nombre"
                               />
                               <input
@@ -798,13 +801,13 @@ export default function EspecialistasTab({
                                     esc_desc: e.target.value,
                                   })
                                 }
-                                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 w-1/2"
+                                className="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 sm:w-1/2"
                                 placeholder="Descripción"
                               />
-                              <div className="flex gap-2 ml-auto">
+                              <div className="flex gap-2 sm:ml-auto">
                                 <button
                                   type="submit"
-                                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm font-semibold"
+                                  className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm font-semibold"
                                 >
                                   Guardar
                                 </button>
@@ -820,7 +823,7 @@ export default function EspecialistasTab({
                           </td>
                         ) : (
                           <>
-                            <td className="py-4 px-4">
+                            <td className="py-4 px-4" data-label="Especialidad">
                               <div className="font-bold text-slate-900 dark:text-white">
                                 {esc.esc_nomb}
                               </div>
@@ -828,17 +831,23 @@ export default function EspecialistasTab({
                                 ID: {esc.esc_codi}
                               </div>
                             </td>
-                            <td className="py-4 px-4 text-slate-600 dark:text-slate-400">
+                            <td
+                              className="py-4 px-4 text-slate-600 dark:text-slate-400"
+                              data-label="Descripción"
+                            >
                               {esc.esc_desc || "-"}
                             </td>
-                            <td className="py-4 px-4">
+                            <td className="py-4 px-4" data-label="Estado">
                               <StatusBadge
                                 active={esc.esc_estd !== false}
                                 activeLabel="Activa"
                                 inactiveLabel="Inactivo"
                               />
                             </td>
-                            <td className="py-4 px-4 text-right">
+                            <td
+                              className="py-4 px-4 text-right"
+                              data-label="Acciones"
+                            >
                               <div className="flex justify-end gap-2">
                                 <button
                                   onClick={() => setEditingEspCat(esc)}

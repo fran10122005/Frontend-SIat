@@ -361,6 +361,86 @@ input[type="checkbox"] {
 }
 
 /* ==========================================================================
+   10. RESPONSIVE TABLES (Cards en móvil)
+   Uso: agrega la clase `responsive-table` al <table> y un atributo
+   data-label="Nombre de columna" a cada <td>. En móvil las filas se
+   convierten en tarjetas apiladas para evitar el scroll horizontal.
+   ========================================================================== */
+@media (max-width: 639px) {
+  .responsive-table {
+    display: block;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  .responsive-table thead {
+    display: none;
+  }
+  .responsive-table tbody,
+  .responsive-table tr,
+  .responsive-table td {
+    display: block;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  .responsive-table tr {
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border: 1px solid rgba(3, 78, 161, 0.12) !important;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.7);
+  }
+  .dark .responsive-table tr {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(15, 23, 42, 0.55);
+  }
+  .responsive-table td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0 !important;
+    border: none !important;
+    white-space: normal !important;
+    text-align: right !important;
+  }
+  .responsive-table td:not(:last-child) {
+    border-bottom: 1px dashed rgba(148, 163, 184, 0.25) !important;
+  }
+  .responsive-table td.hidden,
+  .responsive-table td.sm\:hidden {
+    display: none !important;
+  }
+  .responsive-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    align-self: flex-start;
+    min-width: 92px;
+    padding-top: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    text-align: left;
+  }
+  .responsive-table td:not([data-label])::before {
+    content: none;
+  }
+  .responsive-table td > * {
+    min-width: 0;
+  }
+  /* Grupos de acciones: permitir envolver botones sin desbordar */
+  .responsive-table td[data-label="Acciones"] > div,
+  .responsive-table td[data-label="Acción"] > div,
+  .responsive-table td[data-label="Detalle"] > div,
+  .responsive-table td[data-label="Detalle"] > button {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    white-space: normal !important;
+  }
+}
+
+/* ==========================================================================
    DRIVER.JS CUSTOM SIAT STYLING (Tutorial Interactivo)
    ========================================================================== */
 .driver-popover {

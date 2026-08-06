@@ -63,32 +63,29 @@ export default function UsuariosTab({
   };
 
   const getRoleBadge = (rolCodi) => {
-    switch (rolCodi) {
-      case "ROL_ADM":
-        return (
-          <span className="px-2.5 py-1 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 rounded-full text-xs font-semibold uppercase tracking-wider border border-amber-200/50 dark:border-amber-900/30">
-            Administrador
-          </span>
-        );
-      case "ROL_ESP":
-        return (
-          <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 rounded-full text-xs font-semibold uppercase tracking-wider border border-indigo-200/50 dark:border-indigo-900/30">
-            Especialista
-          </span>
-        );
-      case "ROL_REP":
-        return (
-          <span className="px-2.5 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 rounded-full text-xs font-semibold uppercase tracking-wider border border-blue-200/50 dark:border-blue-900/30">
-            Representante
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2.5 py-1 bg-slate-50 text-slate-700 dark:bg-slate-900 dark:text-slate-400 rounded-full text-xs font-semibold uppercase tracking-wider">
-            Otro
-          </span>
-        );
+    let label = "Otro";
+    let tone =
+      "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700";
+    if (rolCodi === "ROL_ADM") {
+      label = "Administrador";
+      tone =
+        "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700";
+    } else if (rolCodi === "ROL_ESP") {
+      label = "Especialista";
+      tone =
+        "bg-indigo-50/70 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-900/40";
+    } else if (rolCodi === "ROL_REP") {
+      label = "Representante";
+      tone =
+        "bg-sky-50/70 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200/60 dark:border-sky-900/40";
     }
+    return (
+      <span
+        className={`px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border ${tone}`}
+      >
+        {label}
+      </span>
+    );
   };
 
   const hasFilters =
@@ -311,7 +308,7 @@ export default function UsuariosTab({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
+            <table className="w-full text-left text-sm border-collapse responsive-table">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="px-6 py-4">Usuario</th>
@@ -343,7 +340,7 @@ export default function UsuariosTab({
                         key={user.usu_codi}
                         className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors"
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4" data-label="Usuario">
                           <div className="flex items-center gap-3">
                             <div
                               className={`p-2.5 rounded-lg flex items-center justify-center ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
@@ -360,22 +357,34 @@ export default function UsuariosTab({
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td
+                          className="px-6 py-4 whitespace-nowrap"
+                          data-label="Rol"
+                        >
                           {getRoleBadge(user.rol_codi)}
                         </td>
-                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell whitespace-nowrap">
+                        <td
+                          className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell whitespace-nowrap"
+                          data-label="Creación"
+                        >
                           <div className="flex items-center gap-1.5 text-xs">
                             <Calendar className="h-3.5 w-3.5 text-slate-400" />
                             {formatDate(user.usu_crea)}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell whitespace-nowrap">
+                        <td
+                          className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell whitespace-nowrap"
+                          data-label="Último Acceso"
+                        >
                           <div className="flex items-center gap-1.5 text-xs">
                             <Clock className="h-3.5 w-3.5 text-slate-400" />
                             {formatDate(user.usu_logi)}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                        <td
+                          className="px-6 py-4 text-center whitespace-nowrap"
+                          data-label="Estado"
+                        >
                           <button
                             onClick={() => openConfirmToggle(user)}
                             disabled={busy}
@@ -389,7 +398,10 @@ export default function UsuariosTab({
                             <StatusBadge active={isActive} />
                           </button>
                         </td>
-                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <td
+                          className="px-6 py-4 text-right whitespace-nowrap"
+                          data-label="Acciones"
+                        >
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() =>

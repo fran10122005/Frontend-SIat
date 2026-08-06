@@ -207,7 +207,7 @@ export default function HomeAnalytics() {
             </p>
             <button
               onClick={() => navigate("patients")}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               Ir al Gestor de Pacientes
             </button>

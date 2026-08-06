@@ -532,7 +532,7 @@ export default function AgendaDiaria() {
                     {!isFinishing && (
                       <button
                         onClick={endSession}
-                        className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl text-xs shadow-sm flex items-center gap-2 transition-colors"
+                        className="px-5 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-sm flex items-center gap-2 transition-colors"
                       >
                         <Square className="w-3.5 h-3.5 fill-current" /> Detener
                       </button>

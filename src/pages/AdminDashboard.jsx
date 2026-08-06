@@ -1011,7 +1011,7 @@ function AdminDashboard({ onNavigate }) {
                     navigator.clipboard.writeText(generatedLink);
                     showToast("📋 Enlace copiado al portapapeles");
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
                 >
                   Copiar Enlace
                 </button>
@@ -1031,7 +1031,7 @@ function AdminDashboard({ onNavigate }) {
       {showScheduleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-700 to-blue-600 text-white flex items-center justify-between">
+            <div className="px-6 py-4 bg-slate-800 text-white flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <Clock className="w-5 h-5" /> Programar Reporte
               </h3>

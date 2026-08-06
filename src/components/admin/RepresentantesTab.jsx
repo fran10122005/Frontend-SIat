@@ -130,7 +130,7 @@ export default function RepresentantesTab({
                 type="button"
                 onClick={onRegisterClick}
                 data-tour="admin-rep-register"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5"
               >
                 <svg
                   className="w-4 h-4"
@@ -165,7 +165,7 @@ export default function RepresentantesTab({
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
+              <table className="w-full text-left text-sm border-collapse responsive-table">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="px-6 py-3">Representante</th>
@@ -183,7 +183,7 @@ export default function RepresentantesTab({
                       key={r.usu_codi || r.rep_codi}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4" data-label="Representante">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold shrink-0 text-sm">
                             {r.rep_nomb?.charAt(0) || "?"}
@@ -199,7 +199,7 @@ export default function RepresentantesTab({
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4" data-label="Contacto">
                         <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                           <Mail className="w-3.5 h-3.5 text-slate-400" />
                           <span className="text-xs">{r.usu_crro || "-"}</span>
@@ -211,17 +211,23 @@ export default function RepresentantesTab({
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 hidden sm:table-cell">
+                      <td
+                        className="px-6 py-4 hidden sm:table-cell"
+                        data-label="Paciente"
+                      >
                         <span className="text-sm text-slate-600 dark:text-slate-300">
                           {r.tm_ninos?.nin_nomb
                             ? `${r.tm_ninos.nin_nomb} ${r.tm_ninos.nin_apel || ""}`
                             : "Sin asignar"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-6 py-4 text-center" data-label="Estado">
                         <StatusBadge active={r.usu_estd} />
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td
+                        className="px-6 py-4 text-right"
+                        data-label="Acciones"
+                      >
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() =>

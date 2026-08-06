@@ -214,7 +214,7 @@ export default function AsignacionesTab({
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm responsive-table">
             <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="py-3 px-4 font-semibold uppercase">Paciente</th>
@@ -243,7 +243,7 @@ export default function AsignacionesTab({
                     key={asi.asi_codi}
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                   >
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4" data-label="Paciente">
                       <div className="font-semibold text-slate-900 dark:text-white">
                         {asi.tm_ninos?.nin_nomb} {asi.tm_ninos?.nin_apel}
                       </div>
@@ -251,7 +251,7 @@ export default function AsignacionesTab({
                         ID: {asi.tm_ninos?.nin_codi}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4" data-label="Especialista">
                       <div className="font-medium text-slate-700 dark:text-slate-300">
                         {asi.tm_espec?.esp_gner === "M" ? "Dr." : "Dra."}{" "}
                         {asi.tm_espec?.esp_nomb} {asi.tm_espec?.esp_apel}
@@ -260,13 +260,16 @@ export default function AsignacionesTab({
                         ID: {asi.tm_espec?.esp_codi}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
+                    <td
+                      className="py-3 px-4 text-slate-600 dark:text-slate-400"
+                      data-label="Fecha Ingreso"
+                    >
                       {new Date(asi.asi_inic).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4" data-label="Estado">
                       <StatusBadge active={asi.asi_stdo === "Activo"} />
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right" data-label="Acción">
                       <button
                         onClick={() =>
                           handleToggleAsignacion(asi.asi_codi, asi.asi_stdo)

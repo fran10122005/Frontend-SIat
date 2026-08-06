@@ -364,7 +364,7 @@ export default function PatientManagement() {
                     navigator.clipboard.writeText(generatedLink);
                     showToast("📋 Enlace copiado al portapapeles");
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
                 >
                   Copiar Enlace
                 </button>

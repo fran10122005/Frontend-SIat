@@ -412,7 +412,7 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
+              <table className="w-full text-left text-sm border-collapse responsive-table">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="px-6 py-3">Paciente</th>
@@ -431,7 +431,7 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                       key={item.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4" data-label="Paciente">
                         <div className="font-semibold text-slate-900 dark:text-white">
                           {item.nin_nomb}
                         </div>
@@ -439,8 +439,8 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                           ID: {item.id}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      <td className="px-6 py-4" data-label="Tipo / Severidad">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${
                               item.tipo === "CRISIS"
@@ -465,22 +465,31 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
+                      <td
+                        className="px-6 py-4 hidden md:table-cell"
+                        data-label="Especialista"
+                      >
                         <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                           <User className="w-3.5 h-3.5 text-slate-400" />
                           <span className="text-xs">{item.esp_nomb}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300">
+                      <td
+                        className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300"
+                        data-label="BPM"
+                      >
                         {item.bpm_max ? `${item.bpm_max} BPM` : "-"}
                       </td>
-                      <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
+                      <td
+                        className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400"
+                        data-label="Fecha"
+                      >
                         {new Date(item.fecha).toLocaleString("es-ES", {
                           dateStyle: "short",
                           timeStyle: "short",
                         })}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right" data-label="Detalle">
                         <button
                           onClick={() => setSelectedIncident(item)}
                           className="px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
