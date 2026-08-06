@@ -633,7 +633,6 @@ export async function exportManualPDFRepresentante() {
   const contentW = pageW - margin * 2;
   const maxY = 275;
   const headerH = 14;
-  const footerH = 8;
   const lineH = 4;
 
   let logoData = null;
@@ -847,7 +846,7 @@ export async function exportManualPDFRepresentante() {
                 },
               });
               yy = doc.lastAutoTable.finalY + 4;
-            } catch (e) {
+            } catch {
               yy += 3;
             }
           }
