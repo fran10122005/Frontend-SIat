@@ -361,11 +361,21 @@ input[type="checkbox"] {
 }
 
 /* ==========================================================================
-   10. RESPONSIVE TABLES (Cards en móvil)
-   Uso: agrega la clase `responsive-table` al <table> y un atributo
-   data-label="Nombre de columna" a cada <td>. En móvil las filas se
-   convierten en tarjetas apiladas para evitar el scroll horizontal.
+   10. RESPONSIVE TABLES (Tarjetas plegables en móvil)
+   Uso: agrega la clase `responsive-table` al <table>. En móvil cada fila
+   se convierte en una tarjeta compacta que muestra SOLO el resumen:
+   primera celda (clase `mobile-summary`) + badge de estado
+   (`.mobile-summary-status`) + botón chevron (`.mobile-expand-btn`).
+   El resto de celdas (clase `mobile-detail` + data-label) quedan ocultas
+   y se revelan al expandir la tarjeta.
    ========================================================================== */
+
+/* Elementos exclusivos de móvil (ocultos en escritorio) */
+.mobile-summary-status,
+.mobile-expand-btn {
+  display: none;
+}
+
 @media (max-width: 639px) {
   .responsive-table {
     display: block;
@@ -383,43 +393,67 @@ input[type="checkbox"] {
   }
   .responsive-table tr {
     margin-bottom: 8px;
-    padding: 8px 12px;
     border: 1px solid rgba(3, 78, 161, 0.12) !important;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.7);
+    overflow: hidden;
   }
   .dark .responsive-table tr {
     border-color: rgba(255, 255, 255, 0.08) !important;
     background: rgba(15, 23, 42, 0.55);
   }
-  /* Celda compacta: etiqueta a la izquierda, valor a la derecha en la
-     misma línea. Mantiene la tarjeta densa y evita el scroll excesivo. */
-  .responsive-table td {
+  /* Resumen: siempre visible, una sola línea */
+  .responsive-table td.mobile-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px !important;
+    border: none !important;
+  }
+  .responsive-table td.mobile-summary > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .responsive-table td.mobile-summary > .mobile-summary-status {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .responsive-table .mobile-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(148, 163, 184, 0.15);
+    color: #64748b;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+  }
+  .responsive-table .mobile-expand-btn:active {
+    background: rgba(148, 163, 184, 0.3);
+  }
+  .responsive-table .mobile-expand-btn svg {
+    transition: transform 0.2s ease;
+  }
+  .responsive-table tr.mobile-expanded .mobile-expand-btn svg {
+    transform: rotate(180deg);
+  }
+  /* Detalle: oculto hasta expandir */
+  .responsive-table td.mobile-detail {
+    display: none;
+    padding: 7px 12px !important;
+    border-top: 1px dashed rgba(148, 163, 184, 0.2) !important;
+  }
+  .responsive-table tr.mobile-expanded td.mobile-detail {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 6px 0 !important;
-    border: none !important;
     white-space: normal !important;
-    text-align: right !important;
   }
-  .responsive-table td:not(:last-child) {
-    border-bottom: 1px dashed rgba(148, 163, 184, 0.22) !important;
-  }
-  .responsive-table td.hidden,
-  .responsive-table td.sm\:hidden {
-    display: none !important;
-  }
-  .responsive-table td:not([data-label]) {
-    display: block;
-    text-align: center !important;
-    padding: 8px 0 !important;
-  }
-  .responsive-table td:not([data-label])::before {
-    content: none;
-  }
-  .responsive-table td::before {
+  .responsive-table td.mobile-detail::before {
     content: attr(data-label);
     flex-shrink: 0;
     min-width: 96px;
@@ -431,17 +465,25 @@ input[type="checkbox"] {
     text-align: left;
     line-height: 1.5;
   }
-  .responsive-table td > * {
+  .responsive-table td.mobile-detail > * {
     flex: 0 1 auto;
     min-width: 0;
     text-align: right;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
-  /* Grupos de acciones: permitir envolver botones sin desbordar */
-  .responsive-table td[data-label="Acciones"] > div,
-  .responsive-table td[data-label="Acción"] > div,
-  .responsive-table td[data-label="Detalle"] > div {
+  /* Celdas de estructura (fila vacía / formulario de edición) */
+  .responsive-table td:not([data-label]):not(.mobile-summary):not(.mobile-detail) {
+    display: block;
+    text-align: center !important;
+    padding: 8px 12px !important;
+  }
+  .responsive-table td.hidden,
+  .responsive-table td.sm\:hidden {
+    display: none !important;
+  }
+  /* Grupos de acciones: envolver botones sin desbordar */
+  .responsive-table td.mobile-detail > div {
     flex-wrap: wrap;
     justify-content: flex-end;
     white-space: normal !important;

@@ -1,9 +1,21 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, User, Mail, Calendar, Clock, X, KeyRound } from "lucide-react";
+import {
+  Search,
+  User,
+  Mail,
+  Calendar,
+  Clock,
+  X,
+  KeyRound,
+  ChevronDown,
+  Ban,
+  CheckCircle2,
+} from "lucide-react";
 import StatusBadge from "../shared/StatusBadge";
 import Pagination from "../shared/Pagination";
 import LoadingState from "../dashboard/LoadingState";
 import ConfirmDialog from "../shared/ConfirmDialog";
+import useExpandableRows from "../../hooks/useExpandableRows";
 import api from "../../api/axios";
 import { useGlobalContext } from "../../context/GlobalState";
 
@@ -15,6 +27,7 @@ export default function UsuariosTab({
   exportUsuariosToExcel,
 }) {
   const { showToast } = useGlobalContext();
+  const { expandedId, toggle } = useExpandableRows();
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [filterEstado, setFilterEstado] = useState("TODOS");
@@ -338,33 +351,52 @@ export default function UsuariosTab({
                     return (
                       <tr
                         key={user.usu_codi}
-                        className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors"
+                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${expandedId === user.usu_codi ? "mobile-expanded" : ""}`}
                       >
-                        <td className="px-6 py-4" data-label="Usuario">
-                          <div className="flex items-center gap-3">
+                        <td
+                          className="px-6 py-4 mobile-summary"
+                          data-label="Usuario"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div
                               className={`p-2.5 rounded-lg flex items-center justify-center ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
                             >
                               <User className="h-4.5 w-4.5" />
                             </div>
-                            <div>
-                              <div className="font-semibold text-slate-900 dark:text-white leading-tight">
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-900 dark:text-white leading-tight truncate">
                                 {name}
                               </div>
-                              <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-1">
-                                <Mail className="h-3 w-3" /> {user.usu_crro}
+                              <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-1 truncate">
+                                <Mail className="h-3 w-3 shrink-0" />{" "}
+                                {user.usu_crro}
                               </div>
                             </div>
                           </div>
+                          <span className="mobile-summary-status">
+                            <StatusBadge active={isActive} />
+                          </span>
+                          <button
+                            type="button"
+                            className="mobile-expand-btn"
+                            onClick={() => toggle(user.usu_codi)}
+                            aria-label={
+                              expandedId === user.usu_codi
+                                ? "Ver menos"
+                                : "Ver más"
+                            }
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
                         </td>
                         <td
-                          className="px-6 py-4 whitespace-nowrap"
+                          className="px-6 py-4 whitespace-nowrap mobile-detail"
                           data-label="Rol"
                         >
                           {getRoleBadge(user.rol_codi)}
                         </td>
                         <td
-                          className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell whitespace-nowrap"
+                          className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell whitespace-nowrap mobile-detail"
                           data-label="Creación"
                         >
                           <div className="flex items-center gap-1.5 text-xs">
@@ -373,7 +405,7 @@ export default function UsuariosTab({
                           </div>
                         </td>
                         <td
-                          className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell whitespace-nowrap"
+                          className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell whitespace-nowrap mobile-detail"
                           data-label="Último Acceso"
                         >
                           <div className="flex items-center gap-1.5 text-xs">
@@ -382,7 +414,7 @@ export default function UsuariosTab({
                           </div>
                         </td>
                         <td
-                          className="px-6 py-4 text-center whitespace-nowrap"
+                          className="px-6 py-4 text-center whitespace-nowrap mobile-detail"
                           data-label="Estado"
                         >
                           <button
@@ -399,7 +431,7 @@ export default function UsuariosTab({
                           </button>
                         </td>
                         <td
-                          className="px-6 py-4 text-right whitespace-nowrap"
+                          className="px-6 py-4 text-right whitespace-nowrap mobile-detail"
                           data-label="Acciones"
                         >
                           <div className="flex justify-end gap-2">
@@ -412,27 +444,44 @@ export default function UsuariosTab({
                               className="px-2.5 py-1.5 text-purple-600/70 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 flex items-center gap-1"
                             >
                               {resettingId === user.usu_codi ? (
-                                <span className="w-3 h-3 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                                <span className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
                               ) : (
-                                <KeyRound className="w-3 h-3" />
+                                <KeyRound className="w-4 h-4" />
                               )}
-                              Reset Pass
+                              <span className="hidden sm:inline">
+                                Reset Pass
+                              </span>
                             </button>
                             <button
                               onClick={() => openConfirmToggle(user)}
                               disabled={busy}
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${
+                              title={
+                                isActive
+                                  ? "Suspender usuario"
+                                  : "Activar usuario"
+                              }
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 flex items-center gap-1 ${
                                 isActive
                                   ? "text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
                                   : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                               }`}
                             >
                               {togglingId === user.usu_codi ? (
-                                <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin inline-block align-middle" />
+                                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin inline-block align-middle" />
                               ) : isActive ? (
-                                "Suspender"
+                                <>
+                                  <Ban className="w-4 h-4" />
+                                  <span className="hidden sm:inline">
+                                    Suspender
+                                  </span>
+                                </>
                               ) : (
-                                "Activar"
+                                <>
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  <span className="hidden sm:inline">
+                                    Activar
+                                  </span>
+                                </>
                               )}
                             </button>
                           </div>

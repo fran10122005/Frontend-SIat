@@ -1,9 +1,20 @@
 import { useState, useMemo } from "react";
-import { Search, X, Mail, Phone, UserRound } from "lucide-react";
+import {
+  Search,
+  X,
+  Mail,
+  Phone,
+  UserRound,
+  ChevronDown,
+  KeyRound,
+  Ban,
+  CheckCircle2,
+} from "lucide-react";
 import { useGlobalContext } from "../../context/GlobalState";
 import StatusBadge from "../shared/StatusBadge";
 import Pagination from "../shared/Pagination";
 import api from "../../api/axios";
+import useExpandableRows from "../../hooks/useExpandableRows";
 
 const PAGE_SIZE = 10;
 
@@ -14,6 +25,7 @@ export default function RepresentantesTab({
   onRegisterClick,
 }) {
   const { showToast } = useGlobalContext();
+  const { expandedId, toggle } = useExpandableRows();
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("TODOS");
   const [page, setPage] = useState(0);
@@ -181,16 +193,19 @@ export default function RepresentantesTab({
                   {paged.map((r) => (
                     <tr
                       key={r.usu_codi || r.rep_codi}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${expandedId === (r.usu_codi || r.rep_codi) ? "mobile-expanded" : ""}`}
                     >
-                      <td className="px-6 py-4" data-label="Representante">
-                        <div className="flex items-center gap-3">
+                      <td
+                        className="px-6 py-4 mobile-summary"
+                        data-label="Representante"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold shrink-0 text-sm">
                             {r.rep_nomb?.charAt(0) || "?"}
                             {r.rep_apel?.charAt(0) || ""}
                           </div>
-                          <div>
-                            <div className="font-semibold text-slate-900 dark:text-white">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-900 dark:text-white truncate">
                               {r.rep_nomb} {r.rep_apel}
                             </div>
                             <div className="text-xs text-slate-400 font-mono">
@@ -198,8 +213,26 @@ export default function RepresentantesTab({
                             </div>
                           </div>
                         </div>
+                        <span className="mobile-summary-status">
+                          <StatusBadge active={r.usu_estd} />
+                        </span>
+                        <button
+                          type="button"
+                          className="mobile-expand-btn"
+                          onClick={() => toggle(r.usu_codi || r.rep_codi)}
+                          aria-label={
+                            expandedId === (r.usu_codi || r.rep_codi)
+                              ? "Ver menos"
+                              : "Ver más"
+                          }
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
                       </td>
-                      <td className="px-6 py-4" data-label="Contacto">
+                      <td
+                        className="px-6 py-4 mobile-detail"
+                        data-label="Contacto"
+                      >
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                             <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -216,7 +249,7 @@ export default function RepresentantesTab({
                         </div>
                       </td>
                       <td
-                        className="px-6 py-4 hidden sm:table-cell"
+                        className="px-6 py-4 hidden sm:table-cell mobile-detail"
                         data-label="Paciente"
                       >
                         <span className="text-sm text-slate-600 dark:text-slate-300">
@@ -225,11 +258,14 @@ export default function RepresentantesTab({
                             : "Sin asignar"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center" data-label="Estado">
+                      <td
+                        className="px-6 py-4 text-center mobile-detail"
+                        data-label="Estado"
+                      >
                         <StatusBadge active={r.usu_estd} />
                       </td>
                       <td
-                        className="px-6 py-4 text-right"
+                        className="px-6 py-4 text-right mobile-detail"
                         data-label="Acciones"
                       >
                         <div className="flex justify-end gap-2">
@@ -238,17 +274,38 @@ export default function RepresentantesTab({
                               handleResetPass(r.usu_codi, r.usu_crro)
                             }
                             disabled={resettingId === r.usu_codi}
-                            className="px-2.5 py-1.5 text-purple-600/70 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+                            title="Restablecer contraseña"
+                            className="px-2.5 py-1.5 text-purple-600/70 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 flex items-center gap-1"
                           >
-                            Reset Pass
+                            {resettingId === r.usu_codi ? (
+                              <span className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                            ) : (
+                              <KeyRound className="w-4 h-4" />
+                            )}
+                            <span className="hidden sm:inline">Reset Pass</span>
                           </button>
                           <button
                             onClick={() =>
                               handleToggleEstado(r.usu_codi, r.usu_estd)
                             }
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${r.usu_estd ? "text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
+                            title={r.usu_estd ? "Desactivar" : "Activar"}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${r.usu_estd ? "text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
                           >
-                            {r.usu_estd ? "Desactivar" : "Activar"}
+                            {r.usu_estd ? (
+                              <>
+                                <Ban className="w-4 h-4" />
+                                <span className="hidden sm:inline">
+                                  Desactivar
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span className="hidden sm:inline">
+                                  Activar
+                                </span>
+                              </>
+                            )}
                           </button>
                         </div>
                       </td>

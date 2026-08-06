@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, ChevronDown, Archive, RotateCcw } from "lucide-react";
 import StatusBadge from "../shared/StatusBadge";
 import Pagination from "../shared/Pagination";
+import useExpandableRows from "../../hooks/useExpandableRows";
 
 export default function AsignacionesTab({
   asignacion,
@@ -19,6 +20,7 @@ export default function AsignacionesTab({
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const { expandedId, toggle } = useExpandableRows();
 
   const filtered = useMemo(() => {
     return asignaciones.filter((asi) => {
@@ -241,19 +243,38 @@ export default function AsignacionesTab({
                 paged.map((asi) => (
                   <tr
                     key={asi.asi_codi}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                    className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${expandedId === asi.asi_codi ? "mobile-expanded" : ""}`}
                   >
-                    <td className="py-3 px-4" data-label="Paciente">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-slate-900 dark:text-white">
+                    <td
+                      className="py-3 px-4 mobile-summary"
+                      data-label="Paciente"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900 dark:text-white truncate">
                           {asi.tm_ninos?.nin_nomb} {asi.tm_ninos?.nin_apel}
                         </div>
                         <div className="text-xs text-slate-500 font-mono">
                           ID: {asi.tm_ninos?.nin_codi}
                         </div>
                       </div>
+                      <span className="mobile-summary-status">
+                        <StatusBadge active={asi.asi_stdo === "Activo"} />
+                      </span>
+                      <button
+                        type="button"
+                        className="mobile-expand-btn"
+                        onClick={() => toggle(asi.asi_codi)}
+                        aria-label={
+                          expandedId === asi.asi_codi ? "Ver menos" : "Ver más"
+                        }
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
                     </td>
-                    <td className="py-3 px-4" data-label="Especialista">
+                    <td
+                      className="py-3 px-4 mobile-detail"
+                      data-label="Especialista"
+                    >
                       <div className="min-w-0">
                         <div className="font-medium text-slate-700 dark:text-slate-300">
                           {asi.tm_espec?.esp_gner === "M" ? "Dr." : "Dra."}{" "}
@@ -270,19 +291,39 @@ export default function AsignacionesTab({
                     >
                       {new Date(asi.asi_inic).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4" data-label="Estado">
+                    <td className="py-3 px-4 mobile-detail" data-label="Estado">
                       <StatusBadge active={asi.asi_stdo === "Activo"} />
                     </td>
-                    <td className="py-3 px-4 text-right" data-label="Acción">
+                    <td
+                      className="py-3 px-4 text-right mobile-detail"
+                      data-label="Acción"
+                    >
                       <button
                         onClick={() =>
                           handleToggleAsignacion(asi.asi_codi, asi.asi_stdo)
                         }
-                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${asi.asi_stdo === "Activo" ? "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
+                        title={
+                          asi.asi_stdo === "Activo"
+                            ? "Dar de alta"
+                            : "Reactivar caso"
+                        }
+                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1 ${asi.asi_stdo === "Activo" ? "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
                       >
-                        {asi.asi_stdo === "Activo"
-                          ? "Dar de Alta"
-                          : "Reactivar Caso"}
+                        {asi.asi_stdo === "Activo" ? (
+                          <>
+                            <Archive className="w-4 h-4" />
+                            <span className="hidden sm:inline">
+                              Dar de Alta
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="w-4 h-4" />
+                            <span className="hidden sm:inline">
+                              Reactivar Caso
+                            </span>
+                          </>
+                        )}
                       </button>
                     </td>
                   </tr>

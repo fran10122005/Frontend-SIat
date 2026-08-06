@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Search, Download, FileText, X } from "lucide-react";
+import { Search, Download, FileText, X, ChevronDown } from "lucide-react";
+import useExpandableRows from "../../hooks/useExpandableRows";
 
 const TYPE_BADGES = {
   INFO: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -14,6 +15,7 @@ const TYPE_BADGES = {
 const PAGE_SIZE = 50;
 
 export default function AdminActivityLog({ userName, logs = [] }) {
+  const { expandedId, toggle } = useExpandableRows();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("TODOS");
   const [dateFrom, setDateFrom] = useState("");
@@ -229,15 +231,15 @@ export default function AdminActivityLog({ userName, logs = [] }) {
                   return (
                     <tr
                       key={log.aud_codi}
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors"
+                      className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${expandedId === log.aud_codi ? "mobile-expanded" : ""}`}
                     >
                       <td
-                        className="px-6 py-3 text-slate-500 font-mono text-xs whitespace-nowrap"
+                        className="px-6 py-3 text-slate-500 font-mono text-xs whitespace-nowrap mobile-detail"
                         data-label="Fecha"
                       >
                         {dateStr}
                       </td>
-                      <td className="px-6 py-3" data-label="Tipo">
+                      <td className="px-6 py-3 mobile-detail" data-label="Tipo">
                         <span
                           className={`px-2 py-1 rounded text-[10px] font-bold ${badge}`}
                         >
@@ -245,13 +247,34 @@ export default function AdminActivityLog({ userName, logs = [] }) {
                         </span>
                       </td>
                       <td
-                        className="px-6 py-3 text-slate-700 dark:text-slate-300"
+                        className="px-6 py-3 text-slate-700 dark:text-slate-300 mobile-summary"
                         data-label="Evento"
                       >
-                        {log.aud_desc}
+                        <div className="min-w-0 flex-1">
+                          <span className="line-clamp-2">{log.aud_desc}</span>
+                        </div>
+                        <span className="mobile-summary-status">
+                          <span
+                            className={`px-2 py-1 rounded text-[10px] font-bold ${badge}`}
+                          >
+                            {log.aud_tipo}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          className="mobile-expand-btn"
+                          onClick={() => toggle(log.aud_codi)}
+                          aria-label={
+                            expandedId === log.aud_codi
+                              ? "Ver menos"
+                              : "Ver más"
+                          }
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
                       </td>
                       <td
-                        className="px-6 py-3 text-xs text-slate-500 whitespace-nowrap"
+                        className="px-6 py-3 text-xs text-slate-500 whitespace-nowrap mobile-detail"
                         data-label="Actor / IP"
                       >
                         {log.tm_usuar?.usu_crro || "Sistema"}

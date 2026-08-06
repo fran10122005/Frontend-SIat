@@ -1,8 +1,19 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, X, KeyRound } from "lucide-react";
+import {
+  Search,
+  X,
+  KeyRound,
+  ChevronDown,
+  Pencil,
+  Ban,
+  CheckCircle2,
+  Archive,
+  RotateCcw,
+} from "lucide-react";
 import { useGlobalContext } from "../../context/GlobalState";
 import StatusBadge from "../shared/StatusBadge";
 import Pagination from "../shared/Pagination";
+import useExpandableRows from "../../hooks/useExpandableRows";
 
 export default function EspecialistasTab({
   especialistas,
@@ -27,6 +38,7 @@ export default function EspecialistasTab({
   handleToggleEspecialidad,
 }) {
   const { userRole } = useGlobalContext();
+  const { expandedId, toggle } = useExpandableRows();
   const [subView, setSubView] = useState("especialistas");
   const [searchEsp, setSearchEsp] = useState("");
   const [filterEspecialidad, setFilterEspecialidad] = useState("TODAS");
@@ -466,7 +478,7 @@ export default function EspecialistasTab({
                     pagedEspecialistas.map((esp) => (
                       <tr
                         key={esp.esp_codi}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group"
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group ${expandedId === esp.esp_codi ? "mobile-expanded" : ""}`}
                       >
                         {editingEsp?.esp_codi === esp.esp_codi ? (
                           <td colSpan="4" className="py-3 px-4">
@@ -532,27 +544,45 @@ export default function EspecialistasTab({
                           </td>
                         ) : (
                           <>
-                            <td className="py-4 px-4" data-label="Profesional">
-                              <div className="flex items-center gap-3">
+                            <td
+                              className="py-4 px-4 mobile-summary"
+                              data-label="Profesional"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold shrink-0 text-sm shadow-sm">
                                   {esp.esp_nomb.charAt(0)}
                                   {esp.esp_apel.charAt(0)}
                                 </div>
-                                <div>
-                                  <div className="text-sm font-bold text-slate-900 dark:text-white">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
                                     {esp.esp_gner === "M" ? "Dr." : "Dra."}{" "}
                                     {esp.esp_nomb} {esp.esp_apel}
                                   </div>
-                                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                                     {esp.tm_usuar?.usu_crro}
-                                  </div>
-                                  <div className="text-xs font-mono text-slate-400 mt-0.5">
-                                    ID: {esp.esp_codi}
                                   </div>
                                 </div>
                               </div>
+                              <span className="mobile-summary-status">
+                                <StatusBadge active={esp.tm_usuar?.usu_estd} />
+                              </span>
+                              <button
+                                type="button"
+                                className="mobile-expand-btn"
+                                onClick={() => toggle(esp.esp_codi)}
+                                aria-label={
+                                  expandedId === esp.esp_codi
+                                    ? "Ver menos"
+                                    : "Ver más"
+                                }
+                              >
+                                <ChevronDown className="w-4 h-4" />
+                              </button>
                             </td>
-                            <td className="py-4 px-4" data-label="Información">
+                            <td
+                              className="py-4 px-4 mobile-detail"
+                              data-label="Información"
+                            >
                               <div className="min-w-0">
                                 <div className="text-sm text-slate-700 dark:text-slate-300 font-medium">
                                   {esp.tm_especi?.esc_nomb}
@@ -576,11 +606,14 @@ export default function EspecialistasTab({
                                 )}
                               </div>
                             </td>
-                            <td className="py-4 px-4" data-label="Estado">
+                            <td
+                              className="py-4 px-4 mobile-detail"
+                              data-label="Estado"
+                            >
                               <StatusBadge active={esp.tm_usuar?.usu_estd} />
                             </td>
                             <td
-                              className="py-4 px-4 text-right"
+                              className="py-4 px-4 text-right mobile-detail"
                               data-label="Acciones"
                             >
                               <div className="flex justify-end gap-2">
@@ -593,9 +626,13 @@ export default function EspecialistasTab({
                                       usu_crro: esp.tm_usuar?.usu_crro || "",
                                     })
                                   }
-                                  className="px-3 py-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors"
+                                  className="px-3 py-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1"
+                                  title="Editar"
                                 >
-                                  Editar
+                                  <Pencil className="w-4 h-4" />
+                                  <span className="hidden sm:inline">
+                                    Editar
+                                  </span>
                                 </button>
                                 <button
                                   onClick={() =>
@@ -607,7 +644,8 @@ export default function EspecialistasTab({
                                   className="px-3 py-1.5 text-purple-600/70 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1"
                                   title="Resetear contraseña"
                                 >
-                                  <KeyRound className="w-3.5 h-3.5" /> Pass
+                                  <KeyRound className="w-4 h-4" />
+                                  <span className="hidden sm:inline">Pass</span>
                                 </button>
                                 <button
                                   onClick={() =>
@@ -616,11 +654,28 @@ export default function EspecialistasTab({
                                       esp.tm_usuar?.usu_estd,
                                     )
                                   }
-                                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${esp.tm_usuar?.usu_estd ? "text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
+                                  title={
+                                    esp.tm_usuar?.usu_estd
+                                      ? "Desactivar"
+                                      : "Activar"
+                                  }
+                                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1 ${esp.tm_usuar?.usu_estd ? "text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
                                 >
-                                  {esp.tm_usuar?.usu_estd
-                                    ? "Desactivar"
-                                    : "Activar"}
+                                  {esp.tm_usuar?.usu_estd ? (
+                                    <>
+                                      <Ban className="w-4 h-4" />
+                                      <span className="hidden sm:inline">
+                                        Desactivar
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 className="w-4 h-4" />
+                                      <span className="hidden sm:inline">
+                                        Activar
+                                      </span>
+                                    </>
+                                  )}
                                 </button>
                               </div>
                             </td>
@@ -773,7 +828,7 @@ export default function EspecialistasTab({
                     pagedEspecialidades.map((esc) => (
                       <tr
                         key={esc.esc_codi}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/30 group"
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 group ${expandedId === esc.esc_codi ? "mobile-expanded" : ""}`}
                       >
                         {editingEspCat?.esc_codi === esc.esc_codi ? (
                           <td colSpan="4" className="py-3 px-4">
@@ -825,21 +880,48 @@ export default function EspecialistasTab({
                           </td>
                         ) : (
                           <>
-                            <td className="py-4 px-4" data-label="Especialidad">
-                              <div className="font-bold text-slate-900 dark:text-white">
-                                {esc.esc_nomb}
+                            <td
+                              className="py-4 px-4 mobile-summary"
+                              data-label="Especialidad"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="font-bold text-slate-900 dark:text-white truncate">
+                                  {esc.esc_nomb}
+                                </div>
+                                <div className="text-xs text-slate-500 font-mono">
+                                  ID: {esc.esc_codi}
+                                </div>
                               </div>
-                              <div className="text-xs text-slate-500 font-mono mt-0.5">
-                                ID: {esc.esc_codi}
-                              </div>
+                              <span className="mobile-summary-status">
+                                <StatusBadge
+                                  active={esc.esc_estd !== false}
+                                  activeLabel="Activa"
+                                  inactiveLabel="Inactivo"
+                                />
+                              </span>
+                              <button
+                                type="button"
+                                className="mobile-expand-btn"
+                                onClick={() => toggle(esc.esc_codi)}
+                                aria-label={
+                                  expandedId === esc.esc_codi
+                                    ? "Ver menos"
+                                    : "Ver más"
+                                }
+                              >
+                                <ChevronDown className="w-4 h-4" />
+                              </button>
                             </td>
                             <td
-                              className="py-4 px-4 text-slate-600 dark:text-slate-400"
+                              className="py-4 px-4 text-slate-600 dark:text-slate-400 mobile-detail"
                               data-label="Descripción"
                             >
                               {esc.esc_desc || "-"}
                             </td>
-                            <td className="py-4 px-4" data-label="Estado">
+                            <td
+                              className="py-4 px-4 mobile-detail"
+                              data-label="Estado"
+                            >
                               <StatusBadge
                                 active={esc.esc_estd !== false}
                                 activeLabel="Activa"
@@ -847,15 +929,19 @@ export default function EspecialistasTab({
                               />
                             </td>
                             <td
-                              className="py-4 px-4 text-right"
+                              className="py-4 px-4 text-right mobile-detail"
                               data-label="Acciones"
                             >
                               <div className="flex justify-end gap-2">
                                 <button
                                   onClick={() => setEditingEspCat(esc)}
-                                  className="px-3 py-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors"
+                                  className="px-3 py-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1"
+                                  title="Editar"
                                 >
-                                  Editar
+                                  <Pencil className="w-4 h-4" />
+                                  <span className="hidden sm:inline">
+                                    Editar
+                                  </span>
                                 </button>
                                 <button
                                   onClick={() =>
@@ -864,11 +950,28 @@ export default function EspecialistasTab({
                                       esc.esc_estd,
                                     )
                                   }
-                                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${esc.esc_estd !== false ? "text-slate-500/70 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
+                                  title={
+                                    esc.esc_estd !== false
+                                      ? "Archivar"
+                                      : "Restaurar"
+                                  }
+                                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1 ${esc.esc_estd !== false ? "text-slate-500/70 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
                                 >
-                                  {esc.esc_estd !== false
-                                    ? "Archivar"
-                                    : "Restaurar"}
+                                  {esc.esc_estd !== false ? (
+                                    <>
+                                      <Archive className="w-4 h-4" />
+                                      <span className="hidden sm:inline">
+                                        Archivar
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RotateCcw className="w-4 h-4" />
+                                      <span className="hidden sm:inline">
+                                        Restaurar
+                                      </span>
+                                    </>
+                                  )}
                                 </button>
                               </div>
                             </td>

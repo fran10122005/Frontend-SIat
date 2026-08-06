@@ -10,10 +10,12 @@ import {
   Calendar,
   ShieldCheck,
   User,
+  ChevronDown,
 } from "lucide-react";
 import { useGlobalContext } from "../../context/GlobalState";
 import Pagination from "../shared/Pagination";
 import * as XLSX from "xlsx";
+import useExpandableRows from "../../hooks/useExpandableRows";
 
 const PAGE_SIZE = 10;
 
@@ -95,6 +97,7 @@ const MOCK_INCIDENTES = [
 
 export default function HistorialClinicoTab({ incidentesData = [], loading }) {
   const { showToast } = useGlobalContext();
+  const { expandedId, toggle } = useExpandableRows();
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("TODOS");
   const [filterSeveridad, setFilterSeveridad] = useState("TODAS");
@@ -429,19 +432,48 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                   {paged.map((item) => (
                     <tr
                       key={item.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${expandedId === item.id ? "mobile-expanded" : ""}`}
                     >
-                      <td className="px-6 py-4" data-label="Paciente">
-                        <div className="min-w-0">
-                          <div className="font-semibold text-slate-900 dark:text-white">
+                      <td
+                        className="px-6 py-4 mobile-summary"
+                        data-label="Paciente"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-slate-900 dark:text-white truncate">
                             {item.nin_nomb}
                           </div>
                           <div className="text-xs text-slate-400 font-mono">
                             ID: {item.id}
                           </div>
                         </div>
+                        <span className="mobile-summary-status">
+                          <span
+                            className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${
+                              item.tipo === "CRISIS"
+                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                : item.tipo === "INCIDENTE"
+                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            }`}
+                          >
+                            {item.tipo}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          className="mobile-expand-btn"
+                          onClick={() => toggle(item.id)}
+                          aria-label={
+                            expandedId === item.id ? "Ver menos" : "Ver más"
+                          }
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
                       </td>
-                      <td className="px-6 py-4" data-label="Tipo / Severidad">
+                      <td
+                        className="px-6 py-4 mobile-detail"
+                        data-label="Tipo / Severidad"
+                      >
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
                             className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${
@@ -468,7 +500,7 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                         </div>
                       </td>
                       <td
-                        className="px-6 py-4 hidden md:table-cell"
+                        className="px-6 py-4 hidden md:table-cell mobile-detail"
                         data-label="Especialista"
                       >
                         <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
@@ -477,13 +509,13 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                         </div>
                       </td>
                       <td
-                        className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300"
+                        className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300 mobile-detail"
                         data-label="BPM"
                       >
                         {item.bpm_max ? `${item.bpm_max} BPM` : "-"}
                       </td>
                       <td
-                        className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400"
+                        className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 mobile-detail"
                         data-label="Fecha"
                       >
                         {new Date(item.fecha).toLocaleString("es-ES", {
@@ -491,12 +523,17 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                           timeStyle: "short",
                         })}
                       </td>
-                      <td className="px-6 py-4 text-right" data-label="Detalle">
+                      <td
+                        className="px-6 py-4 text-right mobile-detail"
+                        data-label="Detalle"
+                      >
                         <button
                           onClick={() => setSelectedIncident(item)}
-                          className="px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
+                          title="Ver ficha"
+                          className="px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors flex items-center gap-1 ml-auto"
                         >
-                          Ver Ficha
+                          <Eye className="w-4 h-4" />
+                          <span className="hidden sm:inline">Ver Ficha</span>
                         </button>
                       </td>
                     </tr>
