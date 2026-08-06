@@ -441,6 +441,52 @@ input[type="checkbox"] {
 }
 
 /* ==========================================================================
+   11. MOBILE UX: SCROLL ÓPTIMO, MODALES Y NOTCHES
+   ========================================================================== */
+
+/* Ocultar scrollbars en barras de pestañas y carruseles horizontales */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* El documento nunca se desplaza en horizontal */
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+#root {
+  overflow-x: clip;
+}
+
+/* Móvil: modales centrados y desplazables.
+   - `margin: auto` sobre el hijo centra cuando hay espacio y ancla arriba
+     cuando el contenido es más alto (evita cortes sin poder hacer scroll).
+   - `overscroll-behavior: contain` evita que el scroll del modal arrastre
+     la página de fondo.
+   Los drawers laterales (`justify-end`) quedan excluidos. */
+@media (max-width: 767px) {
+  .fixed.inset-0:not([class*="justify-end"]) {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .fixed.inset-0:not([class*="justify-end"]) > * {
+    margin: auto;
+    max-height: none;
+  }
+  /* Topbar respetando el notch / status bar en PWA */
+  header.sticky,
+  [class*="sticky top-0"] {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ==========================================================================
    DRIVER.JS CUSTOM SIAT STYLING (Tutorial Interactivo)
    ========================================================================== */
 .driver-popover {
