@@ -200,16 +200,20 @@ export default function RepresentantesTab({
                         </div>
                       </td>
                       <td className="px-6 py-4" data-label="Contacto">
-                        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                          <Mail className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="text-xs">{r.usu_crro || "-"}</span>
-                        </div>
-                        {r.rep_telf && (
-                          <div className="flex items-center gap-1.5 text-slate-500 mt-0.5">
-                            <Phone className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-xs">{r.rep_telf}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                            <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="text-xs break-all">
+                              {r.usu_crro || "-"}
+                            </span>
                           </div>
-                        )}
+                          {r.rep_telf && (
+                            <div className="flex items-center gap-1.5 text-slate-500 mt-0.5">
+                              <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="text-xs">{r.rep_telf}</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td
                         className="px-6 py-4 hidden sm:table-cell"

@@ -553,26 +553,28 @@ export default function EspecialistasTab({
                               </div>
                             </td>
                             <td className="py-4 px-4" data-label="Información">
-                              <div className="text-sm text-slate-700 dark:text-slate-300 font-medium">
-                                {esp.tm_especi?.esc_nomb}
-                              </div>
-                              <div className="text-xs text-slate-500">
-                                {esp.tm_insti?.ins_nomb}
-                              </div>
-                              {(esp.esp_licencia || esp.esp_telf) && (
-                                <div className="text-xs text-slate-500 mt-1 flex gap-2">
-                                  {esp.esp_licencia && (
-                                    <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono">
-                                      Lic: {esp.esp_licencia}
-                                    </span>
-                                  )}
-                                  {esp.esp_telf && (
-                                    <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
-                                      Tel: {esp.esp_telf}
-                                    </span>
-                                  )}
+                              <div className="min-w-0">
+                                <div className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                                  {esp.tm_especi?.esc_nomb}
                                 </div>
-                              )}
+                                <div className="text-xs text-slate-500">
+                                  {esp.tm_insti?.ins_nomb}
+                                </div>
+                                {(esp.esp_licencia || esp.esp_telf) && (
+                                  <div className="text-xs text-slate-500 mt-1 flex gap-2">
+                                    {esp.esp_licencia && (
+                                      <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-mono">
+                                        Lic: {esp.esp_licencia}
+                                      </span>
+                                    )}
+                                    {esp.esp_telf && (
+                                      <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
+                                        Tel: {esp.esp_telf}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="py-4 px-4" data-label="Estado">
                               <StatusBadge active={esp.tm_usuar?.usu_estd} />

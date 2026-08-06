@@ -244,24 +244,28 @@ export default function AsignacionesTab({
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                   >
                     <td className="py-3 px-4" data-label="Paciente">
-                      <div className="font-semibold text-slate-900 dark:text-white">
-                        {asi.tm_ninos?.nin_nomb} {asi.tm_ninos?.nin_apel}
-                      </div>
-                      <div className="text-xs text-slate-500 font-mono">
-                        ID: {asi.tm_ninos?.nin_codi}
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-900 dark:text-white">
+                          {asi.tm_ninos?.nin_nomb} {asi.tm_ninos?.nin_apel}
+                        </div>
+                        <div className="text-xs text-slate-500 font-mono">
+                          ID: {asi.tm_ninos?.nin_codi}
+                        </div>
                       </div>
                     </td>
                     <td className="py-3 px-4" data-label="Especialista">
-                      <div className="font-medium text-slate-700 dark:text-slate-300">
-                        {asi.tm_espec?.esp_gner === "M" ? "Dr." : "Dra."}{" "}
-                        {asi.tm_espec?.esp_nomb} {asi.tm_espec?.esp_apel}
-                      </div>
-                      <div className="text-xs text-slate-500 font-mono">
-                        ID: {asi.tm_espec?.esp_codi}
+                      <div className="min-w-0">
+                        <div className="font-medium text-slate-700 dark:text-slate-300">
+                          {asi.tm_espec?.esp_gner === "M" ? "Dr." : "Dra."}{" "}
+                          {asi.tm_espec?.esp_nomb} {asi.tm_espec?.esp_apel}
+                        </div>
+                        <div className="text-xs text-slate-500 font-mono">
+                          ID: {asi.tm_espec?.esp_codi}
+                        </div>
                       </div>
                     </td>
                     <td
-                      className="py-3 px-4 text-slate-600 dark:text-slate-400"
+                      className="py-3 px-4 text-slate-600 dark:text-slate-400 hidden sm:table-cell"
                       data-label="Fecha Ingreso"
                     >
                       {new Date(asi.asi_inic).toLocaleDateString()}

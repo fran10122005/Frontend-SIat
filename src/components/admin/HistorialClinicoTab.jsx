@@ -432,11 +432,13 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                     >
                       <td className="px-6 py-4" data-label="Paciente">
-                        <div className="font-semibold text-slate-900 dark:text-white">
-                          {item.nin_nomb}
-                        </div>
-                        <div className="text-xs text-slate-400 font-mono">
-                          ID: {item.id}
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900 dark:text-white">
+                            {item.nin_nomb}
+                          </div>
+                          <div className="text-xs text-slate-400 font-mono">
+                            ID: {item.id}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4" data-label="Tipo / Severidad">
