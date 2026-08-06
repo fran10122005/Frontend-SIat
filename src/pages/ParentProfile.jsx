@@ -127,12 +127,18 @@ export default function ParentProfile() {
           {/* Header & Tabs */}
           <div className="pt-4 md:pt-5 px-6 md:px-8 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shrink-0">
             <div className="max-w-[1400px] mx-auto">
-              <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors mb-4">
+              <h1
+                data-tour="pp-header"
+                className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors mb-4"
+              >
                 <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                 Expediente Clínico
               </h1>
 
-              <div className="flex gap-6 overflow-x-auto no-scrollbar">
+              <div
+                data-tour="pp-tabs"
+                className="flex gap-6 overflow-x-auto no-scrollbar"
+              >
                 <button
                   onClick={() => setActiveTab("perfil")}
                   className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "perfil" ? "border-brand-500 text-brand-500" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
@@ -168,7 +174,10 @@ export default function ParentProfile() {
           <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900">
             {activeTab === "perfil" && (
               <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
-                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors duration-200">
+                <div
+                  data-tour="pp-perfil"
+                  className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors duration-200"
+                >
                   <div className="p-6 md:p-8">
                     <h3 className="text-sm font-semibold text-brand-700 dark:text-blue-300 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 mb-6 transition-colors">
                       Datos Clínicos Registrados

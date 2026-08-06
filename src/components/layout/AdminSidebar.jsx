@@ -1,5 +1,6 @@
 import { useGlobalContext } from "../../context/GlobalState";
 import funautaLogo from "../../assets/Logo.png";
+import { exportManualPDF } from "../../utils/exportManualPdf";
 import {
   LayoutDashboard,
   Stethoscope,
@@ -21,6 +22,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
     userRole,
     isSidebarOpen,
     setIsSidebarOpen,
+    showToast,
   } = useGlobalContext();
 
   const menuItems = [
@@ -127,6 +129,12 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
               <button
                 key={item.id}
                 onClick={() => {
+                  if (item.id === "manual") {
+                    setIsSidebarOpen(false);
+                    showToast("📖 Generando manual de usuario en PDF...");
+                    exportManualPDF();
+                    return;
+                  }
                   setActiveTab(item.id);
                   setIsSidebarOpen(false); // Cerrar al hacer clic en móvil
                 }}

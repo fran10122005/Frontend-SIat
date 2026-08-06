@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../api/axios";
 import { useGlobalContext } from "../context/GlobalState";
+import { useTourContext } from "../context/TourContext";
 import AdminSidebar from "../components/layout/AdminSidebar";
 import * as XLSX from "xlsx";
 import {
@@ -29,7 +30,6 @@ import HistorialClinicoTab from "../components/admin/HistorialClinicoTab";
 import AsignacionesTab from "../components/admin/AsignacionesTab";
 import CatalogosTab from "../components/admin/CatalogosTab";
 import UsuariosTab from "../components/admin/UsuariosTab";
-import ManualUsuario from "../components/manuals/ManualUsuario";
 import ConfirmDialog from "../components/shared/ConfirmDialog";
 import RegisterChildModal from "../components/shared/RegisterChildModal";
 import Topbar from "../components/layout/Topbar";
@@ -45,6 +45,17 @@ function AdminDashboard({ onNavigate }) {
     isDark,
     showToast,
   } = useGlobalContext();
+
+  const { setModuleContext, clearModuleContext } = useTourContext();
+
+  // Registra el tab activo como contexto del tour contextual, para que el
+  // icono del header lance la guía del módulo actual del panel admin.
+  useEffect(() => {
+    if (activeTab && activeTab !== "dashboard") {
+      setModuleContext(activeTab);
+    }
+    return () => clearModuleContext();
+  }, [activeTab, setModuleContext, clearModuleContext]);
 
   const [especialistas, setEspecialistas] = useState([]);
   const [ninos, setNinos] = useState([]);
@@ -274,31 +285,6 @@ function AdminDashboard({ onNavigate }) {
           showToast(
             `❌ Error al cambiar estado: ${err.response?.data?.error || err.message}`,
           );
-        }
-      },
-    });
-  };
-
-  const handleToggleUser = (usu_codi, currentState) => {
-    setModalConfig({
-      isOpen: true,
-      title: currentState ? "Desactivar Usuario" : "Activar Usuario",
-      message: `¿Estás seguro de que deseas <b>${currentState ? "desactivar" : "activar"}</b> a este usuario?`,
-      type: currentState ? "danger" : "success",
-      onConfirm: async () => {
-        try {
-          setLoading(true);
-          await api.patch(`/admin/users/${usu_codi}/estado`, {
-            activo: !currentState,
-          });
-          showToast(`✅ Estado de usuario actualizado exitosamente.`);
-          fetchData();
-        } catch (err) {
-          showToast(
-            `❌ Error al cambiar estado del usuario: ${err.response?.data?.error || err.message}`,
-          );
-        } finally {
-          setLoading(false);
         }
       },
     });
@@ -642,7 +628,6 @@ function AdminDashboard({ onNavigate }) {
                     "Monitoreo de Infraestructura"}
                   {activeTab === "usuarios" &&
                     "Control de Acceso y Cuentas de Usuario"}
-                  {activeTab === "manual" && "Manual de Usuario"}
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   {activeTab === "dashboard" &&
@@ -661,8 +646,6 @@ function AdminDashboard({ onNavigate }) {
                     "Estado operativo de los servicios de telemetría, bases de datos y respuesta de red."}
                   {activeTab === "usuarios" &&
                     "Gestión de credenciales, roles, fecha de creación y estado de activación de cuentas vinculadas."}
-                  {activeTab === "manual" &&
-                    "Guía de referencia completa del módulo de administrador SIAT."}
                 </p>
               </div>
               {activeTab === "dashboard" && (
@@ -865,97 +848,108 @@ function AdminDashboard({ onNavigate }) {
 
             {/* ESPECIALISTAS TAB */}
             {activeTab === "especialistas" && (
-              <EspecialistasTab
-                especialistas={especialistas}
-                catalogos={catalogos}
-                newEsp={newEsp}
-                setNewEsp={setNewEsp}
-                editingEsp={editingEsp}
-                setEditingEsp={setEditingEsp}
-                loading={loading}
-                handleCreateEspecialista={handleCreateEspecialista}
-                handleUpdateEsp={handleUpdateEsp}
-                handleToggleActivo={handleToggleActivo}
-                handleResetPassword={handleResetPassword}
-                exportEspecialistasToPDF={exportEspecialistasToPDF}
-                exportEspecialistasToExcel={exportEspecialistasToExcel}
-                newEspCat={newEspCat}
-                setNewEspCat={setNewEspCat}
-                editingEspCat={editingEspCat}
-                setEditingEspCat={setEditingEspCat}
-                handleCreateEspecialidad={handleCreateEspecialidad}
-                handleUpdateEspecialidad={handleUpdateEspecialidad}
-                handleToggleEspecialidad={handleToggleEspecialidad}
-              />
+              <div data-tour="admin-especialistas">
+                <EspecialistasTab
+                  especialistas={especialistas}
+                  catalogos={catalogos}
+                  newEsp={newEsp}
+                  setNewEsp={setNewEsp}
+                  editingEsp={editingEsp}
+                  setEditingEsp={setEditingEsp}
+                  loading={loading}
+                  handleCreateEspecialista={handleCreateEspecialista}
+                  handleUpdateEsp={handleUpdateEsp}
+                  handleToggleActivo={handleToggleActivo}
+                  handleResetPassword={handleResetPassword}
+                  exportEspecialistasToPDF={exportEspecialistasToPDF}
+                  exportEspecialistasToExcel={exportEspecialistasToExcel}
+                  newEspCat={newEspCat}
+                  setNewEspCat={setNewEspCat}
+                  editingEspCat={editingEspCat}
+                  setEditingEspCat={setEditingEspCat}
+                  handleCreateEspecialidad={handleCreateEspecialidad}
+                  handleUpdateEspecialidad={handleUpdateEspecialidad}
+                  handleToggleEspecialidad={handleToggleEspecialidad}
+                />
+              </div>
             )}
 
             {/* REPRESENTANTES TAB */}
             {activeTab === "representantes" && (
-              <RepresentantesTab
-                representantes={representantes}
-                loading={loading}
-                onRefresh={fetchData}
-              />
+              <div data-tour="admin-representantes">
+                <RepresentantesTab
+                  representantes={representantes}
+                  loading={loading}
+                  onRefresh={fetchData}
+                  onRegisterClick={() => setShowRegModal(true)}
+                />
+              </div>
             )}
 
             {/* HISTORIAL CLINICO TAB */}
             {activeTab === "historial_clinico" && (
-              <HistorialClinicoTab
-                incidentesData={incidentes}
-                loading={loading}
-              />
+              <div data-tour="admin-historial_clinico">
+                <HistorialClinicoTab
+                  incidentesData={incidentes}
+                  loading={loading}
+                />
+              </div>
             )}
 
             {/* ASIGNACIONES TAB */}
             {activeTab === "asignaciones" && (
-              <AsignacionesTab
-                asignacion={asignacion}
-                setAsignacion={setAsignacion}
-                ninos={ninos}
-                especialistas={especialistas}
-                asignaciones={asignaciones}
-                loading={loading}
-                handleAssign={handleAssign}
-                handleToggleAsignacion={handleToggleAsignacion}
-                exportAsignacionesToPDF={exportAsignacionesToPDF}
-                exportAsignacionesToExcel={exportAsignacionesToExcel}
-                onRegisterClick={() => setShowRegModal(true)}
-              />
+              <div data-tour="admin-asignaciones">
+                <AsignacionesTab
+                  asignacion={asignacion}
+                  setAsignacion={setAsignacion}
+                  ninos={ninos}
+                  especialistas={especialistas}
+                  asignaciones={asignaciones}
+                  loading={loading}
+                  handleAssign={handleAssign}
+                  handleToggleAsignacion={handleToggleAsignacion}
+                  exportAsignacionesToPDF={exportAsignacionesToPDF}
+                  exportAsignacionesToExcel={exportAsignacionesToExcel}
+                />
+              </div>
             )}
 
             {/* CATALOGOS TAB */}
             {activeTab === "catalogos" && (
-              <CatalogosTab
-                catalogos={catalogos}
-                editingInst={editingInst}
-                setEditingInst={setEditingInst}
-                loading={loading}
-                handleUpdateInstitucion={handleUpdateInstitucion}
-                exportEspecialidadesToPDF={exportEspecialidadesToPDF}
-                exportEspecialidadesToExcel={exportEspecialidadesToExcel}
-              />
+              <div data-tour="admin-catalogos">
+                <CatalogosTab
+                  catalogos={catalogos}
+                  editingInst={editingInst}
+                  setEditingInst={setEditingInst}
+                  loading={loading}
+                  handleUpdateInstitucion={handleUpdateInstitucion}
+                  exportEspecialidadesToPDF={exportEspecialidadesToPDF}
+                  exportEspecialidadesToExcel={exportEspecialidadesToExcel}
+                />
+              </div>
             )}
 
             {/* USUARIOS TAB */}
             {activeTab === "usuarios" && (
-              <UsuariosTab
-                usuarios={usuarios}
-                loading={loading}
-                handleToggleUser={handleToggleUser}
-                exportUsuariosToPDF={exportUsuariosToPDF}
-                exportUsuariosToExcel={exportUsuariosToExcel}
-              />
+              <div data-tour="admin-usuarios">
+                <UsuariosTab
+                  usuarios={usuarios}
+                  loading={loading}
+                  onRefresh={fetchData}
+                  exportUsuariosToPDF={exportUsuariosToPDF}
+                  exportUsuariosToExcel={exportUsuariosToExcel}
+                />
+              </div>
             )}
-
-            {/* MANUAL TAB */}
-            {activeTab === "manual" && <ManualUsuario />}
 
             {/* INFRAESTRUCTURA TAB */}
             {activeTab === "infraestructura" && (
-              <InfraestructuraTab
-                isDark={isDark}
-                mockUptimeData={mockUptimeData}
-              />
+              <div data-tour="admin-infraestructura">
+                <InfraestructuraTab
+                  isDark={isDark}
+                  mockUptimeData={mockUptimeData}
+                />
+              </div>
             )}
           </div>
           <Footer />

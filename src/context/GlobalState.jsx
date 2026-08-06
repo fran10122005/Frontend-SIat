@@ -33,8 +33,6 @@ const viewToPath = {
   sensores: "/sensores",
   historial: "/historial",
   home_analytics: "/home-analytics",
-  manual_repre: "/manual-repre",
-  manual_especialista: "/manual-especialista",
 };
 
 const pathToView = Object.fromEntries(

@@ -1,73 +1,89 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { useTour } from '../hooks/useTour';
+import { createContext, useContext, useCallback, useRef } from "react";
+import { useTour } from "../hooks/useTour";
 import {
   adminTourSteps,
   specialistTourSteps,
   parentTourSteps,
-  getDynamicTourSteps
-} from '../config/tourSteps';
+  getDynamicTourSteps,
+} from "../config/tourSteps";
 
 const TourContext = createContext(undefined);
 
-const TOUR_STORAGE_KEY = 'siat_tour_seen';
-
 export const TourProvider = ({ children }) => {
-  const [hasSeenTour, setHasSeenTour] = useState(() => {
-    return localStorage.getItem(TOUR_STORAGE_KEY) === 'true';
-  });
-
   const tour = useTour({
     showProgress: true,
-    doneBtnText: 'Finalizar',
-    nextBtnText: 'Siguiente',
-    prevBtnText: 'Anterior',
-    onFinish: () => {
-      markTourAsSeen();
-    },
+    doneBtnText: "Finalizar",
+    nextBtnText: "Siguiente",
+    prevBtnText: "Anterior",
   });
 
-  const startRoleTour = useCallback((role) => {
-    let steps = [];
-    if (role === 'ADMIN_INSTITUCION') steps = adminTourSteps;
-    else if (role === 'ESPECIALISTA') steps = specialistTourSteps;
-    else if (role === 'REPRESENTANTE') steps = parentTourSteps;
+  const moduleKeyRef = useRef(null);
 
-    if (steps.length > 0) {
-      tour.startTour(steps);
-    }
-  }, [tour]);
+  const startRoleTour = useCallback(
+    (role) => {
+      let steps = [];
+      if (role === "ADMIN_INSTITUCION") steps = adminTourSteps;
+      else if (role === "ESPECIALISTA") steps = specialistTourSteps;
+      else if (role === "REPRESENTANTE") steps = parentTourSteps;
 
-  const startPageTour = useCallback((path, contextData) => {
-    const steps = getDynamicTourSteps(path, contextData);
-    if (steps && steps.length > 0) {
-      tour.startTour(steps);
-    }
-  }, [tour]);
+      const visible = steps.filter(
+        (step) => !step.element || document.querySelector(step.element),
+      );
+      if (visible.length > 0) {
+        tour.startTour(visible);
+      }
+    },
+    [tour],
+  );
+
+  /**
+   * Define el módulo activo para los tours contextuales. Las páginas con
+   * sub-vistas (ej. tabs del panel admin) lo registran para que el icono del
+   * header lance el tour correcto.
+   */
+  const setModuleContext = useCallback((key) => {
+    moduleKeyRef.current = key;
+  }, []);
+
+  const clearModuleContext = useCallback(() => {
+    moduleKeyRef.current = null;
+  }, []);
+
+  /**
+   * Tour manual desde el icono del header: si hay una guía para el módulo
+   * actual la muestra; si no, cae al resumen general del rol. Los pasos cuyo
+   * elemento no existe en la pantalla actual (UI condicional) se omiten.
+   */
+  const startContextualTour = useCallback(
+    (role, fallbackKey) => {
+      if (!role) return;
+      const key = moduleKeyRef.current || fallbackKey;
+      const steps = getDynamicTourSteps(key, role);
+      const visible = steps.filter(
+        (step) => !step.element || document.querySelector(step.element),
+      );
+      if (visible.length > 0) {
+        tour.startTour(visible);
+      } else {
+        startRoleTour(role);
+      }
+    },
+    [tour, startRoleTour],
+  );
 
   const stopTour = useCallback(() => {
     tour.stopTour();
   }, [tour]);
-
-  const markTourAsSeen = useCallback(() => {
-    localStorage.setItem(TOUR_STORAGE_KEY, 'true');
-    setHasSeenTour(true);
-  }, []);
-
-  const resetTour = useCallback(() => {
-    localStorage.removeItem(TOUR_STORAGE_KEY);
-    setHasSeenTour(false);
-  }, []);
 
   return (
     <TourContext.Provider
       value={{
         isTourActive: tour.isActive(),
         startRoleTour,
-        startPageTour,
+        startContextualTour,
+        setModuleContext,
+        clearModuleContext,
         stopTour,
-        hasSeenTour,
-        markTourAsSeen,
-        resetTour,
       }}
     >
       {children}
@@ -78,7 +94,7 @@ export const TourProvider = ({ children }) => {
 export const useTourContext = () => {
   const context = useContext(TourContext);
   if (!context) {
-    throw new Error('useTourContext must be used within a TourProvider');
+    throw new Error("useTourContext must be used within a TourProvider");
   }
   return context;
 };

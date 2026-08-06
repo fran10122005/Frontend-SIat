@@ -226,7 +226,10 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Metric Summaries */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div
+        data-tour="admin-hc-kpis"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+      >
         <div className="bg-white dark:bg-[#1E293B] p-4 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
             <Activity className="w-5 h-5" />
@@ -286,7 +289,10 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 space-y-3">
+      <div
+        data-tour="admin-hc-filters"
+        className="bg-white dark:bg-[#1E293B] p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 space-y-3"
+      >
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -378,7 +384,10 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
       </div>
 
       {/* Main Table */}
-      <div className="bg-white dark:bg-[#1E293B] rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 overflow-hidden">
+      <div
+        data-tour="admin-hc-table"
+        className="bg-white dark:bg-[#1E293B] rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 overflow-hidden"
+      >
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-900 dark:text-white">
             Registro Clínico e Incidentes

@@ -285,7 +285,10 @@ export default function DiarioHogar() {
             {/* Header del Módulo */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                <h1
+                  data-tour="dh-header"
+                  className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
+                >
                   <NotebookPen className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   Diario de Hogar
                 </h1>
@@ -296,7 +299,10 @@ export default function DiarioHogar() {
             </div>
 
             {/* Stats Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div
+              data-tour="dh-stats"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+            >
               <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                   <NotebookPen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -354,7 +360,10 @@ export default function DiarioHogar() {
             </div>
 
             {/* Formulario */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-8">
+            <div
+              data-tour="dh-form"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-8"
+            >
               <div className="p-6 md:p-8 border-b border-gray-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <NotebookPen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -372,6 +381,7 @@ export default function DiarioHogar() {
                     </label>
                     <input
                       type="date"
+                      data-tour="dh-date"
                       value={reportDate}
                       onChange={(e) => setReportDate(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -382,6 +392,7 @@ export default function DiarioHogar() {
                       Ánimo de {art} {ninoLabel}
                     </label>
                     <select
+                      data-tour="dh-mood"
                       value={mood}
                       onChange={(e) => setMood(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -400,6 +411,7 @@ export default function DiarioHogar() {
                     <input
                       type="number"
                       min="0"
+                      data-tour="dh-crisis"
                       value={crisisCount}
                       onChange={(e) => setCrisisCount(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -413,6 +425,7 @@ export default function DiarioHogar() {
                   </label>
                   <input
                     type="text"
+                    data-tour="dh-positive"
                     placeholder={
                       genero === "femenino"
                         ? "Ej: Hoy logró comer sola, se vistió sola..."
@@ -444,6 +457,7 @@ export default function DiarioHogar() {
                 <div className="space-y-1.5">
                   <button
                     type="button"
+                    data-tour="dh-extra"
                     onClick={() => setShowExtra(!showExtra)}
                     className="text-xs font-semibold text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1.5 transition-colors"
                   >
@@ -516,6 +530,7 @@ export default function DiarioHogar() {
                 <div className="flex justify-end pt-2">
                   <button
                     type="submit"
+                    data-tour="dh-save"
                     className="px-5 py-2.5 bg-brand-500 hover:bg-blue-600 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
                   >
                     <CheckCircle2 className="w-4 h-4" />
@@ -526,7 +541,10 @@ export default function DiarioHogar() {
             </div>
 
             {/* Historial */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <div
+              data-tour="dh-history"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden"
+            >
               <div className="p-6 md:p-8 border-b border-gray-100 dark:border-slate-700">
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-indigo-500" />
@@ -534,7 +552,10 @@ export default function DiarioHogar() {
                 </h3>
               </div>
               <div className="p-6 md:p-8 pt-4">
-                <div className="flex flex-wrap gap-3 items-center mb-6">
+                <div
+                  data-tour="dh-filters"
+                  className="flex flex-wrap gap-3 items-center mb-6"
+                >
                   <input
                     type="date"
                     value={filterDateFrom}

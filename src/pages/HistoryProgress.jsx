@@ -122,7 +122,10 @@ export default function HistoryProgress() {
           <div className="max-w-[1400px] w-full mx-auto p-6 md:p-8 lg:p-10 flex flex-col gap-8">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                <h1
+                  data-tour="hp-header"
+                  className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
+                >
                   <TrendingUp className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   Reportes de Evolución Médica
                 </h1>
@@ -133,6 +136,7 @@ export default function HistoryProgress() {
 
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <select
+                  data-tour="hp-date-filter"
                   value={dateRange}
                   onChange={(e) => setDateRange(e.target.value)}
                   className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white cursor-pointer shadow-sm transition-colors"
@@ -143,6 +147,7 @@ export default function HistoryProgress() {
                 </select>
 
                 <button
+                  data-tour="hp-export"
                   onClick={handleExportPDF}
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-brand-700 dark:text-blue-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                 >
@@ -154,7 +159,10 @@ export default function HistoryProgress() {
 
             <div className="flex flex-col gap-6">
               {/* KPIs */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div
+                data-tour="hp-kpis"
+                className="grid grid-cols-1 md:grid-cols-3 gap-6"
+              >
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-brand-500 dark:text-blue-400">
@@ -250,7 +258,10 @@ export default function HistoryProgress() {
               </div>
 
               {/* Gráfico */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+              <div
+                data-tour="hp-chart"
+                className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700"
+              >
                 <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-6 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-brand-500 dark:text-blue-400" />
                   Evolución del Tiempo en Calma (pro_calm)
@@ -322,6 +333,7 @@ export default function HistoryProgress() {
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
+                    data-tour="hp-search-notes"
                     placeholder="Buscar en notas médicas..."
                     value={searchNotes}
                     onChange={(e) => setSearchNotes(e.target.value)}
@@ -329,6 +341,7 @@ export default function HistoryProgress() {
                   />
                 </div>
                 <select
+                  data-tour="hp-filter-efectividad"
                   value={filterEfectividad}
                   onChange={(e) => setFilterEfectividad(e.target.value)}
                   className="px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
@@ -339,6 +352,7 @@ export default function HistoryProgress() {
                 </select>
                 {hasFilters && (
                   <button
+                    data-tour="hp-clear"
                     onClick={() => {
                       setSearchNotes("");
                       setFilterEfectividad("TODOS");
@@ -352,7 +366,10 @@ export default function HistoryProgress() {
               </div>
 
               {/* Tabla */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+              <div
+                data-tour="hp-table"
+                className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden"
+              >
                 <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700">
                   <h3 className="font-semibold text-gray-800 dark:text-gray-200">
                     Registro Clínico Detallado
@@ -424,11 +441,13 @@ export default function HistoryProgress() {
                   </table>
                 </div>
               </div>
-              <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-              />
+              <div data-tour="hp-pagination">
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                />
+              </div>
 
               {/* Metas PEI - visible para representantes */}
               {globalPeiGoals?.length > 0 && (
