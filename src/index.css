@@ -384,7 +384,7 @@ input[type="checkbox"] {
   }
   .responsive-table tr {
     margin-bottom: 12px;
-    padding: 12px 14px;
+    padding: 10px 14px;
     border: 1px solid rgba(3, 78, 161, 0.12) !important;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.7);
@@ -393,15 +393,17 @@ input[type="checkbox"] {
     border-color: rgba(255, 255, 255, 0.08) !important;
     background: rgba(15, 23, 42, 0.55);
   }
+  /* Celda apilada: etiqueta arriba y valor(es) debajo en bloque normal.
+     Evita superposiciones aunque la celda tenga varios bloques o texto
+     largo sin espacios (correos, licencias). */
   .responsive-table td {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
+    display: block;
     padding: 8px 0 !important;
     border: none !important;
     white-space: normal !important;
-    text-align: right !important;
+    text-align: left !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .responsive-table td:not(:last-child) {
     border-bottom: 1px dashed rgba(148, 163, 184, 0.25) !important;
@@ -410,23 +412,21 @@ input[type="checkbox"] {
   .responsive-table td.sm\:hidden {
     display: none !important;
   }
+  .responsive-table td:not([data-label])::before {
+    content: none;
+  }
   .responsive-table td::before {
     content: attr(data-label);
-    flex-shrink: 0;
-    align-self: flex-start;
-    min-width: 92px;
-    padding-top: 2px;
+    display: block;
+    margin-bottom: 4px;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #94a3b8;
-    text-align: left;
-  }
-  .responsive-table td:not([data-label])::before {
-    content: none;
   }
   .responsive-table td > * {
+    max-width: 100%;
     min-width: 0;
   }
   /* Grupos de acciones: permitir envolver botones sin desbordar */
