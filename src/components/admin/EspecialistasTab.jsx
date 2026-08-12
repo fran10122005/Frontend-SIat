@@ -626,10 +626,10 @@ export default function EspecialistasTab({
                                       usu_crro: esp.tm_usuar?.usu_crro || "",
                                     })
                                   }
-                                  className="px-3 py-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1"
+                                  className="btn-secondary"
                                   title="Editar"
                                 >
-                                  <Pencil className="w-4 h-4" />
+                                  <Pencil className="w-4 h-4 text-slate-500" />
                                   <span className="hidden sm:inline">
                                     Editar
                                   </span>
@@ -641,10 +641,10 @@ export default function EspecialistasTab({
                                       esp.tm_usuar?.usu_crro || "",
                                     )
                                   }
-                                  className="px-3 py-1.5 text-purple-600/70 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1"
+                                  className="btn-secondary"
                                   title="Resetear contraseña"
                                 >
-                                  <KeyRound className="w-4 h-4" />
+                                  <KeyRound className="w-4 h-4 text-slate-500" />
                                   <span className="hidden sm:inline">Pass</span>
                                 </button>
                                 <button
@@ -659,18 +659,18 @@ export default function EspecialistasTab({
                                       ? "Desactivar"
                                       : "Activar"
                                   }
-                                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1 ${esp.tm_usuar?.usu_estd ? "text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
+                                  className="btn-secondary"
                                 >
                                   {esp.tm_usuar?.usu_estd ? (
                                     <>
-                                      <Ban className="w-4 h-4" />
+                                      <Ban className="w-4 h-4 text-rose-500" />
                                       <span className="hidden sm:inline">
                                         Desactivar
                                       </span>
                                     </>
                                   ) : (
                                     <>
-                                      <CheckCircle2 className="w-4 h-4" />
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                                       <span className="hidden sm:inline">
                                         Activar
                                       </span>

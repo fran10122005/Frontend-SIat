@@ -18,6 +18,7 @@ import ConfirmDialog from "../shared/ConfirmDialog";
 import useExpandableRows from "../../hooks/useExpandableRows";
 import api from "../../api/axios";
 import { useGlobalContext } from "../../context/GlobalState";
+import { toastError } from "../../utils/errorHandler";
 
 export default function UsuariosTab({
   usuarios,
@@ -163,7 +164,7 @@ export default function UsuariosTab({
         `✅ Contraseña restablecida para ${email}. Nueva: SiatDoc2026*`,
       );
     } catch (err) {
-      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
+      toastError(err, showToast, "Error al restablecer la contraseña.");
     } finally {
       setResettingId(null);
     }
@@ -184,8 +185,10 @@ export default function UsuariosTab({
       );
       if (onRefresh) onRefresh();
     } catch (err) {
-      showToast(
-        `❌ Error al ${activo ? "activar" : "suspender"}: ${err.response?.data?.error || err.message}`,
+      toastError(
+        err,
+        showToast,
+        `Error al ${activo ? "activar" : "suspender"} el usuario.`,
       );
     } finally {
       setTogglingId(null);
@@ -441,12 +444,12 @@ export default function UsuariosTab({
                               }
                               disabled={busy}
                               title="Restablecer contraseña"
-                              className="px-2.5 py-1.5 text-purple-600/70 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 flex items-center gap-1"
+                              className="btn-secondary"
                             >
                               {resettingId === user.usu_codi ? (
-                                <span className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                                <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
                               ) : (
-                                <KeyRound className="w-4 h-4" />
+                                <KeyRound className="w-4 h-4 text-slate-500" />
                               )}
                               <span className="hidden sm:inline">
                                 Reset Pass
@@ -460,24 +463,20 @@ export default function UsuariosTab({
                                   ? "Suspender usuario"
                                   : "Activar usuario"
                               }
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 flex items-center gap-1 ${
-                                isActive
-                                  ? "text-rose-600/70 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-                                  : "text-emerald-600/70 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                              }`}
+                              className="btn-secondary"
                             >
                               {togglingId === user.usu_codi ? (
                                 <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin inline-block align-middle" />
                               ) : isActive ? (
                                 <>
-                                  <Ban className="w-4 h-4" />
+                                  <Ban className="w-4 h-4 text-rose-500" />
                                   <span className="hidden sm:inline">
                                     Suspender
                                   </span>
                                 </>
                               ) : (
                                 <>
-                                  <CheckCircle2 className="w-4 h-4" />
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                                   <span className="hidden sm:inline">
                                     Activar
                                   </span>

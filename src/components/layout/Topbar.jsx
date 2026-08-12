@@ -32,6 +32,17 @@ export default function Topbar() {
         <Menu className="w-5.5 h-5.5" />
       </button>
 
+      {/* Breadcrumb izquierdo para desktop */}
+      <div className="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <span>SIAT</span>
+        <span className="text-slate-300 dark:text-slate-700">/</span>
+        <span className="text-slate-600 dark:text-slate-300">
+          {userRole === "ADMIN_INSTITUCION" || userRole === "ROL_ADM"
+            ? "Gestión de Fundación"
+            : "Monitoreo Clínico"}
+        </span>
+      </div>
+
       {/* Contenedor derecho de acciones */}
       <div className="flex items-center gap-4 ml-auto">
         <NotificationBell />

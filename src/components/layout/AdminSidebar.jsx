@@ -154,7 +154,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
                 <span className="text-sm tracking-wide flex-1">
                   {item.label}
                 </span>
-                {item.count != null && (
+                {item.count != null && item.count > 0 && (
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
                       activeTab === item.id

@@ -31,6 +31,8 @@ export default [
         HTMLUnknownElement: 'readonly',
         AbortController: 'readonly',
         URLSearchParams: 'readonly',
+        FormData: 'readonly',
+        XMLHttpRequest: 'readonly',
         alert: 'readonly',
         CustomEvent: 'readonly',
         SpeechSynthesisUtterance: 'readonly',

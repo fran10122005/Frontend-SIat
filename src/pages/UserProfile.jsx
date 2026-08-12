@@ -26,6 +26,7 @@ import {
   listPasskeys,
   deletePasskey,
 } from "../api/passkey";
+import { getErrorMessage } from "../utils/errorHandler";
 
 export default function UserProfile() {
   const {
@@ -95,7 +96,9 @@ export default function UserProfile() {
       setFpMsg(
         err?.name === "NotAllowedError"
           ? "Registro cancelado o huella no disponible."
-          : err.response?.data?.error || "No se pudo registrar la huella.",
+          : err?.isAxiosError || err?.response
+            ? getErrorMessage(err, "No se pudo registrar la huella.")
+            : "No se pudo registrar la huella.",
       );
     } finally {
       setFpLoading(false);
@@ -109,9 +112,7 @@ export default function UserProfile() {
       showToast("Acceso rápido eliminado");
     } catch (err) {
       console.error(err);
-      showToast(
-        err.response?.data?.error || "No se pudo eliminar el acceso rápido",
-      );
+      showToast(getErrorMessage(err, "No se pudo eliminar el acceso rápido"));
     }
   };
 
@@ -244,15 +245,9 @@ export default function UserProfile() {
       setUserName(updatedName);
       showToast("✅ Perfil actualizado correctamente");
     } catch (error) {
-      let errorMsg = "⚠️ Ocurrió un error al actualizar el perfil";
-      if (error.response?.data) {
-        if (error.response.data.detalles) {
-          errorMsg = `⚠️ ${error.response.data.detalles.map((d) => d.mensaje).join(", ")}`;
-        } else if (error.response.data.error) {
-          errorMsg = `⚠️ ${error.response.data.error}`;
-        }
-      }
-      showToast(errorMsg);
+      showToast(
+        getErrorMessage(error, "⚠️ Ocurrió un error al actualizar el perfil"),
+      );
     } finally {
       setSaving(false);
     }
@@ -291,15 +286,12 @@ export default function UserProfile() {
         confirmPassword: "",
       });
     } catch (error) {
-      let errorMsg = "⚠️ Ocurrió un error al actualizar la contraseña";
-      if (error.response?.data) {
-        if (error.response.data.detalles) {
-          errorMsg = `⚠️ ${error.response.data.detalles.map((d) => d.mensaje).join(", ")}`;
-        } else if (error.response.data.error) {
-          errorMsg = `⚠️ ${error.response.data.error}`;
-        }
-      }
-      showToast(errorMsg);
+      showToast(
+        getErrorMessage(
+          error,
+          "⚠️ Ocurrió un error al actualizar la contraseña",
+        ),
+      );
     } finally {
       setSaving(false);
     }

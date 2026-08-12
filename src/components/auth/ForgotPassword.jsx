@@ -1,35 +1,40 @@
-import { useState } from 'react'
-import api from '../../api/axios';
-import funautaLogo from '../../assets/Logo.png'
+import { useState } from "react";
+import api from "../../api/axios";
+import funautaLogo from "../../assets/Logo.png";
+import { getErrorMessage } from "../../utils/errorHandler";
+import FormAlert from "../shared/FormAlert";
 
 function ForgotPassword({ onNavigate }) {
-  const [email, setEmail] = useState('')
-  const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (event) => {
-    event.preventDefault()
-    setError('')
-    setMessage('')
+    event.preventDefault();
+    setError("");
+    setMessage("");
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailPattern.test(email)) {
-      setError('Ingrese un correo electrónico válido.')
-      return
+      setError("Ingrese un correo electrónico válido.");
+      return;
     }
 
     try {
       setIsLoading(true);
-      const res = await api.post('/auth/forgot-password', { email });
-      setMessage(res.data.message || 'Si el correo existe, se enviará un enlace de recuperación.');
+      const res = await api.post("/auth/forgot-password", { email });
+      setMessage(
+        res.data.message ||
+          "Si el correo existe, se enviará un enlace de recuperación.",
+      );
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.error || 'Error al conectar con el servidor.');
+      setError(getErrorMessage(err, "Error al conectar con el servidor."));
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="w-full min-h-[100dvh] bg-[#F4F7F9] dark:bg-slate-900 flex flex-col justify-center items-center px-4 transition-colors duration-200">
@@ -37,22 +42,48 @@ function ForgotPassword({ onNavigate }) {
         <div className="mb-8 text-center flex flex-col items-center">
           {/* Mobile Logo Badge */}
           <div className="flex items-center gap-3 mb-6 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <img src={funautaLogo} alt="Logo FUNAUTA" className="w-12 h-12 object-contain" />
+            <img
+              src={funautaLogo}
+              alt="Logo FUNAUTA"
+              className="w-12 h-12 object-contain"
+            />
             <div className="text-left">
-              <span className="block text-sm font-extrabold text-brand-700 dark:text-blue-400 tracking-wider">SIAT-TEA</span>
-              <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">FUNAUTA</span>
+              <span className="block text-sm font-extrabold text-brand-700 dark:text-blue-400 tracking-wider">
+                SIAT-TEA
+              </span>
+              <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">
+                FUNAUTA
+              </span>
             </div>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-brand-700 dark:text-blue-400 mb-2 transition-colors">Recuperar Contraseña</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors">Ingresa tu correo y te enviaremos instrucciones para restablecer tu contraseña.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-700 dark:text-blue-400 mb-2 transition-colors">
+            Recuperar Contraseña
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors">
+            Ingresa tu correo y te enviaremos instrucciones para restablecer tu
+            contraseña.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
+          <FormAlert variant="error" message={error} />
+          <FormAlert variant="success" message={message} />
+
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Correo Electrónico</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Correo Electrónico
+            </label>
             <div className="relative">
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  className="h-5 w-5 text-gray-400 dark:text-gray-500"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
@@ -68,39 +99,27 @@ function ForgotPassword({ onNavigate }) {
             </div>
           </div>
 
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800/50 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl flex items-start">
-              <span>{error}</span>
-            </div>
-          )}
-
-          {message && (
-            <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400 text-sm px-4 py-3 rounded-xl flex items-start">
-              <span>{message}</span>
-            </div>
-          )}
-
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isLoading}
             className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 px-4 rounded-xl shadow-button dark:shadow-none transition-all duration-200 hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center"
           >
-            {isLoading ? 'Enviando...' : 'Enviar enlace'}
+            {isLoading ? "Enviando..." : "Enviar enlace"}
           </button>
         </form>
 
         <div className="mt-8 text-center">
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="text-sm font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-            onClick={() => onNavigate('login')}
+            onClick={() => onNavigate("login")}
           >
             Volver al inicio de sesión
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default ForgotPassword
+export default ForgotPassword;

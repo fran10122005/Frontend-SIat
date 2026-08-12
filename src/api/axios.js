@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getErrorMessage } from "../utils/errorHandler";
 
 const rawBase =
   import.meta.env.VITE_API_URL || "https://backend-siat.onrender.com/api";
@@ -53,6 +54,10 @@ api.interceptors.response.use(
     const config = error.config || {};
     const isNetworkError = !error.response;
 
+    // Mensaje amigable resuelto una sola vez; los componentes pueden leerlo
+    // desde err.userMessage para no volver a calcular el texto.
+    error.userMessage = getErrorMessage(error);
+
     // Reintento con backoff para errores de red y 5xx transitorios (ej. Render "dormido")
     if (
       (isNetworkError || retriableStatus(error.response?.status)) &&
@@ -73,6 +78,8 @@ api.interceptors.response.use(
       }, 2000);
       return Promise.reject(error);
     }
+    // Solo notificamos aquí errores de nivel de aplicación (no validaciones
+    // de formulario, que cada vista maneja con su propio contexto).
     if (error.response?.status === 403) {
       showGlobalToast(
         "⛔ Acceso denegado. No tienes permisos para esta acción.",
@@ -80,10 +87,10 @@ api.interceptors.response.use(
       console.warn("Acceso denegado por RBAC");
     }
     if (error.response?.status >= 500) {
-      showGlobalToast("⚠️ Error del servidor. Intenta de nuevo más tarde.");
+      showGlobalToast(`⚠️ ${error.userMessage}`);
     }
-    if (!error.response) {
-      showGlobalToast("🔌 Error de conexión. Verifica tu red.");
+    if (!error.response && !error.code?.startsWith("ERR_CANCELED")) {
+      showGlobalToast(`🔌 ${error.userMessage}`);
     }
     return Promise.reject(error);
   },

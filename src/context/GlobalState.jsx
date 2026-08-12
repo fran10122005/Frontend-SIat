@@ -8,6 +8,7 @@ import React, {
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios";
 import useIdleTimer from "../hooks/useIdleTimer";
+import { toastError } from "../utils/errorHandler";
 
 const GlobalContext = createContext();
 
@@ -38,6 +39,23 @@ const viewToPath = {
 const pathToView = Object.fromEntries(
   Object.entries(viewToPath).map(([k, v]) => [v, k]),
 );
+
+// Rutas paginadas por pestaña del panel admin (URL con deep-linking: /admin/especialistas, etc.)
+export const adminTabPaths = {
+  dashboard: "/admin",
+  especialistas: "/admin/especialistas",
+  representantes: "/admin/representantes",
+  historial_clinico: "/admin/historial-clinico",
+  asignaciones: "/admin/asignaciones",
+  catalogos: "/admin/catalogos",
+  usuarios: "/admin/usuarios",
+  infraestructura: "/admin/infraestructura",
+};
+
+// Todas las rutas del panel admin resuelven a la vista "admin"
+Object.values(adminTabPaths).forEach((p) => {
+  pathToView[p] = "admin";
+});
 
 export const GlobalProvider = ({ children }) => {
   const routerNavigate = useNavigate();
@@ -146,7 +164,7 @@ export const GlobalProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("Error fetching niños:", err);
-      showToast("⚠️ Error al cargar los datos del sistema.");
+      toastError(err, showToast, "Error al cargar los datos del sistema.");
     }
   };
 
@@ -241,7 +259,7 @@ export const GlobalProvider = ({ children }) => {
       await fetchRoutines();
     } catch (err) {
       console.error("Error creating routine:", err);
-      showToast("❌ Error al guardar la rutina.");
+      toastError(err, showToast, "Error al guardar la rutina.");
     }
   };
 
@@ -507,7 +525,7 @@ export const GlobalProvider = ({ children }) => {
       }
     } catch (err) {
       console.error("Error submitting feedback:", err);
-      showToast("❌ Error al registrar feedback en el servidor.");
+      toastError(err, showToast, "Error al registrar feedback en el servidor.");
     }
   };
 

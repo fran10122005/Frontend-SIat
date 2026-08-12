@@ -36,6 +36,14 @@ Estabilizar el panel admin, corregir errores del inspector, mejorar responsive.
 - **2.2 Especialistas**: agregado botón "Reset Pass" con endpoint `/admin/especialistas/:id/password`.
 - **2.1 PUT Institución**: mejor logging del error (response completo, status, body enviado), quitado `ins_codi` del body (se envía en URL).
 
+### Sesión 3 — Manejo de errores y mensajes unificados
+- **Utilidad central de errores**: nuevo `src/utils/errorHandler.js` con `getErrorMessage`, `extractServerMessage`, `friendlyMessage` y `toastError`. Extrae el mensaje real del backend en cualquier formato (`error`, `message`, `mensaje`, `detalles[]`, `detail`) y mapea patrones conocidos (correo duplicado, nombre ya existe, cédula duplicada, token expirado, credenciales incorrectas) a mensajes claros en español.
+- **Interceptor Axios**: ahora adjunta `err.userMessage` (mensaje amigable resuelto una sola vez) y muestra toasts globales para 403/5xx/red usando la misma utilidad. Abortos (`ERR_CANCELED`) ya no muestran toast.
+- **FormAlert**: nuevo componente reutilizable `src/components/shared/FormAlert.jsx` (variants error/success/warning/info, descartable, se re-muestra al cambiar el mensaje). Reemplaza los mensajes inline que aparecían debajo de los formularios por un banner al inicio del formulario (Login, ForgotPassword, ResetPassword, RegisterRepre).
+- **Vistas migradas a `toastError`/`getErrorMessage`**: AdminDashboard (todos los handlers), GlobalState (fetchNinos, createRoutine, evaluateAlert), RegisterChildModal, RepresentantesTab, UsuariosTab, UserProfile, StudentRecord.
+- **Detalle**: propiedad de regex renombrada `test`→`pattern` en KNOWN_PATTERNS (un RegExp no es invocable y sombreaba `RegExp.prototype.test`).
+- **Tests**: `src/utils/errorHandler.test.js` (14 casos) + suite completa 25/25 verde.
+
 ## Known Issues
 - PUT `/admin/instituciones/I001` retorna 400 incluso con body filtrado. Sin acceso al backend para logs.
 
@@ -46,7 +54,10 @@ Estabilizar el panel admin, corregir errores del inspector, mejorar responsive.
 
 ## Relevant Files
 - `src/pages/AdminDashboard.jsx` — migrado a toasts, dashboard ejecutivo, reset pass, PUT logging.
-- `src/api/axios.js` — interceptor global con eventos toast.
+- `src/api/axios.js` — interceptor global con eventos toast y `err.userMessage`.
+- `src/utils/errorHandler.js` — utilidad central de errores (extracción + mensajes amigables + `toastError`).
+- `src/utils/errorHandler.test.js` — tests de la utilidad (14 casos).
+- `src/components/shared/FormAlert.jsx` — banner inline reutilizable para formularios.
 - `src/context/GlobalState.jsx` — listener `global-toast`, showToast.
 - `src/components/layout/AdminSidebar.jsx` — badges con counts.
 - `src/components/admin/AdminActivityLog.jsx` — PDF export, responsive.

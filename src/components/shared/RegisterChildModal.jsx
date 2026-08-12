@@ -28,6 +28,7 @@ import {
   isCloudinaryReady,
   FOLDERS,
 } from "../../config/cloudinary";
+import { toastError } from "../../utils/errorHandler";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -505,7 +506,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
       setStep(1);
       onClose();
     } catch (err) {
-      showToast(`❌ ${err.response?.data?.error || err.message}`);
+      toastError(err, showToast, "No se pudo completar el registro clínico.");
     } finally {
       setLoading(false);
     }

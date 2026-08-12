@@ -24,13 +24,22 @@ export default function HistoryProgress() {
 
   function parseFecRepo(str) {
     if (!str) return null;
-    const parts = str.split("/");
-    if (parts.length === 3) {
-      const [day, month, year] = parts;
-      return new Date(+year, +month - 1, +day);
+    try {
+      if (typeof str !== "string") {
+        const d = new Date(str);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      const parts = str.split("/");
+      if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return new Date(+year, +month - 1, +day);
+      }
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    } catch (e) {
+      console.error("Error parsing date:", e);
+      return null;
     }
-    const d = new Date(str);
-    return isNaN(d.getTime()) ? null : d;
   }
 
   const filteredData = useMemo(() => {
@@ -112,7 +121,7 @@ export default function HistoryProgress() {
   };
 
   return (
-    <div className="flex h-[100dvh] w-full bg-[#F4F7F9] dark:bg-slate-900 font-sans overflow-hidden transition-colors duration-200">
+    <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
       <Sidebar />
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">

@@ -3,6 +3,8 @@ import funautaLogo from "../../assets/Logo.png";
 import { useGlobalContext } from "../../context/GlobalState";
 import api from "../../api/axios";
 import { loginWithFingerprint } from "../../api/passkey";
+import { getErrorMessage } from "../../utils/errorHandler";
+import FormAlert from "../shared/FormAlert";
 
 function Login({ onNavigate }) {
   const [email, setEmail] = useState("");
@@ -40,9 +42,7 @@ function Login({ onNavigate }) {
       finalizeSession(user, token);
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.error || "Error al conectar con el servidor.",
-      );
+      setError(getErrorMessage(err, "Error al conectar con el servidor."));
     } finally {
       setIsLoading(false);
     }
@@ -85,14 +85,13 @@ function Login({ onNavigate }) {
     } catch (err) {
       console.error(err);
       const name = err?.name;
-      const serverMsg = err.response?.data?.error;
+      const serverMsg =
+        err?.isAxiosError || err?.response ? getErrorMessage(err) : "";
       if (name === "NotAllowedError" || name === "AbortError") {
         setError(
           serverMsg ||
             "Autenticación cancelada o no se encontró la huella en este dispositivo. Si aún no la has configurado, inicia sesión con tu contraseña y regístrala en Mi Perfil → Acceso rápido con huella.",
         );
-      } else if (err?.code === 400 && serverMsg) {
-        setError(serverMsg);
       } else {
         setError(serverMsg || "No se pudo completar el acceso con huella.");
       }
@@ -122,6 +121,8 @@ function Login({ onNavigate }) {
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
+          <FormAlert variant="error" message={error} />
+
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Correo Electrónico
@@ -210,25 +211,6 @@ function Login({ onNavigate }) {
               </button>
             </div>
           </div>
-
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800/50 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl flex items-start animate-in slide-in-from-top-2 duration-200">
-              <svg
-                className="w-5 h-5 mr-2 shrink-0 mt-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{error}</span>
-            </div>
-          )}
 
           <button
             type="submit"

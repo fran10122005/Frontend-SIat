@@ -15,6 +15,7 @@ import StatusBadge from "../shared/StatusBadge";
 import Pagination from "../shared/Pagination";
 import api from "../../api/axios";
 import useExpandableRows from "../../hooks/useExpandableRows";
+import { toastError } from "../../utils/errorHandler";
 
 const PAGE_SIZE = 10;
 
@@ -61,8 +62,8 @@ export default function RepresentantesTab({
       showToast(
         `✅ Contraseña restablecida para ${email}. Nueva: SiatDoc2026*`,
       );
-    } catch {
-      showToast(`❌ Error al restablecer contraseña.`);
+    } catch (err) {
+      toastError(err, showToast, "Error al restablecer la contraseña.");
     } finally {
       setResettingId(null);
     }
@@ -78,7 +79,11 @@ export default function RepresentantesTab({
       );
       onRefresh();
     } catch (err) {
-      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
+      toastError(
+        err,
+        showToast,
+        "Error al cambiar el estado del representante.",
+      );
     }
   };
 

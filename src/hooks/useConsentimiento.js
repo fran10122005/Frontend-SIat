@@ -48,6 +48,7 @@ export function useConsentimiento(nin_codi) {
       await api.post("/consentimiento/aceptar", {
         nin_codi,
         con_vers,
+        con_acep: true,
       });
       setConsentimientoOk(true);
       sessionStorage.setItem(`consentimiento_${nin_codi}`, "true");

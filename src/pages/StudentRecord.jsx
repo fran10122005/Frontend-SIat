@@ -5,6 +5,7 @@ import { UserCircle } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 import { exportManualPDFEspecialista } from "../utils/exportManualPdfEspecialista";
+import { toastError } from "../utils/errorHandler";
 
 export default function StudentRecord({ onNavigate }) {
   const { showToast, selectedChildId, fetchNinos } = useGlobalContext();
@@ -56,7 +57,7 @@ export default function StudentRecord({ onNavigate }) {
         });
       } catch (err) {
         console.error("Error fetching child clinical record:", err);
-        showToast("⚠️ Error al cargar la ficha clínica desde el servidor.");
+        toastError(err, showToast, "Error al cargar la ficha clínica.");
       }
     };
 
@@ -97,9 +98,7 @@ export default function StudentRecord({ onNavigate }) {
       fetchNinos(); // Refrescar nombres y detalles en el menú contextual
     } catch (err) {
       console.error("Error updating child clinical record:", err);
-      showToast(
-        `❌ Error al guardar: ${err.response?.data?.error || err.message}`,
-      );
+      toastError(err, showToast, "Error al guardar la ficha clínica.");
     }
   };
 

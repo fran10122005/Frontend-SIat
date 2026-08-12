@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   User,
   ChevronDown,
+  Eye,
 } from "lucide-react";
 import { useGlobalContext } from "../../context/GlobalState";
 import Pagination from "../shared/Pagination";

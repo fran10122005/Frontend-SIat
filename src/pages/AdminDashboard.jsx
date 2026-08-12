@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios";
-import { useGlobalContext } from "../context/GlobalState";
+import { useGlobalContext, adminTabPaths } from "../context/GlobalState";
 import { useTourContext } from "../context/TourContext";
+import { toastError } from "../utils/errorHandler";
 import AdminSidebar from "../components/layout/AdminSidebar";
 import * as XLSX from "xlsx";
 import {
@@ -47,6 +49,22 @@ function AdminDashboard({ onNavigate }) {
   } = useGlobalContext();
 
   const { setModuleContext, clearModuleContext } = useTourContext();
+
+  const routerNavigate = useNavigate();
+  const location = useLocation();
+
+  // Deriva la pestaña activa desde la URL (/admin/especialistas => "especialistas")
+  const tabFromPath = () => {
+    for (const [tab, tabPath] of Object.entries(adminTabPaths)) {
+      if (location.pathname === tabPath) return tab;
+    }
+    return "dashboard";
+  };
+
+  // Cambiar de pestaña navega a su URL; el efecto de abajo sincroniza estado y datos
+  const changeTab = (tab) => {
+    routerNavigate(adminTabPaths[tab] || "/admin");
+  };
 
   // Registra el tab activo como contexto del tour contextual, para que el
   // icono del header lance la guía del módulo actual del panel admin.
@@ -137,66 +155,112 @@ function AdminDashboard({ onNavigate }) {
       return;
     }
     mountedRef.current = true;
-    const controller = new AbortController();
-    fetchData(controller);
+    const tab = tabFromPath();
+    setActiveTab(tab);
+    fetchData(tab);
     return () => {
       mountedRef.current = false;
-      controller.abort();
     };
-  }, [userRole]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userRole, location.pathname]);
 
-  const fetchData = async (controller) => {
+  const deriveRepresentantes = (users) =>
+    users
+      .filter((u) => u.rol_codi === "ROL_REP")
+      .map((u) => ({
+        ...u.tm_repre,
+        usu_codi: u.usu_codi,
+        usu_crro: u.usu_crro,
+        usu_estd: u.usu_estd,
+        tm_ninos: u.tm_repre?.tm_ninos || null,
+      }));
+
+  const seedInstitucion = (catData) => {
+    if (catData.instituciones && catData.instituciones.length > 0) {
+      setNewEsp((prev) => ({
+        ...prev,
+        ins_codi: catData.instituciones[0].ins_codi,
+      }));
+      setEditingInst(catData.instituciones[0]);
+    }
+  };
+
+  // Carga SOLO los datos que necesita la pestaña activa (ya no todos los endpoints de golpe)
+  const fetchData = async (tab = activeTab) => {
+    if (!mountedRef.current) return;
+    setLoading(true);
     try {
-      const [
-        espRes,
-        ninosRes,
-        asignacionesRes,
-        metricasRes,
-        catRes,
-        usersRes,
-        auditRes,
-      ] = await Promise.all([
-        api.get("/admin/especialistas", { signal: controller?.signal }),
-        api.get("/admin/ninos", { signal: controller?.signal }),
-        api.get("/admin/asignaciones", { signal: controller?.signal }),
-        api.get("/admin/metricas", { signal: controller?.signal }),
-        api.get("/admin/catalogos", { signal: controller?.signal }),
-        api.get("/admin/users", { signal: controller?.signal }),
-        api.get("/admin/auditoria", { signal: controller?.signal }),
-      ]);
-      if (!mountedRef.current) return;
-      setEspecialistas(espRes.data.data);
-      setNinos(ninosRes.data.data);
-      setAsignaciones(asignacionesRes.data.data);
-      setMetricas(metricasRes.data.data);
-      setUsuarios(usersRes.data.data);
-      setAuditLogs(auditRes.data.data || []);
-      setRepresentantes(
-        usersRes.data.data
-          .filter((u) => u.rol_codi === "ROL_REP")
-          .map((u) => ({
-            ...u.tm_repre,
-            usu_codi: u.usu_codi,
-            usu_crro: u.usu_crro,
-            usu_estd: u.usu_estd,
-            tm_ninos: u.tm_repre?.tm_ninos || null,
-          })),
-      );
-      const catData = catRes.data.data;
-      setCatalogos(catData);
-      if (catData.instituciones && catData.instituciones.length > 0) {
-        setNewEsp((prev) => ({
-          ...prev,
-          ins_codi: catData.instituciones[0].ins_codi,
-        }));
-        setEditingInst(catData.instituciones[0]);
-      }
+      const loaders = {
+        dashboard: async () => {
+          const [esp, ninos, asign, metricas, cat, users, audit] =
+            await Promise.all([
+              api.get("/admin/especialistas"),
+              api.get("/admin/ninos"),
+              api.get("/admin/asignaciones"),
+              api.get("/admin/metricas"),
+              api.get("/admin/catalogos"),
+              api.get("/admin/users"),
+              api.get("/admin/auditoria"),
+            ]);
+          if (!mountedRef.current) return;
+          setEspecialistas(esp.data.data);
+          setNinos(ninos.data.data);
+          setAsignaciones(asign.data.data);
+          setMetricas(metricas.data.data);
+          setUsuarios(users.data.data);
+          setAuditLogs(audit.data.data || []);
+          setRepresentantes(deriveRepresentantes(users.data.data));
+          setCatalogos(cat.data.data);
+          seedInstitucion(cat.data.data);
+        },
+        especialistas: async () => {
+          const [esp, cat] = await Promise.all([
+            api.get("/admin/especialistas"),
+            api.get("/admin/catalogos"),
+          ]);
+          if (!mountedRef.current) return;
+          setEspecialistas(esp.data.data);
+          setCatalogos(cat.data.data);
+          seedInstitucion(cat.data.data);
+        },
+        representantes: async () => {
+          const users = await api.get("/admin/users");
+          if (!mountedRef.current) return;
+          setUsuarios(users.data.data);
+          setRepresentantes(deriveRepresentantes(users.data.data));
+        },
+        historial_clinico: async () => {},
+        asignaciones: async () => {
+          const [asign, ninos, esp] = await Promise.all([
+            api.get("/admin/asignaciones"),
+            api.get("/admin/ninos"),
+            api.get("/admin/especialistas"),
+          ]);
+          if (!mountedRef.current) return;
+          setAsignaciones(asign.data.data);
+          setNinos(ninos.data.data);
+          setEspecialistas(esp.data.data);
+        },
+        catalogos: async () => {
+          const cat = await api.get("/admin/catalogos");
+          if (!mountedRef.current) return;
+          setCatalogos(cat.data.data);
+          seedInstitucion(cat.data.data);
+        },
+        usuarios: async () => {
+          const users = await api.get("/admin/users");
+          if (!mountedRef.current) return;
+          setUsuarios(users.data.data);
+        },
+        infraestructura: async () => {},
+      };
+      await (loaders[tab] || loaders.dashboard)();
     } catch (err) {
       if (!mountedRef.current) return;
       console.error("API Error:", err.response || err);
-      showToast(
-        `Error cargando datos del panel: ${err.response?.data?.error || err.message}`,
-      );
+      toastError(err, showToast, "Error cargando los datos del panel.");
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
   };
 
@@ -238,7 +302,7 @@ function AdminDashboard({ onNavigate }) {
       });
       fetchData();
     } catch (err) {
-      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
+      toastError(err, showToast, "No se pudo registrar el especialista.");
     } finally {
       setLoading(false);
     }
@@ -254,7 +318,7 @@ function AdminDashboard({ onNavigate }) {
       setAsignacion({ nin_codi: "", esp_codi: "" });
       fetchData();
     } catch (err) {
-      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
+      toastError(err, showToast, "No se pudo crear la asignación.");
     } finally {
       setLoading(false);
     }
@@ -282,8 +346,10 @@ function AdminDashboard({ onNavigate }) {
           );
           fetchData();
         } catch (err) {
-          showToast(
-            `❌ Error al cambiar estado: ${err.response?.data?.error || err.message}`,
+          toastError(
+            err,
+            showToast,
+            "Error al cambiar el estado del especialista.",
           );
         }
       },
@@ -297,9 +363,7 @@ function AdminDashboard({ onNavigate }) {
         `✅ Contraseña restablecida para ${email}. Nueva contraseña: SiatDoc2026*`,
       );
     } catch (err) {
-      showToast(
-        `❌ Error al restablecer contraseña: ${err.response?.data?.error || err.message}`,
-      );
+      toastError(err, showToast, "Error al restablecer la contraseña.");
     }
   };
 
@@ -321,9 +385,7 @@ function AdminDashboard({ onNavigate }) {
           showToast(`✅ Asignación marcada como ${nextState}.`);
           fetchData();
         } catch (err) {
-          showToast(
-            `❌ Error al modificar asignación: ${err.response?.data?.error || err.message}`,
-          );
+          toastError(err, showToast, "Error al modificar la asignación.");
         }
       },
     });
@@ -342,9 +404,7 @@ function AdminDashboard({ onNavigate }) {
       setEditingEsp(null);
       fetchData();
     } catch (err) {
-      showToast(
-        `❌ Error al actualizar: ${err.response?.data?.error || err.message}`,
-      );
+      toastError(err, showToast, "Error al actualizar el especialista.");
     } finally {
       setLoading(false);
     }
@@ -373,8 +433,7 @@ function AdminDashboard({ onNavigate }) {
       fetchData();
     } catch (err) {
       const errResp = err.response?.data;
-      const errMsg = errResp?.error || err.message || "Error desconocido";
-      showToast(`❌ Error al actualizar: ${errMsg}`);
+      toastError(err, showToast, "Error al actualizar la institución.");
       console.error(
         "PUT institucion error — full response:",
         JSON.stringify(errResp, null, 2),
@@ -396,7 +455,7 @@ function AdminDashboard({ onNavigate }) {
       setNewEspCat({ esc_codi: "", esc_nomb: "", esc_desc: "" });
       fetchData();
     } catch (err) {
-      showToast(`❌ Error: ${err.response?.data?.error || err.message}`);
+      toastError(err, showToast, "No se pudo registrar la especialidad.");
     } finally {
       setLoading(false);
     }
@@ -414,9 +473,7 @@ function AdminDashboard({ onNavigate }) {
       setEditingEspCat(null);
       fetchData();
     } catch (err) {
-      showToast(
-        `❌ Error al actualizar: ${err.response?.data?.error || err.message}`,
-      );
+      toastError(err, showToast, "Error al actualizar la especialidad.");
     } finally {
       setLoading(false);
     }
@@ -439,8 +496,10 @@ function AdminDashboard({ onNavigate }) {
           );
           fetchData();
         } catch (err) {
-          showToast(
-            `❌ Error al cambiar estado: ${err.response?.data?.error || err.message}`,
+          toastError(
+            err,
+            showToast,
+            "Error al cambiar el estado de la especialidad.",
           );
         }
       },
@@ -592,7 +651,7 @@ function AdminDashboard({ onNavigate }) {
       {/* Sidebar */}
       <AdminSidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={changeTab}
         counts={{
           especialistas: especialistas.length,
           representantes: representantes.length,
@@ -612,7 +671,7 @@ function AdminDashboard({ onNavigate }) {
           <div className="max-w-7xl w-full mx-auto p-6 md:p-8 flex flex-col gap-8 pb-12">
             <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="flex flex-col gap-2">
-                <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 md:gap-3 transition-colors">
                   <Building2 className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   {activeTab === "dashboard" && "Panel Clínico Institucional"}
                   {activeTab === "especialistas" &&
@@ -629,7 +688,7 @@ function AdminDashboard({ onNavigate }) {
                   {activeTab === "usuarios" &&
                     "Control de Acceso y Cuentas de Usuario"}
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-subtitle-muted mt-1">
                   {activeTab === "dashboard" &&
                     "Visión general de la operación clínica, rendimiento de terapias y reportes de incidentes."}
                   {activeTab === "especialistas" &&
@@ -732,7 +791,7 @@ function AdminDashboard({ onNavigate }) {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <button
                       id="tour-admin-tab-especialistas"
-                      onClick={() => setActiveTab("especialistas")}
+                      onClick={() => changeTab("especialistas")}
                       className="flex items-center gap-3 p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
                     >
                       <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -749,7 +808,7 @@ function AdminDashboard({ onNavigate }) {
                     </button>
                     <button
                       id="tour-admin-tab-asignaciones"
-                      onClick={() => setActiveTab("asignaciones")}
+                      onClick={() => changeTab("asignaciones")}
                       className="flex items-center gap-3 p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
                     >
                       <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -765,7 +824,7 @@ function AdminDashboard({ onNavigate }) {
                       </div>
                     </button>
                     <button
-                      onClick={() => setActiveTab("usuarios")}
+                      onClick={() => changeTab("usuarios")}
                       className="flex items-center gap-3 p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
                     >
                       <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
@@ -781,7 +840,7 @@ function AdminDashboard({ onNavigate }) {
                       </div>
                     </button>
                     <button
-                      onClick={() => setActiveTab("catalogos")}
+                      onClick={() => changeTab("catalogos")}
                       className="flex items-center gap-3 p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-left"
                     >
                       <div className="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg">

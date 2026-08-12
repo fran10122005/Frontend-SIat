@@ -1,63 +1,65 @@
-import { useState, useEffect } from 'react'
-import api from '../../api/axios';
-import funautaLogo from '../../assets/Logo.png'
+import { useState, useEffect } from "react";
+import api from "../../api/axios";
+import funautaLogo from "../../assets/Logo.png";
+import { getErrorMessage } from "../../utils/errorHandler";
+import FormAlert from "../shared/FormAlert";
 
 function ResetPassword({ onNavigate }) {
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [token, setToken] = useState('')
-  const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [token, setToken] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get('token');
+    const tokenParam = params.get("token");
     if (tokenParam) {
       setToken(tokenParam);
     } else {
-      setError('Enlace inválido o expirado. Por favor solicita uno nuevo.');
+      setError("Enlace inválido o expirado. Por favor solicita uno nuevo.");
     }
   }, []);
 
   const handleSubmit = async (event) => {
-    event.preventDefault()
-    setError('')
-    setMessage('')
+    event.preventDefault();
+    setError("");
+    setMessage("");
 
     if (!token) {
-      setError('No hay token válido.');
+      setError("No hay token válido.");
       return;
     }
 
     if (password.trim().length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.')
-      return
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
     }
 
     if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden.')
-      return
+      setError("Las contraseñas no coinciden.");
+      return;
     }
 
     try {
       setIsLoading(true);
-      const res = await api.post('/auth/reset-password', { 
-        token, 
-        newPassword: password 
+      const res = await api.post("/auth/reset-password", {
+        token,
+        newPassword: password,
       });
-      setMessage(res.data.message || 'Contraseña actualizada correctamente.');
+      setMessage(res.data.message || "Contraseña actualizada correctamente.");
       // Redirigir al login despues de 3 segundos
       setTimeout(() => {
-        onNavigate('login');
+        onNavigate("login");
       }, 3000);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.error || 'El enlace es inválido o ha expirado.');
+      setError(getErrorMessage(err, "El enlace es inválido o ha expirado."));
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="w-full min-h-[100dvh] bg-[#F4F7F9] dark:bg-slate-900 flex flex-col justify-center items-center px-4 transition-colors duration-200">
@@ -65,19 +67,36 @@ function ResetPassword({ onNavigate }) {
         <div className="mb-8 text-center flex flex-col items-center">
           {/* Mobile Logo Badge */}
           <div className="flex items-center gap-3 mb-6 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <img src={funautaLogo} alt="Logo FUNAUTA" className="w-12 h-12 object-contain" />
+            <img
+              src={funautaLogo}
+              alt="Logo FUNAUTA"
+              className="w-12 h-12 object-contain"
+            />
             <div className="text-left">
-              <span className="block text-sm font-extrabold text-brand-700 dark:text-blue-400 tracking-wider">SIAT-TEA</span>
-              <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">FUNAUTA</span>
+              <span className="block text-sm font-extrabold text-brand-700 dark:text-blue-400 tracking-wider">
+                SIAT-TEA
+              </span>
+              <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold uppercase">
+                FUNAUTA
+              </span>
             </div>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-brand-700 dark:text-blue-400 mb-2 transition-colors">Crear Nueva Contraseña</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors">Ingresa tu nueva contraseña para acceder al sistema SIAT.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-700 dark:text-blue-400 mb-2 transition-colors">
+            Crear Nueva Contraseña
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors">
+            Ingresa tu nueva contraseña para acceder al sistema SIAT.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
+          <FormAlert variant="error" message={error} />
+          <FormAlert variant="success" message={message} />
+
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nueva Contraseña</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Nueva Contraseña
+            </label>
             <div className="relative">
               <input
                 type="password"
@@ -91,7 +110,9 @@ function ResetPassword({ onNavigate }) {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirmar Contraseña</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Confirmar Contraseña
+            </label>
             <div className="relative">
               <input
                 type="password"
@@ -104,39 +125,27 @@ function ResetPassword({ onNavigate }) {
             </div>
           </div>
 
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800/50 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl flex items-start">
-              <span>{error}</span>
-            </div>
-          )}
-
-          {message && (
-            <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400 text-sm px-4 py-3 rounded-xl flex items-start">
-              <span>{message}</span>
-            </div>
-          )}
-
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isLoading || !token}
             className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 px-4 rounded-xl shadow-button dark:shadow-none transition-all duration-200 hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center"
           >
-            {isLoading ? 'Actualizando...' : 'Restablecer Contraseña'}
+            {isLoading ? "Actualizando..." : "Restablecer Contraseña"}
           </button>
         </form>
 
         <div className="mt-8 text-center">
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="text-sm font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-            onClick={() => onNavigate('login')}
+            onClick={() => onNavigate("login")}
           >
             Volver al inicio de sesión
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default ResetPassword
+export default ResetPassword;
