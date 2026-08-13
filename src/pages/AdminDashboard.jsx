@@ -85,6 +85,7 @@ function AdminDashboard({ onNavigate }) {
   });
   const [usuarios, setUsuarios] = useState([]);
   const [representantes, setRepresentantes] = useState([]);
+  const [editingRep, setEditingRep] = useState(null);
   const [incidentes, setIncidentes] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
 
@@ -99,6 +100,7 @@ function AdminDashboard({ onNavigate }) {
 
   // Forms state
   const [newEsp, setNewEsp] = useState({
+    esp_codi: "",
     esp_nomb: "",
     esp_apel: "",
     usu_crro: "",
@@ -107,9 +109,17 @@ function AdminDashboard({ onNavigate }) {
     esp_telf: "",
     esc_codi: "",
     esp_gner: "M",
+    esp_tdoc: "V",
+    esp_fnac: "",
+    esp_foto: "",
     ins_codi: "",
   });
-  const [asignacion, setAsignacion] = useState({ nin_codi: "", esp_codi: "" });
+  const [asignacion, setAsignacion] = useState({
+    nin_codi: "",
+    esp_codi: "",
+    asi_inic: "",
+    asi_stdo: "Activo",
+  });
   const [editingEsp, setEditingEsp] = useState(null);
 
   const [editingInst, setEditingInst] = useState(null);
@@ -167,13 +177,22 @@ function AdminDashboard({ onNavigate }) {
   const deriveRepresentantes = (users) =>
     users
       .filter((u) => u.rol_codi === "ROL_REP")
-      .map((u) => ({
-        ...u.tm_repre,
-        usu_codi: u.usu_codi,
-        usu_crro: u.usu_crro,
-        usu_estd: u.usu_estd,
-        tm_ninos: u.tm_repre?.tm_ninos || null,
-      }));
+      .map((u) => {
+        const rep = u.tm_repre || {};
+        const vinculos = rep.tm_repre_ninos || [];
+        const ninos = vinculos.map((v) => v.tm_ninos).filter(Boolean);
+        return {
+          ...rep,
+          rep_codi: rep.rep_cod || rep.rep_codi || u.usu_codi,
+          usu_codi: u.usu_codi,
+          usu_crro: u.usu_crro,
+          usu_estd: u.usu_estd,
+          rep_nomb: rep.rep_nomb || "Representante",
+          rep_apel: rep.rep_apel || "",
+          tm_ninos: ninos[0] || null,
+          ninos: ninos,
+        };
+      });
 
   const seedInstitucion = (catData) => {
     if (catData.instituciones && catData.instituciones.length > 0) {
@@ -279,11 +298,17 @@ function AdminDashboard({ onNavigate }) {
         esp_telf: newEsp.esp_telf || undefined,
         esc_codi: newEsp.esc_codi,
         esp_gner: newEsp.esp_gner || "M",
+        esp_tdoc: newEsp.esp_tdoc || "V",
+        esp_fnac: newEsp.esp_fnac || undefined,
+        esp_foto: newEsp.esp_foto || undefined,
         ins_codi: newEsp.ins_codi || undefined,
       };
-      await api.post("/admin/especialistas", payload);
+      const res = await api.post("/admin/especialistas", payload);
+      const nuevaClave = res.data?.data?.password_generada;
       showToast(
-        "✅ Especialista creado con éxito. Contraseña por defecto: SiatDoc2026*",
+        nuevaClave
+          ? `✅ Especialista creado. Contraseña provisional: ${nuevaClave}`
+          : "✅ Especialista creado exitosamente.",
       );
       setNewEsp({
         usu_crro: "",
@@ -295,14 +320,19 @@ function AdminDashboard({ onNavigate }) {
         esp_telf: "",
         esc_codi: "",
         esp_gner: "M",
+        esp_tdoc: "V",
+        esp_fnac: "",
+        esp_foto: "",
         ins_codi:
           catalogos.instituciones && catalogos.instituciones.length > 0
             ? catalogos.instituciones[0].ins_codi
             : "",
       });
       fetchData();
+      return true;
     } catch (err) {
       toastError(err, showToast, "No se pudo registrar el especialista.");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -313,12 +343,24 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
 
     try {
-      await api.post("/admin/asignar", asignacion);
+      await api.post("/admin/asignar", {
+        nin_codi: asignacion.nin_codi,
+        esp_codi: asignacion.esp_codi,
+        asi_inic: asignacion.asi_inic || undefined,
+        asi_stdo: asignacion.asi_stdo || "Activo",
+      });
       showToast("✅ Paciente asignado al especialista exitosamente.");
-      setAsignacion({ nin_codi: "", esp_codi: "" });
+      setAsignacion({
+        nin_codi: "",
+        esp_codi: "",
+        asi_inic: "",
+        asi_stdo: "Activo",
+      });
       fetchData();
+      return true;
     } catch (err) {
       toastError(err, showToast, "No se pudo crear la asignación.");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -358,12 +400,40 @@ function AdminDashboard({ onNavigate }) {
 
   const handleResetPassword = async (esp_codi, email) => {
     try {
-      await api.post(`/admin/especialistas/${esp_codi}/password`, {});
+      const res = await api.post(
+        `/admin/especialistas/${esp_codi}/password`,
+        {},
+      );
+      const nuevaClave = res.data?.data?.password_generada;
       showToast(
-        `✅ Contraseña restablecida para ${email}. Nueva contraseña: SiatDoc2026*`,
+        nuevaClave
+          ? `✅ Contraseña restablecida para ${email}. Nueva contraseña: ${nuevaClave}`
+          : `✅ Contraseña restablecida para ${email}.`,
       );
     } catch (err) {
       toastError(err, showToast, "Error al restablecer la contraseña.");
+    }
+  };
+
+  const handleUpdateRepresentante = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.put(`/admin/representantes/${editingRep.usu_codi}`, {
+        rep_nomb: editingRep.rep_nomb,
+        rep_apel: editingRep.rep_apel,
+        rep_telf: editingRep.rep_telf,
+        rep_rela: editingRep.rep_rela,
+      });
+      showToast("✅ Representante actualizado con éxito.");
+      setEditingRep(null);
+      fetchData();
+      return true;
+    } catch (err) {
+      toastError(err, showToast, "Error al actualizar el representante.");
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -399,12 +469,19 @@ function AdminDashboard({ onNavigate }) {
         esp_nomb: editingEsp.esp_nomb,
         esp_apel: editingEsp.esp_apel,
         usu_crro: editingEsp.usu_crro,
+        esp_gner: editingEsp.esp_gner,
+        esp_telf: editingEsp.esp_telf,
+        esp_licencia: editingEsp.esp_licencia,
+        esp_foto: editingEsp.esp_foto,
+        esc_codi: editingEsp.esc_codi,
       });
       showToast("✅ Especialista actualizado con éxito.");
       setEditingEsp(null);
       fetchData();
+      return true;
     } catch (err) {
       toastError(err, showToast, "Error al actualizar el especialista.");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -449,13 +526,17 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
 
     try {
-      const esc_codi = `E${Date.now().toString(36).toUpperCase()}`;
+      const esc_codi =
+        (newEspCat.esc_codi || "").trim() ||
+        `E${Date.now().toString(36).toUpperCase()}`;
       await api.post("/admin/especialidades", { ...newEspCat, esc_codi });
       showToast(`✅ Especialidad registrada con éxito. Código: ${esc_codi}`);
       setNewEspCat({ esc_codi: "", esc_nomb: "", esc_desc: "" });
       fetchData();
+      return true;
     } catch (err) {
       toastError(err, showToast, "No se pudo registrar la especialidad.");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -472,8 +553,10 @@ function AdminDashboard({ onNavigate }) {
       showToast("✅ Especialidad actualizada con éxito.");
       setEditingEspCat(null);
       fetchData();
+      return true;
     } catch (err) {
       toastError(err, showToast, "Error al actualizar la especialidad.");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -941,6 +1024,9 @@ function AdminDashboard({ onNavigate }) {
                   loading={loading}
                   onRefresh={fetchData}
                   onRegisterClick={() => setShowRegModal(true)}
+                  editingRep={editingRep}
+                  setEditingRep={setEditingRep}
+                  handleUpdateRepresentante={handleUpdateRepresentante}
                 />
               </div>
             )}
@@ -1127,9 +1213,7 @@ function AdminDashboard({ onNavigate }) {
               {scheduleConfig.enabled && (
                 <div className="space-y-4 pt-2">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-                      Frecuencia
-                    </label>
+                    <label className="form-label">Frecuencia</label>
                     <select
                       value={scheduleConfig.frequency}
                       onChange={(e) =>
@@ -1138,7 +1222,7 @@ function AdminDashboard({ onNavigate }) {
                           frequency: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                      className="form-select"
                     >
                       <option value="daily">Diario</option>
                       <option value="weekly">Semanal</option>
@@ -1147,9 +1231,7 @@ function AdminDashboard({ onNavigate }) {
                   </div>
                   {scheduleConfig.frequency === "weekly" && (
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-                        Día de la semana
-                      </label>
+                      <label className="form-label">Día de la semana</label>
                       <select
                         value={scheduleConfig.day}
                         onChange={(e) =>
@@ -1158,7 +1240,7 @@ function AdminDashboard({ onNavigate }) {
                             day: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                        className="form-select"
                       >
                         {[
                           "lunes",
@@ -1177,9 +1259,7 @@ function AdminDashboard({ onNavigate }) {
                     </div>
                   )}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-                      Correo destino
-                    </label>
+                    <label className="form-label">Correo destino</label>
                     <input
                       type="email"
                       value={scheduleConfig.email}
@@ -1189,7 +1269,7 @@ function AdminDashboard({ onNavigate }) {
                           email: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                      className="form-input"
                       placeholder="admin@fundacion.org"
                     />
                   </div>

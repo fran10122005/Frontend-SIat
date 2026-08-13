@@ -1,7 +1,20 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, X, ChevronDown, Archive, RotateCcw } from "lucide-react";
+import {
+  Search,
+  X,
+  ChevronDown,
+  Archive,
+  RotateCcw,
+  Plus,
+  ShieldCheck,
+  Link2,
+  User,
+  Stethoscope,
+  CalendarDays,
+} from "lucide-react";
 import StatusBadge from "../shared/StatusBadge";
 import Pagination from "../shared/Pagination";
+import AdminModal from "../shared/AdminModal";
 import useExpandableRows from "../../hooks/useExpandableRows";
 
 export default function AsignacionesTab({
@@ -21,6 +34,8 @@ export default function AsignacionesTab({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const { expandedId, toggle } = useExpandableRows();
+  const [showAsignar, setShowAsignar] = useState(false);
+  const todayStr = new Date().toISOString().split("T")[0];
 
   const filtered = useMemo(() => {
     return asignaciones.filter((asi) => {
@@ -68,75 +83,123 @@ export default function AsignacionesTab({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div
-        data-tour="admin-asg-form"
-        className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60"
+      <AdminModal
+        open={showAsignar}
+        onClose={() => setShowAsignar(false)}
+        title="Asignar Paciente a Especialista"
+        subtitle="Establecer el vínculo clínico de atención entre el paciente y el profesional"
+        maxWidth="max-w-2xl"
       >
-        <div className="flex flex-col items-start sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            Asignar Paciente a Especialista
-          </h2>
-        </div>
         <form
-          onSubmit={handleAssign}
-          className="grid grid-cols-1 md:grid-cols-3 gap-5 items-end"
+          onSubmit={async (e) => {
+            const ok = await handleAssign(e);
+            if (ok) setShowAsignar(false);
+          }}
+          className="space-y-6"
         >
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-              Seleccionar Paciente
-            </label>
-            <select
-              required
-              value={asignacion.nin_codi}
-              onChange={(e) =>
-                setAsignacion({ ...asignacion, nin_codi: e.target.value })
-              }
-              className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer"
-            >
-              <option value="" disabled>
-                Buscar paciente...
-              </option>
-              {ninos.map((n) => (
-                <option key={n.nin_codi} value={n.nin_codi}>
-                  {n.nin_nomb} {n.nin_apel}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-              Especialista Tratante
-            </label>
-            <select
-              required
-              value={asignacion.esp_codi}
-              onChange={(e) =>
-                setAsignacion({ ...asignacion, esp_codi: e.target.value })
-              }
-              className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors cursor-pointer"
-            >
-              <option value="" disabled>
-                Seleccionar médico...
-              </option>
-              {especialistas
-                .filter((e) => e.tm_usuar?.usu_estd)
-                .map((esp) => (
-                  <option key={esp.esp_codi} value={esp.esp_codi}>
-                    {esp.esp_gner === "M" ? "Dr." : "Dra."} {esp.esp_nomb}{" "}
-                    {esp.esp_apel}
+          {/* Datos del Vínculo */}
+          <section>
+            <div className="form-section-title">
+              <Link2 className="form-section-title-icon" />
+              <h4 className="form-section-title-text">Datos del Vínculo</h4>
+              <span className="form-section-title-line" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="form-label">Paciente</label>
+                <select
+                  required
+                  value={asignacion.nin_codi}
+                  onChange={(e) =>
+                    setAsignacion({ ...asignacion, nin_codi: e.target.value })
+                  }
+                  className="form-select"
+                >
+                  <option value="" disabled>
+                    Seleccionar paciente...
                   </option>
-                ))}
-            </select>
+                  {ninos.map((n) => (
+                    <option key={n.nin_codi} value={n.nin_codi}>
+                      {n.nin_nomb} {n.nin_apel} — {n.nin_codi}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Especialista Tratante</label>
+                <select
+                  required
+                  value={asignacion.esp_codi}
+                  onChange={(e) =>
+                    setAsignacion({ ...asignacion, esp_codi: e.target.value })
+                  }
+                  className="form-select"
+                >
+                  <option value="" disabled>
+                    Seleccionar médico...
+                  </option>
+                  {especialistas
+                    .filter((e) => e.tm_usuar?.usu_estd)
+                    .map((esp) => (
+                      <option key={esp.esp_codi} value={esp.esp_codi}>
+                        {esp.esp_gner === "M" ? "Dr." : "Dra."} {esp.esp_nomb}{" "}
+                        {esp.esp_apel}
+                        {esp.tm_especi?.esc_nomb
+                          ? ` — ${esp.tm_especi.esc_nomb}`
+                          : ""}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Inicio y Estado */}
+          <section>
+            <div className="form-section-title">
+              <CalendarDays className="form-section-title-icon" />
+              <h4 className="form-section-title-text">Inicio y Estado</h4>
+              <span className="form-section-title-line" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="form-label">
+                  Fecha de Inicio de la Atención
+                </label>
+                <input
+                  type="date"
+                  max={todayStr}
+                  value={asignacion.asi_inic}
+                  onChange={(e) =>
+                    setAsignacion({ ...asignacion, asi_inic: e.target.value })
+                  }
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label className="form-label">Estado Inicial</label>
+                <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-2">
+                  <StatusBadge active />
+                  <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">
+                    Activo
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex justify-end pt-1 border-t border-slate-200 dark:border-slate-700">
+            <button
+              disabled={loading}
+              type="submit"
+              className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Crear Asignación
+            </button>
           </div>
-          <button
-            disabled={loading}
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 h-[42px]"
-          >
-            Crear Asignación
-          </button>
         </form>
-      </div>
+      </AdminModal>
 
       {/* Filtros */}
       <div
@@ -199,6 +262,14 @@ export default function AsignacionesTab({
               {filtered.length} registros
             </span>
             <div className="flex gap-2">
+              <button
+                data-tour="admin-asg-form-btn"
+                onClick={() => setShowAsignar(true)}
+                className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Asignar
+              </button>
               <button
                 onClick={exportAsignacionesToPDF}
                 className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 rounded-lg text-xs font-semibold transition-colors"
@@ -307,22 +378,12 @@ export default function AsignacionesTab({
                             ? "Dar de alta"
                             : "Reactivar caso"
                         }
-                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1 ${asi.asi_stdo === "Activo" ? "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"}`}
+                        className={`action-icon-btn text-slate-500 ${asi.asi_stdo === "Activo" ? "hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" : "hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"}`}
                       >
                         {asi.asi_stdo === "Activo" ? (
-                          <>
-                            <Archive className="w-4 h-4" />
-                            <span className="hidden sm:inline">
-                              Dar de Alta
-                            </span>
-                          </>
+                          <Archive className="w-4 h-4" />
                         ) : (
-                          <>
-                            <RotateCcw className="w-4 h-4" />
-                            <span className="hidden sm:inline">
-                              Reactivar Caso
-                            </span>
-                          </>
+                          <RotateCcw className="w-4 h-4" />
                         )}
                       </button>
                     </td>

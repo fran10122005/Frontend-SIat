@@ -1256,11 +1256,11 @@ const adminModuleTours = {
       },
     },
     {
-      element: '[data-tour="admin-esp-register"]',
+      element: '[data-tour="admin-esp-register-btn"]',
       popover: {
         title: "Acreditación de Nuevo Especialista",
         description:
-          'Formulario de alta: cédula, correo corporativo, nombres, apellidos, teléfono, licencia médica, especialidad, institución y sexo. Pulsa "Registrar Especialista" al completarlo.',
+          'Pulsa "Nuevo Especialista" para abrir la ventana de alta: cédula, correo corporativo, nombres, apellidos, teléfono, licencia médica, especialidad, institución y sexo. Pulsa "Registrar Especialista" al completarlo.',
         side: "top",
         align: "center",
       },
@@ -1280,7 +1280,7 @@ const adminModuleTours = {
       popover: {
         title: "Catálogo de Especialidades",
         description:
-          "Define nuevas especialidades (denominación y perfil clínico) y administra el catálogo base con acciones Editar, Archivar o Restaurar.",
+          "Pulsa 'Añadir Especialidad' para registrar una nueva (denominación y perfil clínico) y administra el catálogo base con acciones Editar, Archivar o Restaurar.",
         side: "top",
         align: "center",
       },
@@ -1382,11 +1382,11 @@ const adminModuleTours = {
       },
     },
     {
-      element: '[data-tour="admin-asg-form"]',
+      element: '[data-tour="admin-asg-form-btn"]',
       popover: {
         title: "Asignar Paciente a Especialista",
         description:
-          'Selecciona el paciente y el especialista tratante, y pulsa "Crear Asignación" para establecer el vínculo clínico.',
+          'Pulsa "Asignar" para abrir la ventana. Selecciona el paciente y el especialista tratante, y pulsa "Crear Asignación" para establecer el vínculo clínico.',
         side: "top",
         align: "center",
       },

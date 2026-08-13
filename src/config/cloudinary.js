@@ -16,12 +16,13 @@
  */
 
 // ← CAMBIAR ESTOS DOS VALORES cuando crees tu cuenta Cloudinary
-export const CLOUD_NAME = 'wvhx0eok';
-export const UPLOAD_PRESET = 'siat_unsigned'; // Nombre del upload preset creado
+export const CLOUD_NAME = "wvhx0eok";
+export const UPLOAD_PRESET = "siat_unsigned"; // Nombre del upload preset creado
 
 export const FOLDERS = {
-  patientPhotos: 'siat/pacientes/fotos',
-  medicalDocs: 'siat/pacientes/documentos',
+  patientPhotos: "siat/pacientes/fotos",
+  medicalDocs: "siat/pacientes/documentos",
+  specialistPhotos: "siat/especialistas/fotos",
 };
 
 /**
@@ -34,23 +35,28 @@ export const FOLDERS = {
  * @param {(progress: number) => void} onProgress - Callback de progreso (0–100).
  * @returns {Promise<{url: string, publicId: string}>}
  */
-export async function uploadToCloudinary(file, resourceType = 'image', folder = FOLDERS.patientPhotos, onProgress) {
+export async function uploadToCloudinary(
+  file,
+  resourceType = "image",
+  folder = FOLDERS.patientPhotos,
+  onProgress,
+) {
   if (!CLOUD_NAME) {
     throw new Error(
-      'Cloudinary no está configurado. Agrega el CLOUD_NAME en src/config/cloudinary.js'
+      "Cloudinary no está configurado. Agrega el CLOUD_NAME en src/config/cloudinary.js",
     );
   }
 
   const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', UPLOAD_PRESET);
-  formData.append('folder', folder);
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
+  formData.append("folder", folder);
 
-  const endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType === 'raw' ? 'raw' : 'image'}/upload`;
+  const endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType === "raw" ? "raw" : "image"}/upload`;
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', endpoint);
+    xhr.open("POST", endpoint);
 
     if (onProgress) {
       xhr.upload.onprogress = (e) => {
@@ -65,11 +71,14 @@ export async function uploadToCloudinary(file, resourceType = 'image', folder = 
         const data = JSON.parse(xhr.responseText);
         resolve({ url: data.secure_url, publicId: data.public_id });
       } else {
-        reject(new Error(`Cloudinary error: ${xhr.status} — ${xhr.responseText}`));
+        reject(
+          new Error(`Cloudinary error: ${xhr.status} — ${xhr.responseText}`),
+        );
       }
     };
 
-    xhr.onerror = () => reject(new Error('Error de red al subir archivo a Cloudinary.'));
+    xhr.onerror = () =>
+      reject(new Error("Error de red al subir archivo a Cloudinary."));
     xhr.send(formData);
   });
 }

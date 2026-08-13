@@ -113,9 +113,9 @@ export const seccionesManual = [
         tipo: "pasos",
         items: [
           'Haga clic en "Especialistas" en la barra lateral. Asegúrese de estar en la sub-pestaña "Especialistas".',
-          'Complete el formulario de "Acreditación de Nuevo Especialista".',
+          'Haga clic en el botón "+ Nuevo Especialista" y complete el formulario.',
           'Presione "Registrar Especialista".',
-          "El sistema asignará automáticamente la contraseña por defecto: SiatDoc2026*.",
+          "El sistema generará automáticamente una contraseña provisional segura y se la mostrará en pantalla.",
         ],
       },
       { tipo: "texto", valor: "Campos del formulario:" },
@@ -138,7 +138,7 @@ export const seccionesManual = [
         tipo: "nota",
         variante: "info",
         valor:
-          "La contraseña por defecto para nuevos especialistas es SiatDoc2026*. El especialista deberá cambiarla en su primer inicio de sesión.",
+          "Al crear un especialista se genera una contraseña provisional segura y aleatoria que se muestra en pantalla. El especialista deberá cambiarla en su primer inicio de sesión.",
       },
       { tipo: "subtitulo", valor: 'Filtros de la Tabla "Nómina Médica"' },
       {

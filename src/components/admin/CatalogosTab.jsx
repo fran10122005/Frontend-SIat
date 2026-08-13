@@ -23,10 +23,10 @@ export default function CatalogosTab({
     setEditingInst({ ...inst, [field]: e.target.value });
 
   const inputClass = (editable) =>
-    `w-full px-4 py-2.5 text-sm border rounded-lg outline-none transition-colors ${
+    `form-input ${
       editable
-        ? "bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500"
-        : "bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 cursor-default"
+        ? ""
+        : "!bg-slate-100 dark:!bg-slate-800/50 !text-slate-600 dark:!text-slate-400 cursor-default"
     }`;
 
   return (
@@ -59,9 +59,7 @@ export default function CatalogosTab({
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                RIF / Código Fiscal
-              </label>
+              <label className="form-label">RIF / Código Fiscal</label>
               <input
                 required
                 type="text"
@@ -72,9 +70,7 @@ export default function CatalogosTab({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                Nombre de la Fundación
-              </label>
+              <label className="form-label">Nombre de la Fundación</label>
               <input
                 required
                 type="text"
@@ -88,9 +84,7 @@ export default function CatalogosTab({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                Dirección Física
-              </label>
+              <label className="form-label">Dirección Física</label>
               <input
                 required
                 type="text"
@@ -101,9 +95,7 @@ export default function CatalogosTab({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                Teléfono
-              </label>
+              <label className="form-label">Teléfono</label>
               <input
                 required
                 type="text"
@@ -117,9 +109,7 @@ export default function CatalogosTab({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                Correo Electrónico
-              </label>
+              <label className="form-label">Correo Electrónico</label>
               <input
                 type="email"
                 value={inst.ins_emai || ""}
@@ -130,9 +120,7 @@ export default function CatalogosTab({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                Sitio Web
-              </label>
+              <label className="form-label">Sitio Web</label>
               <input
                 type="text"
                 value={inst.ins_web || ""}
@@ -145,9 +133,7 @@ export default function CatalogosTab({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-              Contacto Principal
-            </label>
+            <label className="form-label">Contacto Principal</label>
             <input
               type="text"
               value={inst.ins_pers || ""}

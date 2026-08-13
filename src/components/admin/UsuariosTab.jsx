@@ -159,9 +159,12 @@ export default function UsuariosTab({
   const handleResetPass = async (usuCodi, email) => {
     setResettingId(usuCodi);
     try {
-      await api.post(`/admin/users/${usuCodi}/password`, {});
+      const res = await api.post(`/admin/users/${usuCodi}/password`, {});
+      const nuevaClave = res.data?.data?.password_generada;
       showToast(
-        `✅ Contraseña restablecida para ${email}. Nueva: SiatDoc2026*`,
+        nuevaClave
+          ? `✅ Contraseña restablecida para ${email}. Nueva: ${nuevaClave}`
+          : `✅ Contraseña restablecida para ${email}.`,
       );
     } catch (err) {
       toastError(err, showToast, "Error al restablecer la contraseña.");
@@ -444,16 +447,13 @@ export default function UsuariosTab({
                               }
                               disabled={busy}
                               title="Restablecer contraseña"
-                              className="btn-secondary"
+                              className="action-icon-btn text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30"
                             >
                               {resettingId === user.usu_codi ? (
                                 <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
                               ) : (
-                                <KeyRound className="w-4 h-4 text-slate-500" />
+                                <KeyRound className="w-4 h-4" />
                               )}
-                              <span className="hidden sm:inline">
-                                Reset Pass
-                              </span>
                             </button>
                             <button
                               onClick={() => openConfirmToggle(user)}
@@ -463,24 +463,18 @@ export default function UsuariosTab({
                                   ? "Suspender usuario"
                                   : "Activar usuario"
                               }
-                              className="btn-secondary"
+                              className={
+                                isActive
+                                  ? "action-icon-btn text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                                  : "action-icon-btn text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                              }
                             >
                               {togglingId === user.usu_codi ? (
                                 <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin inline-block align-middle" />
                               ) : isActive ? (
-                                <>
-                                  <Ban className="w-4 h-4 text-rose-500" />
-                                  <span className="hidden sm:inline">
-                                    Suspender
-                                  </span>
-                                </>
+                                <Ban className="w-4 h-4" />
                               ) : (
-                                <>
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                  <span className="hidden sm:inline">
-                                    Activar
-                                  </span>
-                                </>
+                                <CheckCircle2 className="w-4 h-4" />
                               )}
                             </button>
                           </div>

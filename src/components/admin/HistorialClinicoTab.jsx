@@ -531,10 +531,9 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
                         <button
                           onClick={() => setSelectedIncident(item)}
                           title="Ver ficha"
-                          className="px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors flex items-center gap-1 ml-auto"
+                          className="action-icon-btn text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 ml-auto"
                         >
                           <Eye className="w-4 h-4" />
-                          <span className="hidden sm:inline">Ver Ficha</span>
                         </button>
                       </td>
                     </tr>

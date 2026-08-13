@@ -153,6 +153,12 @@ export const GlobalProvider = ({ children }) => {
           ape_nino: n.nin_apel,
           niv_desa: n.nin_nivd,
           est_disp: "Online", // Simulado por ahora
+          nin_fnac: n.nin_fnac,
+          nin_gner: n.nin_gner,
+          nin_ingr: n.nin_ingr,
+          nin_codi: n.nin_codi,
+          ins_codi: n.ins_codi,
+          tm_insti: n.tm_insti,
         }));
         setListaNinos(mapped);
         if (!selectedChildId && userRole !== "ESPECIALISTA") {
