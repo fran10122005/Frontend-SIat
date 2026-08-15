@@ -19,6 +19,7 @@ import StatusBadge from "../shared/StatusBadge";
 import FilterBar from "../shared/FilterBar";
 import Pagination from "../shared/Pagination";
 import AdminModal from "../shared/AdminModal";
+import FotoUpload from "../shared/FotoUpload";
 import api from "../../api/axios";
 import useExpandableRows from "../../hooks/useExpandableRows";
 import { toastError } from "../../utils/errorHandler";
@@ -59,6 +60,7 @@ export default function RepresentantesTab({
   const [resettingId, setResettingId] = useState(null);
   const [previewRep, setPreviewRep] = useState(null);
   const [editErrores, setEditErrores] = useState({});
+  const [updatingFotoNin, setUpdatingFotoNin] = useState(null);
 
   const validarEditCampo = (campo) => {
     if (campo === "rep_telf") return VALIDACIONES_TELF(editingRep?.rep_telf);
@@ -137,6 +139,36 @@ export default function RepresentantesTab({
         showToast,
         "Error al cambiar el estado del representante.",
       );
+    }
+  };
+
+  const handleUpdateNinoFoto = async (ninCodi, url) => {
+    setUpdatingFotoNin(ninCodi);
+    try {
+      await api.patch(`/admin/ninos/${ninCodi}/foto`, {
+        nin_foto: url || null,
+      });
+      showToast("✅ Foto del paciente actualizada correctamente.");
+      setPreviewRep((prev) => {
+        if (!prev) return prev;
+        const actualizar = (nino) =>
+          nino.nin_codi === ninCodi ? { ...nino, nin_foto: url } : nino;
+        const nuevos = (prev.ninos || []).map(actualizar);
+        const primero = prev.ninos && prev.ninos.length > 0 ? nuevos[0] : null;
+        return {
+          ...prev,
+          ninos: nuevos,
+          tm_ninos:
+            prev.tm_ninos && prev.tm_ninos.nin_codi === ninCodi
+              ? { ...prev.tm_ninos, nin_foto: url }
+              : prev.tm_ninos || primero,
+        };
+      });
+      onRefresh();
+    } catch (err) {
+      toastError(err, showToast, "Error al actualizar la foto del paciente.");
+    } finally {
+      setUpdatingFotoNin(null);
     }
   };
 
@@ -585,10 +617,18 @@ export default function RepresentantesTab({
                       key={idx}
                       className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40"
                     >
-                      <div className="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold text-base shrink-0">
-                        {nino.nin_nomb?.charAt(0) || "?"}
-                        {nino.nin_apel?.charAt(0) || ""}
-                      </div>
+                      {nino.nin_foto ? (
+                        <img
+                          src={nino.nin_foto}
+                          alt={`Foto de ${nino.nin_nomb}`}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-brand-100 dark:border-brand-900/30 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold text-base shrink-0">
+                          {nino.nin_nomb?.charAt(0) || "?"}
+                          {nino.nin_apel?.charAt(0) || ""}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-slate-900 dark:text-white">
                           {nino.nin_nomb} {nino.nin_apel}
@@ -615,6 +655,17 @@ export default function RepresentantesTab({
                         </div>
                         <div className="text-xs text-slate-400 font-mono mt-1">
                           ID: {nino.nin_codi}
+                        </div>
+                        <div className="mt-3">
+                          <FotoUpload
+                            value={nino.nin_foto || ""}
+                            onChange={(url) =>
+                              handleUpdateNinoFoto(nino.nin_codi, url)
+                            }
+                            label="Foto del paciente"
+                            alt={`Foto de ${nino.nin_nomb}`}
+                            size="w-16 h-16"
+                          />
                         </div>
                       </div>
                     </div>

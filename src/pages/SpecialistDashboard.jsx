@@ -422,7 +422,7 @@ export default function SpecialistDashboard() {
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 md:gap-3 transition-colors">
                   <Users className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   {activeChild
-                    ? `Panel Clínico: ${activeChild.nom_nino} ${activeChild.ape_nino}`
+                    ? `Panel del Paciente: ${activeChild.nom_nino} ${activeChild.ape_nino}`
                     : `Bienvenido, ${userName || "Especialista"}`}
                 </h1>
                 <p className="text-subtitle-muted mt-1">
@@ -495,6 +495,96 @@ export default function SpecialistDashboard() {
                   <SpecialistGlobalView
                     globalStats={globalStats}
                     globalAlertsFeed={globalAlertsFeed}
+                    quickActions={[
+                      {
+                        id: "historial",
+                        icon: TrendingUp,
+                        label: "Historial de Evolución",
+                        description: "Progreso y tendencias del paciente",
+                        highlight: true,
+                        onClick: () => {
+                          if (!listaNinos.length) {
+                            showToast("⚠️ No tienes pacientes asignados.");
+                            return;
+                          }
+                          if (!selectedChildId) {
+                            showToast(
+                              "👆 Selecciona un paciente para continuar",
+                            );
+                            navigate("patients");
+                            return;
+                          }
+                          navigate("historial");
+                        },
+                      },
+                      {
+                        id: "pacientes",
+                        icon: Users,
+                        label: "Gestionar Pacientes",
+                        description: "Accede a tus pacientes asignados",
+                        onClick: () => navigate("patients"),
+                      },
+                      {
+                        id: "incident",
+                        icon: AlertCircle,
+                        label: "Registrar Incidente",
+                        description: "Anota un incidente conductual (A-B-C)",
+                        onClick: () => {
+                          if (!listaNinos.length) {
+                            showToast("⚠️ No tienes pacientes asignados.");
+                            return;
+                          }
+                          if (!selectedChildId) {
+                            showToast(
+                              "👆 Selecciona un paciente para continuar",
+                            );
+                            navigate("patients");
+                            return;
+                          }
+                          setShowIncidentModal(true);
+                        },
+                      },
+                      {
+                        id: "indicacion",
+                        icon: FilePlus,
+                        label: "Anotar Indicación",
+                        description: "Indicación para el representante",
+                        onClick: () => {
+                          if (!listaNinos.length) {
+                            showToast("⚠️ No tienes pacientes asignados.");
+                            return;
+                          }
+                          if (!selectedChildId) {
+                            showToast(
+                              "👆 Selecciona un paciente para continuar",
+                            );
+                            navigate("patients");
+                            return;
+                          }
+                          setShowIndicacionModal(true);
+                        },
+                      },
+                      {
+                        id: "soap",
+                        icon: FileText,
+                        label: "Nota SOAP",
+                        description: "Registro de sesión clínica",
+                        onClick: () => {
+                          if (!listaNinos.length) {
+                            showToast("⚠️ No tienes pacientes asignados.");
+                            return;
+                          }
+                          if (!selectedChildId) {
+                            showToast(
+                              "👆 Selecciona un paciente para continuar",
+                            );
+                            navigate("patients");
+                            return;
+                          }
+                          setShowSoapModal(true);
+                        },
+                      },
+                    ]}
                   />
                 )}
 

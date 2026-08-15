@@ -34,23 +34,23 @@ export default function Sidebar() {
   const activeMenu = currentView;
 
   const specialistItems = [
-    { id: "dashboard", icon: LayoutDashboard, label: "Resumen Global" },
+    { id: "dashboard", icon: LayoutDashboard, label: "Panel del Paciente" },
     { id: "patients", icon: Users, label: "Gestión de Pacientes" },
-    { id: "student", icon: UserCircle, label: "Perfil Clínico" },
+    { id: "student", icon: UserCircle, label: "Ficha del Paciente" },
     { id: "historial", icon: TrendingUp, label: "Historial de Evolución" },
     { id: "home_analytics", icon: LineChart, label: "Análisis en Casa" },
-    { id: "rutinas", icon: Puzzle, label: "Asignación de Actividades" },
-    { id: "inventario", icon: Cpu, label: "Calibración de Sensores" },
+    { id: "rutinas", icon: Puzzle, label: "Terapias y Actividades" },
+    { id: "inventario", icon: Cpu, label: "Seguimiento en Vivo" },
     { id: "manual_especialista", icon: BookOpen, label: "Manual de Usuario" },
   ];
 
   const parentItems = [
-    { id: "dashboard", icon: LayoutDashboard, label: "Panel Principal" },
+    { id: "dashboard", icon: LayoutDashboard, label: "Inicio" },
     { id: "sensores", icon: Activity, label: "Seguimiento en Vivo" },
     { id: "agenda", icon: CheckSquare, label: "Día a Día" },
     { id: "diario_hogar", icon: NotebookPen, label: "Diario de Hogar" },
     { id: "herramientas", icon: Puzzle, label: "Herramientas de Apoyo" },
-    { id: "perfil_padre", icon: UserCircle, label: "Expediente Clínico" },
+    { id: "perfil_padre", icon: UserCircle, label: "Mi Perfil" },
     { id: "manual_repre", icon: BookOpen, label: "Manual de Usuario" },
   ];
 

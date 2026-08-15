@@ -15,6 +15,9 @@ import {
   Brain,
   Stethoscope,
   ShieldAlert,
+  Building2,
+  Phone,
+  ClipboardList,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import LoadingState from "../components/dashboard/LoadingState";
@@ -79,6 +82,15 @@ export default function ParentProfile() {
     if (lvl.includes("3") || lvl === "nivel-3")
       return "bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800";
     return "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700";
+  };
+
+  const formatIngreso = (val) => {
+    if (!val) return "";
+    return new Date(val).toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   };
 
   // Security Guard
@@ -203,100 +215,187 @@ export default function ParentProfile() {
                         </button>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                          <div className="flex items-start gap-3">
-                            <User className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                Nombre Completo
-                              </p>
-                              <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
-                                {childProfile.nin_nomb} {childProfile.nin_apel}
-                              </p>
-                            </div>
+                      <>
+                        <div
+                          data-tour="pp-profile-card"
+                          className="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-6 mb-6 border-b border-gray-100 dark:border-slate-700"
+                        >
+                          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-2 border-gray-200 dark:border-slate-600 flex items-center justify-center overflow-hidden shrink-0 bg-gray-50 dark:bg-slate-900">
+                            {childProfile.nin_foto ? (
+                              <img
+                                src={childProfile.nin_foto}
+                                alt={`${childProfile.nin_nomb} ${childProfile.nin_apel}`}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <UserCircle className="w-14 h-14 text-gray-300 dark:text-gray-600" />
+                            )}
                           </div>
-                          <div className="flex items-start gap-3">
-                            <Hash className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                Código de Sistema (ID)
-                              </p>
-                              <p className="text-sm font-mono text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700/50 inline-block px-2 py-1 rounded mt-1">
-                                {childProfile.nin_codi}
-                              </p>
+                          <div className="flex-1 text-center sm:text-left min-w-0">
+                            <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                              {childProfile.nin_nomb} {childProfile.nin_apel}
+                            </h3>
+                            <div className="mt-2 flex flex-wrap justify-center sm:justify-start gap-2">
+                              {childProfile.nin_edad && (
+                                <span className="text-xs font-semibold bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 px-2.5 py-1 rounded-full border border-sky-200 dark:border-sky-800">
+                                  {childProfile.nin_edad}
+                                </span>
+                              )}
+                              {childProfile.nin_gner && (
+                                <span className="text-xs font-semibold bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 px-2.5 py-1 rounded-full border border-violet-200 dark:border-violet-800">
+                                  {childProfile.nin_gner === "M"
+                                    ? "Masculino"
+                                    : "Femenino"}
+                                </span>
+                              )}
+                              {childProfile.nin_nivd && (
+                                <span
+                                  className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${getTeaLevelColor(childProfile.nin_nivd)}`}
+                                >
+                                  {getTeaLevelBadge(childProfile.nin_nivd)}
+                                </span>
+                              )}
                             </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Calendar className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                Fecha de Nacimiento
+                            {childProfile.nin_ingr && (
+                              <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                                Ingreso al sistema:{" "}
+                                {formatIngreso(childProfile.nin_ingr)}
                               </p>
-                              <p className="text-md text-gray-800 dark:text-gray-200 mt-1 flex items-center gap-2">
-                                {childProfile.nin_fnac
-                                  ? new Date(
-                                      childProfile.nin_fnac,
-                                    ).toLocaleDateString("es-ES", {
-                                      day: "numeric",
-                                      month: "long",
-                                      year: "numeric",
-                                    })
-                                  : ""}
-                                {childProfile.nin_edad && (
-                                  <span className="text-xs font-semibold bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
-                                    {childProfile.nin_edad}
-                                  </span>
-                                )}
-                              </p>
-                            </div>
+                            )}
                           </div>
                         </div>
 
-                        <div className="space-y-6">
-                          <div className="flex items-start gap-3">
-                            <Brain className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+                        {childProfile.nin_diag && (
+                          <div
+                            data-tour="pp-diagnosis"
+                            className="flex items-start gap-3 mb-6 bg-slate-50 dark:bg-slate-900/60 border border-gray-100 dark:border-slate-700 rounded-lg p-4"
+                          >
+                            <ClipboardList className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
                             <div>
                               <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                Nivel de Desarrollo (TEA)
+                                Diagnóstico Clínico
                               </p>
-                              <div
-                                className={`inline-flex items-center gap-2 px-3 py-1.5 mt-1 rounded-lg font-medium text-sm border ${getTeaLevelColor(childProfile.nin_nivd)}`}
-                              >
-                                <span
-                                  className={`w-2 h-2 rounded-full ${childProfile.nin_nivd?.includes("3") ? "bg-rose-500" : childProfile.nin_nivd?.includes("2") ? "bg-amber-500" : "bg-blue-500"}`}
-                                />
-                                {getTeaLevelBadge(childProfile.nin_nivd)}
+                              <p className="text-md text-gray-800 dark:text-gray-200 mt-1">
+                                {childProfile.nin_diag}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="space-y-6">
+                            <div className="flex items-start gap-3">
+                              <User className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                  Nombre Completo
+                                </p>
+                                <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                                  {childProfile.nin_nomb}{" "}
+                                  {childProfile.nin_apel}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <Hash className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                  Código de Sistema (ID)
+                                </p>
+                                <p className="text-sm font-mono text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700/50 inline-block px-2 py-1 rounded mt-1">
+                                  {childProfile.nin_codi}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <Calendar className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                  Fecha de Nacimiento
+                                </p>
+                                <p className="text-md text-gray-800 dark:text-gray-200 mt-1 flex items-center gap-2">
+                                  {childProfile.nin_fnac
+                                    ? new Date(
+                                        childProfile.nin_fnac,
+                                      ).toLocaleDateString("es-ES", {
+                                        day: "numeric",
+                                        month: "long",
+                                        year: "numeric",
+                                      })
+                                    : ""}
+                                  {childProfile.nin_edad && (
+                                    <span className="text-xs font-semibold bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800">
+                                      {childProfile.nin_edad}
+                                    </span>
+                                  )}
+                                </p>
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-start gap-3">
-                            <Brain className="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                Perfil Sensorial Principal
-                              </p>
-                              <div className="inline-flex items-center gap-2 px-3 py-1.5 mt-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-lg font-medium text-sm">
-                                <Brain className="w-4 h-4" />
-                                {childProfile.perfil_sensorial ||
-                                  "Sensorial Mixto"}
+
+                          <div className="space-y-6">
+                            <div className="flex items-start gap-3">
+                              <Brain className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                  Nivel de Desarrollo (TEA)
+                                </p>
+                                <div
+                                  className={`inline-flex items-center gap-2 px-3 py-1.5 mt-1 rounded-lg font-medium text-sm border ${getTeaLevelColor(childProfile.nin_nivd)}`}
+                                >
+                                  <span
+                                    className={`w-2 h-2 rounded-full ${childProfile.nin_nivd?.includes("3") ? "bg-rose-500" : childProfile.nin_nivd?.includes("2") ? "bg-amber-500" : "bg-blue-500"}`}
+                                  />
+                                  {getTeaLevelBadge(childProfile.nin_nivd)}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Stethoscope className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                Especialista Asignado
-                              </p>
-                              <p className="text-md text-gray-800 dark:text-gray-200 mt-1 flex items-center gap-2">
-                                <User className="w-4 h-4 text-brand-500" />
-                                {childProfile.especialista || "No asignado"}
-                              </p>
+                            <div className="flex items-start gap-3">
+                              <Brain className="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                  Perfil Sensorial Principal
+                                </p>
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 mt-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-lg font-medium text-sm">
+                                  <Brain className="w-4 h-4" />
+                                  {childProfile.perfil_sensorial ||
+                                    "Sensorial Mixto"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <Stethoscope className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                  Especialista Asignado
+                                </p>
+                                <p className="text-md text-gray-800 dark:text-gray-200 mt-1 flex items-center gap-2">
+                                  <User className="w-4 h-4 text-brand-500" />
+                                  {childProfile.especialista || "No asignado"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <Building2 className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                  Institución
+                                </p>
+                                <p className="text-md text-gray-800 dark:text-gray-200 mt-1">
+                                  {childProfile.institucion?.ins_nomb ||
+                                    "No registrada"}
+                                </p>
+                                {childProfile.institucion?.ins_telf && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1">
+                                    <Phone className="w-3.5 h-3.5" />
+                                    {childProfile.institucion.ins_telf}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
 

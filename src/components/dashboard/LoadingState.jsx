@@ -1,77 +1,82 @@
-import { Skeleton, DashboardSkeleton, TableSkeleton, CardSkeleton } from './Skeleton'
-import { Loader2 } from 'lucide-react'
+import {
+  Skeleton,
+  DashboardSkeleton,
+  TableSkeleton,
+  CardSkeleton,
+} from "./Skeleton";
+import { Loader2 } from "lucide-react";
 
 const roleMessages = {
   ADMIN_INSTITUCION: {
-    dashboard: 'Cargando panel de administración...',
-    table: 'Cargando usuarios del sistema...',
-    profile: 'Cargando perfil del administrador...',
-    form: 'Preparando formulario...',
-    default: 'Cargando información del sistema...',
+    dashboard: "Cargando panel de administración...",
+    table: "Cargando usuarios del sistema...",
+    profile: "Cargando perfil del administrador...",
+    form: "Preparando formulario...",
+    default: "Cargando información del sistema...",
   },
   ESPECIALISTA: {
-    dashboard: 'Preparando tu dashboard clínico...',
-    table: 'Cargando lista de pacientes...',
-    profile: 'Cargando perfil del especialista...',
-    form: 'Preparando datos clínicos...',
-    default: 'Cargando información clínica...',
+    dashboard: "Preparando tu dashboard clínico...",
+    table: "Cargando lista de pacientes...",
+    profile: "Cargando perfil del especialista...",
+    form: "Preparando datos clínicos...",
+    default: "Cargando información clínica...",
   },
   REPRESENTANTE: {
-    dashboard: 'Cargando información de tu hijo...',
-    table: 'Cargando registro de actividades...',
-    profile: 'Cargando perfil familiar...',
-    form: 'Preparando datos del hogar...',
-    default: 'Un momento, estamos listando todo...',
+    dashboard: "Cargando información de tu hijo...",
+    table: "Cargando registro de actividades...",
+    profile: "Cargando perfil familiar...",
+    form: "Preparando datos del hogar...",
+    default: "Un momento, estamos listando todo...",
   },
-}
+};
 
 export default function LoadingState({
-  variant = 'spinner',
+  variant = "spinner",
   message,
   role,
   rows,
   count,
-  className = '',
+  className = "",
 }) {
-  const currentRole = role || 'REPRESENTANTE'
-  const msgs = roleMessages[currentRole] || roleMessages.REPRESENTANTE
-  const resolvedMessage = message || msgs[variant] || msgs.default
+  const currentRole = role || "REPRESENTANTE";
+  const msgs = roleMessages[currentRole] || roleMessages.REPRESENTANTE;
+  const resolvedMessage = message || msgs[variant] || msgs.default;
 
   const renderContent = () => {
     switch (variant) {
-      case 'dashboard':
-        return <DashboardSkeleton />
-      case 'table':
-        return <TableSkeleton rows={rows} cols={4} />
-      case 'card':
-        return <CardSkeleton count={count} />
-      case 'profile':
-        return <ProfileSkeleton />
-      case 'form':
-        return <FormSkeleton />
-      case 'spinner':
+      case "dashboard":
+        return <DashboardSkeleton />;
+      case "table":
+        return <TableSkeleton rows={rows} cols={4} />;
+      case "card":
+        return <CardSkeleton count={count} />;
+      case "profile":
+        return <ProfileSkeleton />;
+      case "form":
+        return <FormSkeleton />;
+      case "spinner":
       default:
         return (
-          <div className="flex flex-col items-center justify-center gap-4 py-16">
+          <div className="flex flex-col items-center justify-center gap-2 py-6">
             <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin" />
           </div>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className={`w-full ${className}`} role="status" aria-label="Cargando">
-      {(variant !== 'spinner' || message) && (
-        <div className="mb-6">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
+      {(variant !== "spinner" || message) && (
+        <div className="mb-3">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 text-center">
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
             {resolvedMessage}
           </p>
         </div>
       )}
       {renderContent()}
     </div>
-  )
+  );
 }
 
 function ProfileSkeleton() {
@@ -106,7 +111,7 @@ function ProfileSkeleton() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function FormSkeleton() {
@@ -129,5 +134,5 @@ function FormSkeleton() {
         <Skeleton className="w-32 h-10" />
       </div>
     </div>
-  )
+  );
 }

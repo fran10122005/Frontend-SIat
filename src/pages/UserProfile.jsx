@@ -27,6 +27,8 @@ import {
   deletePasskey,
 } from "../api/passkey";
 import { getErrorMessage } from "../utils/errorHandler";
+import FotoUpload from "../components/shared/FotoUpload";
+import { FOLDERS } from "../config/cloudinary";
 
 export default function UserProfile() {
   const {
@@ -50,6 +52,7 @@ export default function UserProfile() {
     email: "",
     rol_nomb: "",
     gner: "",
+    foto: "",
   });
 
   // Password state
@@ -127,7 +130,8 @@ export default function UserProfile() {
           telf = "",
           licencia = "",
           rela = "",
-          gner = "";
+          gner = "",
+          foto = "";
 
         if (userData.rol_codi === "ROL_ESP" && userData.tm_espec) {
           nomb = userData.tm_espec.esp_nomb;
@@ -135,15 +139,18 @@ export default function UserProfile() {
           telf = userData.tm_espec.esp_telf || "";
           licencia = userData.tm_espec.esp_licencia || "";
           gner = userData.tm_espec.esp_gner || "F";
+          foto = userData.tm_espec.esp_foto || "";
         } else if (userData.rol_codi === "ROL_REP" && userData.tm_repre) {
           nomb = userData.tm_repre.rep_nomb;
           apel = userData.tm_repre.rep_apel;
           telf = userData.tm_repre.rep_telf || "";
           rela = userData.tm_repre.rep_rela || "";
+          foto = userData.tm_repre.rep_foto || "";
         } else if (userData.rol_codi === "ROL_ADM" && userData.tm_admin) {
           nomb = userData.tm_admin.adm_nomb;
           apel = userData.tm_admin.adm_apel;
           telf = userData.tm_admin.adm_telf || "";
+          foto = userData.tm_admin.adm_foto || "";
         }
 
         setProfile({
@@ -153,6 +160,7 @@ export default function UserProfile() {
           licencia,
           rela,
           gner,
+          foto,
           email: userData.usu_crro,
           rol_nomb: userData.tm_roles?.rol_nomb || "Usuario",
         });
@@ -231,6 +239,7 @@ export default function UserProfile() {
         nomb: profile.nomb,
         apel: profile.apel,
         telf: profile.telf,
+        foto: profile.foto || null,
       };
       if (userRole === "ESPECIALISTA") {
         payload.licencia = profile.licencia;
@@ -332,12 +341,16 @@ export default function UserProfile() {
                 {/* Panel Izquierdo: Resumen */}
                 <div className="lg:col-span-1 space-y-6">
                   <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 flex flex-col items-center text-center transition-all duration-300 hover:shadow-md">
-                    <div className="w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-3xl font-black mb-4 select-none">
-                      {profile.nomb
-                        ? profile.nomb.charAt(0) + profile.apel.charAt(0)
-                        : "US"}
-                    </div>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    <FotoUpload
+                      value={profile.foto}
+                      onChange={(url) =>
+                        setProfile((prev) => ({ ...prev, foto: url }))
+                      }
+                      label="Tu foto de perfil"
+                      alt="Foto de perfil"
+                      size="w-24 h-24"
+                    />
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white mt-4">
                       {profile.nomb} {profile.apel}
                     </h2>
                     <span className="mt-1 px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full uppercase tracking-wider">

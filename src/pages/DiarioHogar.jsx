@@ -281,9 +281,9 @@ export default function DiarioHogar() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10 space-y-8 animate-in fade-in duration-300 pb-20">
+          <div className="max-w-[1400px] mx-auto p-4 md:p-8 lg:p-10 space-y-6 md:space-y-8 animate-in fade-in duration-300 pb-20">
             {/* Header del Módulo */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 md:gap-4">
               <div>
                 <h1
                   data-tour="dh-header"
@@ -301,56 +301,56 @@ export default function DiarioHogar() {
             {/* Stats Summary */}
             <div
               data-tour="dh-stats"
-              className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4"
             >
-              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <NotebookPen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-3 md:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 md:gap-4">
+                <div className="p-2.5 md:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <NotebookPen className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <div className="min-w-0">
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Reportes
                   </p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
                     {totalReports}
                   </p>
                 </div>
               </div>
-              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-3 md:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 md:gap-4">
+                <div className="p-2.5 md:p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <div className="min-w-0">
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Último Ánimo
                   </p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-sm md:text-xl font-bold text-slate-900 dark:text-white truncate">
                     {lastMood}
                   </p>
                 </div>
               </div>
-              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-3 md:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 md:gap-4">
+                <div className="p-2.5 md:p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-amber-600 dark:text-amber-400" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <div className="min-w-0">
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Crisis (Total)
                   </p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
                     {totalCrisis}
                   </p>
                 </div>
               </div>
-              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                  <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-3 md:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 md:gap-4">
+                <div className="p-2.5 md:p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <div className="min-w-0">
+                  <p className="text-[9px] md:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     Racha
                   </p>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
                     {bitacorasList.length > 0
                       ? `${Math.min(bitacorasList.length, 7)} días`
                       : "—"}
@@ -362,9 +362,9 @@ export default function DiarioHogar() {
             {/* Formulario */}
             <div
               data-tour="dh-form"
-              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-8"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-6 md:mb-8"
             >
-              <div className="p-6 md:p-8 border-b border-gray-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="p-5 md:p-8 border-b border-gray-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <NotebookPen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   Registrar Nuevo Reporte Diario
@@ -372,7 +372,7 @@ export default function DiarioHogar() {
               </div>
               <form
                 onSubmit={handleReportSubmit}
-                className="p-6 md:p-8 space-y-6"
+                className="p-5 md:p-8 space-y-5"
               >
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
@@ -531,7 +531,7 @@ export default function DiarioHogar() {
                   <button
                     type="submit"
                     data-tour="dh-save"
-                    className="px-5 py-2.5 bg-brand-500 hover:bg-blue-600 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-brand-500 hover:bg-blue-600 text-white font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     Guardar Reporte
@@ -545,35 +545,35 @@ export default function DiarioHogar() {
               data-tour="dh-history"
               className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden"
             >
-              <div className="p-6 md:p-8 border-b border-gray-100 dark:border-slate-700">
+              <div className="p-5 md:p-8 border-b border-gray-100 dark:border-slate-700">
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-indigo-500" />
                   Historial de Diario
                 </h3>
               </div>
-              <div className="p-6 md:p-8 pt-4">
+              <div className="p-4 md:p-8 pt-4">
                 <div
                   data-tour="dh-filters"
-                  className="flex flex-wrap gap-3 items-center mb-6"
+                  className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 items-stretch sm:items-center mb-6"
                 >
                   <input
                     type="date"
                     value={filterDateFrom}
                     onChange={(e) => setFilterDateFrom(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                     title="Fecha desde"
                   />
                   <input
                     type="date"
                     value={filterDateTo}
                     onChange={(e) => setFilterDateTo(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                     title="Fecha hasta"
                   />
                   <select
                     value={filterMood}
                     onChange={(e) => setFilterMood(e.target.value)}
-                    className="px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
                     <option value="TODOS">Todos los ánimos</option>
                     <option value="Muy Calmo">Muy Calmo</option>
@@ -582,7 +582,7 @@ export default function DiarioHogar() {
                     <option value="Ansioso">Ansioso</option>
                     <option value="Triste">Triste</option>
                   </select>
-                  <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                  <label className="flex items-center justify-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer select-none px-3 py-2 border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 sm:border-transparent sm:bg-transparent sm:dark:bg-transparent sm:justify-start">
                     <input
                       type="checkbox"
                       checked={filterCrisisOnly}
@@ -599,7 +599,7 @@ export default function DiarioHogar() {
                         setFilterMood("TODOS");
                         setFilterCrisisOnly(false);
                       }}
-                      className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
+                      className="flex items-center justify-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
                     >
                       <X className="w-3.5 h-3.5" /> Limpiar
                     </button>
@@ -642,7 +642,7 @@ export default function DiarioHogar() {
                       return (
                         <div
                           key={bitacora.bit_codi || idx}
-                          className="p-5 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          className="p-4 md:p-5 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-2">
@@ -662,22 +662,22 @@ export default function DiarioHogar() {
                           </div>
 
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700">
-                              <span className="text-base">
+                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0">
+                              <span className="text-base shrink-0">
                                 {animoIconos[bitacora.bit_anim] || "😐"}
                               </span>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                                   Ánimo
                                 </p>
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
                                   {bitacora.bit_anim}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700">
-                              <Moon className="w-4 h-4 text-indigo-400" />
-                              <div>
+                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0">
+                              <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
+                              <div className="min-w-0">
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                                   Sueño
                                 </p>
@@ -688,24 +688,24 @@ export default function DiarioHogar() {
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700">
-                              <Utensils className="w-4 h-4 text-amber-400" />
-                              <div>
+                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0">
+                              <Utensils className="w-4 h-4 text-amber-400 shrink-0" />
+                              <div className="min-w-0">
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                                   Apetito
                                 </p>
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
                                   {bitacora.bit_apet || "—"}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700">
-                              <Heart className="w-4 h-4 text-rose-400" />
-                              <div>
+                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0">
+                              <Heart className="w-4 h-4 text-rose-400 shrink-0" />
+                              <div className="min-w-0">
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                                   Positivo
                                 </p>
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
                                   {bitacora.positiveNote || "—"}
                                 </p>
                               </div>

@@ -201,7 +201,7 @@ export default function Routines() {
                 <div className="flex justify-between items-end mb-8">
                   <div data-tour="rt-header">
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                      Catálogo de Terapias
+                      Terapias y Actividades
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">
                       Selecciona una rutina para iniciar el monitoreo clínico

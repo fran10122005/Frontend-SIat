@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import { useDebounce } from "../hooks/useDebounce";
+import { speak } from "../utils/speech";
 import {
   Wind,
   VolumeX,
@@ -464,11 +465,7 @@ export default function Herramientas() {
   const speakSentence = () => {
     if (sentence.length === 0) return;
     const textToSpeak = sentence.map((i) => i.label).join(". ") + ".";
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.lang = "es-ES";
-    utterance.rate = 0.85;
-    utterance.pitch = 1.0;
-    window.speechSynthesis.speak(utterance);
+    speak(textToSpeak, { rate: 0.85, pitch: 1.0 });
 
     setRecentPhrases((prev) => {
       const key = sentence.map((i) => i.label).join("|");
@@ -482,10 +479,7 @@ export default function Herramientas() {
   const playRecentPhrase = (phrase) => {
     setSentence(phrase);
     const textToSpeak = phrase.map((i) => i.label).join(". ") + ".";
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.lang = "es-ES";
-    utterance.rate = 0.85;
-    window.speechSynthesis.speak(utterance);
+    speak(textToSpeak, { rate: 0.85 });
   };
 
   const handleAddPictogram = (e) => {
@@ -540,12 +534,7 @@ export default function Herramientas() {
   // --- Sensory Regulation Handlers ---
   const startSensoryStrategy = (strategy) => {
     setActiveStrategy(strategy);
-    const utterance = new SpeechSynthesisUtterance(
-      `Vamos a hacer: ${strategy.label}. ${strategy.desc}`,
-    );
-    utterance.lang = "es-ES";
-    utterance.rate = 0.8;
-    window.speechSynthesis.speak(utterance);
+    speak(`Vamos a hacer: ${strategy.label}. ${strategy.desc}`, { rate: 0.8 });
     if (sensoryTimer) clearTimeout(sensoryTimer);
     setSensoryTimer(
       setTimeout(() => {

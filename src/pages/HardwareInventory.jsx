@@ -222,12 +222,12 @@ export default function HardwareInventory() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-6 md:p-8 flex flex-col gap-8 pb-12">
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-8 flex flex-col gap-6 md:gap-8 pb-12">
             {userRole !== "ESPECIALISTA" ? (
               // 👪 REPRESENTANTE - COCKPIT DE SEGUIMIENTO EN VIVO
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Header parent */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 md:pb-5">
                   <div>
                     <h1
                       data-tour="hw-title"
@@ -242,7 +242,7 @@ export default function HardwareInventory() {
                   </div>
                   <div
                     data-tour="hw-sim"
-                    className="flex items-center gap-3 flex-wrap"
+                    className="flex items-center gap-2 flex-wrap"
                   >
                     <span
                       className={`px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 ${
@@ -291,24 +291,24 @@ export default function HardwareInventory() {
                 {/* Grid layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left stats column */}
-                  <div className="lg:col-span-1 space-y-6">
+                  <div className="lg:col-span-1 grid grid-cols-2 lg:grid-cols-1 gap-4 lg:gap-6">
                     {/* Heart Rate Card */}
                     <div
                       data-tour="hw-bpm"
-                      className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700/60 flex items-center gap-4 relative overflow-hidden group"
+                      className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-6 shadow-sm border border-slate-200 dark:border-slate-700/60 flex items-center gap-3 md:gap-4 relative overflow-hidden group"
                     >
                       <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 group-hover:scale-110 transition-transform">
                         <Heart className="w-32 h-32 text-rose-500" />
                       </div>
-                      <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/30 rounded-xl flex items-center justify-center border border-rose-100 dark:border-rose-900/40 shrink-0">
-                        <Heart className="w-7 h-7 text-rose-500 animate-pulse" />
+                      <div className="w-11 h-11 md:w-14 md:h-14 bg-rose-50 dark:bg-rose-950/30 rounded-xl flex items-center justify-center border border-rose-100 dark:border-rose-900/40 shrink-0">
+                        <Heart className="w-6 h-6 md:w-7 md:h-7 text-rose-500 animate-pulse" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">
                           Ritmo Cardíaco
                         </span>
                         <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-3xl font-black text-slate-800 dark:text-white">
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white">
                             {currentBpm}
                           </span>
                           <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
@@ -324,20 +324,20 @@ export default function HardwareInventory() {
                     {/* Movement Card */}
                     <div
                       data-tour="hw-mov"
-                      className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700/60 flex items-center gap-4 relative overflow-hidden group"
+                      className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-6 shadow-sm border border-slate-200 dark:border-slate-700/60 flex items-center gap-3 md:gap-4 relative overflow-hidden group"
                     >
                       <div className="absolute right-0 bottom-0 translate-x-4 translate-y-4 opacity-5 group-hover:scale-110 transition-transform">
                         <Activity className="w-32 h-32 text-blue-500" />
                       </div>
-                      <div className="w-14 h-14 bg-blue-50 dark:bg-blue-950/30 rounded-xl flex items-center justify-center border border-blue-100 dark:border-blue-900/40 shrink-0">
-                        <Activity className="w-7 h-7 text-blue-500" />
+                      <div className="w-11 h-11 md:w-14 md:h-14 bg-blue-50 dark:bg-blue-950/30 rounded-xl flex items-center justify-center border border-blue-100 dark:border-blue-900/40 shrink-0">
+                        <Activity className="w-6 h-6 md:w-7 md:h-7 text-blue-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">
                           Movimiento (G)
                         </span>
                         <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-3xl font-black text-slate-800 dark:text-white">
+                          <span className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white">
                             {currentMov}
                           </span>
                           <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
@@ -353,19 +353,19 @@ export default function HardwareInventory() {
                     {/* Stress Index Card */}
                     <div
                       data-tour="hw-stress"
-                      className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700/60 flex flex-col gap-4 relative overflow-hidden"
+                      className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-6 shadow-sm border border-slate-200 dark:border-slate-700/60 flex flex-col gap-4 relative overflow-hidden col-span-2 lg:col-span-1"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40 shrink-0">
-                          <Brain className="w-7 h-7 text-indigo-500" />
+                      <div className="flex items-center gap-3 md:gap-4">
+                        <div className="w-11 h-11 md:w-14 md:h-14 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40 shrink-0">
+                          <Brain className="w-6 h-6 md:w-7 md:h-7 text-indigo-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                          <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">
                             Índice de Estrés
                           </span>
                           <div className="flex items-baseline gap-1 mt-1">
                             <span
-                              className={`text-3xl font-black ${getStressColorClass(currentStress)}`}
+                              className={`text-2xl md:text-3xl font-black ${getStressColorClass(currentStress)}`}
                             >
                               {currentStress}%
                             </span>
@@ -524,9 +524,9 @@ export default function HardwareInventory() {
               </div>
             ) : (
               // 🩺 ESPECIALISTA - LISTADO Y CALIBRACIÓN DE DISPOSITIVOS CLÍNICOS
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Header Specialist */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 md:gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 md:pb-5">
                   <div>
                     <h1
                       data-tour="hw-title"
@@ -544,7 +544,7 @@ export default function HardwareInventory() {
                   <button
                     data-tour="hw-new"
                     onClick={() => setShowNewSensorModal(true)}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg shadow-sm transition-colors text-sm"
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg shadow-sm transition-colors text-sm w-full md:w-auto"
                   >
                     <svg
                       className="w-4 h-4"
@@ -566,7 +566,7 @@ export default function HardwareInventory() {
                 {/* Grid de Dispositivos */}
                 <div
                   data-tour="hw-grid"
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
                 >
                   {hardware.map((device) => {
                     const hasError =

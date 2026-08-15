@@ -101,11 +101,11 @@ function Login({ onNavigate }) {
   };
 
   return (
-    <div className="w-full flex flex-col justify-center px-5 sm:px-8 py-6 sm:py-8 bg-white dark:bg-slate-900 transition-colors duration-200">
+    <div className="w-full flex flex-col justify-center px-4 sm:px-8 py-5 sm:py-8 bg-white dark:bg-slate-900 transition-colors duration-200">
       <div className="w-full">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8 text-center">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20 mx-auto mb-3 sm:mb-4">
+        {/* Header (solo en desktop; en móvil el brand lo muestra Auth.jsx) */}
+        <div className="mb-5 sm:mb-8 text-center hidden md:block">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20 mx-auto mb-2.5 sm:mb-4">
             <img
               src={funautaLogo}
               alt="Logo"
@@ -120,7 +120,7 @@ function Login({ onNavigate }) {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <FormAlert variant="error" message={error} />
 
           <div className="space-y-1.5">
@@ -243,7 +243,7 @@ function Login({ onNavigate }) {
           </button>
         </form>
 
-        <div className="my-5 flex items-center gap-3">
+        <div className="my-4 sm:my-5 flex items-center gap-3">
           <span className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
           <span className="text-xs text-slate-400">o</span>
           <span className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
@@ -253,7 +253,7 @@ function Login({ onNavigate }) {
           type="button"
           onClick={handleFingerprint}
           disabled={isLoading || isFp}
-          className="group w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl border border-brand-200 dark:border-blue-700/50 bg-brand-50/60 dark:bg-slate-800/70 text-brand-700 dark:text-blue-300 font-semibold transition-all duration-200 hover:bg-brand-100/70 dark:hover:bg-blue-900/30 hover:border-brand-300 dark:hover:border-blue-600 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          className="group w-full flex items-center justify-center gap-3 py-3 sm:py-3.5 px-4 rounded-xl border border-brand-200 dark:border-blue-700/50 bg-brand-50/60 dark:bg-slate-800/70 text-brand-700 dark:text-blue-300 font-semibold transition-all duration-200 hover:bg-brand-100/70 dark:hover:bg-blue-900/30 hover:border-brand-300 dark:hover:border-blue-600 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500/10 dark:bg-blue-500/15 text-brand-600 dark:text-blue-400 ring-1 ring-brand-500/20 dark:ring-blue-500/20 transition-all duration-200 group-hover:bg-brand-500/15 dark:group-hover:bg-blue-500/20">
             {isFp ? (

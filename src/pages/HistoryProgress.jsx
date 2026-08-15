@@ -134,7 +134,7 @@ export default function HistoryProgress() {
                   className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
                 >
                   <TrendingUp className="w-6 h-6 text-brand-700 dark:text-blue-400" />
-                  Reportes de Evolución Médica
+                  Historial de Evolución
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Análisis histórico y tendencias de comportamiento
@@ -168,11 +168,11 @@ export default function HistoryProgress() {
               {/* KPIs */}
               <div
                 data-tour="hp-kpis"
-                className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4"
               >
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-brand-500 dark:text-blue-400">
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-brand-500 dark:text-blue-400">
                       <svg
                         className="w-4 h-4"
                         fill="none"
@@ -187,23 +187,23 @@ export default function HistoryProgress() {
                         />
                       </svg>
                     </div>
-                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                       Promedio de Calma
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
                       {kpis.avgCalm}%
                     </span>
-                    <span className="text-sm font-medium text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded border border-green-100 dark:border-green-800/50">
+                    <span className="text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded border border-green-100 dark:border-green-800/50">
                       +5% vs sem. pasada
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div className="w-8 h-8 shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
                       <svg
                         className="w-4 h-4"
                         fill="none"
@@ -218,23 +218,23 @@ export default function HistoryProgress() {
                         />
                       </svg>
                     </div>
-                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                       Total de Sesiones
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
                       {kpis.totalSessions}
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      sesiones completadas
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      sesiones
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-[#1E7E34] dark:text-green-400">
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0 col-span-2 md:col-span-1">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <div className="w-8 h-8 shrink-0 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-[#1E7E34] dark:text-green-400">
                       <svg
                         className="w-4 h-4"
                         fill="none"
@@ -249,16 +249,16 @@ export default function HistoryProgress() {
                         />
                       </svg>
                     </div>
-                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                       Alertas Efectivas
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
                       {kpis.effectivePercentage}%
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      tasa de éxito en rutinas
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      éxito rutinas
                     </span>
                   </div>
                 </div>

@@ -20,20 +20,52 @@ export default function PatientManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [filterNivel, setFilterNivel] = useState("Todos");
-  const [filterEstado, setFilterEstado] = useState("Todos");
+  const [filterAsign, setFilterAsign] = useState("Todos");
+  const [filterGenero, setFilterGenero] = useState("Todos");
+  const [sortBy, setSortBy] = useState("nombre");
+  const [sortDir, setSortDir] = useState("asc");
+
+  const sortedNinos = useMemo(() => {
+    const arr = [...listaNinos];
+    const dir = sortDir === "asc" ? 1 : -1;
+    if (sortBy === "edad") {
+      arr.sort((a, b) => {
+        const ea = a.nin_fnac ? new Date(a.nin_fnac).getTime() : 0;
+        const eb = b.nin_fnac ? new Date(b.nin_fnac).getTime() : 0;
+        return (ea - eb) * dir;
+      });
+    } else if (sortBy === "ingreso") {
+      arr.sort((a, b) => {
+        const ia = a.nin_ingr ? new Date(a.nin_ingr).getTime() : 0;
+        const ib = b.nin_ingr ? new Date(b.nin_ingr).getTime() : 0;
+        return (ib - ia) * dir;
+      });
+    } else {
+      arr.sort(
+        (a, b) =>
+          `${a.nom_nino} ${a.ape_nino}`.localeCompare(
+            `${b.nom_nino} ${b.ape_nino}`,
+          ) * dir,
+      );
+    }
+    return arr;
+  }, [listaNinos, sortBy, sortDir]);
+
   const filteredNinos = useMemo(() => {
-    return listaNinos.filter((nino) => {
+    return sortedNinos.filter((nino) => {
       const fullName = `${nino.nom_nino} ${nino.ape_nino}`.toLowerCase();
       const matchesSearch =
         fullName.includes(debouncedSearch.toLowerCase()) ||
         nino.nom_nino.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchesNivel =
         filterNivel === "Todos" || nino.niv_desa === filterNivel;
-      const matchesEstado =
-        filterEstado === "Todos" || nino.est_disp === filterEstado;
-      return matchesSearch && matchesNivel && matchesEstado;
+      const matchesAsign =
+        filterAsign === "Todos" || nino.est_asign === filterAsign;
+      const matchesGenero =
+        filterGenero === "Todos" || nino.nin_gner === filterGenero;
+      return matchesSearch && matchesNivel && matchesAsign && matchesGenero;
     });
-  }, [listaNinos, debouncedSearch, filterNivel, filterEstado]);
+  }, [sortedNinos, debouncedSearch, filterNivel, filterAsign, filterGenero]);
 
   const PAGE_SIZE = 8;
   const [page, setPage] = useState(0);
@@ -45,7 +77,7 @@ export default function PatientManagement() {
 
   useEffect(() => {
     setPage(0);
-  }, [searchTerm, filterNivel, filterEstado]);
+  }, [searchTerm, filterNivel, filterAsign, filterGenero, sortBy, sortDir]);
 
   // New States for Clinical Invitation
   const [showRegModal, setShowRegModal] = useState(false);
@@ -84,6 +116,26 @@ export default function PatientManagement() {
     return `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
   };
 
+  // Avatar con foto o iniciales como fallback
+  const Avatar = ({ nino, className = "" }) => {
+    if (nino.nin_foto) {
+      return (
+        <img
+          src={nino.nin_foto}
+          alt={`${nino.nom_nino} ${nino.ape_nino}`}
+          className={`object-cover rounded-full border border-blue-200 dark:border-blue-800/50 ${className}`}
+        />
+      );
+    }
+    return (
+      <div
+        className={`flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-brand-500 dark:text-blue-400 font-bold shadow-sm border border-blue-200 dark:border-blue-800/50 ${className}`}
+      >
+        {getInitials(nino.nom_nino, nino.ape_nino)}
+      </div>
+    );
+  };
+
   const nivelesUnicos = [
     "Todos",
     ...new Set(listaNinos.map((n) => n.niv_desa)),
@@ -100,20 +152,26 @@ export default function PatientManagement() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-6 md:p-8 lg:p-10 flex flex-col gap-8">
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-8 lg:p-10 flex flex-col gap-5 md:gap-8">
             {/* Header del Dashboard ([B] Ind. Empresa y [A] Logo + [D] Botones de Cambio) */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 md:gap-6">
               <div>
                 <h1
                   data-tour="pm-header"
                   className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
                 >
                   <Users className="w-6 h-6 text-brand-700 dark:text-blue-400" />
-                  Portal Clínico de Especialistas
+                  Gestión de Pacientes
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Panel de control para el seguimiento de pacientes asignados
                 </p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  <Users className="w-3.5 h-3.5 text-brand-500" />
+                  {filteredNinos.length} de {listaNinos.length} pacientes
+                </span>
               </div>
             </div>
 
@@ -129,12 +187,17 @@ export default function PatientManagement() {
                 activeCount={
                   (searchTerm ? 1 : 0) +
                   (filterNivel !== "Todos" ? 1 : 0) +
-                  (filterEstado !== "Todos" ? 1 : 0)
+                  (filterAsign !== "Todos" ? 1 : 0) +
+                  (filterGenero !== "Todos" ? 1 : 0) +
+                  (sortBy !== "nombre" || sortDir !== "asc" ? 1 : 0)
                 }
                 onClearAll={() => {
                   setSearchTerm("");
                   setFilterNivel("Todos");
-                  setFilterEstado("Todos");
+                  setFilterAsign("Todos");
+                  setFilterGenero("Todos");
+                  setSortBy("nombre");
+                  setSortDir("asc");
                 }}
                 chips={[
                   filterNivel !== "Todos" && {
@@ -142,10 +205,29 @@ export default function PatientManagement() {
                     label: `Nivel: ${filterNivel}`,
                     onRemove: () => setFilterNivel("Todos"),
                   },
-                  filterEstado !== "Todos" && {
-                    key: "estado",
-                    label: `Estado: ${filterEstado}`,
-                    onRemove: () => setFilterEstado("Todos"),
+                  filterAsign !== "Todos" && {
+                    key: "asign",
+                    label:
+                      filterAsign === "Activo"
+                        ? "Asignación: Con especialista"
+                        : "Asignación: Sin especialista",
+                    onRemove: () => setFilterAsign("Todos"),
+                  },
+                  filterGenero !== "Todos" && {
+                    key: "genero",
+                    label:
+                      filterGenero === "M"
+                        ? "Género: Masculino"
+                        : "Género: Femenino",
+                    onRemove: () => setFilterGenero("Todos"),
+                  },
+                  (sortBy !== "nombre" || sortDir !== "asc") && {
+                    key: "orden",
+                    label: `Orden: ${sortBy === "edad" ? "Edad" : sortBy === "ingreso" ? "Ingreso" : "Nombre"} (${sortDir === "asc" ? "A-Z" : "Z-A"})`,
+                    onRemove: () => {
+                      setSortBy("nombre");
+                      setSortDir("asc");
+                    },
                   },
                 ].filter(Boolean)}
                 className="flex-1"
@@ -163,14 +245,41 @@ export default function PatientManagement() {
                   ))}
                 </select>
                 <select
-                  data-tour="pm-filter-estado"
+                  data-tour="pm-filter-genero"
                   className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
-                  value={filterEstado}
-                  onChange={(e) => setFilterEstado(e.target.value)}
+                  value={filterGenero}
+                  onChange={(e) => setFilterGenero(e.target.value)}
                 >
-                  <option value="Todos">Todos los estados</option>
-                  <option value="Online">Online</option>
-                  <option value="Offline">Offline</option>
+                  <option value="Todos">Todos los géneros</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Femenino</option>
+                </select>
+                <select
+                  data-tour="pm-filter-asign"
+                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
+                  value={filterAsign}
+                  onChange={(e) => setFilterAsign(e.target.value)}
+                >
+                  <option value="Todos">Todas las asignaciones</option>
+                  <option value="Activo">Con especialista asignado</option>
+                  <option value="Sin asignar">Sin especialista asignado</option>
+                </select>
+                <select
+                  data-tour="pm-sort"
+                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
+                  value={`${sortBy}:${sortDir}`}
+                  onChange={(e) => {
+                    const [by, dir] = e.target.value.split(":");
+                    setSortBy(by);
+                    setSortDir(dir);
+                  }}
+                >
+                  <option value="nombre:asc">Nombre (A-Z)</option>
+                  <option value="nombre:desc">Nombre (Z-A)</option>
+                  <option value="edad:asc">Edad (menor a mayor)</option>
+                  <option value="edad:desc">Edad (mayor a menor)</option>
+                  <option value="ingreso:desc">Ingreso (recientes)</option>
+                  <option value="ingreso:asc">Ingreso (antiguos)</option>
                 </select>
               </FilterBar>
               <button
@@ -198,57 +307,39 @@ export default function PatientManagement() {
             {/* [C] Objetos (Cuadrícula de Pacientes) */}
             <div
               data-tour="pm-grid"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
             >
               {pagedNinos.map((nino) => (
                 <div
                   key={nino.id_ninos}
                   data-tour="pm-card"
                   onClick={() => setPreviewNino(nino)}
-                  className="group flex flex-col bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+                  className="group flex flex-col bg-white dark:bg-slate-800 rounded-2xl p-3 sm:p-6 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden cursor-pointer"
                 >
                   {/* Decorative background glow on hover */}
                   <div className="absolute -inset-2 bg-gradient-to-r from-blue-100 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 dark:from-slate-700 dark:to-slate-800 pointer-events-none -z-10 blur-xl"></div>
 
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 text-brand-500 dark:text-blue-400 text-xl font-bold shadow-sm border border-blue-200 dark:border-blue-800/50">
-                      {getInitials(nino.nom_nino, nino.ape_nino)}
-                    </div>
+                  <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                    <Avatar
+                      nino={nino}
+                      className="h-10 w-10 sm:h-16 sm:w-16 text-base sm:text-2xl"
+                    />
 
-                    {/* Hardware State Indicator */}
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600">
-                      <span
-                        className={`w-2 h-2 rounded-full ${nino.est_disp === "Online" ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" : "bg-gray-400"}`}
-                      ></span>
-                      <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                        {nino.est_disp}
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white line-clamp-1 sm:line-clamp-none sm:mb-1">
+                        {nino.nom_nino} {nino.ape_nino}
+                      </h3>
+                      <div className="flex items-center flex-wrap gap-1.5 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
+                        <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 font-sans font-semibold whitespace-nowrap">
+                          <Cake className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                          {calcEdad(nino.nin_fnac)}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="mb-5 flex-1">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white line-clamp-1 mb-1">
-                      {nino.nom_nino} {nino.ape_nino}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 font-mono mb-3 flex items-center gap-1">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                        />
-                      </svg>
-                      {nino.id_ninos}
-                    </p>
-
-                    {/* Development Level Badge */}
-                    <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50">
+                  <div className="mb-3 sm:mb-5 flex-1 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50">
                       <svg
                         className="w-3 h-3 mr-1.5"
                         fill="none"
@@ -264,6 +355,29 @@ export default function PatientManagement() {
                       </svg>
                       Clasificación: {nino.niv_desa}
                     </span>
+
+                    {/* Asignación clínica */}
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold border ${
+                        nino.est_asign === "Activo"
+                          ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800/50"
+                          : "bg-gray-50 text-gray-500 border-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600"
+                      }`}
+                      title={
+                        nino.est_asign === "Activo"
+                          ? "Paciente con especialista asignado"
+                          : "Paciente sin especialista asignado"
+                      }
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
+                          nino.est_asign === "Activo"
+                            ? "bg-green-500"
+                            : "bg-gray-400"
+                        }`}
+                      ></span>
+                      {nino.est_asign === "Activo" ? "Asignado" : "Sin asignar"}
+                    </span>
                   </div>
 
                   <button
@@ -272,11 +386,11 @@ export default function PatientManagement() {
                       e.stopPropagation();
                       handleManagePatient(nino);
                     }}
-                    className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group/btn"
+                    className="w-full py-2 sm:py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group/btn text-xs sm:text-sm"
                   >
                     Gestionar Paciente
                     <svg
-                      className="w-4 h-4 transform group-hover/btn:translate-x-1 transition-transform"
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 transform group-hover/btn:translate-x-1 transition-transform"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -338,42 +452,66 @@ export default function PatientManagement() {
       {previewNino && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-            <div className="p-6 bg-gradient-to-r from-brand-700 to-brand-600 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                  {getInitials(previewNino.nom_nino, previewNino.ape_nino)}
-                </div>
-                <div>
-                  <h3 className="text-base font-bold">
+            <div className="relative p-6 bg-gradient-to-r from-brand-700 to-brand-600 text-white flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar
+                  nino={previewNino}
+                  className="w-20 h-20 text-2xl shrink-0 border-4 border-white/30 shadow-lg"
+                />
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold leading-tight">
                     {previewNino.nom_nino} {previewNino.ape_nino}
                   </h3>
-                  <p className="text-xs opacity-90 font-mono">
-                    ID: {previewNino.id_ninos}
-                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white/20 text-white border border-white/30">
+                      Clasificación: {previewNino.niv_desa}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                        previewNino.est_asign === "Activo"
+                          ? "bg-white/20 text-white border-white/30"
+                          : "bg-black/20 text-white/90 border-white/20"
+                      }`}
+                      title={
+                        previewNino.est_asign === "Activo"
+                          ? "Paciente con especialista asignado"
+                          : "Paciente sin especialista asignado"
+                      }
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          previewNino.est_asign === "Activo"
+                            ? "bg-green-300"
+                            : "bg-white/60"
+                        }`}
+                      ></span>
+                      {previewNino.est_asign === "Activo"
+                        ? "Con especialista"
+                        : "Sin especialista"}
+                    </span>
+                  </div>
                 </div>
               </div>
               <button
                 onClick={() => setPreviewNino(null)}
-                className="text-white/80 hover:text-white text-xl font-bold"
+                className="text-white/80 hover:text-white text-2xl font-bold shrink-0"
+                aria-label="Cerrar vista previa"
               >
                 &times;
               </button>
             </div>
 
             <div className="p-6 space-y-4 text-sm text-slate-700 dark:text-slate-300">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center px-3 py-1 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50">
-                  Clasificación: {previewNino.niv_desa}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${previewNino.est_disp === "Online" ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800/50" : "bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"}`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${previewNino.est_disp === "Online" ? "bg-green-500 animate-pulse" : "bg-gray-400"}`}
-                  ></span>
-                  {previewNino.est_disp}
-                </span>
-              </div>
+              {previewNino.nin_diag && (
+                <div className="p-4 rounded-xl border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/20">
+                  <div className="flex items-center gap-1.5 text-brand-600 dark:text-brand-300 text-xs font-bold uppercase tracking-wider mb-1">
+                    <IdCard className="w-3.5 h-3.5" /> Diagnóstico
+                  </div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    {previewNino.nin_diag}
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">

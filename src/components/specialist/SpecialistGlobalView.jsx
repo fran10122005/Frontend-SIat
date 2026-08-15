@@ -3,11 +3,19 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldAlert,
+  ChevronRight,
+  ClipboardList,
+  FilePlus,
+  FileText,
+  TrendingUp,
+  BookOpen,
+  Download,
 } from "lucide-react";
 
 export default function SpecialistGlobalView({
   globalStats,
   globalAlertsFeed,
+  quickActions = [],
 }) {
   return (
     <>
@@ -54,6 +62,59 @@ export default function SpecialistGlobalView({
             </h3>
           </div>
         </div>
+      </div>
+
+      {/* Accesos Rápidos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.id}
+              onClick={action.onClick}
+              className={`flex items-center gap-3 p-4 md:p-5 rounded-xl shadow-sm border text-left transition-all group ${
+                action.highlight
+                  ? "bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500/30 text-white hover:shadow-lg hover:-translate-y-0.5"
+                  : "bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-800/60 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-md hover:-translate-y-0.5"
+              }`}
+            >
+              <div
+                className={`p-2.5 md:p-3 rounded-lg shrink-0 ${
+                  action.highlight
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-100 dark:bg-slate-800 text-brand-600 dark:text-brand-400"
+                }`}
+              >
+                <Icon className="w-5 h-5 md:w-6 md:h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p
+                  className={`text-sm font-bold ${
+                    action.highlight
+                      ? "text-white"
+                      : "text-slate-900 dark:text-white"
+                  }`}
+                >
+                  {action.label}
+                </p>
+                <p
+                  className={`text-xs mt-0.5 ${
+                    action.highlight
+                      ? "text-blue-100"
+                      : "text-slate-500 dark:text-slate-400"
+                  }`}
+                >
+                  {action.description}
+                </p>
+              </div>
+              <ChevronRight
+                className={`w-4 h-4 shrink-0 transition-transform group-hover:translate-x-1 ${
+                  action.highlight ? "text-white" : "text-slate-400"
+                }`}
+              />
+            </button>
+          );
+        })}
       </div>
 
       {/* Alertas Globales */}

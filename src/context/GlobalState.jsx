@@ -155,12 +155,16 @@ export const GlobalProvider = ({ children }) => {
           ape_nino: n.nin_apel,
           niv_desa: n.nin_nivd,
           est_disp: "Online", // Simulado por ahora
+          est_asign:
+            n.tc_asign && n.tc_asign.length > 0 ? "Activo" : "Sin asignar",
           nin_fnac: n.nin_fnac,
           nin_gner: n.nin_gner,
           nin_ingr: n.nin_ingr,
           nin_codi: n.nin_codi,
           ins_codi: n.ins_codi,
           tm_insti: n.tm_insti,
+          nin_foto: n.nin_foto || "",
+          nin_diag: n.nin_diag || "",
         }));
         setListaNinos(mapped);
         if (!selectedChildId && userRole !== "ESPECIALISTA") {
