@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
-import api from "../api/axios";
 import { Users, Cake, Calendar, IdCard } from "lucide-react";
 import { useDebounce } from "../hooks/useDebounce";
 import Topbar from "../components/layout/Topbar";
 import Pagination from "../components/shared/Pagination";
 import RegisterChildModal from "../components/shared/RegisterChildModal";
+import FilterBar from "../components/shared/FilterBar";
 
 export default function PatientManagement() {
   const {
@@ -69,8 +69,12 @@ export default function PatientManagement() {
     return `${años} año${años !== 1 ? "s" : ""}`;
   };
 
-  const handleRegistrationSuccess = (invitationUrl) => {
-    setGeneratedLink(invitationUrl);
+  const handleRegistrationSuccess = (data = {}) => {
+    if (data.reutilizado) {
+      fetchNinos();
+      return;
+    }
+    setGeneratedLink(data.invitationUrl || "");
     setShowLinkModal(true);
     fetchNinos();
   };
@@ -114,33 +118,38 @@ export default function PatientManagement() {
             </div>
 
             {/* Toolbar */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-              <div className="flex flex-col sm:flex-row w-full md:w-auto gap-4">
-                <div className="relative">
-                  <span className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <svg
-                      className="w-5 h-5 text-gray-400"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </span>
-                  <input
-                    type="text"
-                    data-tour="pm-search"
-                    placeholder="Buscar paciente por nombre..."
-                    className="w-full sm:w-64 pl-4 pr-10 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              <FilterBar
+                dataTour="pm-filters"
+                searchDataTour="pm-search"
+                clearDataTour="pm-clear"
+                searchValue={searchTerm}
+                onSearch={setSearchTerm}
+                searchPlaceholder="Buscar paciente por nombre..."
+                activeCount={
+                  (searchTerm ? 1 : 0) +
+                  (filterNivel !== "Todos" ? 1 : 0) +
+                  (filterEstado !== "Todos" ? 1 : 0)
+                }
+                onClearAll={() => {
+                  setSearchTerm("");
+                  setFilterNivel("Todos");
+                  setFilterEstado("Todos");
+                }}
+                chips={[
+                  filterNivel !== "Todos" && {
+                    key: "nivel",
+                    label: `Nivel: ${filterNivel}`,
+                    onRemove: () => setFilterNivel("Todos"),
+                  },
+                  filterEstado !== "Todos" && {
+                    key: "estado",
+                    label: `Estado: ${filterEstado}`,
+                    onRemove: () => setFilterEstado("Todos"),
+                  },
+                ].filter(Boolean)}
+                className="flex-1"
+              >
                 <select
                   data-tour="pm-filter-nivel"
                   className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
@@ -163,26 +172,11 @@ export default function PatientManagement() {
                   <option value="Online">Online</option>
                   <option value="Offline">Offline</option>
                 </select>
-                {(searchTerm ||
-                  filterNivel !== "Todos" ||
-                  filterEstado !== "Todos") && (
-                  <button
-                    data-tour="pm-clear"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setFilterNivel("Todos");
-                      setFilterEstado("Todos");
-                    }}
-                    className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
-                  >
-                    Limpiar
-                  </button>
-                )}
-              </div>
+              </FilterBar>
               <button
                 onClick={() => setShowRegModal(true)}
                 data-tour="pm-register"
-                className="w-full md:w-auto px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-md transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
+                className="w-full md:w-auto px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-md transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5 shrink-0"
               >
                 <svg
                   className="w-5 h-5"

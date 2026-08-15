@@ -134,30 +134,6 @@ export const seccionesManualRepresentante = [
         valor:
           "Indicador del estado de la pulsera biométrica: conexión, nivel de batería y calidad de señal.",
       },
-
-      { tipo: "subtitulo", valor: "Solicitar Cita" },
-      {
-        tipo: "pasos",
-        items: [
-          'Presione el botón "Pedir Cita" en el panel principal.',
-          "Complete el formulario: especialista, fecha deseada, hora, tipo de cita y motivo.",
-          'Presione "Solicitar Cita". La solicitud será enviada al especialista.',
-        ],
-      },
-      {
-        tipo: "tabla",
-        encabezados: ["Campo", "Descripción"],
-        filas: [
-          ["Especialista", "Seleccione de la lista de especialistas asignados"],
-          ["Fecha Deseada", "Seleccione la fecha para la cita"],
-          ["Hora Deseada", "Seleccione la hora preferida"],
-          [
-            "Tipo de Cita",
-            "Consulta Regular, Terapia de Lenguaje, Terapia Ocupacional, Psicología, Revisión de PEI, Urgencia",
-          ],
-          ["Motivo", "Notas adicionales para el especialista"],
-        ],
-      },
     ],
   },
   {

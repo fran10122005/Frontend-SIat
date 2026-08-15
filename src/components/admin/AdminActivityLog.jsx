@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
-import { Search, Download, FileText, X, ChevronDown } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Download, FileText, ChevronDown } from "lucide-react";
 import useExpandableRows from "../../hooks/useExpandableRows";
+import useMediaQuery from "../../hooks/useMediaQuery";
+import FilterBar from "../shared/FilterBar";
 
 const TYPE_BADGES = {
   INFO: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -12,10 +14,13 @@ const TYPE_BADGES = {
     "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
 };
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE_DESKTOP = 10;
+const PAGE_SIZE_MOBILE = 5;
 
 export default function AdminActivityLog({ userName, logs = [] }) {
   const { expandedId, toggle } = useExpandableRows();
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const pageSize = isMobile ? PAGE_SIZE_MOBILE : PAGE_SIZE_DESKTOP;
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("TODOS");
   const [dateFrom, setDateFrom] = useState("");
@@ -37,10 +42,46 @@ export default function AdminActivityLog({ userName, logs = [] }) {
     });
   }, [logs, search, filterType, dateFrom, dateTo]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paged = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
-  const hasFilters = search || filterType !== "TODOS" || dateFrom || dateTo;
+  useEffect(() => {
+    if (page >= totalPages && totalPages > 0) setPage(totalPages - 1);
+  }, [totalPages, page]);
+
+  const clearFilters = () => {
+    setSearch("");
+    setFilterType("TODOS");
+    setDateFrom("");
+    setDateTo("");
+    setPage(0);
+  };
+
+  const getPageItems = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i);
+    const pages = new Set([0, totalPages - 1, page - 1, page, page + 1]);
+    return [...pages]
+      .filter((p) => p >= 0 && p < totalPages)
+      .sort((a, b) => a - b);
+  };
+
+  const filterChips = [
+    filterType !== "TODOS" && {
+      key: "tipo",
+      label: `Tipo: ${filterType}`,
+      onRemove: () => setFilterType("TODOS"),
+    },
+    dateFrom && {
+      key: "dateFrom",
+      label: `Desde: ${dateFrom}`,
+      onRemove: () => setDateFrom(""),
+    },
+    dateTo && {
+      key: "dateTo",
+      label: `Hasta: ${dateTo}`,
+      onRemove: () => setDateTo(""),
+    },
+  ].filter(Boolean);
 
   const exportExcel = () => {
     import("xlsx").then((XLSX) => {
@@ -91,94 +132,78 @@ export default function AdminActivityLog({ userName, logs = [] }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Filters */}
-      <div className="bg-white dark:bg-[#1E293B] p-4 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar en descripción..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <select
-            value={filterType}
+      <FilterBar
+        searchValue={search}
+        onSearch={(v) => {
+          setSearch(v);
+          setPage(0);
+        }}
+        searchPlaceholder="Buscar en descripción..."
+        activeCount={
+          (search ? 1 : 0) +
+          (filterType !== "TODOS" ? 1 : 0) +
+          (dateFrom ? 1 : 0) +
+          (dateTo ? 1 : 0)
+        }
+        onClearAll={clearFilters}
+        chips={filterChips}
+      >
+        <select
+          value={filterType}
+          onChange={(e) => {
+            setFilterType(e.target.value);
+            setPage(0);
+          }}
+          className="w-full sm:w-auto px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+        >
+          <option value="TODOS">Todos los tipos</option>
+          <option value="INFO">INFO</option>
+          <option value="WARN">WARN</option>
+          <option value="SUCCESS">SUCCESS</option>
+          <option value="INCIDENTE">INCIDENTE</option>
+          <option value="ASIGNACION">ASIGNACION</option>
+        </select>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-slate-500 shrink-0">Desde</label>
+          <input
+            type="date"
+            value={dateFrom}
             onChange={(e) => {
-              setFilterType(e.target.value);
+              setDateFrom(e.target.value);
               setPage(0);
             }}
-            className="w-full sm:w-auto px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value="TODOS">Todos los tipos</option>
-            <option value="INFO">INFO</option>
-            <option value="WARN">WARN</option>
-            <option value="SUCCESS">SUCCESS</option>
-            <option value="INCIDENTE">INCIDENTE</option>
-            <option value="ASIGNACION">ASIGNACION</option>
-          </select>
-          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 items-stretch sm:items-center w-full sm:w-auto">
-            <div className="flex items-center gap-1 sm:gap-2">
-              <label className="text-xs text-slate-500 shrink-0">Desde</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => {
-                  setDateFrom(e.target.value);
-                  setPage(0);
-                }}
-                className="flex-1 sm:flex-none px-2 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2">
-              <label className="text-xs text-slate-500 shrink-0">Hasta</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => {
-                  setDateTo(e.target.value);
-                  setPage(0);
-                }}
-                className="flex-1 sm:flex-none px-2 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={exportExcel}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 rounded-lg transition-colors shrink-0"
-            >
-              <Download className="w-4 h-4" />
-              Excel
-            </button>
-            <button
-              onClick={exportPDF}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50 rounded-lg transition-colors shrink-0"
-            >
-              <FileText className="w-4 h-4" />
-              PDF
-            </button>
-          </div>
-          {hasFilters && (
-            <button
-              onClick={() => {
-                setSearch("");
-                setFilterType("TODOS");
-                setDateFrom("");
-                setDateTo("");
-                setPage(0);
-              }}
-              className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
-            >
-              <X className="w-3.5 h-3.5" /> Limpiar
-            </button>
-          )}
+            className="px-2 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
-      </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-slate-500 shrink-0">Hasta</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setPage(0);
+            }}
+            className="px-2 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={exportExcel}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 rounded-lg transition-colors shrink-0"
+          >
+            <Download className="w-4 h-4" />
+            Excel
+          </button>
+          <button
+            onClick={exportPDF}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50 rounded-lg transition-colors shrink-0"
+          >
+            <FileText className="w-4 h-4" />
+            PDF
+          </button>
+        </div>
+      </FilterBar>
 
       {/* Table */}
       <div className="bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm overflow-hidden">
@@ -299,14 +324,18 @@ export default function AdminActivityLog({ userName, logs = [] }) {
               ← Anterior
             </button>
             <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i)}
-                  className={`w-8 h-8 text-xs font-semibold rounded-lg transition-colors ${i === page ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
-                >
-                  {i + 1}
-                </button>
+              {getPageItems().map((i, idx, arr) => (
+                <span key={i} className="flex items-center gap-1">
+                  {idx > 0 && i !== arr[idx - 1] + 1 && (
+                    <span className="px-1 text-xs text-slate-400">…</span>
+                  )}
+                  <button
+                    onClick={() => setPage(i)}
+                    className={`w-8 h-8 text-xs font-semibold rounded-lg transition-colors ${i === page ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+                  >
+                    {i + 1}
+                  </button>
+                </span>
               ))}
             </div>
             <button

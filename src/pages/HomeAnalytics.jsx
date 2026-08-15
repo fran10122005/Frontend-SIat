@@ -251,50 +251,50 @@ export default function HomeAnalytics() {
             {/* KPIs resumen */}
             <div
               data-tour="ha-kpis"
-              className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+              className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4"
             >
-              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
+              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 md:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  <p className="text-[11px] md:text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Promedio de Calma
                   </p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
                     {avgCalma}%
                   </p>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
+              <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 md:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-4">
                 <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                  <Calendar className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  <Calendar className="w-5 h-5 md:w-6 md:h-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  <p className="text-[11px] md:text-xs font-semibold text-slate-500 uppercase tracking-wide">
                     Mejor Día
                   </p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                  <p className="text-lg md:text-2xl font-bold text-slate-900 dark:text-white">
                     {bestDay.dia}{" "}
-                    <span className="text-sm font-medium text-emerald-600">
+                    <span className="text-xs md:text-sm font-medium text-emerald-600">
                       ({bestDay.calma}%)
                     </span>
                   </p>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl p-5 border border-rose-500/20 shadow-sm flex items-center gap-4 text-white">
+              <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl p-4 md:p-5 border border-rose-500/20 shadow-sm flex items-center gap-4 text-white col-span-2 md:col-span-1">
                 <div className="p-3 bg-white/20 rounded-lg">
-                  <TrendingDown className="w-6 h-6 text-white" />
+                  <TrendingDown className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-rose-100 uppercase tracking-wide">
+                  <p className="text-[11px] md:text-xs font-semibold text-rose-100 uppercase tracking-wide">
                     Peor Día (Más Crisis)
                   </p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-lg md:text-2xl font-bold">
                     {worstDay.dia}{" "}
-                    <span className="text-sm font-medium text-rose-200">
+                    <span className="text-xs md:text-sm font-medium text-rose-200">
                       ({worstDay.sobrecarga}% sobrecarga)
                     </span>
                   </p>
@@ -307,7 +307,7 @@ export default function HomeAnalytics() {
               {/* Balance Calma/Sobrecarga por día */}
               <div
                 data-tour="ha-balance"
-                className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm min-h-[250px] md:h-[360px]"
+                className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col min-h-[300px] lg:h-[400px]"
               >
                 <div className="mb-4 flex justify-between items-start">
                   <div>
@@ -329,13 +329,10 @@ export default function HomeAnalytics() {
                     </span>
                   </div>
                 </div>
-                <div
-                  className="min-h-[180px] md:min-h-0"
-                  style={{ height: 260 }}
-                >
+                <div className="flex-1 w-full min-h-0">
                   <ResponsiveContainer
                     width="100%"
-                    height={260}
+                    height="100%"
                     minWidth={0}
                     minHeight={0}
                   >
@@ -421,7 +418,7 @@ export default function HomeAnalytics() {
               {/* BPM a lo largo del día seleccionado */}
               <div
                 data-tour="ha-bpm"
-                className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm min-h-[250px] md:h-[360px]"
+                className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col min-h-[300px] lg:h-[400px]"
               >
                 <div className="mb-4">
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">
@@ -431,13 +428,10 @@ export default function HomeAnalytics() {
                     Distribución de BPM durante el día seleccionado en casa
                   </p>
                 </div>
-                <div
-                  className="min-h-[180px] md:min-h-0"
-                  style={{ height: 260 }}
-                >
+                <div className="flex-1 w-full min-h-0">
                   <ResponsiveContainer
                     width="100%"
-                    height={260}
+                    height="100%"
                     minWidth={0}
                     minHeight={0}
                   >

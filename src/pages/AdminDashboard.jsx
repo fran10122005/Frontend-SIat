@@ -366,8 +366,12 @@ function AdminDashboard({ onNavigate }) {
     }
   };
 
-  const handleRegistrationSuccess = (invitationUrl) => {
-    setGeneratedLink(invitationUrl);
+  const handleRegistrationSuccess = (data = {}) => {
+    if (data.reutilizado) {
+      fetchData();
+      return;
+    }
+    setGeneratedLink(data.invitationUrl || "");
     setShowLinkModal(true);
     fetchData();
   };
@@ -491,20 +495,21 @@ function AdminDashboard({ onNavigate }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const codi =
-        editingInst?.ins_codi || catalogos.instituciones?.[0]?.ins_codi;
+      // El RIF se puede editar (es el ID fiscal, no se genera). La URL lleva el
+      // código ORIGINAL; el nuevo valor viaja en el body y el backend lo propaga.
+      const originalCodi =
+        catalogos.instituciones?.[0]?.ins_codi || editingInst?.ins_codi;
       const body = {
-        ins_codi: codi,
+        ins_codi: (editingInst.ins_codi || originalCodi || "").trim(),
         ins_nomb: editingInst.ins_nomb,
         ins_dire: editingInst.ins_dire,
         ins_telf: editingInst.ins_telf,
         ins_pers: editingInst.ins_pers || "",
         ins_emai: editingInst.ins_emai || "",
         ins_web: editingInst.ins_web || "",
-        ins_esta: "Activa",
       };
       console.log("PUT institucion — body enviado:", JSON.stringify(body));
-      await api.put(`/admin/instituciones/${codi}`, body);
+      await api.put(`/admin/instituciones/${originalCodi}`, body);
       showToast("✅ Institución actualizada con éxito.");
       setEditingInst(null);
       fetchData();

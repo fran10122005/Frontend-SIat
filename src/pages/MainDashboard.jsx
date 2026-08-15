@@ -11,14 +11,9 @@ import {
   Wind,
   Grid,
   LayoutDashboard,
-  CalendarPlus,
   Download,
-  Calendar,
 } from "lucide-react";
-import api from "../api/axios";
-import PedirCitaModal from "../components/parent/PedirCitaModal";
 import Footer from "../components/layout/Footer";
-import CalendarioCitas from "../components/shared/CalendarioCitas";
 import { exportDashboardReport } from "../utils/pdfExporter";
 
 import { useTelemetry } from "../hooks/useTelemetry";
@@ -34,73 +29,17 @@ export default function MainDashboard() {
     nomNino,
     navigate,
     weeklyGoal,
-    isDark,
     userRole,
     userName,
     homeHistoricalData,
     routines,
-    showToast,
   } = useGlobalContext();
   const [showBreathing, setShowBreathing] = useState(false);
   const [showAac, setShowAac] = useState(false);
-  const [showCalendario, setShowCalendario] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const { liveBpm, liveStress, liveMov, isWebSocketActive } = useTelemetry();
   const { alertsList } = useClinicalData();
-
-  const [showCitaModal, setShowCitaModal] = useState(false);
-  const [citaData, setCitaData] = useState({
-    esp_codi: "",
-    fecha: "",
-    hora: "",
-    tipo: "Consulta Regular",
-    notas: "",
-  });
-  const [especialistasCita, setEspecialistasCita] = useState([]);
-  const fetchEspecialistasCita = async () => {
-    try {
-      const res = await api.get("/citas/especialistas-asignados");
-      setEspecialistasCita(res.data.data || []);
-      if (res.data.data?.length > 0) {
-        setCitaData((prev) => ({
-          ...prev,
-          esp_codi: res.data.data[0].esp_codi,
-        }));
-      }
-    } catch (err) {
-      console.error("Error fetching especialistas:", err);
-    }
-  };
-
-  const handlePedirCita = async (e) => {
-    e.preventDefault();
-    try {
-      await api.post("/citas", {
-        esp_codi: citaData.esp_codi,
-        cit_fech: citaData.fecha,
-        cit_hora: citaData.hora,
-        cit_tipo: citaData.tipo,
-        cit_nota: citaData.notas,
-      });
-      showToast("✅ Solicitud de cita enviada con éxito");
-      setShowCitaModal(false);
-      setCitaData({
-        esp_codi:
-          especialistasCita.length > 0 ? especialistasCita[0].esp_codi : "",
-        fecha: "",
-        hora: "",
-        tipo: "Consulta Regular",
-        notas: "",
-      });
-    } catch (err) {
-      showToast(
-        err.response?.data?.error
-          ? `❌ ${err.response.data.error}`
-          : "❌ Error al solicitar cita",
-      );
-    }
-  };
 
   const handleExportDashboard = async () => {
     setExporting(true);
@@ -201,21 +140,6 @@ export default function MainDashboard() {
                   {exporting ? "Generando..." : "Reporte"}
                 </button>
                 <button
-                  onClick={() => setShowCalendario(!showCalendario)}
-                  className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-semibold rounded-lg transition-all flex items-center gap-1.5 text-xs"
-                >
-                  <Calendar className="w-3.5 h-3.5" /> Calendario
-                </button>
-                <button
-                  onClick={() => {
-                    setShowCitaModal(true);
-                    fetchEspecialistasCita();
-                  }}
-                  className="px-3 py-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold rounded-lg transition-all flex items-center gap-1.5 text-xs"
-                >
-                  <CalendarPlus className="w-3.5 h-3.5" /> Pedir Cita
-                </button>
-                <button
                   onClick={() => navigate("diario_hogar")}
                   className="px-3 py-2 bg-brand-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all flex items-center gap-1.5 text-xs"
                 >
@@ -223,8 +147,6 @@ export default function MainDashboard() {
                 </button>
               </div>
             </div>
-
-            {showCalendario && <CalendarioCitas citas={[]} />}
 
             {/* Estado del niño */}
             <ChildStatusBanner
@@ -371,14 +293,6 @@ export default function MainDashboard() {
         setShowBreathing={setShowBreathing}
       />
       <AacBoardDrawer showAac={showAac} setShowAac={setShowAac} />
-      <PedirCitaModal
-        showModal={showCitaModal}
-        setShowModal={setShowCitaModal}
-        citaData={citaData}
-        setCitaData={setCitaData}
-        handleSubmit={handlePedirCita}
-        especialistas={especialistasCita}
-      />
     </div>
   );
 }

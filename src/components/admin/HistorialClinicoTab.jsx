@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
 import {
-  Search,
-  X,
   Download,
   FileText,
   Activity,
@@ -15,6 +13,7 @@ import {
 } from "lucide-react";
 import { useGlobalContext } from "../../context/GlobalState";
 import Pagination from "../shared/Pagination";
+import FilterBar from "../shared/FilterBar";
 import * as XLSX from "xlsx";
 import useExpandableRows from "../../hooks/useExpandableRows";
 
@@ -139,12 +138,6 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const hasFilters =
-    search ||
-    filterTipo !== "TODOS" ||
-    filterSeveridad !== "TODAS" ||
-    startDate ||
-    endDate;
 
   const clearFilters = () => {
     setSearch("");
@@ -154,6 +147,29 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
     setEndDate("");
     setPage(0);
   };
+
+  const filterChips = [
+    filterTipo !== "TODOS" && {
+      key: "tipo",
+      label: `Tipo: ${filterTipo}`,
+      onRemove: () => setFilterTipo("TODOS"),
+    },
+    filterSeveridad !== "TODAS" && {
+      key: "severidad",
+      label: `Severidad: ${filterSeveridad}`,
+      onRemove: () => setFilterSeveridad("TODAS"),
+    },
+    startDate && {
+      key: "start",
+      label: `Desde: ${startDate}`,
+      onRemove: () => setStartDate(""),
+    },
+    endDate && {
+      key: "end",
+      label: `Hasta: ${endDate}`,
+      onRemove: () => setEndDate(""),
+    },
+  ].filter(Boolean);
 
   // Analytics KPIs from filtered dataset
   const totalSeveras = filtered.filter((i) => i.severidad === "SEVERA").length;
@@ -293,99 +309,85 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
       </div>
 
       {/* Filters Bar */}
-      <div
-        data-tour="admin-hc-filters"
-        className="bg-white dark:bg-[#1E293B] p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 space-y-3"
+      <FilterBar
+        dataTour="admin-hc-filters"
+        searchValue={search}
+        onSearch={(v) => {
+          setSearch(v);
+          setPage(0);
+        }}
+        searchPlaceholder="Buscar por paciente, especialista o síntoma..."
+        activeCount={
+          (search ? 1 : 0) +
+          (filterTipo !== "TODOS" ? 1 : 0) +
+          (filterSeveridad !== "TODAS" ? 1 : 0) +
+          (startDate ? 1 : 0) +
+          (endDate ? 1 : 0)
+        }
+        onClearAll={clearFilters}
+        chips={filterChips}
       >
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar por paciente, especialista o síntoma..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <select
+          value={filterTipo}
+          onChange={(e) => {
+            setFilterTipo(e.target.value);
+            setPage(0);
+          }}
+          className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+        >
+          <option value="TODOS">Todos los tipos</option>
+          <option value="CRISIS">Crisis de Sobrecarga</option>
+          <option value="INCIDENTE">Incidente Conductual</option>
+          <option value="DIARIO_HOGAR">Reporte del Hogar</option>
+          <option value="EVALUACION">Evaluación PEI</option>
+        </select>
 
-          <select
-            value={filterTipo}
-            onChange={(e) => {
-              setFilterTipo(e.target.value);
-              setPage(0);
-            }}
-            className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value="TODOS">Todos los tipos</option>
-            <option value="CRISIS">Crisis de Sobrecarga</option>
-            <option value="INCIDENTE">Incidente Conductual</option>
-            <option value="DIARIO_HOGAR">Reporte del Hogar</option>
-            <option value="EVALUACION">Evaluación PEI</option>
-          </select>
+        <select
+          value={filterSeveridad}
+          onChange={(e) => {
+            setFilterSeveridad(e.target.value);
+            setPage(0);
+          }}
+          className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+        >
+          <option value="TODAS">Todas las severidades</option>
+          <option value="LEVE">Leve</option>
+          <option value="MODERADA">Moderada</option>
+          <option value="SEVERA">Severa</option>
+        </select>
 
-          <select
-            value={filterSeveridad}
-            onChange={(e) => {
-              setFilterSeveridad(e.target.value);
-              setPage(0);
-            }}
-            className="px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value="TODAS">Todas las severidades</option>
-            <option value="LEVE">Leve</option>
-            <option value="MODERADA">Moderada</option>
-            <option value="SEVERA">Severa</option>
-          </select>
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <span className="text-xs text-slate-400">a</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
 
-        {/* Date Filter & Export Row */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-xs text-slate-400">a</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            {hasFilters && (
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors ml-2"
-              >
-                <X className="w-3.5 h-3.5" /> Limpiar
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <button
-              onClick={exportPDF}
-              className="px-3 py-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
-            >
-              <FileText className="w-3.5 h-3.5" /> Exportar PDF
-            </button>
-            <button
-              onClick={exportExcel}
-              className="px-3 py-1.5 text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 transition-colors flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5" /> Exportar Excel
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPDF}
+            className="px-3 py-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
+          >
+            <FileText className="w-3.5 h-3.5" /> Exportar PDF
+          </button>
+          <button
+            onClick={exportExcel}
+            className="px-3 py-1.5 text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" /> Exportar Excel
+          </button>
         </div>
-      </div>
+      </FilterBar>
 
       {/* Main Table */}
       <div

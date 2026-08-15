@@ -1,18 +1,17 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import {
   AlertCircle,
   Users,
   FilePlus,
+  FileText,
   TrendingUp,
   Download,
-  Calendar,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 import Footer from "../components/layout/Footer";
-import CalendarioCitas from "../components/shared/CalendarioCitas";
 import { exportDashboardReport } from "../utils/pdfExporter";
 
 // Subcomponents
@@ -22,6 +21,8 @@ import PatientSensoryChart from "../components/specialist/PatientSensoryChart";
 import PatientBehaviorChart from "../components/specialist/PatientBehaviorChart";
 import IncidentModal from "../components/specialist/IncidentModal";
 import IndicacionModal from "../components/specialist/IndicacionModal";
+import SoapNoteModal from "../components/specialist/SoapNoteModal";
+import PatientCrisisLog from "../components/specialist/PatientCrisisLog";
 import LoadingState from "../components/dashboard/LoadingState";
 
 // Hooks
@@ -68,13 +69,14 @@ export default function SpecialistDashboard() {
     userName,
     listaNinos,
     selectedChildId,
-    setSelectedChildId,
-    setNomNino,
     showToast,
     crearIndicacion,
     clinicalAlerts = [],
     globalPeiGoals = [],
     incrementPeiTrial,
+    crearPeiGoal,
+    crisisAlerts = [],
+    crisisTelemetryMap = {},
     isDark,
     userRole,
   } = useGlobalContext();
@@ -83,18 +85,24 @@ export default function SpecialistDashboard() {
   // Modals state
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showIndicacionModal, setShowIndicacionModal] = useState(false);
-  const [indicacionText, setIndicacionText] = useState("");
+  const [indicacionText, setIndicacionText] = useState({});
+  const [showSoapModal, setShowSoapModal] = useState(false);
+  const [selectedAlertId, setSelectedAlertId] = useState(null);
 
   // Local state for mock PEI goals (editable)
   const [localMockPeiGoals, setLocalMockPeiGoals] = useState(mockPeiGoals);
 
   // Form States
   const [incidentData, setIncidentData] = useState({
-    tipo: "Berrinche",
-    duracion: "5 min",
-    detonante: "Ruido",
-    rutina: "Ninguna",
-    observacion: "",
+    inc_tipo: "",
+    inc_dura: "",
+    inc_deto: "",
+    inc_seve: "",
+    inc_ruti: "",
+    inc_conse: "",
+    inc_inter: "",
+    inc_resu: "",
+    inc_obse: "",
   });
 
   // Patient context memoizado
@@ -106,7 +114,6 @@ export default function SpecialistDashboard() {
   const globalStats = useMemo(
     () => ({
       pacientesActivos: listaNinos.length || 0,
-      citasHoy: 0,
       alertasPendientes: 0,
       porcentajeCumplimiento: 0,
     }),
@@ -114,92 +121,11 @@ export default function SpecialistDashboard() {
   );
 
   // Telemetry for testing
-  const { telemetryHistory, isWebSocketActive } = useTelemetry();
+  const { isWebSocketActive } = useTelemetry();
 
   // View state
-  const [showCalendario, setShowCalendario] = useState(false);
   const [exporting, setExporting] = useState(false);
   const loadingTimerRef = useRef(null);
-
-  const [agendaHoy, setAgendaHoy] = useState([]);
-
-  function normalizarCitas(items) {
-    return (items || []).map((c) => ({
-      id: c.id_cita || c.id,
-      hora: c.hora || c.hor_cita || "",
-      tipo: c.tipo || c.tip_cita || "",
-      estado: c.estado || c.est_cita || "Programada",
-      paciente:
-        c.nin_nomb ||
-        c.paciente ||
-        `${c.nin_nomb || ""} ${c.nin_apel || ""}`.trim() ||
-        "Paciente",
-      childId: c.nin_codi || c.childId || c.id_ninos,
-    }));
-  }
-
-  const fetchAgenda = useCallback(async () => {
-    try {
-      const res = await api.get("/citas/agenda-hoy");
-      const data = res.data.data;
-      if (data && data.length > 0) {
-        setAgendaHoy(normalizarCitas(data));
-      } else {
-        setAgendaHoy(
-          normalizarCitas([
-            {
-              id_cita: "C01",
-              hora: "09:00",
-              tipo: "Terapia Ocupacional",
-              estado: "Completada",
-              nin_nomb: "Paciente Uno",
-            },
-            {
-              id_cita: "C02",
-              hora: "11:30",
-              tipo: "Evaluación Psicológica",
-              estado: "Programada",
-              nin_nomb: "Paciente Dos",
-            },
-            {
-              id_cita: "C03",
-              hora: "14:00",
-              tipo: "Terapia de Lenguaje",
-              estado: "Programada",
-              nin_nomb: "Paciente Tres",
-            },
-            {
-              id_cita: "C04",
-              hora: "16:00",
-              tipo: "Sesión Sensorial",
-              estado: "Programada",
-              nin_nomb: "Paciente Cuatro",
-            },
-          ]),
-        );
-      }
-    } catch (err) {
-      console.error("Error fetching agenda:", err);
-      setAgendaHoy(
-        normalizarCitas([
-          {
-            id_cita: "C01",
-            hora: "09:00",
-            tipo: "Terapia Ocupacional",
-            estado: "Completada",
-            nin_nomb: "Paciente Uno",
-          },
-          {
-            id_cita: "C02",
-            hora: "11:30",
-            tipo: "Evaluación Psicológica",
-            estado: "Programada",
-            nin_nomb: "Paciente Dos",
-          },
-        ]),
-      );
-    }
-  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -211,23 +137,6 @@ export default function SpecialistDashboard() {
       }
     };
   }, [selectedChildId]);
-
-  useEffect(() => {
-    if (!activeChild) {
-      fetchAgenda();
-    }
-  }, [activeChild, fetchAgenda]);
-
-  const handleCompleteCita = async (id) => {
-    try {
-      await api.patch(`/citas/${id}/estado`, { estado: "Completada" });
-      showToast("✅ Cita completada con éxito");
-      fetchAgenda();
-    } catch (err) {
-      console.error(err);
-      showToast("❌ Error al completar cita");
-    }
-  };
 
   const globalAlertsFeed = [];
 
@@ -290,10 +199,14 @@ export default function SpecialistDashboard() {
       return globalPeiGoals.map((g) => ({
         id: g.met_codi,
         goal: g.met_desc,
-        category: g.tm_categ?.cat_nomb || "General",
+        category: g.met_categ || "General",
         progress: g.met_prog,
         trials: g.met_trial,
         totalTrials: g.met_ttria,
+        criterio: g.met_crit || null,
+        fechas: g.met_fini
+          ? `${g.met_fini?.substring?.(0, 10) || new Date(g.met_fini).toISOString().substring(0, 10)} → ${g.met_ffin ? g.met_ffin?.substring?.(0, 10) || new Date(g.met_ffin).toISOString().substring(0, 10) : "Sin límite"}`
+          : null,
       }));
     }
     return activeChild ? localMockPeiGoals : [];
@@ -357,15 +270,31 @@ export default function SpecialistDashboard() {
   const handleIncidentSubmit = async (e) => {
     e.preventDefault();
     if (!activeChild) return;
+    if (
+      !incidentData.inc_tipo ||
+      !incidentData.inc_dura ||
+      !incidentData.inc_deto ||
+      !incidentData.inc_seve
+    ) {
+      showToast("⚠️ Completa tipo, duración, detonante y severidad.");
+      return;
+    }
     try {
-      await api.post(`/ninos/${activeChild.id_ninos}/incidentes`, incidentData);
+      await api.post(
+        `/especialista/incidentes/${activeChild.id_ninos}`,
+        incidentData,
+      );
       setShowIncidentModal(false);
       setIncidentData({
-        tipo: "Berrinche",
-        duracion: "5 min",
-        detonante: "Ruido",
-        rutina: "Ninguna",
-        observacion: "",
+        inc_tipo: "",
+        inc_dura: "",
+        inc_deto: "",
+        inc_seve: "",
+        inc_ruti: "",
+        inc_conse: "",
+        inc_inter: "",
+        inc_resu: "",
+        inc_obse: "",
       });
       showToast("🚨 Incidente conductual registrado y tabulado.");
     } catch (err) {
@@ -375,16 +304,51 @@ export default function SpecialistDashboard() {
 
   const handleIndicacionSubmit = async (e) => {
     e.preventDefault();
-    if (!indicacionText.trim()) return;
+    const ind_desc = (indicacionText.ind_desc || "").trim();
+    if (!ind_desc || !indicacionText.ind_tipo) {
+      showToast("⚠️ Completa el tipo y la descripción de la indicación.");
+      return;
+    }
     try {
-      await crearIndicacion(selectedChildId, indicacionText);
+      await crearIndicacion(selectedChildId, {
+        ind_tipo: indicacionText.ind_tipo,
+        ind_area: indicacionText.ind_area || "General",
+        ind_frec: indicacionText.ind_frec || "Solo en sesión",
+        ind_dura: indicacionText.ind_dura || null,
+        ind_prio: indicacionText.ind_prio || "Media",
+        ind_vige: indicacionText.ind_vige || null,
+        ind_desc,
+      });
       setShowIndicacionModal(false);
-      setIndicacionText("");
+      setIndicacionText({});
       showToast(
-        "✅ Indicación médica guardada y compartida con el representante.",
+        "✅ Indicación clínica guardada y compartida con el representante.",
       );
     } catch (error) {
       showToast("❌ Error al guardar la indicación.");
+    }
+  };
+
+  const handleSoapSave = async (soapData) => {
+    try {
+      await api.post("/especialista/soap", {
+        nin_codi: selectedChildId,
+        ...soapData,
+      });
+      showToast("📋 Nota clínica SOAP guardada en el expediente.");
+    } catch (err) {
+      showToast("❌ Error al guardar la nota SOAP.");
+      throw err;
+    }
+  };
+
+  const handleCreatePeiGoal = async (goalData) => {
+    try {
+      await crearPeiGoal(selectedChildId, goalData);
+      showToast("🎯 Meta PEI creada correctamente.");
+    } catch (err) {
+      showToast("❌ Error al crear la meta PEI.");
+      throw err;
     }
   };
 
@@ -464,7 +428,7 @@ export default function SpecialistDashboard() {
                 <p className="text-subtitle-muted mt-1">
                   {activeChild
                     ? "Seguimiento de progreso PEI, registro conductual y detonantes sensoriales."
-                    : "Resumen de pacientes, agenda del día y alertas generales."}
+                    : "Resumen de pacientes, metas PEI y alertas generales."}
                 </p>
               </div>
 
@@ -493,6 +457,13 @@ export default function SpecialistDashboard() {
                     Anotar Indicación
                   </button>
                   <button
+                    onClick={() => setShowSoapModal(true)}
+                    className="px-3 py-1.5 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 font-bold text-[11px] rounded flex items-center gap-1.5 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Nota SOAP
+                  </button>
+                  <button
                     onClick={() => navigate("historial")}
                     className="px-4 py-2 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white font-bold text-xs rounded shadow flex items-center gap-2 transition-colors"
                   >
@@ -502,13 +473,6 @@ export default function SpecialistDashboard() {
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setShowCalendario(!showCalendario)}
-                    className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-semibold rounded-lg shadow-sm transition-all flex items-center gap-2 text-sm"
-                  >
-                    <Calendar className="w-4 h-4" />{" "}
-                    {showCalendario ? "Ocultar Calendario" : "Ver Calendario"}
-                  </button>
                   <button
                     onClick={handleExportDashboard}
                     disabled={exporting}
@@ -528,24 +492,10 @@ export default function SpecialistDashboard() {
               <>
                 {/* ==== VISTA GLOBAL ==== */}
                 {!activeChild && (
-                  <>
-                    <SpecialistGlobalView
-                      globalStats={globalStats}
-                      agendaHoy={agendaHoy}
-                      globalAlertsFeed={globalAlertsFeed}
-                      setSelectedChildId={setSelectedChildId}
-                      setNomNino={setNomNino}
-                      handleCompleteCita={handleCompleteCita}
-                    />
-                    {showCalendario && (
-                      <CalendarioCitas
-                        citas={agendaHoy.map((c) => ({
-                          ...c,
-                          fecha: new Date().toISOString().split("T")[0],
-                        }))}
-                      />
-                    )}
-                  </>
+                  <SpecialistGlobalView
+                    globalStats={globalStats}
+                    globalAlertsFeed={globalAlertsFeed}
+                  />
                 )}
 
                 {/* ==== VISTA DE PACIENTE SELECCIONADO ==== */}
@@ -555,6 +505,8 @@ export default function SpecialistDashboard() {
                       <PatientPeiGoals
                         peiGoals={peiGoals}
                         incrementPeiTrial={handleIncrementPeiTrial}
+                        onCreateGoal={handleCreatePeiGoal}
+                        activeChild={activeChild}
                       />
                       <PatientSensoryChart
                         sensoryData={sensoryData}
@@ -566,6 +518,18 @@ export default function SpecialistDashboard() {
                       behaviorHistory={behaviorHistory}
                       isDark={isDark}
                     />
+
+                    {crisisAlerts.length > 0 && (
+                      <PatientCrisisLog
+                        alertas={crisisAlerts}
+                        crisisTelemetry={crisisTelemetryMap}
+                        selectedAlertId={selectedAlertId}
+                        setSelectedAlertId={setSelectedAlertId}
+                        valMini={65}
+                        valMaxi={110}
+                        isDark={isDark}
+                      />
+                    )}
                   </div>
                 )}
               </>
@@ -593,6 +557,13 @@ export default function SpecialistDashboard() {
         setIndicacionText={setIndicacionText}
         handleIndicacionSubmit={handleIndicacionSubmit}
         activeChild={activeChild}
+      />
+
+      <SoapNoteModal
+        showSoapModal={showSoapModal}
+        setShowSoapModal={setShowSoapModal}
+        activeChild={activeChild}
+        onSave={handleSoapSave}
       />
     </div>
   );

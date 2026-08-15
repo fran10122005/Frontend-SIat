@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  Search,
-  X,
   ChevronDown,
   Archive,
   RotateCcw,
@@ -13,6 +11,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import StatusBadge from "../shared/StatusBadge";
+import FilterBar from "../shared/FilterBar";
 import Pagination from "../shared/Pagination";
 import AdminModal from "../shared/AdminModal";
 import useExpandableRows from "../../hooks/useExpandableRows";
@@ -72,14 +71,30 @@ export default function AsignacionesTab({
     setPage(0);
   }, [search, statusFilter, dateFrom, dateTo]);
 
-  const hasFilters = search || statusFilter !== "TODOS" || dateFrom || dateTo;
-
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("TODOS");
     setDateFrom("");
     setDateTo("");
   };
+
+  const filterChips = [
+    statusFilter !== "TODOS" && {
+      key: "estado",
+      label: `Estado: ${statusFilter}`,
+      onRemove: () => setStatusFilter("TODOS"),
+    },
+    dateFrom && {
+      key: "dateFrom",
+      label: `Desde: ${dateFrom}`,
+      onRemove: () => setDateFrom(""),
+    },
+    dateTo && {
+      key: "dateTo",
+      label: `Hasta: ${dateTo}`,
+      onRemove: () => setDateTo(""),
+    },
+  ].filter(Boolean);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -202,20 +217,20 @@ export default function AsignacionesTab({
       </AdminModal>
 
       {/* Filtros */}
-      <div
-        data-tour="admin-asg-filters"
-        className="bg-white dark:bg-[#1E293B] p-4 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center"
+      <FilterBar
+        dataTour="admin-asg-filters"
+        searchValue={search}
+        onSearch={setSearch}
+        searchPlaceholder="Buscar por paciente o especialista..."
+        activeCount={
+          (search ? 1 : 0) +
+          (statusFilter !== "TODOS" ? 1 : 0) +
+          (dateFrom ? 1 : 0) +
+          (dateTo ? 1 : 0)
+        }
+        onClearAll={clearFilters}
+        chips={filterChips}
       >
-        <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar por paciente o especialista..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -239,15 +254,7 @@ export default function AsignacionesTab({
           className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
           title="Fecha ingreso hasta"
         />
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
-          >
-            <X className="w-3.5 h-3.5" /> Limpiar
-          </button>
-        )}
-      </div>
+      </FilterBar>
 
       <div
         data-tour="admin-asg-table"

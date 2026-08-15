@@ -3,6 +3,7 @@ import { useGlobalContext } from "./context/GlobalState";
 import Auth from "./components/auth/Auth";
 import SplashScreen from "./components/shared/SplashScreen";
 import api from "./api/axios";
+import { disconnectSocket } from "./hooks/socket";
 import StudentRecord from "./pages/StudentRecord";
 import MainDashboard from "./pages/MainDashboard";
 import Routines from "./pages/Routines";
@@ -77,6 +78,7 @@ export default function App() {
   }, []);
 
   const handleLogout = () => {
+    disconnectSocket();
     setShowSessionExpired(false);
     setUserRole(null);
     setSelectedChildId(null);

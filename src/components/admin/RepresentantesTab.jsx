@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
 import {
-  Search,
-  X,
   Mail,
   Phone,
   UserRound,
@@ -18,6 +16,7 @@ import {
 } from "lucide-react";
 import { useGlobalContext } from "../../context/GlobalState";
 import StatusBadge from "../shared/StatusBadge";
+import FilterBar from "../shared/FilterBar";
 import Pagination from "../shared/Pagination";
 import AdminModal from "../shared/AdminModal";
 import api from "../../api/axios";
@@ -89,13 +88,22 @@ export default function RepresentantesTab({
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const hasFilters = search || filterEstado !== "TODOS";
-
   const clearFilters = () => {
     setSearch("");
     setFilterEstado("TODOS");
     setPage(0);
   };
+
+  const filterChips = [
+    filterEstado !== "TODOS" && {
+      key: "estado",
+      label: filterEstado === "ACTIVO" ? "Activos" : "Inactivos",
+      onRemove: () => {
+        setFilterEstado("TODOS");
+        setPage(0);
+      },
+    },
+  ].filter(Boolean);
 
   const handleResetPass = async (usuCodi, email) => {
     setResettingId(usuCodi);
@@ -134,46 +142,31 @@ export default function RepresentantesTab({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div
-        data-tour="admin-rep-search"
-        className="bg-white dark:bg-[#1E293B] p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60"
+      <FilterBar
+        dataTour="admin-rep-search"
+        searchValue={search}
+        onSearch={(v) => {
+          setSearch(v);
+          setPage(0);
+        }}
+        searchPlaceholder="Buscar por nombre o correo..."
+        activeCount={(search ? 1 : 0) + (filterEstado !== "TODOS" ? 1 : 0)}
+        onClearAll={clearFilters}
+        chips={filterChips}
       >
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre o correo..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <select
-            value={filterEstado}
-            onChange={(e) => {
-              setFilterEstado(e.target.value);
-              setPage(0);
-            }}
-            className="w-full sm:w-auto px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-          >
-            <option value="TODOS">Todos los estados</option>
-            <option value="ACTIVO">Activo</option>
-            <option value="INACTIVO">Inactivo</option>
-          </select>
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
-            >
-              <X className="w-3.5 h-3.5" /> Limpiar
-            </button>
-          )}
-        </div>
-      </div>
+        <select
+          value={filterEstado}
+          onChange={(e) => {
+            setFilterEstado(e.target.value);
+            setPage(0);
+          }}
+          className="w-full sm:w-auto px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+        >
+          <option value="TODOS">Todos los estados</option>
+          <option value="ACTIVO">Activo</option>
+          <option value="INACTIVO">Inactivo</option>
+        </select>
+      </FilterBar>
 
       <div
         data-tour="admin-rep-table"

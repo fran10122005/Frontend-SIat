@@ -53,7 +53,7 @@ Pulsera (ESP32) → WebSockets → Backend Node.js → PostgreSQL
 - Simulador de monitoreo en vivo
 
 #### Especialista
-- Dashboard con resumen de pacientes, citas y alertas
+- Dashboard con resumen de pacientes, metas PEI y alertas
 - Gestión de pacientes (expediente clínico digital)
 - Historial de evolución con gráficos (exportable a PDF)
 - Calibración de sensores wearables (línea base de 15s)
@@ -67,7 +67,6 @@ Pulsera (ESP32) → WebSockets → Backend Node.js → PostgreSQL
 - Reportes diarios desde el hogar (sueño, ánimo, apetito)
 - Diario del hogar
 - Agenda y rutinas del niño
-- Solicitud de citas
 
 ### Transversales
 - **Autenticación JWT** con renovación automática
@@ -225,8 +224,6 @@ siat/
         │   ├── EspecialistasTab.jsx      # Gestión de especialistas
         │   ├── AsignacionesTab.jsx       # Asignaciones
         │   └── CatalogosTab.jsx          # Catálogos
-        └── parent/
-            └── PedirCitaModal.jsx        # Solicitud de citas
 ```
 
 ---

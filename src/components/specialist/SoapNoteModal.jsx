@@ -1,14 +1,84 @@
-import { FileText } from "lucide-react";
+import { FileText, X, CheckCircle2, User } from "lucide-react";
+import { useState } from "react";
+
+const SECCIONES = [
+  {
+    key: "soap_subj",
+    letra: "S",
+    titulo: "Subjetivo",
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    border: "focus:ring-blue-500",
+    desc: "Reporte de padres / observación libre",
+    placeholder:
+      "El padre indica que el niño tuvo problemas para dormir anoche...",
+  },
+  {
+    key: "soap_obje",
+    letra: "O",
+    titulo: "Objetivo",
+    color:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+    border: "focus:ring-emerald-500",
+    desc: "Métricas y observaciones medibles",
+    placeholder:
+      "Se completaron 3 de 4 ensayos de contacto visual. Se registraron 2 estereotipias motoras de 1 min de duración.",
+  },
+  {
+    key: "soap_anal",
+    letra: "A",
+    titulo: "Análisis",
+    color:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    border: "focus:ring-amber-500",
+    desc: "Evaluación clínica",
+    placeholder:
+      "Adecuada tolerancia a estímulos táctiles hoy. Progreso notable en metas del PEI.",
+  },
+  {
+    key: "soap_plan",
+    letra: "P",
+    titulo: "Plan",
+    color:
+      "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+    border: "focus:ring-purple-500",
+    desc: "Próximos pasos y rutinas asignadas",
+    placeholder:
+      "Mantener plan actual. Asignar rutina visual de lavado de manos para casa.",
+  },
+];
 
 export default function SoapNoteModal({
   showSoapModal,
   setShowSoapModal,
   activeChild,
-  soapData,
-  setSoapData,
-  handleSoapSubmit,
+  onSave,
 }) {
+  const [soapData, setSoapData] = useState({
+    soap_subj: "",
+    soap_obje: "",
+    soap_anal: "",
+    soap_plan: "",
+  });
+  const [loading, setLoading] = useState(false);
+
   if (!showSoapModal) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave(soapData);
+      setShowSoapModal(false);
+      setSoapData({
+        soap_subj: "",
+        soap_obje: "",
+        soap_anal: "",
+        soap_plan: "",
+      });
+    } catch {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -16,100 +86,74 @@ export default function SoapNoteModal({
       onClick={() => setShowSoapModal(false)}
     >
       <div
-        className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-2xl overflow-y-auto max-h-[90vh] border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 shrink-0">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <FileText className="w-5 h-5 text-indigo-500" />
-            Registro Clínico (Formato SOAP)
+            Nota Clínica (Formato SOAP)
           </h3>
           <button
             onClick={() => setShowSoapModal(false)}
             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            aria-label="Cerrar"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {activeChild && (
-          <div className="px-6 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-900/30 flex items-center gap-3">
+          <div className="px-6 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-900/30 flex items-center gap-3 shrink-0">
             <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
-              {activeChild.nom_nino[0]}
-              {activeChild.ape_nino[0]}
+              {activeChild.nom_nino?.[0]}
+              {activeChild.ape_nino?.[0]}
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase">
+              <p className="text-[10px] font-bold text-slate-500 uppercase">
                 Paciente Actual
               </p>
               <p className="text-sm font-bold text-slate-900 dark:text-white">
                 {activeChild.nom_nino} {activeChild.ape_nino}
               </p>
             </div>
+            <span className="ml-auto text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+              <User className="w-3 h-3" /> Especialista
+            </span>
           </div>
         )}
 
-        <form onSubmit={handleSoapSubmit} className="p-6 space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-              S - Subjetivo (Reporte de padres/observación libre)
-            </label>
-            <textarea
-              required
-              value={soapData.s}
-              onChange={(e) => setSoapData({ ...soapData, s: e.target.value })}
-              className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 h-20 resize-none transition-all"
-              placeholder="El padre indica que el niño tuvo problemas para dormir anoche..."
-            ></textarea>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-              O - Objetivo (Métricas y observaciones medibles)
-            </label>
-            <textarea
-              required
-              value={soapData.o}
-              onChange={(e) => setSoapData({ ...soapData, o: e.target.value })}
-              className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 h-20 resize-none transition-all"
-              placeholder="Se completaron 3 de 4 ensayos de contacto visual. Se registraron 2 estereotipias motoras de 1 min de duración."
-            ></textarea>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-              A - Análisis (Evaluación clínica)
-            </label>
-            <textarea
-              required
-              value={soapData.a}
-              onChange={(e) => setSoapData({ ...soapData, a: e.target.value })}
-              className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 h-20 resize-none transition-all"
-              placeholder="Adecuada tolerancia a estímulos táctiles hoy. Progreso notable en metas del PEI."
-            ></textarea>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-              P - Plan (Próximos pasos y rutinas asignadas)
-            </label>
-            <textarea
-              required
-              value={soapData.p}
-              onChange={(e) => setSoapData({ ...soapData, p: e.target.value })}
-              className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 h-20 resize-none transition-all"
-              placeholder="Mantener plan actual. Asignar rutina visual de lavado de manos para casa."
-            ></textarea>
-          </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+          {SECCIONES.map((sec) => (
+            <div key={sec.key}>
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-black shrink-0 ${sec.color}`}
+                >
+                  {sec.letra}
+                </span>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                  {sec.titulo}{" "}
+                  <span className="font-normal text-slate-400">
+                    · {sec.desc}
+                  </span>
+                </label>
+              </div>
+              <textarea
+                required
+                value={soapData[sec.key]}
+                onChange={(e) =>
+                  setSoapData((prev) => ({
+                    ...prev,
+                    [sec.key]: e.target.value,
+                  }))
+                }
+                className={`w-full p-3 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 h-20 resize-none transition-all ${sec.border}`}
+                placeholder={sec.placeholder}
+              ></textarea>
+            </div>
+          ))}
+
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
@@ -120,9 +164,19 @@ export default function SoapNoteModal({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm flex items-center gap-2"
+              disabled={loading}
+              className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
             >
-              Firmar y Guardar Nota
+              {loading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{" "}
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" /> Firmar y Guardar Nota
+                </>
+              )}
             </button>
           </div>
         </form>

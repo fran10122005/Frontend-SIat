@@ -298,7 +298,6 @@ const INITIAL_FORM = {
   nin_gner: "M",
   nin_nivd: "Nivel 1",
   nin_diag: "",
-  nin_esco: "",
   // Archivos (se llenan post-upload con URLs de Cloudinary)
   nin_foto: "",
   nin_docs: [],
@@ -324,6 +323,10 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
 
+  // Representante existente detectado por correo (se reutiliza automáticamente)
+  const [repExistente, setRepExistente] = useState(null);
+  const [buscandoRep, setBuscandoRep] = useState(false);
+
   // Upload state
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -336,6 +339,35 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
 
   const set = (field, value) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  // ── Búsqueda de representante existente por cédula (identificador único) ──
+  const buscarRep = async (cedula) => {
+    const digits = String(cedula || "").replace(/\D/g, "");
+    if (digits.length < 6) return null;
+    setBuscandoRep(true);
+    try {
+      const res = await api.get("/ninos/representante", {
+        params: { cedula: digits },
+      });
+      const data = res.data?.data;
+      if (data?.encontrado) {
+        setRepExistente(data);
+        set("rep_nomb", data.rep_nomb || "");
+        set("rep_apel", data.rep_apel || "");
+        set("rep_rela", data.rep_rela || form.rep_rela);
+        set("rep_telf", data.rep_telf || "");
+        set("usu_crro", data.usu_crro || form.usu_crro);
+        return data;
+      }
+      setRepExistente(null);
+      return null;
+    } catch {
+      setRepExistente(null);
+      return null;
+    } finally {
+      setBuscandoRep(false);
+    }
+  };
 
   // ── Handlers de foto ──
   const handlePhotoSelect = async (file) => {
@@ -440,13 +472,6 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
     form.nin_fnac &&
     form.nin_gner;
   const v2 = () => !form.sen_tipo || (form.sen_tipo && form.sen_nvli);
-  const v3 = () =>
-    form.rep_nomb.trim() &&
-    form.rep_apel.trim() &&
-    form.rep_rela &&
-    form.rep_telf.trim().length >= 7 &&
-    form.usu_crro.includes("@") &&
-    form.acepta_lopnna;
 
   const handleNext = () => {
     if (step === 1 && !v1()) {
@@ -461,10 +486,35 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   };
 
   const handleSubmit = async () => {
-    if (!v1() || !v2() || !v3()) {
+    if (!v1() || !v2()) {
       showToast("⚠️ Hay campos requeridos sin completar");
       return;
     }
+
+    // Si la cédula ya está escrita pero aún no se resolvió el representante,
+    // buscarlo antes de validar para permitir la reutilización automática.
+    let rep = repExistente;
+    const ceduDigits = form.rep_cedu.replace(/\D/g, "");
+    if (ceduDigits.length >= 6 && !rep && !buscandoRep) {
+      rep = await buscarRep(form.rep_cedu);
+    }
+
+    if (
+      !form.acepta_lopnna ||
+      ceduDigits.length < 6 ||
+      !form.usu_crro.includes("@") ||
+      (!rep?.encontrado &&
+        !(
+          form.rep_nomb.trim() &&
+          form.rep_apel.trim() &&
+          form.rep_rela &&
+          form.rep_telf.trim().length >= 7
+        ))
+    ) {
+      showToast("⚠️ Hay campos requeridos sin completar");
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -473,11 +523,12 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         nin_fnac: form.nin_fnac,
         nin_gner: form.nin_gner,
         nin_nivd: form.nin_nivd,
-        rep_nomb: form.rep_nomb,
-        rep_apel: form.rep_apel,
-        rep_rela: form.rep_rela,
-        rep_telf: form.rep_telf,
-        usu_crro: form.usu_crro,
+        rep_nomb: rep?.rep_nomb || form.rep_nomb,
+        rep_apel: rep?.rep_apel || form.rep_apel,
+        rep_rela: rep?.rep_rela || form.rep_rela,
+        rep_telf: rep?.rep_telf || form.rep_telf,
+        rep_cedu: rep?.rep_cedu || ceduDigits,
+        usu_crro: rep?.usu_crro || form.usu_crro,
         ...(form.sen_tipo && {
           sen_tipo: form.sen_tipo,
           sen_nvli: form.sen_nvli,
@@ -486,9 +537,18 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
           form.nin_foto !== "__local__" && { nin_foto: form.nin_foto }),
       };
       const res = await api.post("/ninos/invite-representative", payload);
-      onSuccess(res.data.data.invitationUrl);
-      showToast("✅ Registro clínico completado exitosamente");
+      const data = res.data?.data || {};
+      onSuccess(data);
+      if (data.reutilizado) {
+        const r = data.representante;
+        showToast(
+          `✅ Paciente vinculado al representante ${r?.rep_nomb || ""} ${r?.rep_apel || ""}`.trim(),
+        );
+      } else {
+        showToast("✅ Registro clínico completado exitosamente");
+      }
       setForm(INITIAL_FORM);
+      setRepExistente(null);
       setPhotoFile(null);
       setPhotoPreview(null);
       setDocFiles([]);
@@ -652,21 +712,6 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                         <option value="F">Femenino</option>
                       </SelectField>
                     </div>
-                  </div>
-
-                  <div>
-                    <FieldLabel tooltip="Centro de educación actual donde está inscrito el paciente (si aplica).">
-                      Institución Educativa Actual{" "}
-                      <span className="text-slate-400 font-normal">
-                        (Opcional)
-                      </span>
-                    </FieldLabel>
-                    <InputField
-                      type="text"
-                      value={form.nin_esco}
-                      onChange={(e) => set("nin_esco", e.target.value)}
-                      placeholder="Ej. U.E. San José de Tarbes"
-                    />
                   </div>
                 </div>
               </div>
@@ -904,6 +949,84 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                 </p>
               </div>
 
+              {/* Cédula: identificador único del representante (primer campo) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel
+                    required
+                    tooltip="Cédula de identidad del representante. Es única en el sistema: si ya está registrado, el nuevo paciente se vinculará automáticamente a su cuenta."
+                  >
+                    <IdCard className="w-3 h-3" /> Cédula de Identidad
+                  </FieldLabel>
+                  <InputField
+                    type="text"
+                    inputMode="numeric"
+                    value={form.rep_cedu}
+                    onChange={(e) => {
+                      set("rep_cedu", e.target.value.replace(/\D/g, ""));
+                      setRepExistente(null);
+                    }}
+                    onBlur={(e) => buscarRep(e.target.value)}
+                    placeholder="Ej. 12345678"
+                    className="border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                  />
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+                    Al salir del campo se consultará si ya existe un
+                    representante registrado con esta cédula.
+                  </p>
+                </div>
+                <div>
+                  <FieldLabel
+                    required
+                    tooltip="Correo electrónico al que se enviará el enlace de activación de la cuenta del representante en SIAT."
+                  >
+                    <Mail className="w-3 h-3" /> Correo Electrónico de Acceso
+                  </FieldLabel>
+                  <InputField
+                    type="email"
+                    value={form.usu_crro}
+                    onChange={(e) => set("usu_crro", e.target.value)}
+                    placeholder="correo@ejemplo.com"
+                    disabled={!!repExistente}
+                    className={
+                      repExistente
+                        ? "opacity-70"
+                        : "border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                    }
+                  />
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+                    {repExistente
+                      ? "Se usará el correo ya registrado del representante."
+                      : "SIAT generará credenciales seguras y las enviará cifradas a este correo."}
+                  </p>
+                </div>
+              </div>
+
+              {buscandoRep && (
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" />
+                  Verificando si el representante ya está registrado...
+                </div>
+              )}
+
+              {repExistente && (
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      Representante ya registrado en SIAT
+                    </p>
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 leading-relaxed">
+                      {repExistente.rep_nomb} {repExistente.rep_apel} ·{" "}
+                      {repExistente.rep_rela} · Tiene {repExistente.ninos}{" "}
+                      paciente{repExistente.ninos !== 1 ? "s" : ""}. El nuevo
+                      paciente se vinculará automáticamente a este representante
+                      existente (no se enviará una nueva invitación).
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <FieldLabel
@@ -917,6 +1040,8 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                     value={form.rep_nomb}
                     onChange={(e) => set("rep_nomb", e.target.value)}
                     placeholder="Ej. María Elena"
+                    disabled={!!repExistente}
+                    className={repExistente ? "opacity-70" : ""}
                   />
                 </div>
                 <div>
@@ -926,11 +1051,13 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                     value={form.rep_apel}
                     onChange={(e) => set("rep_apel", e.target.value)}
                     placeholder="Ej. Rodríguez"
+                    disabled={!!repExistente}
+                    className={repExistente ? "opacity-70" : ""}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <FieldLabel
                     required
@@ -941,6 +1068,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                   <SelectField
                     value={form.rep_rela}
                     onChange={(e) => set("rep_rela", e.target.value)}
+                    disabled={!!repExistente}
                   >
                     <option value="Madre">Madre</option>
                     <option value="Padre">Padre</option>
@@ -955,58 +1083,21 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                   </SelectField>
                 </div>
                 <div>
-                  <FieldLabel tooltip="Número de cédula de identidad venezolana del representante (opcional, pero mejora la trazabilidad legal).">
-                    <IdCard className="w-3 h-3" /> Cédula de Identidad{" "}
-                    <span className="text-slate-400 font-normal">
-                      (Opcional)
-                    </span>
+                  <FieldLabel
+                    required
+                    tooltip="Número de contacto principal. Se usará para notificaciones de emergencia."
+                  >
+                    <Phone className="w-3 h-3" /> Teléfono Móvil de Contacto
                   </FieldLabel>
                   <InputField
-                    type="text"
-                    value={form.rep_cedu}
-                    onChange={(e) => set("rep_cedu", e.target.value)}
-                    placeholder="Ej. V-12.345.678"
+                    type="tel"
+                    value={form.rep_telf}
+                    onChange={(e) => set("rep_telf", e.target.value)}
+                    placeholder="Ej. +58 424 1234567"
+                    disabled={!!repExistente}
+                    className={`border-slate-200 dark:border-slate-700 focus:ring-emerald-500 ${repExistente ? "opacity-70" : ""}`}
                   />
                 </div>
-              </div>
-
-              <div>
-                <FieldLabel
-                  required
-                  tooltip="Número de contacto principal. Se usará para notificaciones de emergencia y confirmaciones de citas."
-                >
-                  <Phone className="w-3 h-3" /> Teléfono Móvil de Contacto
-                </FieldLabel>
-                <InputField
-                  type="tel"
-                  value={form.rep_telf}
-                  onChange={(e) => set("rep_telf", e.target.value)}
-                  placeholder="Ej. +58 424 1234567"
-                  className="border-slate-200 dark:border-slate-700 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <FieldLabel
-                  required
-                  tooltip="Correo electrónico al que se enviará el enlace de activación de la cuenta del representante en SIAT."
-                >
-                  <Mail className="w-3 h-3" /> Correo Electrónico de Acceso
-                </FieldLabel>
-                <InputField
-                  type="email"
-                  value={form.usu_crro}
-                  onChange={(e) => set("usu_crro", e.target.value)}
-                  placeholder="correo@ejemplo.com"
-                  className="border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
-                />
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-start gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  SIAT generará credenciales seguras y las enviará cifradas a
-                  este correo. El representante deberá completar el
-                  consentimiento informado (LOPNNA Art. 65) al activar su
-                  cuenta.
-                </p>
               </div>
 
               {/* Consentimiento del especialista */}

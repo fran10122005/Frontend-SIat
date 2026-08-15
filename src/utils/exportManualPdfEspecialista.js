@@ -84,7 +84,7 @@ export const seccionesManualEspecialista = [
     id: "dashboard",
     titulo: "Resumen Global",
     icono: "dashboard",
-    descripcion: "Vista general con KPIs, agenda y alertas",
+    descripcion: "Vista general con KPIs y alertas",
     contenido: [
       { tipo: "subtitulo", valor: "Vista Global (sin paciente seleccionado)" },
       {
@@ -99,28 +99,11 @@ export const seccionesManualEspecialista = [
         encabezados: ["KPI", "Descripción"],
         filas: [
           ["Pacientes Activos", "Total de niños asignados al especialista"],
-          ["Citas Hoy", "Número de consultas agendadas para el día actual"],
           ["Cumplimiento PEI", "Porcentaje promedio de avance en metas PEI"],
           [
             "Alertas (24h)",
             "Alertas de crisis registradas en las últimas 24 horas",
           ],
-        ],
-      },
-
-      { tipo: "subtitulo", valor: "Agenda Clínica del Día" },
-      {
-        tipo: "texto",
-        valor:
-          "Lista de citas del día obtenidas del sistema. Cada cita muestra:",
-      },
-      {
-        tipo: "lista",
-        items: [
-          "Hora programada y estado (Completada / En Progreso / Pendiente).",
-          "Nombre del paciente y tipo de cita.",
-          'Botón "Ir a Paciente": carga el panel clínico del paciente.',
-          'Botón "Completar": marca la cita como finalizada.',
         ],
       },
 
@@ -135,7 +118,7 @@ export const seccionesManualEspecialista = [
       {
         tipo: "texto",
         valor:
-          "Al seleccionar un paciente (desde la agenda o desde Gestión de Pacientes), se despliega el panel clínico con:",
+          "Al seleccionar un paciente (desde Gestión de Pacientes), se despliega el panel clínico con:",
       },
       {
         tipo: "lista",

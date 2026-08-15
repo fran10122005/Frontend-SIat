@@ -63,6 +63,7 @@ export default function CatalogosTab({
               <input
                 required
                 type="text"
+                maxLength={11}
                 value={inst.ins_codi || ""}
                 onChange={set("ins_codi")}
                 readOnly={!isEditing}

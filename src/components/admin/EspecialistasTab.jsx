@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
-  Search,
-  X,
   KeyRound,
   ChevronDown,
   Pencil,
@@ -32,6 +30,7 @@ import {
 import StatusBadge from "../shared/StatusBadge";
 import Pagination from "../shared/Pagination";
 import AdminModal from "../shared/AdminModal";
+import FilterBar from "../shared/FilterBar";
 import useExpandableRows from "../../hooks/useExpandableRows";
 
 const VALIDACIONES = {
@@ -261,14 +260,55 @@ export default function EspecialistasTab({
     setPageEspCat(0);
   }, [searchEspCat, filterEspCatEstado]);
 
-  const hasEspFilters =
-    searchEsp ||
-    filterEspecialidad !== "TODAS" ||
-    filterEstado !== "TODOS" ||
-    filterGenero !== "TODOS" ||
-    dateFrom ||
-    dateTo;
-  const hasEspCatFilters = searchEspCat || filterEspCatEstado !== "TODOS";
+  const clearEspFilters = () => {
+    setSearchEsp("");
+    setFilterEspecialidad("TODAS");
+    setFilterEstado("TODOS");
+    setFilterGenero("TODOS");
+    setDateFrom("");
+    setDateTo("");
+  };
+
+  const clearEspCatFilters = () => {
+    setSearchEspCat("");
+    setFilterEspCatEstado("TODOS");
+  };
+
+  const espFilterChips = [
+    filterEspecialidad !== "TODAS" && {
+      key: "especialidad",
+      label: "Especialidad seleccionada",
+      onRemove: () => setFilterEspecialidad("TODAS"),
+    },
+    filterEstado !== "TODOS" && {
+      key: "estado",
+      label: filterEstado === "ACTIVO" ? "Activos" : "Inactivos",
+      onRemove: () => setFilterEstado("TODOS"),
+    },
+    filterGenero !== "TODOS" && {
+      key: "genero",
+      label: filterGenero === "M" ? "Masculino" : "Femenino",
+      onRemove: () => setFilterGenero("TODOS"),
+    },
+    dateFrom && {
+      key: "dateFrom",
+      label: `Desde: ${dateFrom}`,
+      onRemove: () => setDateFrom(""),
+    },
+    dateTo && {
+      key: "dateTo",
+      label: `Hasta: ${dateTo}`,
+      onRemove: () => setDateTo(""),
+    },
+  ].filter(Boolean);
+
+  const espCatFilterChips = [
+    filterEspCatEstado !== "TODOS" && {
+      key: "estado",
+      label: filterEspCatEstado === "ACTIVA" ? "Activas" : "Inactivas",
+      onRemove: () => setFilterEspCatEstado("TODOS"),
+    },
+  ].filter(Boolean);
 
   const validarCampo = (campo) => {
     const valor = newEsp[campo];
@@ -876,81 +916,69 @@ export default function EspecialistasTab({
             </div>
 
             {/* Filtros */}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4">
-              <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o correo..."
-                  value={searchEsp}
-                  onChange={(e) => setSearchEsp(e.target.value)}
-                  className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-                <select
-                  value={filterEspecialidad}
-                  onChange={(e) => setFilterEspecialidad(e.target.value)}
-                  className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="TODAS">Todas las especialidades</option>
-                  {catalogos.especialidades
-                    .filter((es) => es.esc_estd !== false)
-                    .map((es) => (
-                      <option key={es.esc_codi} value={es.esc_codi}>
-                        {es.esc_nomb}
-                      </option>
-                    ))}
-                </select>
-                <select
-                  value={filterEstado}
-                  onChange={(e) => setFilterEstado(e.target.value)}
-                  className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="TODOS">Todos los estados</option>
-                  <option value="ACTIVO">Activo</option>
-                  <option value="INACTIVO">Inactivo</option>
-                </select>
-                <select
-                  value={filterGenero}
-                  onChange={(e) => setFilterGenero(e.target.value)}
-                  className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                >
-                  <option value="TODOS">Todos los géneros</option>
-                  <option value="M">Masculino</option>
-                  <option value="F">Femenino</option>
-                </select>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                  title="Fecha desde"
-                />
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                  title="Fecha hasta"
-                />
-                {hasEspFilters && (
-                  <button
-                    onClick={() => {
-                      setSearchEsp("");
-                      setFilterEspecialidad("TODAS");
-                      setFilterEstado("TODOS");
-                      setFilterGenero("TODOS");
-                      setDateFrom("");
-                      setDateTo("");
-                    }}
-                    className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
-                  >
-                    <X className="w-3.5 h-3.5" /> Limpiar
-                  </button>
-                )}
-              </div>
-            </div>
+            <FilterBar
+              embedded
+              searchValue={searchEsp}
+              onSearch={setSearchEsp}
+              searchPlaceholder="Buscar por nombre o correo..."
+              activeCount={
+                (searchEsp ? 1 : 0) +
+                (filterEspecialidad !== "TODAS" ? 1 : 0) +
+                (filterEstado !== "TODOS" ? 1 : 0) +
+                (filterGenero !== "TODOS" ? 1 : 0) +
+                (dateFrom ? 1 : 0) +
+                (dateTo ? 1 : 0)
+              }
+              onClearAll={clearEspFilters}
+              chips={espFilterChips}
+            >
+              <select
+                value={filterEspecialidad}
+                onChange={(e) => setFilterEspecialidad(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="TODAS">Todas las especialidades</option>
+                {catalogos.especialidades
+                  .filter((es) => es.esc_estd !== false)
+                  .map((es) => (
+                    <option key={es.esc_codi} value={es.esc_codi}>
+                      {es.esc_nomb}
+                    </option>
+                  ))}
+              </select>
+              <select
+                value={filterEstado}
+                onChange={(e) => setFilterEstado(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="TODOS">Todos los estados</option>
+                <option value="ACTIVO">Activo</option>
+                <option value="INACTIVO">Inactivo</option>
+              </select>
+              <select
+                value={filterGenero}
+                onChange={(e) => setFilterGenero(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="TODOS">Todos los géneros</option>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+              </select>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                title="Fecha desde"
+              />
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                title="Fecha hasta"
+              />
+            </FilterBar>
 
             <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
               <table className="w-full text-left text-sm responsive-table">
@@ -1484,17 +1512,18 @@ export default function EspecialistasTab({
               </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4">
-              <div className="relative w-full sm:flex-1 sm:min-w-[180px]">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar especialidad..."
-                  value={searchEspCat}
-                  onChange={(e) => setSearchEspCat(e.target.value)}
-                  className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+            <FilterBar
+              embedded
+              searchValue={searchEspCat}
+              onSearch={setSearchEspCat}
+              searchPlaceholder="Buscar especialidad..."
+              activeCount={
+                (searchEspCat ? 1 : 0) +
+                (filterEspCatEstado !== "TODOS" ? 1 : 0)
+              }
+              onClearAll={clearEspCatFilters}
+              chips={espCatFilterChips}
+            >
               <select
                 value={filterEspCatEstado}
                 onChange={(e) => setFilterEspCatEstado(e.target.value)}
@@ -1504,18 +1533,7 @@ export default function EspecialistasTab({
                 <option value="ACTIVA">Activa</option>
                 <option value="INACTIVA">Inactivo</option>
               </select>
-              {hasEspCatFilters && (
-                <button
-                  onClick={() => {
-                    setSearchEspCat("");
-                    setFilterEspCatEstado("TODOS");
-                  }}
-                  className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
-                >
-                  <X className="w-3.5 h-3.5" /> Limpiar
-                </button>
-              )}
-            </div>
+            </FilterBar>
 
             <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
               <table className="w-full text-left text-sm responsive-table">

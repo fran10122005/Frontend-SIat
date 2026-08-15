@@ -9,6 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios";
 import useIdleTimer from "../hooks/useIdleTimer";
 import { toastError } from "../utils/errorHandler";
+import { disconnectSocket } from "../hooks/socket";
 
 const GlobalContext = createContext();
 
@@ -125,6 +126,7 @@ export const GlobalProvider = ({ children }) => {
   const idleActive = hasToken && !isPublicView;
 
   const handleIdleTimeout = useCallback(() => {
+    disconnectSocket();
     localStorage.removeItem("token");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userName");
@@ -444,6 +446,27 @@ export const GlobalProvider = ({ children }) => {
 
   const [globalPeiGoals, setGlobalPeiGoals] = useState([]);
 
+  const [crisisAlerts, setCrisisAlerts] = useState([]);
+  const [crisisTelemetryMap, setCrisisTelemetryMap] = useState({});
+
+  const fetchCrisisAlerts = async (childId) => {
+    if (!childId) return;
+    try {
+      const res = await api.get(`/especialista/alertas/${childId}`);
+      const data = res.data.data || [];
+      const map = {};
+      data.forEach((al) => {
+        map[al.id_alert] = al.telemetry || [];
+      });
+      setCrisisAlerts(data);
+      setCrisisTelemetryMap(map);
+    } catch (err) {
+      console.error("Error fetching crisis alerts:", err);
+      setCrisisAlerts([]);
+      setCrisisTelemetryMap({});
+    }
+  };
+
   const fetchPeiGoals = async (childId) => {
     if (!childId) return;
     try {
@@ -454,12 +477,11 @@ export const GlobalProvider = ({ children }) => {
     }
   };
 
-  const crearPeiGoal = async (childId, desc, totalTrials) => {
+  const crearPeiGoal = async (childId, goalData) => {
     try {
       await api.post("/metas", {
         nin_codi: childId,
-        met_desc: desc,
-        met_ttria: totalTrials,
+        ...goalData,
       });
       await fetchPeiGoals(childId);
     } catch (err) {
@@ -478,11 +500,11 @@ export const GlobalProvider = ({ children }) => {
     }
   };
 
-  const crearIndicacion = async (childId, texto) => {
+  const crearIndicacion = async (childId, data) => {
     try {
-      await api.post("/reportes/indicacion", {
+      await api.post("/especialista/indicaciones", {
         nin_codi: childId,
-        com_tend: texto,
+        ...data,
       });
       await fetchHistorialCompleto(childId);
     } catch (err) {
@@ -495,6 +517,7 @@ export const GlobalProvider = ({ children }) => {
     if (selectedChildId) {
       fetchHistorialCompleto(selectedChildId);
       fetchPeiGoals(selectedChildId);
+      fetchCrisisAlerts(selectedChildId);
     }
   }, [selectedChildId]);
 
@@ -675,6 +698,9 @@ export const GlobalProvider = ({ children }) => {
         createRoutine,
         clinicalAlerts,
         clinicalHistory,
+        crisisAlerts,
+        crisisTelemetryMap,
+        fetchCrisisAlerts,
         crearIndicacion,
         globalPeiGoals,
         crearPeiGoal,
@@ -684,7 +710,7 @@ export const GlobalProvider = ({ children }) => {
       {children}
       {/* Toast Notification simulando Shadcn */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-white dark:bg-slate-800 border-l-4 border-brand-500 p-4 rounded-lg shadow-xl z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-6 right-6 bg-white dark:bg-slate-800 border-l-4 border-brand-500 p-4 rounded-lg shadow-xl z-[300] animate-in slide-in-from-bottom-5 fade-in duration-300">
           <div className="flex items-center gap-3">
             <svg
               className="w-5 h-5 text-brand-500"

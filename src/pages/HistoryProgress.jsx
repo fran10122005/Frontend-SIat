@@ -11,10 +11,11 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { TrendingUp, Download, Search, X } from "lucide-react";
+import { TrendingUp, Download } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import { exportHistoryToPDF } from "../utils/pdfExporter";
 import Pagination from "../components/shared/Pagination";
+import FilterBar from "../components/shared/FilterBar";
 
 export default function HistoryProgress() {
   const { historicalData, globalPeiGoals } = useGlobalContext();
@@ -82,9 +83,6 @@ export default function HistoryProgress() {
   useEffect(() => {
     setPage(0);
   }, [dateRange, searchNotes, filterEfectividad]);
-
-  const hasFilters =
-    dateRange !== "7days" || searchNotes || filterEfectividad !== "TODOS";
 
   const mockChartData = [
     { fec_repo: "01/07/2026", pro_calm: 72, tot_sesi: 3, fue_efec: true },
@@ -269,13 +267,13 @@ export default function HistoryProgress() {
               {/* Gráfico */}
               <div
                 data-tour="hp-chart"
-                className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700"
+                className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col min-h-[300px] lg:h-[400px]"
               >
                 <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-6 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-brand-500 dark:text-blue-400" />
                   Evolución del Tiempo en Calma (pro_calm)
                 </h3>
-                <div className="w-full h-[200px] md:h-[300px]">
+                <div className="flex-1 w-full min-h-0">
                   <ResponsiveContainer
                     width="100%"
                     height="100%"
@@ -337,18 +335,32 @@ export default function HistoryProgress() {
               </div>
 
               {/* Filtros tabla */}
-              <div className="flex flex-wrap gap-3 items-center">
-                <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    data-tour="hp-search-notes"
-                    placeholder="Buscar en notas médicas..."
-                    value={searchNotes}
-                    onChange={(e) => setSearchNotes(e.target.value)}
-                    className="w-full pl-4 pr-9 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+              <FilterBar
+                searchDataTour="hp-search-notes"
+                clearDataTour="hp-clear"
+                searchValue={searchNotes}
+                onSearch={setSearchNotes}
+                searchPlaceholder="Buscar en notas médicas..."
+                activeCount={
+                  (searchNotes ? 1 : 0) +
+                  (filterEfectividad !== "TODOS" ? 1 : 0)
+                }
+                onClearAll={() => {
+                  setSearchNotes("");
+                  setFilterEfectividad("TODOS");
+                  setDateRange("7days");
+                }}
+                chips={[
+                  filterEfectividad !== "TODOS" && {
+                    key: "efectividad",
+                    label:
+                      filterEfectividad === "EFECTIVA"
+                        ? "Efectiva"
+                        : "No Efectiva",
+                    onRemove: () => setFilterEfectividad("TODOS"),
+                  },
+                ].filter(Boolean)}
+              >
                 <select
                   data-tour="hp-filter-efectividad"
                   value={filterEfectividad}
@@ -359,20 +371,7 @@ export default function HistoryProgress() {
                   <option value="EFECTIVA">Efectiva</option>
                   <option value="NO_EFECTIVA">No Efectiva</option>
                 </select>
-                {hasFilters && (
-                  <button
-                    data-tour="hp-clear"
-                    onClick={() => {
-                      setSearchNotes("");
-                      setFilterEfectividad("TODOS");
-                      setDateRange("7days");
-                    }}
-                    className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
-                  >
-                    <X className="w-3.5 h-3.5" /> Limpiar
-                  </button>
-                )}
-              </div>
+              </FilterBar>
 
               {/* Tabla */}
               <div
