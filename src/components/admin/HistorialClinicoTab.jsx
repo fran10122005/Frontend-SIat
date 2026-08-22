@@ -10,6 +10,7 @@ import {
   User,
   ChevronDown,
   Eye,
+  X,
 } from "lucide-react";
 import { useGlobalContext } from "../../context/GlobalState";
 import Pagination from "../shared/Pagination";
@@ -554,20 +555,25 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
 
       {/* Modal Detail View */}
       {selectedIncident && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 bg-[#034EA1] text-white flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold">Ficha de Evento Clínico</h3>
-                <p className="text-xs opacity-80">
-                  {selectedIncident.id} — {selectedIncident.nin_nomb}
-                </p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 bg-blue-600 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-xl">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">Ficha de Evento Clínico</h3>
+                  <p className="text-blue-100 text-sm mt-0.5">
+                    {selectedIncident.id} — {selectedIncident.nin_nomb}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setSelectedIncident(null)}
-                className="text-white/80 hover:text-white text-xl font-bold"
+                className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
               >
-                &times;
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -629,7 +635,7 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
               <div className="flex justify-end pt-2">
                 <button
                   onClick={() => setSelectedIncident(null)}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-colors"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors"
                 >
                   Cerrar
                 </button>

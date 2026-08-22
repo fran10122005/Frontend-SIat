@@ -24,11 +24,11 @@ export default function FilterBar({
       data-tour={dataTour}
       className={
         embedded
-          ? `flex flex-col flex-wrap gap-3 ${className}`
-          : `bg-white dark:bg-[#1E293B] p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 ${className}`
+          ? `flex flex-col sm:flex-row flex-wrap gap-3 ${className}`
+          : `bg-white dark:bg-[#1E293B] p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 ${className}`
       }
     >
-      <div className="flex flex-row flex-wrap items-center gap-3">
+      <div className="flex flex-row flex-wrap items-center gap-2.5">
         {searchValue !== undefined && (
           <div className="relative flex-1 min-w-[160px]">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -38,7 +38,7 @@ export default function FilterBar({
               placeholder={searchPlaceholder}
               value={searchValue}
               onChange={(e) => onSearch?.(e.target.value)}
-              className="w-full pl-4 pr-9 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              className="w-full pl-4 pr-9 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             />
           </div>
         )}
@@ -47,7 +47,7 @@ export default function FilterBar({
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
           >
             <SlidersHorizontal className="w-4 h-4 text-slate-400" />
             Filtros
@@ -67,7 +67,7 @@ export default function FilterBar({
             type="button"
             data-tour={clearDataTour}
             onClick={onClearAll}
-            className="flex items-center gap-1 px-4 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
+            className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
           >
             <X className="w-3.5 h-3.5" /> Limpiar todo
           </button>

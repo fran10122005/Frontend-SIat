@@ -14,7 +14,6 @@ import {
 import {
   Building2,
   FileText,
-  ShieldAlert,
   Users,
   Stethoscope,
   Link2,
@@ -945,47 +944,6 @@ function AdminDashboard({ onNavigate }) {
                     </button>
                   </div>
 
-                  {/* Recent Alerts */}
-                  {auditLogs.filter(
-                    (l) => l.aud_tipo === "INCIDENTE" || l.aud_tipo === "WARN",
-                  ).length > 0 && (
-                    <div className="bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm overflow-hidden">
-                      <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-center gap-2">
-                        <ShieldAlert className="w-4 h-4 text-amber-500" />
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Alertas Recientes
-                        </h3>
-                      </div>
-                      <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                        {auditLogs
-                          .filter(
-                            (l) =>
-                              l.aud_tipo === "INCIDENTE" ||
-                              l.aud_tipo === "WARN",
-                          )
-                          .slice(0, 5)
-                          .map((log) => (
-                            <div
-                              key={log.aud_codi}
-                              className="px-6 py-3 flex items-center gap-3"
-                            >
-                              <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${log.aud_tipo === "INCIDENTE" ? "bg-red-500" : "bg-amber-500"}`}
-                              />
-                              <p className="text-sm text-slate-700 dark:text-slate-300 flex-1">
-                                {log.aud_desc}
-                              </p>
-                              <span className="text-xs text-slate-400 shrink-0">
-                                {new Date(log.aud_time).toLocaleDateString(
-                                  "es-ES",
-                                )}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
                   <AdminCharts metricas={metricas} isDark={isDark} />
                   <AdminActivityLog userName={userName} logs={auditLogs} />
                 </div>
@@ -1124,52 +1082,52 @@ function AdminDashboard({ onNavigate }) {
 
       {/* MODAL: Enlace de Activación Generado */}
       {showLinkModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-            <div className="p-6 text-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">
+                    ¡Invitación Clínica Creada!
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowLinkModal(false)}
+                  className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                ¡Invitación Clínica Creada!
-              </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Se ha generado el token de activación clínico. Copie el
                 siguiente enlace y envíelo al representante para que configure
                 su cuenta:
               </p>
 
-              <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 font-mono text-xs select-all break-all text-left max-h-[80px] overflow-y-auto">
+              <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border-2 border-slate-200 dark:border-slate-600 font-mono text-xs select-all break-all text-left max-h-[80px] overflow-y-auto">
                 {generatedLink}
               </div>
 
-              <div className="flex gap-2 justify-center pt-2">
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  onClick={() => setShowLinkModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 rounded-xl text-sm font-semibold transition-colors"
+                >
+                  Cerrar
+                </button>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(generatedLink);
                     showToast("📋 Enlace copiado al portapapeles");
                   }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm shadow-blue-600/25 transition-all"
                 >
                   Copiar Enlace
-                </button>
-                <button
-                  onClick={() => setShowLinkModal(false)}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 rounded-lg text-sm font-semibold"
-                >
-                  Cerrar
                 </button>
               </div>
             </div>
@@ -1179,21 +1137,26 @@ function AdminDashboard({ onNavigate }) {
 
       {/* MODAL: Programar Reporte */}
       {showScheduleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 bg-slate-800 text-white flex items-center justify-between">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <Clock className="w-5 h-5" /> Programar Reporte
-              </h3>
-              <button
-                onClick={() => setShowScheduleModal(false)}
-                className="text-white/80 hover:text-white text-xl font-bold"
-              >
-                &times;
-              </button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">Programar Reporte</h3>
+                </div>
+                <button
+                  onClick={() => setShowScheduleModal(false)}
+                  className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Configura el envío automático del reporte del dashboard por
                 correo electrónico.
               </p>
@@ -1281,10 +1244,10 @@ function AdminDashboard({ onNavigate }) {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-700/50">
                 <button
                   onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-semibold"
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
                 </button>
@@ -1310,7 +1273,7 @@ function AdminDashboard({ onNavigate }) {
                       showToast("📋 Configuración guardada.");
                     }
                   }}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm shadow-blue-600/25 transition-all"
                 >
                   Guardar Configuración
                 </button>

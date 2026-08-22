@@ -23,6 +23,7 @@ export const FOLDERS = {
   patientPhotos: "siat/pacientes/fotos",
   medicalDocs: "siat/pacientes/documentos",
   specialistPhotos: "siat/especialistas/fotos",
+  activityMedia: "siat/actividades/media",
 };
 
 /**

@@ -11,11 +11,12 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { TrendingUp, Download } from "lucide-react";
+import { TrendingUp, Download, ChevronDown, ChevronUp } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import { exportHistoryToPDF } from "../utils/pdfExporter";
 import Pagination from "../components/shared/Pagination";
 import FilterBar from "../components/shared/FilterBar";
+import Button from "../components/ui/Button";
 
 export default function HistoryProgress() {
   const { historicalData, globalPeiGoals } = useGlobalContext();
@@ -74,14 +75,25 @@ export default function HistoryProgress() {
 
   const PAGE_SIZE = 8;
   const [page, setPage] = useState(0);
+  const [expandedRows, setExpandedRows] = useState(new Set());
   const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
   const pagedData = filteredData.slice(
     page * PAGE_SIZE,
     (page + 1) * PAGE_SIZE,
   );
 
+  const toggleRow = (index) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
   useEffect(() => {
     setPage(0);
+    setExpandedRows(new Set());
   }, [dateRange, searchNotes, filterEfectividad]);
 
   const mockChartData = [
@@ -126,9 +138,9 @@ export default function HistoryProgress() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-6 md:p-8 lg:p-10 flex flex-col gap-8">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-              <div>
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 lg:p-8 flex flex-col gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="flex flex-col gap-2">
                 <h1
                   data-tour="hp-header"
                   className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
@@ -136,31 +148,20 @@ export default function HistoryProgress() {
                   <TrendingUp className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   Historial de Evolución
                 </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400">
                   Análisis histórico y tendencias de comportamiento
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <select
-                  data-tour="hp-date-filter"
-                  value={dateRange}
-                  onChange={(e) => setDateRange(e.target.value)}
-                  className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 text-gray-800 dark:text-white cursor-pointer shadow-sm transition-colors"
-                >
-                  <option value="7days">Últimos 7 días</option>
-                  <option value="month">Este Mes</option>
-                  <option value="all">Todo el historial</option>
-                </select>
-
-                <button
-                  data-tour="hp-export"
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Download className="w-4 h-4" />}
                   onClick={handleExportPDF}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-brand-700 dark:text-blue-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                 >
-                  <Download className="w-5 h-5 text-brand-500 dark:text-blue-400" />
-                  Exportar PDF Médico
-                </button>
+                  Exportar PDF
+                </Button>
               </div>
             </div>
 
@@ -343,7 +344,8 @@ export default function HistoryProgress() {
                 searchPlaceholder="Buscar en notas médicas..."
                 activeCount={
                   (searchNotes ? 1 : 0) +
-                  (filterEfectividad !== "TODOS" ? 1 : 0)
+                  (filterEfectividad !== "TODOS" ? 1 : 0) +
+                  (dateRange !== "7days" ? 1 : 0)
                 }
                 onClearAll={() => {
                   setSearchNotes("");
@@ -359,13 +361,27 @@ export default function HistoryProgress() {
                         : "No Efectiva",
                     onRemove: () => setFilterEfectividad("TODOS"),
                   },
+                  dateRange !== "7days" && {
+                    key: "dateRange",
+                    label:
+                      dateRange === "month" ? "Este Mes" : "Todo el historial",
+                    onRemove: () => setDateRange("7days"),
+                  },
                 ].filter(Boolean)}
               >
                 <select
-                  data-tour="hp-filter-efectividad"
+                  value={dateRange}
+                  onChange={(e) => setDateRange(e.target.value)}
+                  className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="7days">Últimos 7 días</option>
+                  <option value="month">Este Mes</option>
+                  <option value="all">Todo el historial</option>
+                </select>
+                <select
                   value={filterEfectividad}
                   onChange={(e) => setFilterEfectividad(e.target.value)}
-                  className="px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
                   <option value="TODOS">Todas las efectividades</option>
                   <option value="EFECTIVA">Efectiva</option>
@@ -383,29 +399,33 @@ export default function HistoryProgress() {
                     Registro Clínico Detallado
                   </h3>
                 </div>
-                <div className="w-full overflow-x-auto">
-                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400">
+                <div className="overflow-x-auto">
+                  {/* Desktop table */}
+                  <table className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hidden sm:table">
                     <thead className="bg-gray-50/50 dark:bg-slate-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-100 dark:border-slate-700">
                       <tr>
                         <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">
-                          Fecha (fec_repo)
+                          Fecha
                         </th>
                         <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">
-                          Sesiones (tot_sesi)
+                          Calma
                         </th>
                         <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">
-                          Efectividad (fue_efec)
+                          Sesiones
+                        </th>
+                        <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">
+                          Efectividad
                         </th>
                         <th className="px-6 py-4 font-medium uppercase tracking-wider text-xs">
-                          Notas Médicas (com_tend)
+                          Notas
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
-                      {filteredData.length === 0 ? (
+                      {pagedData.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="4"
+                            colSpan="5"
                             className="px-6 py-8 text-center text-slate-500 dark:text-slate-400"
                           >
                             No se encontraron registros con los filtros
@@ -413,13 +433,26 @@ export default function HistoryProgress() {
                           </td>
                         </tr>
                       ) : (
-                        (pagedData || []).map((row, index) => (
+                        pagedData.map((row, index) => (
                           <tr
                             key={index}
                             className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors"
                           >
                             <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 dark:text-gray-200">
                               {row.fec_repo}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                              {row.pro_calm != null ? (
+                                <span
+                                  className={`inline-flex items-center gap-1 text-sm font-bold ${row.pro_calm > 75 ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400"}`}
+                                >
+                                  {row.pro_calm}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-300 dark:text-slate-600">
+                                  —
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-center">
                               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 font-semibold">
@@ -439,7 +472,7 @@ export default function HistoryProgress() {
                                 </span>
                               )}
                             </td>
-                            <td className="px-6 py-4 text-gray-600 dark:text-gray-400 min-w-[250px]">
+                            <td className="px-6 py-4 text-gray-600 dark:text-gray-400 max-w-[300px] truncate">
                               {row.com_tend}
                             </td>
                           </tr>
@@ -447,6 +480,90 @@ export default function HistoryProgress() {
                       )}
                     </tbody>
                   </table>
+
+                  {/* Mobile cards */}
+                  <div className="sm:hidden divide-y divide-gray-100 dark:divide-slate-700/50">
+                    {pagedData.length === 0 ? (
+                      <div className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
+                        No se encontraron registros con los filtros aplicados.
+                      </div>
+                    ) : (
+                      pagedData.map((row, index) => {
+                        const isExpanded = expandedRows.has(index);
+                        return (
+                          <div key={index} className="transition-colors">
+                            <button
+                              type="button"
+                              onClick={() => toggleRow(index)}
+                              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-slate-800/50 active:bg-gray-100 dark:active:bg-slate-700/50"
+                            >
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                    {row.fec_repo}
+                                  </span>
+                                  {row.pro_calm != null && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                      {row.pro_calm}% calma
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[220px]">
+                                  {row.com_tend || "Sin notas"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <span
+                                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${row.fue_efec ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}
+                                >
+                                  {row.fue_efec ? "Efectiva" : "No Efectiva"}
+                                </span>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4 text-gray-400" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                                )}
+                              </div>
+                            </button>
+                            {isExpanded && (
+                              <div className="px-4 pb-4 pt-1 bg-gray-50/50 dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-700/50">
+                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400 font-medium">
+                                      Sesiones
+                                    </span>
+                                    <p className="text-gray-900 dark:text-gray-100 mt-0.5 font-semibold">
+                                      {row.tot_sesi}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400 font-medium">
+                                      Calma
+                                    </span>
+                                    <p className="text-gray-900 dark:text-gray-100 mt-0.5 font-semibold">
+                                      {row.pro_calm != null
+                                        ? `${row.pro_calm}%`
+                                        : "—"}
+                                    </p>
+                                  </div>
+                                  {row.com_tend && (
+                                    <div className="col-span-2">
+                                      <span className="text-gray-500 dark:text-gray-400 font-medium">
+                                        Notas
+                                      </span>
+                                      <p className="text-gray-900 dark:text-gray-100 mt-0.5 leading-relaxed">
+                                        {row.com_tend}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
               <div data-tour="hp-pagination">

@@ -1,4 +1,5 @@
-import { FilePlus, X, CalendarDays, Clock, Flag, Layers } from "lucide-react";
+import { FilePlus, X } from "lucide-react";
+import Button from "../ui/Button";
 
 const TIPOS = [
   {
@@ -40,22 +41,13 @@ const FRECUENCIAS = [
 ];
 
 const PRIORIDADES = [
-  {
-    value: "Alta",
-    color:
-      "text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-800",
-  },
-  {
-    value: "Media",
-    color:
-      "text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800",
-  },
-  {
-    value: "Baja",
-    color:
-      "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800",
-  },
+  { value: "Alta", color: "bg-rose-600 border-rose-600 text-white" },
+  { value: "Media", color: "bg-amber-500 border-amber-500 text-white" },
+  { value: "Baja", color: "bg-emerald-500 border-emerald-500 text-white" },
 ];
+
+const inputClass =
+  "w-full px-4 py-2.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer";
 
 export default function IndicacionModal({
   showIndicacionModal,
@@ -67,46 +59,41 @@ export default function IndicacionModal({
 }) {
   if (!showIndicacionModal) return null;
 
-  const nombre = activeChild?.nom_nino
-    ? `${activeChild.nom_nino} ${activeChild.ape_nino}`
-    : "su paciente";
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-indigo-100 dark:border-slate-700 flex justify-between items-center bg-indigo-50/50 dark:bg-indigo-900/20 shrink-0">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FilePlus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            Nueva Indicación Clínica
-          </h3>
-          <button
-            onClick={() => setShowIndicacionModal(false)}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-            aria-label="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {activeChild && (
-          <div className="px-6 py-2.5 bg-indigo-50/30 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-slate-700 flex items-center gap-2 text-xs text-indigo-700 dark:text-indigo-300 shrink-0">
-            <Layers className="w-3.5 h-3.5" />
-            Paciente:{" "}
-            <strong>
-              {activeChild.nom_nino} {activeChild.ape_nino}
-            </strong>
-            <span className="text-slate-400">·</span> Visible de inmediato para
-            el representante
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-xl">
+                <FilePlus className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Nueva Indicación Clínica</h3>
+                {activeChild && (
+                  <p className="text-blue-100 text-sm mt-0.5">
+                    {activeChild.nom_nino} {activeChild.ape_nino}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowIndicacionModal(false)}
+              className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        )}
+        </div>
 
         <form
           onSubmit={handleIndicacionSubmit}
-          className="p-6 space-y-5 overflow-y-auto"
+          className="p-6 space-y-5 overflow-y-auto flex-1"
         >
           {/* Tipo */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Tipo de Indicación
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -120,12 +107,12 @@ export default function IndicacionModal({
                       ind_tipo: t.value,
                     }))
                   }
-                  className={`text-left p-3 rounded-xl border-2 transition-all duration-200 ${(indicacionText.ind_tipo || "") === t.value ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 ring-2 ring-indigo-200 dark:ring-indigo-900" : "border-slate-200 dark:border-slate-700 hover:border-indigo-300"}`}
+                  className={`text-left p-3 rounded-xl border-2 transition-all ${(indicacionText.ind_tipo || "") === t.value ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-slate-200 dark:border-slate-600 hover:border-blue-300 bg-white dark:bg-slate-800"}`}
                 >
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                     {t.value}
                   </p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {t.desc}
                   </p>
                 </button>
@@ -136,8 +123,8 @@ export default function IndicacionModal({
           {/* Área + Frecuencia */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5" /> Área de Intervención
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                Área de Intervención
               </label>
               <select
                 value={indicacionText.ind_area || ""}
@@ -148,7 +135,7 @@ export default function IndicacionModal({
                   }))
                 }
                 required
-                className="w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className={inputClass}
               >
                 <option value="">Selecciona el área...</option>
                 {AREAS.map((a) => (
@@ -159,8 +146,8 @@ export default function IndicacionModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" /> Frecuencia Recomendada
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                Frecuencia Recomendada
               </label>
               <select
                 value={indicacionText.ind_frec || ""}
@@ -171,7 +158,7 @@ export default function IndicacionModal({
                   }))
                 }
                 required
-                className="w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className={inputClass}
               >
                 <option value="">Selecciona frecuencia...</option>
                 {FRECUENCIAS.map((f) => (
@@ -186,7 +173,7 @@ export default function IndicacionModal({
           {/* Duración + Vigencia */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Duración Estimada
               </label>
               <input
@@ -199,12 +186,12 @@ export default function IndicacionModal({
                   }))
                 }
                 placeholder="Ej. 15 min por sesión"
-                className="w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`${inputClass} cursor-text`}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <CalendarDays className="w-3.5 h-3.5" /> Vigencia (Opcional)
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                Vigencia (Opcional)
               </label>
               <input
                 type="date"
@@ -215,15 +202,15 @@ export default function IndicacionModal({
                     ind_vige: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                className={inputClass}
               />
             </div>
           </div>
 
           {/* Prioridad */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Flag className="w-3.5 h-3.5" /> Prioridad
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              Prioridad
             </label>
             <div className="flex gap-2">
               {PRIORIDADES.map((p) => (
@@ -236,7 +223,7 @@ export default function IndicacionModal({
                       ind_prio: p.value,
                     }))
                   }
-                  className={`px-4 py-2 rounded-xl border-2 text-xs font-bold transition-all ${(indicacionText.ind_prio || "") === p.value ? p.color : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"}`}
+                  className={`flex-1 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${(indicacionText.ind_prio || "") === p.value ? p.color : "border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800"}`}
                 >
                   {p.value}
                 </button>
@@ -246,7 +233,7 @@ export default function IndicacionModal({
 
           {/* Descripción */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Instrucciones y Recomendaciones
             </label>
             <textarea
@@ -257,30 +244,28 @@ export default function IndicacionModal({
                   ind_desc: e.target.value,
                 }))
               }
-              placeholder="Describa de forma clara y concreta la indicación, incluyendo pasos a seguir, materiales y criterios de éxito..."
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 min-h-[110px] resize-none text-slate-800 dark:text-slate-200"
+              placeholder="Describa la indicación, pasos a seguir, materiales y criterios de éxito..."
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-blue-500 min-h-[110px] resize-none text-slate-800 dark:text-slate-200 transition-colors"
               required
             />
-            <p className="text-[10px] text-slate-500 mt-2">
-              Esta indicación quedará registrada en el expediente de {nombre} y
-              será visible para el representante.
-            </p>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700/50">
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setShowIndicacionModal(false)}
-              className="px-4 py-2 font-semibold text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-4 py-2 font-semibold text-xs bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg shadow-sm flex items-center gap-2"
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl shadow-sm shadow-blue-500/25 transition-all flex items-center gap-2"
             >
               <FilePlus className="w-4 h-4" /> Guardar y Enviar
-            </button>
+            </Button>
           </div>
         </form>
       </div>

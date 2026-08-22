@@ -93,7 +93,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
 
       <aside
         id="tour-admin-sidebar"
-        className={`fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] dark:from-[#020617] dark:via-[#0B1120] dark:to-[#1E293B] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 dark:shadow-black/40 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -140,15 +140,15 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
                 }}
                 className={`w-full flex items-center px-4 py-3 rounded-xl text-left transition-all duration-300 group ${
                   activeTab === item.id
-                    ? "bg-gradient-to-r from-white/20 to-white/5 text-white font-bold shadow-lg shadow-black/10 border-l-4 border-white"
-                    : "text-blue-100 hover:bg-white/10 hover:text-white hover:translate-x-1"
+                    ? "bg-gradient-to-r from-white/20 to-white/5 dark:from-slate-500/20 dark:to-transparent text-white font-bold shadow-lg shadow-black/10 border-l-4 border-white dark:border-blue-400"
+                    : "text-blue-100 dark:text-slate-300 hover:bg-white/10 dark:hover:bg-white/5 hover:text-white hover:translate-x-1"
                 }`}
               >
                 <Icon
                   className={`w-5 h-5 mr-3 shrink-0 transition-colors ${
                     activeTab === item.id
                       ? "text-white"
-                      : "text-blue-200 group-hover:text-white"
+                      : "text-blue-200 dark:text-slate-400 group-hover:text-white"
                   }`}
                 />
                 <span className="text-sm tracking-wide flex-1">
@@ -159,7 +159,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${
                       activeTab === item.id
                         ? "bg-white/25 text-white"
-                        : "bg-white/10 text-blue-200"
+                        : "bg-white/10 dark:bg-white/5 text-blue-200 dark:text-slate-400"
                     }`}
                   >
                     {item.count}

@@ -118,11 +118,11 @@ export default function MainDashboard() {
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <LayoutDashboard className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                <h1 className="text-lg md:text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <LayoutDashboard className="w-5 h-5 text-brand-700 dark:text-blue-400" />
                   Inicio
                 </h1>
-                <p className="text-subtitle-muted mt-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Paciente:{" "}
                   <span className="font-semibold text-slate-700 dark:text-slate-300">
                     {nomNino || "No Asignado"}
@@ -180,7 +180,7 @@ export default function MainDashboard() {
                   </p>
                   <button
                     onClick={() => navigate("agenda")}
-                    className="mt-4 px-5 py-2.5 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2"
+                    className="mt-4 px-4 py-2 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white text-xs font-bold rounded-lg transition-all shadow-sm flex items-center gap-2"
                   >
                     <CheckSquare className="w-4 h-4" /> Ver Agenda del Día
                   </button>
@@ -190,26 +190,27 @@ export default function MainDashboard() {
               {/* Columna derecha */}
               <div className="flex flex-col gap-6">
                 {/* Zona SOS */}
-                <div className="bg-gradient-to-br from-[#011C3F] via-[#023A7A] to-[#034EA1] rounded-2xl card-padding border border-blue-800/40 text-white shadow-xl shadow-blue-900/20">
-                  <div className="flex items-center gap-1.5 text-overline text-rose-400">
-                    <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping"></span>
+                <div className="bg-white dark:bg-[#1E293B] rounded-xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60">
+                  <div className="flex items-center gap-1.5 text-overline text-rose-600 dark:text-rose-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                     SOS Sensorial
                   </div>
-                  <p className="text-xs text-blue-200/80 mt-2 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
                     Herramientas de auxilio inmediato.
                   </p>
-                  <div className="grid grid-cols-2 gap-2 mt-4">
+                  <div className="grid grid-cols-2 gap-2 mt-3">
                     <button
                       onClick={() => setShowBreathing(true)}
-                      className="py-3 px-3 bg-rose-500/80 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all flex flex-col items-center justify-center gap-1.5 border border-rose-400/20 hover:scale-[1.02]"
+                      className="py-2.5 px-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-lg text-xs transition-all flex items-center justify-center gap-2"
                     >
-                      <Wind className="w-5 h-5" /> Respiración
+                      <Wind className="w-4 h-4" /> Respiración
                     </button>
                     <button
                       onClick={() => setShowAac(true)}
-                      className="py-3 px-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs transition-all border border-white/15 flex flex-col items-center justify-center gap-1.5 hover:scale-[1.02]"
+                      className="py-2.5 px-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-xs transition-all flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-600"
                     >
-                      <Grid className="w-5 h-5 text-blue-300" /> Tablero AAC
+                      <Grid className="w-4 h-4 text-blue-500 dark:text-blue-400" />{" "}
+                      Tablero AAC
                     </button>
                   </div>
                 </div>
@@ -254,28 +255,32 @@ export default function MainDashboard() {
                 </div>
 
                 {/* Wearable */}
-                <div className="bg-gradient-to-br from-[#0B2545] via-[#134074] to-[#0B2545] rounded-2xl card-padding shadow-xl border border-blue-800/40 text-white">
+                <div className="bg-white dark:bg-[#1E293B] rounded-xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-overline text-white/90 flex items-center gap-1.5">
-                      <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />{" "}
+                    <h3 className="text-overline text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-emerald-500" />{" "}
                       Pulsera IoT
                     </h3>
                     <span
-                      className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${isWebSocketActive ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/20 text-rose-400 border border-rose-500/30"}`}
+                      className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${isWebSocketActive ? "bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50" : "bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50"}`}
                     >
                       {isWebSocketActive ? "Conectada" : "Desconectada"}
                     </span>
                   </div>
                   <div className="mt-3 space-y-1.5 text-[11px]">
-                    <div className="flex justify-between py-1 border-b border-white/10">
-                      <span className="text-blue-200">Batería</span>
-                      <span className="font-semibold text-emerald-400">
+                    <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Batería
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
                         85%
                       </span>
                     </div>
                     <div className="flex justify-between py-1">
-                      <span className="text-blue-200">Señal</span>
-                      <span className="font-semibold text-emerald-400">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Señal
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
                         Excelente
                       </span>
                     </div>

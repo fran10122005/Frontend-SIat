@@ -12,6 +12,7 @@ import {
   Hash,
   Save,
   KeyRound,
+  Lock,
   Eye,
   EyeOff,
   Check,
@@ -19,7 +20,9 @@ import {
   Fingerprint,
   Trash2,
   Info,
+  User,
 } from "lucide-react";
+import Button from "../components/ui/Button";
 import LoadingState from "../components/dashboard/LoadingState";
 import {
   registerFingerprint,
@@ -72,7 +75,6 @@ export default function UserProfile() {
   // Passkey (acceso rápido con huella) state
   const [passkeys, setPasskeys] = useState([]);
   const [fpLoading, setFpLoading] = useState(false);
-  const [fpMsg, setFpMsg] = useState("");
 
   useEffect(() => {
     const loadPasskeys = async () => {
@@ -88,15 +90,13 @@ export default function UserProfile() {
 
   const handleRegisterFingerprint = async () => {
     setFpLoading(true);
-    setFpMsg("");
     try {
       await registerFingerprint("Dispositivo");
       setPasskeys(await listPasskeys());
-      setFpMsg("Tu huella fue registrada correctamente.");
       showToast("Acceso rápido con huella configurado");
     } catch (err) {
       console.error(err);
-      setFpMsg(
+      showToast(
         err?.name === "NotAllowedError"
           ? "Registro cancelado o huella no disponible."
           : err?.isAxiosError || err?.response
@@ -323,15 +323,17 @@ export default function UserProfile() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto p-6 md:p-8 lg:p-10 flex flex-col gap-8 pb-12">
-            <header>
-              <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors">
-                <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
-                Mi Perfil
-              </h1>
-              <p className="text-sm text-slate-500 mt-1 pl-11">
-                Gestiona tu información personal y opciones de seguridad.
-              </p>
+          <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10 flex flex-col gap-8 pb-12">
+            <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-brand-700 dark:text-blue-400 flex items-center gap-2">
+                  <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                  Mi Perfil
+                </h1>
+                <p className="hidden sm:block text-sm text-slate-500 dark:text-slate-400">
+                  Gestiona tu información personal y opciones de seguridad.
+                </p>
+              </div>
             </header>
 
             {loading ? (
@@ -412,7 +414,7 @@ export default function UserProfile() {
                                   onClick={() =>
                                     handleDeleteFingerprint(k.pk_id)
                                   }
-                                  className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0"
+                                  className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-red-500/50"
                                   aria-label={`Eliminar acceso rápido ${k.pk_nomb}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -464,12 +466,6 @@ export default function UserProfile() {
                             )}
                             {fpLoading ? "Configurando..." : "Registrar huella"}
                           </button>
-
-                          {fpMsg && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {fpMsg}
-                            </p>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -483,7 +479,8 @@ export default function UserProfile() {
                     onSubmit={submitProfile}
                     className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300 hover:shadow-md"
                   >
-                    <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                    <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-2">
+                      <User className="w-5 h-5 text-slate-400" />
                       <h3 className="font-bold text-slate-800 dark:text-white">
                         Datos Personales
                       </h3>
@@ -565,14 +562,15 @@ export default function UserProfile() {
                       </div>
                     </div>
                     <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
-                      <button
+                      <Button
                         type="submit"
-                        disabled={saving}
-                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        variant="primary"
+                        size="md"
+                        leftIcon={<Save className="w-4 h-4" />}
+                        loading={saving}
                       >
-                        <Save className="w-4 h-4" />
-                        {saving ? "Guardando..." : "Guardar Cambios"}
-                      </button>
+                        Guardar Cambios
+                      </Button>
                     </div>
                   </form>
 
@@ -792,20 +790,22 @@ export default function UserProfile() {
                       )}
                     </div>
                     <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
-                      <button
+                      <Button
                         type="submit"
+                        variant="primary"
+                        size="md"
+                        leftIcon={<Lock className="w-4 h-4" />}
+                        loading={saving}
                         disabled={
-                          saving ||
                           !passwordData.currentPassword ||
                           passwordData.newPassword !==
                             passwordData.confirmPassword ||
                           getPasswordStrength(passwordData.newPassword).score <
                             4
                         }
-                        className="px-6 py-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {saving ? "Guardando..." : "Actualizar Contraseña"}
-                      </button>
+                        Actualizar Contraseña
+                      </Button>
                     </div>
                   </form>
                 </div>

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Target, Plus, Trophy, PencilLine } from "lucide-react";
 import FilterBar from "../shared/FilterBar";
 import NewPeiGoalModal from "./NewPeiGoalModal";
+import Button from "../ui/Button";
 
 function AnimatedCounter({ value, duration = 600 }) {
   const [display, setDisplay] = useState(0);
@@ -94,22 +95,24 @@ export default function PatientPeiGoals({
 
   const completadas = peiGoals.filter((g) => g.progress >= 100).length;
   const total = peiGoals.length;
+  const activas = peiGoals.filter((g) => g.progress < 100);
 
   return (
-    <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 transition-all duration-200">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800/60 transition-all duration-200">
+      <div className="flex justify-between items-center mb-3">
         <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <Target className="w-5 h-5 text-indigo-500" />
           Metas PEI
         </h2>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<PencilLine className="w-3.5 h-3.5" />}
             onClick={() => setShowNewGoal(true)}
-            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded-md shadow-sm flex items-center gap-1.5 transition-colors"
           >
-            <PencilLine className="w-3.5 h-3.5" />
             Nueva Meta
-          </button>
+          </Button>
           <span className="text-xs font-semibold px-2 py-1 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-md flex items-center gap-1.5">
             <Trophy className="w-3.5 h-3.5" />
             {completadas}/{total}
@@ -141,7 +144,7 @@ export default function PatientPeiGoals({
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
             <option value="TODAS">Todas las categorías</option>
             {categoriasUnicas.map((c) => (
@@ -170,7 +173,7 @@ export default function PatientPeiGoals({
             return (
               <div
                 key={goal.id}
-                className={`p-4 rounded-xl border border-slate-100 dark:border-slate-700 ${getProgressBg(pct)} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                className={`p-3 rounded-xl border border-slate-100 dark:border-slate-700 ${getProgressBg(pct)} animate-in fade-in slide-in-from-bottom-2 duration-300`}
                 style={{
                   animationDelay: `${idx * 50}ms`,
                   animationFillMode: "backwards",
@@ -201,14 +204,14 @@ export default function PatientPeiGoals({
                       <span className="text-slate-400">/</span>
                       {goal.totalTrials}
                     </span>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      leftIcon={<Plus className="w-3.5 h-3.5" />}
                       onClick={() => handleIncrement(goal.id)}
                       disabled={goal.trials >= goal.totalTrials}
-                      className="p-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 dark:bg-indigo-900/50 dark:hover:bg-indigo-800 dark:text-indigo-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-110 active:scale-95"
                       title="Registrar ensayo"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
+                    />
                   </div>
                 </div>
                 <div className="relative mt-3">

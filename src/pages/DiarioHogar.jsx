@@ -11,6 +11,7 @@ import {
   Utensils,
   AlertTriangle,
   Heart,
+  Watch,
 } from "lucide-react";
 import LoadingState from "../components/dashboard/LoadingState";
 import Topbar from "../components/layout/Topbar";
@@ -413,9 +414,13 @@ export default function DiarioHogar() {
                       min="0"
                       data-tour="dh-crisis"
                       value={crisisCount}
-                      onChange={(e) => setCrisisCount(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      readOnly
+                      title="Las crisis son detectadas automáticamente por la pulsera IoT"
+                      className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none cursor-not-allowed text-slate-500 transition-all"
                     />
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 mt-1">
+                      <Watch className="w-3 h-3" /> Sincronizado vía IoT
+                    </span>
                   </div>
                 </div>
 

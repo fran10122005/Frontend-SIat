@@ -72,7 +72,7 @@ export default function Sidebar() {
             ? "tour-specialist-sidebar"
             : "tour-parent-sidebar"
         }
-        className={`fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] dark:from-[#020617] dark:via-[#0B1120] dark:to-[#1E293B] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 dark:shadow-black/40 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -107,7 +107,9 @@ export default function Sidebar() {
             const isBlocked =
               userRole === "ESPECIALISTA" &&
               !selectedChildId &&
-              ["rutinas", "historial", "home_analytics"].includes(item.id);
+              ["rutinas", "historial", "home_analytics", "inventario"].includes(
+                item.id,
+              );
 
             return (
               <button
@@ -115,7 +117,9 @@ export default function Sidebar() {
                 id={`tour-sidebar-${item.id}`}
                 onClick={() => {
                   if (isBlocked) {
-                    showToast("⚠️ Selecciona un paciente primero");
+                    showToast("👆 Selecciona un paciente para continuar");
+                    navigate("patients");
+                    setIsSidebarOpen(false);
                     return;
                   }
                   if (item.id === "manual_especialista") {
@@ -137,8 +141,8 @@ export default function Sidebar() {
                   isBlocked
                     ? "opacity-40 cursor-not-allowed text-blue-200"
                     : activeMenu === item.id
-                      ? "bg-gradient-to-r from-white/20 to-white/5 text-white font-bold shadow-lg shadow-black/10 border-l-4 border-white"
-                      : "text-blue-100 hover:bg-white/10 hover:text-white hover:translate-x-1"
+                      ? "bg-gradient-to-r from-white/20 to-white/5 dark:from-slate-500/20 dark:to-transparent text-white font-bold shadow-lg shadow-black/10 border-l-4 border-white dark:border-blue-400"
+                      : "text-blue-100 dark:text-slate-300 hover:bg-white/10 dark:hover:bg-white/5 hover:text-white hover:translate-x-1"
                 }`}
               >
                 <Icon
@@ -147,7 +151,7 @@ export default function Sidebar() {
                       ? "text-blue-300"
                       : activeMenu === item.id
                         ? "text-white"
-                        : "text-blue-200 group-hover:text-white"
+                        : "text-blue-200 dark:text-slate-400 group-hover:text-white"
                   }`}
                 />
                 <span className="text-sm tracking-wide flex-1">

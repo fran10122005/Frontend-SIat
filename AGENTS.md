@@ -80,6 +80,19 @@ Estabilizar el panel admin, corregir errores del inspector, mejorar responsive.
 - **Frontend**: `ins_codi` ahora es **readOnly** en CatalogosTab (es la PK; editarlo solo rompía la URL del PUT). Se quitó `ins_esta` del body (campo inexistente; el real es `ins_estd`).
 - **Verificación**: suite backend 38/38, eslint 0 errores, build frontend OK.
 
+### Sesión 9 — Historial de Evolución responsive + fix SpecialistDashboard
+- **SpecialistDashboard parsing error**: regex automático (`c.replace(/^\s*\)\}/m, '}')`) eliminó el `)` del cierre del ternary `{activeChild ? (...) : (...)}`, causando `Parsing error: Unexpected token }`. Restaurado `{activeChild ? (` antes del bloque de botones del paciente activo. Verificación: eslint 0 errores.
+- **HistoryProgress header**: migrado a patrón AdminDashboard (`flex-col sm:flex-row sm:items-start justify-between gap-4`). Botón "Exportar PDF" ahora en el header a la derecha con `flex-wrap gap-2 shrink-0`, no debajo del título.
+- **HistoryProgress tabla colapsable en móvil**: eliminado `hidden sm:table-cell` que ocultaba columnas sin alternativa. Implementada vista dual: desktop = tabla completa (`hidden sm:table`), mobile = cards con expand/collapse por fila (`sm:hidden`). Cada fila móvil muestra fecha + preview de notas + badge de efectividad + chevron; al expandir muestra grid 2×2 con todos los campos (fecha, sesiones, efectividad, notas médicas). `expandedRows` (Set) se resetea al cambiar filtros.
+- **Lint**: 0 errores (75 warnings pre-existentes), **build**: OK, **tests**: 25/25 OK.
+
+### Sesión 10 — FASE 1: Datos Reales y Limpieza Backend
+- **1.1 Alertas reales en dashboard**: `globalAlertsFeed` estaba hardcodeado como `[]`. Ahora usa `alertsSource` (que mezcla `clinicalAlerts` + `mockAlerts`), para que SpecialistGlobalView muestre las alertas reales del paciente.
+- **1.2 Hooks de sesiones**: nuevos `fetchSessions`, `startSession`, `closeSession`, `logActivity` en GlobalState usando endpoints `/sesiones/*` existentes. `fetchSessions` se ejecuta al seleccionar un paciente. State `sessions` e `isSessionsLoading` disponibles en context.
+- **1.4 LoadingState**: ya era consistente. Sin cambios necesarios.
+- **Pendiente FASE 1.3**: `markIndicacionRead` / `fetchIndicacionStatus` requiere endpoint nuevo en backend.
+- **Verificación**: 0 errores lint, build OK, 25/25 tests OK.
+
 ## Known Issues
 
 ## Next Steps
@@ -105,6 +118,15 @@ Estabilizar el panel admin, corregir errores del inspector, mejorar responsive.
 - `src/components/layout/AdminSidebar.jsx` — badges con counts.
 - `src/components/admin/AdminActivityLog.jsx` — PDF export, responsive.
 - `src/components/admin/InfraestructuraTab.jsx` — health fetch + fallback.
+- `src/components/admin/EspecialistasTab.jsx` — botón reset pass.
+- `src/components/admin/CatalogosTab.jsx` — formulario institución (RIF editable, email/web).
+- `src/components/admin/AdminKPIs.jsx` — KPIs con trends.
+- `src/components/admin/AdminCharts.jsx` — charts con tooltips.
+- `src/pages/SpecialistDashboard.jsx` — fix parsing error, header responsive, botones患者 activo.
+- `src/pages/HistoryProgress.jsx` — header AdminDashboard, tabla colapsable móvil, botones Button.
+- `src/pages/Routines.jsx` — header responsive, FilterBar embedded, live session compact.
+- `src/components/shared/FilterBar.jsx` — fix embedded responsive.
+- `REVISION_PANEL_ESPECIALISTA.md` — plan de mejora panel especialista v2.0.
 - `src/components/admin/EspecialistasTab.jsx` — botón reset pass.
 - `src/components/admin/CatalogosTab.jsx` — formulario institución (RIF editable, email/web).
 - `src/components/admin/AdminKPIs.jsx` — KPIs con trends.

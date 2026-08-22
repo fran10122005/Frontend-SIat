@@ -429,6 +429,7 @@ export default function RepresentantesTab({
         title="Editar Representante"
         subtitle={`${editingRep?.rep_nomb || ""} ${editingRep?.rep_apel || ""}`.trim()}
         maxWidth="max-w-xl"
+        icon={Pencil}
       >
         <form
           onSubmit={async (e) => {
@@ -520,14 +521,14 @@ export default function RepresentantesTab({
             <button
               type="button"
               onClick={() => setEditingRep(null)}
-              className="md:w-auto w-full px-6 py-2.5 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
               Cancelar
             </button>
             <button
               disabled={parentLoading}
               type="submit"
-              className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               Guardar Cambios
             </button>
@@ -543,6 +544,7 @@ export default function RepresentantesTab({
           title="Vista previa del Representante"
           subtitle={`${previewRep.rep_nomb || ""} ${previewRep.rep_apel || ""}`.trim()}
           maxWidth="max-w-xl"
+          icon={UserRound}
         >
           <div className="space-y-6">
             {/* Ficha del representante */}

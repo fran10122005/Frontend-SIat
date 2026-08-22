@@ -572,26 +572,33 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col border border-slate-200/80 dark:border-slate-800 max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col border border-slate-200 dark:border-slate-700/80 max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
         {/* ── Header ── */}
-        <div className="flex items-start justify-between gap-4 px-7 py-5 border-b border-slate-200 dark:border-slate-700 shrink-0">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white font-display">
-              Registro de Nuevo Paciente
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Formulario de ingreso al Sistema Integrado de Asignación y
-              Seguimiento de Terapia
-            </p>
+        <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-xl">
+                <Baby className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">
+                  Registro de Nuevo Paciente
+                </h3>
+                <p className="text-blue-100 text-sm mt-0.5">
+                  Formulario de ingreso al Sistema Integrado de Asignación y
+                  Seguimiento de Terapia
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* ── Stepper ── */}
@@ -1163,7 +1170,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-semibold rounded-xl flex items-center gap-2 text-sm transition-all shadow-md shadow-brand-600/20 hover:-translate-y-0.5"
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold rounded-xl flex items-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20 hover:-translate-y-0.5"
               >
                 Continuar <ChevronRight className="w-4 h-4" />
               </button>
@@ -1172,7 +1179,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading || !form.acepta_lopnna || docsUploading}
-                className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl flex items-center gap-2 text-sm transition-all shadow-md shadow-brand-600/20 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-xl flex items-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
               >
                 {loading ? (
                   <>

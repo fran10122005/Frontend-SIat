@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios";
@@ -86,6 +87,41 @@ export const GlobalProvider = ({ children }) => {
     }
     setIsDark(!isDark);
   };
+
+  const [specialistConfig, setSpecialistConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem("specialistConfig");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const updateSpecialistConfig = (newConfig) => {
+    setSpecialistConfig((prev) => {
+      const merged = { ...prev, ...newConfig };
+      localStorage.setItem("specialistConfig", JSON.stringify(merged));
+      return merged;
+    });
+  };
+
+  const isQuietHours = useMemo(() => {
+    if (!specialistConfig.quietHoursEnabled) return false;
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    const current = h * 60 + m;
+    const [sh, sm] = (specialistConfig.quietStart || "22:00")
+      .split(":")
+      .map(Number);
+    const [eh, em] = (specialistConfig.quietEnd || "07:00")
+      .split(":")
+      .map(Number);
+    const start = sh * 60 + sm;
+    const end = eh * 60 + em;
+    if (start > end) return current >= start || current < end;
+    return current >= start && current < end;
+  }, [specialistConfig]);
 
   useEffect(() => {
     localStorage.setItem("currentView", currentView);
@@ -216,47 +252,80 @@ export const GlobalProvider = ({ children }) => {
       (userRole === "ESPECIALISTA" || userRole === "REPRESENTANTE")
     ) {
       fetchRoutines();
+      fetchCategories();
     }
   }, [currentView, userRole, selectedChildId]);
 
   const [routines, setRoutines] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [isRoutinesLoading, setIsRoutinesLoading] = useState(false);
 
-  const fetchRoutines = async () => {
+  const fetchCategories = async () => {
     try {
-      const url = selectedChildId
-        ? `/sesiones/actividades?nin_codi=${selectedChildId}`
-        : "/sesiones/actividades";
-      const res = await api.get(url);
+      const res = await api.get("/sesiones/categorias?limite=100");
       const data = res.data.data;
-      if (data && data.length > 0) {
-        const mapped = data.map((act) => ({
-          id: act.act_codi,
-          title: act.act_trea,
-          category: act.tm_categ?.cat_nomb || "Monitoreo",
-          durationStr: `${act.act_time || 15} min`,
-          inst: act.act_guia || "",
-        }));
-        setRoutines(mapped);
-      }
+      setCategories(data?.items || []);
     } catch (err) {
-      console.error("Error fetching routines:", err);
+      console.error("Error fetching categories:", err);
     }
   };
 
+  const fetchRoutines = async () => {
+    setIsRoutinesLoading(true);
+    try {
+      const url = selectedChildId
+        ? `/sesiones/actividades?nin_codi=${selectedChildId}&limite=100`
+        : "/sesiones/actividades?limite=100";
+      const res = await api.get(url);
+      const data = res.data.data;
+      const items = data?.items || [];
+      const mapped = items.map((act) => ({
+        id: act.act_codi,
+        title: act.act_trea,
+        category: act.tm_categ?.cat_nomb || "Monitoreo",
+        categoryCode: act.cat_codi,
+        description: act.act_desc || "",
+        difficulty: act.act_difi || "Baja",
+        status: act.act_estd || "Activa",
+        durationStr: act.act_time ? `${act.act_time} min` : "Sin duración",
+        act_time: act.act_time || 15,
+        inst: act.act_guia || "",
+        media: act.act_med || "",
+        materials: act.act_meta || "",
+        sessionCount: act._count?.tr_sesio || 0,
+      }));
+      setRoutines(mapped);
+    } catch (err) {
+      console.error("Error fetching routines:", err);
+    } finally {
+      setIsRoutinesLoading(false);
+    }
+  };
+
+  const resolveCategory = (name) =>
+    categories.find(
+      (c) =>
+        c.cat_nomb?.trim().toLowerCase() === String(name || "").toLowerCase(),
+    ) ||
+    categories.find((c) => c.cat_codi === "CAT_SIM") ||
+    categories[0] ||
+    null;
+
   const createRoutine = async (formData) => {
     try {
-      const categoryMap = {
-        Higiene: "CAT_SIM",
-        Terapéutico: "CAT_SIM",
-        Alimentación: "CAT_SIM",
-        Educativo: "CAT_SIM",
-        Regulación: "CAT_SIM",
-      };
+      const cat = resolveCategory(formData.category);
+      if (!cat) {
+        showToast("⚠️ No hay categorías disponibles. Crea una primero.");
+        return;
+      }
 
       const payload = {
-        category_code: categoryMap[formData.category] || "CAT_SIM",
+        cat_codi: cat.cat_codi,
         act_trea: formData.title,
-        act_meta: formData.difficulty || "Baja",
+        act_desc: formData.description || undefined,
+        act_meta: formData.materials?.trim() || undefined,
+        act_difi: formData.difficulty || "Baja",
+        act_med: formData.mediaUrl?.trim() || undefined,
         act_guia: formData.steps
           ? formData.steps
               .map((s, index) => `${index + 1}. ${s.text} (${s.time})`)
@@ -272,6 +341,86 @@ export const GlobalProvider = ({ children }) => {
     } catch (err) {
       console.error("Error creating routine:", err);
       toastError(err, showToast, "Error al guardar la rutina.");
+    }
+  };
+
+  const updateRoutine = async (act_codi, formData) => {
+    try {
+      const cat = resolveCategory(formData.category);
+      if (!cat) {
+        showToast("⚠️ No hay categorías disponibles. Crea una primero.");
+        return;
+      }
+
+      const payload = {
+        cat_codi: cat.cat_codi,
+        act_trea: formData.title,
+        act_desc: formData.description || undefined,
+        act_meta: formData.materials?.trim() || undefined,
+        act_difi: formData.difficulty || "Baja",
+        act_med: formData.mediaUrl?.trim() || undefined,
+        act_guia: formData.steps
+          ? formData.steps
+              .map((s, index) => `${index + 1}. ${s.text} (${s.time})`)
+              .join("\n")
+          : "",
+        act_time: parseInt(formData.durationStr) || 15,
+      };
+
+      await api.put(`/sesiones/actividades/${act_codi}`, payload);
+      showToast("✅ Terapia actualizada correctamente.");
+      await fetchRoutines();
+    } catch (err) {
+      console.error("Error updating routine:", err);
+      toastError(err, showToast, "Error al actualizar la rutina.");
+    }
+  };
+
+  const deleteRoutine = async (act_codi) => {
+    try {
+      await api.delete(`/sesiones/actividades/${act_codi}`);
+      showToast("🗑️ Terapia eliminada.");
+      await fetchRoutines();
+    } catch (err) {
+      console.error("Error deleting routine:", err);
+      toastError(err, showToast, "Error al eliminar la rutina.");
+    }
+  };
+
+  const createCategory = async (cat_nomb, cat_deta = "") => {
+    try {
+      await api.post("/sesiones/categorias", {
+        cat_nomb,
+        cat_deta: cat_deta || undefined,
+      });
+      showToast("✅ Categoría creada.");
+      await fetchCategories();
+    } catch (err) {
+      console.error("Error creating category:", err);
+      toastError(err, showToast, "Error al crear la categoría.");
+    }
+  };
+
+  const updateCategory = async (cat_codi, data) => {
+    try {
+      await api.put(`/sesiones/categorias/${cat_codi}`, data);
+      showToast("✅ Categoría actualizada.");
+      await fetchCategories();
+    } catch (err) {
+      console.error("Error updating category:", err);
+      toastError(err, showToast, "Error al actualizar la categoría.");
+    }
+  };
+
+  const deleteCategory = async (cat_codi) => {
+    try {
+      await api.delete(`/sesiones/categorias/${cat_codi}`);
+      showToast("🗑️ Categoría eliminada.");
+      await fetchCategories();
+      await fetchRoutines();
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      toastError(err, showToast, "No se pudo eliminar la categoría.");
     }
   };
 
@@ -517,11 +666,104 @@ export const GlobalProvider = ({ children }) => {
     }
   };
 
+  // ==== SESSIONS HOOKS (FASE 1.2) ====
+  const [sessions, setSessions] = useState([]);
+  const [isSessionsLoading, setIsSessionsLoading] = useState(false);
+
+  const fetchSessions = useCallback(async (childId) => {
+    if (!childId) return;
+    setIsSessionsLoading(true);
+    try {
+      const res = await api.get(`/sesiones/ninos/${childId}/sesiones`);
+      setSessions(res.data.data || []);
+    } catch (err) {
+      console.error("Error fetching sessions:", err);
+    } finally {
+      setIsSessionsLoading(false);
+    }
+  }, []);
+
+  const startSession = useCallback(
+    async (sessionData) => {
+      try {
+        const nin_codi =
+          sessionData.nin_codi ||
+          sessionData.patient?.nin_codi ||
+          sessionData.patient?.id_ninos;
+        let act_codi = sessionData.act_codi;
+
+        if (!act_codi && sessionData.activities?.length > 0) {
+          act_codi = sessionData.activities[0];
+        }
+
+        if (!nin_codi || !act_codi) {
+          throw new Error(
+            "Faltan datos: seleccione un paciente y al menos una actividad",
+          );
+        }
+
+        const res = await api.post("/sesiones/iniciar", { nin_codi, act_codi });
+        if (nin_codi) await fetchSessions(nin_codi);
+        return res.data;
+      } catch (err) {
+        console.error("Error starting session:", err);
+        throw err;
+      }
+    },
+    [fetchSessions],
+  );
+
+  const closeSession = useCallback(
+    async (sesCodi, childId, summaryData) => {
+      try {
+        const res = await api.put(`/sesiones/${sesCodi}/cerrar`, summaryData);
+        if (childId) await fetchSessions(childId);
+        return res.data;
+      } catch (err) {
+        console.error("Error closing session:", err);
+        throw err;
+      }
+    },
+    [fetchSessions],
+  );
+
+  const logActivity = useCallback(async (activityData) => {
+    try {
+      const res = await api.post("/sesiones/actividades", activityData);
+      return res.data;
+    } catch (err) {
+      console.error("Error logging activity:", err);
+      throw err;
+    }
+  }, []);
+
+  // ==== INDICACIONES HOOKS (FASE 1.3) ====
+  const markIndicacionRead = useCallback(async (indicacionId) => {
+    try {
+      await api.patch(`/especialista/indicaciones/${indicacionId}/leer`);
+    } catch (err) {
+      console.error("Error marking indication as read:", err);
+      throw err;
+    }
+  }, []);
+
+  const fetchIndicacionStatus = useCallback(async (childId) => {
+    if (!childId) return [];
+    try {
+      const res = await api.get(`/especialista/indicaciones/${childId}`);
+      return res.data.data || [];
+    } catch (err) {
+      console.error("Error fetching indications:", err);
+      return [];
+    }
+  }, []);
+
   useEffect(() => {
     if (selectedChildId) {
       fetchHistorialCompleto(selectedChildId);
       fetchPeiGoals(selectedChildId);
       fetchCrisisAlerts(selectedChildId);
+      fetchSessions(selectedChildId);
     }
   }, [selectedChildId]);
 
@@ -700,6 +942,13 @@ export const GlobalProvider = ({ children }) => {
         routines,
         fetchRoutines,
         createRoutine,
+        updateRoutine,
+        deleteRoutine,
+        categories,
+        isRoutinesLoading,
+        createCategory,
+        updateCategory,
+        deleteCategory,
         clinicalAlerts,
         clinicalHistory,
         crisisAlerts,
@@ -709,6 +958,17 @@ export const GlobalProvider = ({ children }) => {
         globalPeiGoals,
         crearPeiGoal,
         incrementPeiTrial,
+        sessions,
+        isSessionsLoading,
+        fetchSessions,
+        startSession,
+        closeSession,
+        logActivity,
+        markIndicacionRead,
+        fetchIndicacionStatus,
+        specialistConfig,
+        updateSpecialistConfig,
+        isQuietHours,
       }}
     >
       {children}

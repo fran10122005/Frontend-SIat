@@ -5,6 +5,7 @@ import api from "../api/axios";
 import AlertCenter from "../components/shared/AlertCenter";
 import Indicaciones from "../components/shared/Indicaciones";
 import {
+  Activity,
   UserCircle,
   Calendar,
   AlertTriangle,
@@ -19,6 +20,7 @@ import {
   Phone,
   ClipboardList,
 } from "lucide-react";
+import Button from "../components/ui/Button";
 import Topbar from "../components/layout/Topbar";
 import LoadingState from "../components/dashboard/LoadingState";
 import { useConsentimiento } from "../hooks/useConsentimiento";
@@ -97,22 +99,19 @@ export default function ParentProfile() {
   if (userRole !== "REPRESENTANTE") {
     return (
       <div className="flex h-[100dvh] w-full bg-slate-50 dark:bg-slate-900 items-center justify-center">
-        <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+        <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="text-red-500 mb-4">
             <ShieldAlert className="w-16 h-16 mx-auto" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">
             Acceso Denegado
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-slate-500 dark:text-slate-400 mb-6">
             Módulo exclusivo para Representantes (Padres).
           </p>
-          <button
-            onClick={() => navigate("dashboard")}
-            className="px-6 py-2 bg-brand-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
+          <Button variant="primary" onClick={() => navigate("dashboard")}>
             Volver al Inicio
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -136,49 +135,55 @@ export default function ParentProfile() {
 
         {/* Content Container with Tabs */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Header & Tabs */}
-          <div className="pt-4 md:pt-5 px-6 md:px-8 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shrink-0">
-            <div className="max-w-[1400px] mx-auto">
+          {/* Header */}
+          <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 px-6 md:px-8 pt-4 md:pt-5 shrink-0">
+            <div className="flex flex-col gap-2">
               <h1
                 data-tour="pp-header"
-                className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors mb-4"
+                className="text-xl md:text-2xl font-bold tracking-tight text-brand-700 dark:text-blue-400 flex items-center gap-2"
               >
-                <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                <Activity className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                 Expediente Clínico
               </h1>
+              <p className="hidden sm:block text-sm text-slate-500 dark:text-slate-400">
+                Información clínica del paciente asociado a tu cuenta.
+              </p>
+            </div>
+          </header>
 
-              <div
-                data-tour="pp-tabs"
-                className="flex gap-6 overflow-x-auto no-scrollbar"
+          {/* Tab Bar */}
+          <div
+            data-tour="pp-tabs"
+            className="px-6 md:px-8 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 shrink-0"
+          >
+            <div className="flex gap-6 overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setActiveTab("perfil")}
+                className={`py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "perfil" ? "border-brand-500 text-brand-500" : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
               >
-                <button
-                  onClick={() => setActiveTab("perfil")}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "perfil" ? "border-brand-500 text-brand-500" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
-                >
-                  <span className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Información del Perfil
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("alertas")}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "alertas" ? "border-brand-500 text-brand-500" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
-                >
-                  <span className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4" />
-                    Registro de Alertas
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab("indicaciones")}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "indicaciones" ? "border-brand-500 text-brand-500" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
-                >
-                  <span className="flex items-center gap-2">
-                    <MessageSquareText className="w-4 h-4" />
-                    Indicaciones Clínicas
-                  </span>
-                </button>
-              </div>
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Información del Perfil
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab("alertas")}
+                className={`py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "alertas" ? "border-brand-500 text-brand-500" : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
+              >
+                <span className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Registro de Alertas
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab("indicaciones")}
+                className={`py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === "indicaciones" ? "border-brand-500 text-brand-500" : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
+              >
+                <span className="flex items-center gap-2">
+                  <MessageSquareText className="w-4 h-4" />
+                  Indicaciones Clínicas
+                </span>
+              </button>
             </div>
           </div>
 
@@ -188,39 +193,41 @@ export default function ParentProfile() {
               <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
                 <div
                   data-tour="pp-perfil"
-                  className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors duration-200"
+                  className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-200"
                 >
-                  <div className="p-6 md:p-8">
-                    <h3 className="text-sm font-semibold text-brand-700 dark:text-blue-300 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 mb-6 transition-colors">
+                  <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30">
+                    <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                       Datos Clínicos Registrados
                     </h3>
-
+                  </div>
+                  <div className="p-6 md:p-8">
                     {loadingProfile ? (
                       <div className="py-4">
                         <LoadingState variant="profile" />
                       </div>
                     ) : !childProfile ? (
                       <div className="text-center py-12 space-y-4">
-                        <AlertTriangle className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600" />
-                        <p className="text-gray-500 dark:text-gray-400">
+                        <AlertTriangle className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600" />
+                        <p className="text-slate-500 dark:text-slate-400">
                           No se encontró información de expediente para el niño
                           asociado.
                         </p>
-                        <button
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          leftIcon={<RefreshCw className="w-4 h-4" />}
                           onClick={fetchProfile}
-                          className="px-4 py-2 text-sm font-medium text-brand-500 hover:text-brand-600 border border-brand-200 dark:border-brand-800 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors inline-flex items-center gap-2"
                         >
-                          <RefreshCw className="w-3.5 h-3.5" /> Intentar de
-                          nuevo
-                        </button>
+                          Intentar de nuevo
+                        </Button>
                       </div>
                     ) : (
                       <>
                         <div
                           data-tour="pp-profile-card"
-                          className="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-6 mb-6 border-b border-gray-100 dark:border-slate-700"
+                          className="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-6 mb-6 border-b border-slate-100 dark:border-slate-700"
                         >
-                          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-2 border-gray-200 dark:border-slate-600 flex items-center justify-center overflow-hidden shrink-0 bg-gray-50 dark:bg-slate-900">
+                          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-2 border-slate-200 dark:border-slate-600 flex items-center justify-center overflow-hidden shrink-0 bg-slate-50 dark:bg-slate-900">
                             {childProfile.nin_foto ? (
                               <img
                                 src={childProfile.nin_foto}
@@ -228,11 +235,11 @@ export default function ParentProfile() {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <UserCircle className="w-14 h-14 text-gray-300 dark:text-gray-600" />
+                              <UserCircle className="w-14 h-14 text-slate-300 dark:text-slate-600" />
                             )}
                           </div>
                           <div className="flex-1 text-center sm:text-left min-w-0">
-                            <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                            <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white truncate">
                               {childProfile.nin_nomb} {childProfile.nin_apel}
                             </h3>
                             <div className="mt-2 flex flex-wrap justify-center sm:justify-start gap-2">
@@ -257,7 +264,7 @@ export default function ParentProfile() {
                               )}
                             </div>
                             {childProfile.nin_ingr && (
-                              <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
                                 Ingreso al sistema:{" "}
                                 {formatIngreso(childProfile.nin_ingr)}
                               </p>
@@ -265,32 +272,19 @@ export default function ParentProfile() {
                           </div>
                         </div>
 
-                        {childProfile.nin_diag && (
-                          <div
-                            data-tour="pp-diagnosis"
-                            className="flex items-start gap-3 mb-6 bg-slate-50 dark:bg-slate-900/60 border border-gray-100 dark:border-slate-700 rounded-lg p-4"
-                          >
-                            <ClipboardList className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                                Diagnóstico Clínico
-                              </p>
-                              <p className="text-md text-gray-800 dark:text-gray-200 mt-1">
-                                {childProfile.nin_diag}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          {/* Datos Personales */}
                           <div className="space-y-6">
+                            <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700/50 pb-2">
+                              Datos Personales
+                            </h4>
                             <div className="flex items-start gap-3">
                               <User className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                                   Nombre Completo
                                 </p>
-                                <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                                <p className="text-lg font-medium text-slate-900 dark:text-white mt-1">
                                   {childProfile.nin_nomb}{" "}
                                   {childProfile.nin_apel}
                                 </p>
@@ -299,10 +293,10 @@ export default function ParentProfile() {
                             <div className="flex items-start gap-3">
                               <Hash className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                                   Código de Sistema (ID)
                                 </p>
-                                <p className="text-sm font-mono text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700/50 inline-block px-2 py-1 rounded mt-1">
+                                <p className="text-sm font-mono text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/50 inline-block px-2 py-1 rounded mt-1">
                                   {childProfile.nin_codi}
                                 </p>
                               </div>
@@ -310,10 +304,10 @@ export default function ParentProfile() {
                             <div className="flex items-start gap-3">
                               <Calendar className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                                   Fecha de Nacimiento
                                 </p>
-                                <p className="text-md text-gray-800 dark:text-gray-200 mt-1 flex items-center gap-2">
+                                <p className="text-md text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-2">
                                   {childProfile.nin_fnac
                                     ? new Date(
                                         childProfile.nin_fnac,
@@ -333,11 +327,15 @@ export default function ParentProfile() {
                             </div>
                           </div>
 
+                          {/* Información Clínica */}
                           <div className="space-y-6">
+                            <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700/50 pb-2">
+                              Información Clínica
+                            </h4>
                             <div className="flex items-start gap-3">
                               <Brain className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                                   Nivel de Desarrollo (TEA)
                                 </p>
                                 <div
@@ -353,7 +351,7 @@ export default function ParentProfile() {
                             <div className="flex items-start gap-3">
                               <Brain className="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                                   Perfil Sensorial Principal
                                 </p>
                                 <div className="inline-flex items-center gap-2 px-3 py-1.5 mt-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-lg font-medium text-sm">
@@ -363,13 +361,35 @@ export default function ParentProfile() {
                                 </div>
                               </div>
                             </div>
+                            {childProfile.nin_diag && (
+                              <div className="flex items-start gap-3">
+                                <ClipboardList className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+                                    Diagnóstico Clínico
+                                  </p>
+                                  <p className="text-md text-slate-800 dark:text-slate-200 mt-1">
+                                    {childProfile.nin_diag}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Información Institucional */}
+                        <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50">
+                          <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">
+                            Información Institucional
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="flex items-start gap-3">
                               <Stethoscope className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                                   Especialista Asignado
                                 </p>
-                                <p className="text-md text-gray-800 dark:text-gray-200 mt-1 flex items-center gap-2">
+                                <p className="text-md text-slate-800 dark:text-slate-200 mt-1 flex items-center gap-2">
                                   <User className="w-4 h-4 text-brand-500" />
                                   {childProfile.especialista || "No asignado"}
                                 </p>
@@ -378,15 +398,15 @@ export default function ParentProfile() {
                             <div className="flex items-start gap-3">
                               <Building2 className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                                   Institución
                                 </p>
-                                <p className="text-md text-gray-800 dark:text-gray-200 mt-1">
+                                <p className="text-md text-slate-800 dark:text-slate-200 mt-1">
                                   {childProfile.institucion?.ins_nomb ||
                                     "No registrada"}
                                 </p>
                                 {childProfile.institucion?.ins_telf && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1">
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
                                     <Phone className="w-3.5 h-3.5" />
                                     {childProfile.institucion.ins_telf}
                                   </p>
@@ -399,8 +419,8 @@ export default function ParentProfile() {
                     )}
                   </div>
 
-                  <div className="px-6 md:px-8 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-700 flex justify-end">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <div className="px-6 md:px-8 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
                       Cualquier modificación debe ser solicitada al especialista
                       médico.

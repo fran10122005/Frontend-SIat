@@ -29,28 +29,31 @@ export default function ConsentimientoModal({ onAccept, loading }) {
   }).format(new Date());
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-brand-50 dark:bg-slate-900/50 p-6 border-b border-brand-100 dark:border-slate-700 flex items-center gap-4">
-          <div className="bg-brand-100 dark:bg-brand-900/30 p-3 rounded-xl">
-            <ShieldAlert className="w-8 h-8 text-brand-600 dark:text-brand-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-              Consentimiento Informado Legal
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Requerido por la Ley de Infogobierno (Art. 79) y LOPNNA (Art. 65)
-            </p>
+        <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-xl">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">
+                Consentimiento Informado Legal
+              </h2>
+              <p className="text-blue-100 text-sm mt-0.5">
+                Requerido por la Ley de Infogobierno (Art. 79) y LOPNNA (Art.
+                65)
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Body / Documento */}
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-900/20">
+        <div className="p-6 overflow-y-auto flex-1">
           <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
             <div className="flex items-center gap-2 mb-4 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-100 dark:border-slate-700 pb-2">
-              <FileText className="w-5 h-5 text-brand-500" />
+              <FileText className="w-5 h-5 text-blue-500" />
               Términos y Condiciones del Servicio
             </div>
             <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">
@@ -60,12 +63,12 @@ export default function ConsentimientoModal({ onAccept, loading }) {
         </div>
 
         {/* Footer / Acción */}
-        <div className="p-6 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-4">
-          <label className="flex items-start gap-3 p-3 rounded-lg border border-transparent hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors">
+        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700/50 flex flex-col gap-4 shrink-0">
+          <label className="flex items-start gap-3 p-3 rounded-xl border-2 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
             <div className="mt-0.5">
               <input
                 type="checkbox"
-                className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 focus:ring-offset-0 dark:border-slate-600 dark:bg-slate-700"
+                className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 dark:border-slate-600 dark:bg-slate-700"
                 checked={acceptedCheck}
                 onChange={(e) => setAcceptedCheck(e.target.checked)}
               />
@@ -76,24 +79,26 @@ export default function ConsentimientoModal({ onAccept, loading }) {
               </span>
               Como representante legal, firmo digitalmente mi consentimiento en
               la fecha: <br />
-              <span className="text-brand-600 dark:text-brand-400 font-mono text-xs">
+              <span className="text-blue-600 dark:text-blue-400 font-mono text-xs">
                 {currentDate}
               </span>
             </div>
           </label>
 
-          <button
-            onClick={handleAccept}
-            disabled={!acceptedCheck || loading}
-            className="w-full py-3 px-4 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm"
-          >
-            {loading ? (
-              <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            ) : (
-              <CheckCircle className="w-5 h-5" />
-            )}
-            Aceptar y Continuar
-          </button>
+          <div className="flex justify-end">
+            <button
+              onClick={handleAccept}
+              disabled={!acceptedCheck || loading}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm shadow-blue-600/25"
+            >
+              {loading ? (
+                <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              ) : (
+                <CheckCircle className="w-5 h-5" />
+              )}
+              Aceptar y Continuar
+            </button>
+          </div>
         </div>
       </div>
     </div>

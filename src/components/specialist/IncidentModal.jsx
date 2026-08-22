@@ -1,4 +1,5 @@
 import { AlertCircle, X } from "lucide-react";
+import Button from "../ui/Button";
 
 const TIPOS = [
   "Berrinche / Rabieta",
@@ -24,21 +25,9 @@ const DETONANTES = [
 ];
 
 const SEVERIDADES = [
-  {
-    value: "Leve",
-    color:
-      "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400",
-  },
-  {
-    value: "Moderada",
-    color:
-      "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400",
-  },
-  {
-    value: "Severa",
-    color:
-      "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400",
-  },
+  { value: "Leve", color: "bg-emerald-500 border-emerald-500 text-white" },
+  { value: "Moderada", color: "bg-amber-500 border-amber-500 text-white" },
+  { value: "Severa", color: "bg-rose-600 border-rose-600 text-white" },
 ];
 
 const RESULTADOS = [
@@ -47,6 +36,9 @@ const RESULTADOS = [
   "Regulación parcial / seguimiento en casa",
   "Escalada / requirió retiro",
 ];
+
+const inputClass =
+  "w-full px-4 py-2.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer";
 
 export default function IncidentModal({
   showIncidentModal,
@@ -61,37 +53,43 @@ export default function IncidentModal({
     setIncidentData((prev) => ({ ...prev, [key]: e.target.value }));
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-rose-200 dark:border-rose-900/50 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
-        <div className="px-6 py-4 border-b border-rose-100 dark:border-rose-900/30 flex justify-between items-center bg-rose-50 dark:bg-rose-900/10 shrink-0">
-          <h3 className="text-base font-bold text-rose-700 dark:text-rose-400 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5" />
-            Registro de Incidente Conductual (A-B-C)
-          </h3>
-          <button
-            onClick={() => setShowIncidentModal(false)}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-            aria-label="Cerrar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="px-6 py-5 bg-rose-600 text-white shrink-0">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-xl">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold">
+                Registro de Incidente (A-B-C)
+              </h3>
+            </div>
+            <button
+              onClick={() => setShowIncidentModal(false)}
+              className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <form
           onSubmit={handleIncidentSubmit}
-          className="p-6 space-y-5 overflow-y-auto"
+          className="p-6 space-y-5 overflow-y-auto flex-1"
         >
           {/* Tipo + Duración */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Tipo de Conducta
               </label>
               <select
                 required
                 value={incidentData.inc_tipo}
                 onChange={set("inc_tipo")}
-                className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 transition-all cursor-pointer"
+                className={inputClass}
               >
                 <option value="">Selecciona...</option>
                 {TIPOS.map((t) => (
@@ -102,14 +100,14 @@ export default function IncidentModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Duración Aproximada
               </label>
               <select
                 required
                 value={incidentData.inc_dura}
                 onChange={set("inc_dura")}
-                className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 transition-all cursor-pointer"
+                className={inputClass}
               >
                 <option value="">Selecciona...</option>
                 <option value="< 1 minuto">{"<"} 1 minuto</option>
@@ -120,16 +118,16 @@ export default function IncidentModal({
             </div>
           </div>
 
-          {/* Antecedente A */}
+          {/* Antecedente */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Antecedente / Detonante (A)
             </label>
             <select
               required
               value={incidentData.inc_deto}
               onChange={set("inc_deto")}
-              className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 transition-all cursor-pointer"
+              className={inputClass}
             >
               <option value="">Selecciona el detonante...</option>
               {DETONANTES.map((d) => (
@@ -142,7 +140,7 @@ export default function IncidentModal({
 
           {/* Severidad */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Severidad del Incidente
             </label>
             <div className="flex gap-2">
@@ -153,7 +151,7 @@ export default function IncidentModal({
                   onClick={() =>
                     setIncidentData((prev) => ({ ...prev, inc_seve: s.value }))
                   }
-                  className={`flex-1 px-4 py-2.5 rounded-xl border-2 text-xs font-bold transition-all ${incidentData.inc_seve === s.value ? s.color : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400"}`}
+                  className={`flex-1 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${incidentData.inc_seve === s.value ? s.color : "border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800"}`}
                 >
                   {s.value}
                 </button>
@@ -161,28 +159,28 @@ export default function IncidentModal({
             </div>
           </div>
 
-          {/* Rutina + Consecuencia */}
+          {/* Rutina + Resultado */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Rutina Aplicada (Apoyo)
               </label>
               <input
                 type="text"
                 value={incidentData.inc_ruti || ""}
                 onChange={set("inc_ruti")}
-                className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 transition-all"
-                placeholder="Ej. Respiración de la tortuga, Presión profunda"
+                placeholder="Ej. Respiración de la tortuga"
+                className={`${inputClass} cursor-text`}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Resultado Final
               </label>
               <select
                 value={incidentData.inc_resu || ""}
                 onChange={set("inc_resu")}
-                className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 transition-all cursor-pointer"
+                className={inputClass}
               >
                 <option value="">Selecciona...</option>
                 {RESULTADOS.map((r) => (
@@ -197,56 +195,58 @@ export default function IncidentModal({
           {/* Consecuencia + Intervención */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Consecuencia / Qué se Hizo (C)
               </label>
               <textarea
                 value={incidentData.inc_conse || ""}
                 onChange={set("inc_conse")}
-                className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 h-20 resize-none transition-all"
-                placeholder="Acciones tomadas inmediatamente después del comportamiento..."
-              ></textarea>
+                placeholder="Acciones tomadas después del comportamiento..."
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-blue-500 h-20 resize-none text-slate-800 dark:text-slate-200 transition-colors"
+              />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Intervención Aplicada
               </label>
               <textarea
                 value={incidentData.inc_inter || ""}
                 onChange={set("inc_inter")}
-                className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 h-20 resize-none transition-all"
-                placeholder="Estrategias terapéuticas utilizadas durante el episodio..."
-              ></textarea>
+                placeholder="Estrategias terapéuticas utilizadas..."
+                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-blue-500 h-20 resize-none text-slate-800 dark:text-slate-200 transition-colors"
+              />
             </div>
           </div>
 
           {/* Observaciones */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Notas de Observación
             </label>
             <textarea
               value={incidentData.inc_obse || ""}
               onChange={set("inc_obse")}
-              className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 h-20 resize-none transition-all"
               placeholder="Describe brevemente el comportamiento y cómo se logró la calma."
-            ></textarea>
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-blue-500 h-20 resize-none text-slate-800 dark:text-slate-200 transition-colors"
+            />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700/50">
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setShowIncidentModal(false)}
-              className="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors shadow-sm flex items-center gap-2"
+              size="sm"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-5 py-2 rounded-xl shadow-sm shadow-rose-500/25 transition-all"
             >
               Guardar Incidente
-            </button>
+            </Button>
           </div>
         </form>
       </div>

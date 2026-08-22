@@ -278,7 +278,7 @@ export default function UsuariosTab({
         {/* Tab bar integrada a la tarjeta */}
         <div
           data-tour="admin-usr-status"
-          className="px-6 pt-3 flex items-center gap-6 border-b border-slate-100 dark:border-slate-800/60 overflow-x-auto"
+          className="px-3 sm:px-6 pt-3 flex items-center gap-6 border-b border-slate-100 dark:border-slate-800/60 overflow-x-auto"
         >
           {estadoTabs.map((tab) => (
             <button
@@ -305,7 +305,7 @@ export default function UsuariosTab({
         </div>
 
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-3 flex-wrap">
+        <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-3 flex-wrap">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
             Cuentas de Acceso al Sistema
           </h2>
@@ -334,7 +334,7 @@ export default function UsuariosTab({
         {loading ? (
           <LoadingState variant="table" rows={5} role="ADMIN_INSTITUCION" />
         ) : filteredUsers.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+          <div className="p-6 sm:p-12 text-center text-slate-500 dark:text-slate-400">
             No se encontraron usuarios con los criterios de búsqueda
             establecidos.
           </div>

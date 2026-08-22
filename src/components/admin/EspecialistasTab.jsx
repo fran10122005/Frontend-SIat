@@ -423,6 +423,7 @@ export default function EspecialistasTab({
             onClose={() => setShowRegistro(false)}
             title="Acreditación de Nuevo Especialista"
             subtitle="Registrar un nuevo profesional clínico en la nómina médica"
+            icon={BadgeCheck}
             maxWidth="max-w-3xl"
           >
             <form
@@ -679,14 +680,14 @@ export default function EspecialistasTab({
                 <button
                   type="button"
                   onClick={() => setShowRegistro(false)}
-                  className="md:w-auto w-full px-6 py-2.5 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   disabled={loading}
                   type="submit"
-                  className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   Registrar Especialista
                 </button>
@@ -700,6 +701,7 @@ export default function EspecialistasTab({
             onClose={() => setShowEditEsp(false)}
             title="Editar Especialista"
             subtitle={`${editingEsp?.esp_nomb || ""} ${editingEsp?.esp_apel || ""}`.trim()}
+            icon={Pencil}
             maxWidth="max-w-3xl"
           >
             <form
@@ -800,7 +802,7 @@ export default function EspecialistasTab({
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <div>
                   <label className="form-label">Licencia Médica / CM</label>
                   <input
@@ -867,14 +869,14 @@ export default function EspecialistasTab({
                 <button
                   type="button"
                   onClick={() => setShowEditEsp(false)}
-                  className="md:w-auto w-full px-6 py-2.5 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   disabled={loading}
                   type="submit"
-                  className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   Guardar Cambios
                 </button>
@@ -885,7 +887,7 @@ export default function EspecialistasTab({
           {/* Directorio de Especialistas */}
           <div
             data-tour="admin-esp-directory"
-            className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60"
+            className="bg-white dark:bg-[#1E293B] p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -1174,10 +1176,11 @@ export default function EspecialistasTab({
               onClose={() => setPreviewEsp(null)}
               title="Vista previa del Especialista"
               subtitle={`${previewEsp.esp_nomb || ""} ${previewEsp.esp_apel || ""}`.trim()}
+              icon={Stethoscope}
               maxWidth="max-w-xl"
             >
               <div className="space-y-6">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 shadow-sm">
                     {previewEsp.esp_foto ? (
                       <img
@@ -1315,6 +1318,7 @@ export default function EspecialistasTab({
             onClose={() => setShowCatRegistro(false)}
             title="Registrar Nueva Especialidad"
             subtitle="Añadir una especialidad médica al catálogo oficial de la institución"
+            icon={Plus}
             maxWidth="max-w-3xl"
           >
             <form
@@ -1393,7 +1397,7 @@ export default function EspecialistasTab({
                 <button
                   disabled={loading}
                   type="submit"
-                  className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   Registrar Especialidad
                 </button>
@@ -1407,6 +1411,7 @@ export default function EspecialistasTab({
             onClose={() => setShowEditEspCat(false)}
             title="Editar Especialidad"
             subtitle={editingEspCat?.esc_nomb || ""}
+            icon={Pencil}
             maxWidth="max-w-3xl"
           >
             <form
@@ -1473,14 +1478,14 @@ export default function EspecialistasTab({
                 <button
                   type="button"
                   onClick={() => setShowEditEspCat(false)}
-                  className="md:w-auto w-full px-6 py-2.5 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   disabled={loading}
                   type="submit"
-                  className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   Guardar Cambios
                 </button>

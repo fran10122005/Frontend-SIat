@@ -87,8 +87,8 @@ export default function PatientManagement() {
 
   const handleManagePatient = (nino) => {
     setSelectedChildId(nino.id_ninos);
-    setNomNino(`${nino.nom_nino} ${nino.ape_nino}`); // Set legacy nomNino for consistency
-    navigate("student");
+    setNomNino(`${nino.nom_nino} ${nino.ape_nino}`);
+    navigate("dashboard");
   };
 
   const calcEdad = (fechaNac) => {
@@ -158,12 +158,12 @@ export default function PatientManagement() {
               <div>
                 <h1
                   data-tour="pm-header"
-                  className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
+                  className="text-lg md:text-xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 transition-colors"
                 >
-                  <Users className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                  <Users className="w-5 h-5 text-brand-700 dark:text-blue-400" />
                   Gestión de Pacientes
                 </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Panel de control para el seguimiento de pacientes asignados
                 </p>
               </div>
@@ -234,7 +234,7 @@ export default function PatientManagement() {
               >
                 <select
                   data-tour="pm-filter-nivel"
-                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 text-xs border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
                   value={filterNivel}
                   onChange={(e) => setFilterNivel(e.target.value)}
                 >
@@ -246,7 +246,7 @@ export default function PatientManagement() {
                 </select>
                 <select
                   data-tour="pm-filter-genero"
-                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 text-xs border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
                   value={filterGenero}
                   onChange={(e) => setFilterGenero(e.target.value)}
                 >
@@ -256,7 +256,7 @@ export default function PatientManagement() {
                 </select>
                 <select
                   data-tour="pm-filter-asign"
-                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 text-xs border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
                   value={filterAsign}
                   onChange={(e) => setFilterAsign(e.target.value)}
                 >
@@ -266,7 +266,7 @@ export default function PatientManagement() {
                 </select>
                 <select
                   data-tour="pm-sort"
-                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
+                  className="px-2.5 py-1.5 text-xs border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all cursor-pointer"
                   value={`${sortBy}:${sortDir}`}
                   onChange={(e) => {
                     const [by, dir] = e.target.value.split(":");
@@ -285,7 +285,7 @@ export default function PatientManagement() {
               <button
                 onClick={() => setShowRegModal(true)}
                 data-tour="pm-register"
-                className="w-full md:w-auto px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-md transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5 shrink-0"
+                className="w-full md:w-auto px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 shrink-0"
               >
                 <svg
                   className="w-5 h-5"

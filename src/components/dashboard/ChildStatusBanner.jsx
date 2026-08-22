@@ -44,19 +44,16 @@ export default function ChildStatusBanner({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${colorClase} p-6 text-white shadow-lg`}
+      className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${colorClase} p-4 text-white shadow-md`}
     >
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-      <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-
-      <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm">
+      <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/15">
             <div className={`status-dot ${dotColor}`}></div>
           </div>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <h2 className="text-lg font-bold leading-tight">
+              <h2 className="text-base font-bold leading-tight">
                 {nomNino
                   ? `${nomNino} — ${estado}`
                   : "No hay paciente asignado"}
@@ -65,32 +62,32 @@ export default function ChildStatusBanner({
                 {statusLabel}
               </span>
             </div>
-            <p className="text-sm text-white/75 max-w-md">{mensaje}</p>
+            <p className="text-xs text-white/75 max-w-md">{mensaje}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10">
             {isWebSocketActive ? (
-              <Wifi className="w-4 h-4 text-emerald-300" />
+              <Wifi className="w-3.5 h-3.5 text-emerald-300" />
             ) : (
-              <WifiOff className="w-4 h-4 text-rose-300" />
+              <WifiOff className="w-3.5 h-3.5 text-rose-300" />
             )}
-            <span className="text-xs font-semibold">
+            <span className="text-[11px] font-semibold">
               {isWebSocketActive ? "Conectada" : "Desconectada"}
             </span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-sm">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10">
             <Heart
-              className="w-4 h-4 text-rose-300"
+              className="w-3.5 h-3.5 text-rose-300"
               style={{ animationDuration: pulseDuration }}
             />
-            <span className="text-xs font-semibold">{liveBpm} BPM</span>
+            <span className="text-[11px] font-semibold">{liveBpm} BPM</span>
           </div>
         </div>
       </div>
 
-      <div className="relative mt-3 flex gap-3">
+      <div className="relative mt-2 flex gap-3">
         <div className="flex items-center gap-1.5 text-[10px] text-white/50">
           <Activity className="w-3 h-3" /> Mov: {liveMov}G
         </div>

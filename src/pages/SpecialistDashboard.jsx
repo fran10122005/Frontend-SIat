@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import {
@@ -8,11 +8,15 @@ import {
   FileText,
   TrendingUp,
   Download,
+  HeartPulse,
+  Settings,
+  Bell,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 import Footer from "../components/layout/Footer";
 import { exportDashboardReport } from "../utils/pdfExporter";
+import Button from "../components/ui/Button";
 
 // Subcomponents
 import SpecialistGlobalView from "../components/specialist/SpecialistGlobalView";
@@ -22,46 +26,12 @@ import PatientBehaviorChart from "../components/specialist/PatientBehaviorChart"
 import IncidentModal from "../components/specialist/IncidentModal";
 import IndicacionModal from "../components/specialist/IndicacionModal";
 import SoapNoteModal from "../components/specialist/SoapNoteModal";
-import PatientCrisisLog from "../components/specialist/PatientCrisisLog";
+import AlertRulesConfig from "../components/specialist/AlertRulesConfig";
+import SpecialistSettings from "../components/specialist/SpecialistSettings";
 import LoadingState from "../components/dashboard/LoadingState";
 
 // Hooks
 import { useTelemetry } from "../hooks/useTelemetry";
-
-const mockPeiGoals = [
-  {
-    id: "MOCK1",
-    goal: "Mantener contacto visual 5 segundos",
-    category: "Social",
-    progress: 45,
-    trials: 9,
-    totalTrials: 20,
-  },
-  {
-    id: "MOCK2",
-    goal: "Señalar objetos con el dedo índice",
-    category: "Motor",
-    progress: 70,
-    trials: 14,
-    totalTrials: 20,
-  },
-  {
-    id: "MOCK3",
-    goal: "Seguir instrucciones de dos pasos",
-    category: "Cognitivo",
-    progress: 30,
-    trials: 6,
-    totalTrials: 20,
-  },
-  {
-    id: "MOCK4",
-    goal: "Realizar transiciones sin berrinche",
-    category: "Conductual",
-    progress: 55,
-    trials: 11,
-    totalTrials: 20,
-  },
-];
 
 export default function SpecialistDashboard() {
   const {
@@ -76,9 +46,11 @@ export default function SpecialistDashboard() {
     incrementPeiTrial,
     crearPeiGoal,
     crisisAlerts = [],
-    crisisTelemetryMap = {},
     isDark,
     userRole,
+    specialistConfig,
+    updateSpecialistConfig,
+    isQuietHours,
   } = useGlobalContext();
   const [loading, setLoading] = useState(true);
 
@@ -87,10 +59,8 @@ export default function SpecialistDashboard() {
   const [showIndicacionModal, setShowIndicacionModal] = useState(false);
   const [indicacionText, setIndicacionText] = useState({});
   const [showSoapModal, setShowSoapModal] = useState(false);
-  const [selectedAlertId, setSelectedAlertId] = useState(null);
-
-  // Local state for mock PEI goals (editable)
-  const [localMockPeiGoals, setLocalMockPeiGoals] = useState(mockPeiGoals);
+  const [showAlertRules, setShowAlertRules] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Form States
   const [incidentData, setIncidentData] = useState({
@@ -138,7 +108,54 @@ export default function SpecialistDashboard() {
     };
   }, [selectedChildId]);
 
-  const globalAlertsFeed = [];
+  // FASE 5.1: Keyboard shortcuts
+  const handleKeyDown = useCallback((e) => {
+    if (e.altKey && !e.ctrlKey && !e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case "i":
+          e.preventDefault();
+          setShowIncidentModal(true);
+          break;
+        case "s":
+          e.preventDefault();
+          setShowSoapModal(true);
+          break;
+        case "d":
+          e.preventDefault();
+          setShowIndicacionModal(true);
+          break;
+        default:
+          break;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  // FASE 4.4: Filter alerts by config
+  const filteredAlerts = useMemo(() => {
+    const types = specialistConfig.alertTypes || [
+      "crisis",
+      "indicacion",
+      "sos",
+    ];
+    const now = new Date();
+    const filtered = crisisAlerts.filter((a) => {
+      if (!types.includes("crisis")) return false;
+      if (specialistConfig.bpmHigh && a.bpm_max > specialistConfig.bpmHigh)
+        return true;
+      if (
+        specialistConfig.movementThreshold &&
+        a.mov_max * 10 > specialistConfig.movementThreshold
+      )
+        return true;
+      return a.stress_index > 60;
+    });
+    return isQuietHours ? [] : filtered;
+  }, [crisisAlerts, specialistConfig, isQuietHours]);
 
   const mockAlerts = [
     {
@@ -195,24 +212,37 @@ export default function SpecialistDashboard() {
   // ==== DATOS DEL PACIENTE (MEMOIZADOS) ====
 
   const peiGoals = useMemo(() => {
-    if (globalPeiGoals.length > 0) {
-      return globalPeiGoals.map((g) => ({
-        id: g.met_codi,
-        goal: g.met_desc,
-        category: g.met_categ || "General",
-        progress: g.met_prog,
-        trials: g.met_trial,
-        totalTrials: g.met_ttria,
-        criterio: g.met_crit || null,
-        fechas: g.met_fini
-          ? `${g.met_fini?.substring?.(0, 10) || new Date(g.met_fini).toISOString().substring(0, 10)} → ${g.met_ffin ? g.met_ffin?.substring?.(0, 10) || new Date(g.met_ffin).toISOString().substring(0, 10) : "Sin límite"}`
-          : null,
-      }));
-    }
-    return activeChild ? localMockPeiGoals : [];
-  }, [globalPeiGoals, activeChild, localMockPeiGoals]);
+    return globalPeiGoals.map((g) => ({
+      id: g.met_codi,
+      goal: g.met_desc,
+      category: g.met_categ || "General",
+      progress: g.met_prog,
+      trials: g.met_trial,
+      totalTrials: g.met_ttria,
+      criterio: g.met_crit || null,
+      fechas: g.met_fini
+        ? `${g.met_fini?.substring?.(0, 10) || new Date(g.met_fini).toISOString().substring(0, 10)} → ${g.met_ffin ? g.met_ffin?.substring?.(0, 10) || new Date(g.met_ffin).toISOString().substring(0, 10) : "Sin límite"}`
+        : null,
+    }));
+  }, [globalPeiGoals]);
 
-  const alertsSource = clinicalAlerts.length > 0 ? clinicalAlerts : mockAlerts;
+  const alertsSource = useMemo(() => {
+    const base = clinicalAlerts.length > 0 ? clinicalAlerts : mockAlerts;
+    if (specialistConfig.alertTypes?.length > 0) {
+      return isQuietHours
+        ? []
+        : filteredAlerts.length > 0
+          ? filteredAlerts
+          : base;
+    }
+    return isQuietHours ? [] : base;
+  }, [
+    clinicalAlerts,
+    mockAlerts,
+    specialistConfig,
+    isQuietHours,
+    filteredAlerts,
+  ]);
 
   // Historial Conductual (BarChart) - Optimizado para evitar recálculos en re-renders
   const behaviorHistory = useMemo(() => {
@@ -265,6 +295,56 @@ export default function SpecialistDashboard() {
         }))
       : [{ name: "Sin eventos", value: 1, color: "#e2e8f0" }];
   }, [alertsSource, activeChild]);
+
+  // ==== MOCK DATA: GLOBAL (vista global, sin paciente seleccionado) ====
+  const globalBehaviorData = useMemo(() => {
+    const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+    const histMap = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      histMap[d.toISOString().substring(0, 10)] = {
+        dia: diasSemana[d.getDay()],
+        Berrinche: 0,
+        Estereotipia: 0,
+        Agresión: 0,
+        Ansiedad: 0,
+      };
+    }
+
+    alertsSource.forEach((alert) => {
+      if (!alert.fec_hora) return;
+      const dateStr = new Date(alert.fec_hora).toISOString().substring(0, 10);
+      if (histMap[dateStr] && histMap[dateStr][alert.est_dete] !== undefined) {
+        histMap[dateStr][alert.est_dete] += 1;
+      }
+    });
+
+    const result = Object.values(histMap);
+    const totalCount = result.reduce(
+      (sum, d) => sum + d.Berrinche + d.Estereotipia + d.Agresión + d.Ansiedad,
+      0,
+    );
+    return totalCount === 0 ? [] : result;
+  }, [alertsSource]);
+
+  const globalSensoryData = useMemo(() => {
+    const sensoryCount = {};
+    alertsSource.forEach((alert) => {
+      if (alert.est_dete) {
+        sensoryCount[alert.est_dete] = (sensoryCount[alert.est_dete] || 0) + 1;
+      }
+    });
+
+    const colors = ["#3B82F6", "#F59E0B", "#10B981", "#F43F5E", "#8B5CF6"];
+    return Object.keys(sensoryCount).length > 0
+      ? Object.keys(sensoryCount).map((key, i) => ({
+          name: key,
+          value: sensoryCount[key],
+          color: colors[i % colors.length],
+        }))
+      : [{ name: "Sin eventos", value: 1, color: "#e2e8f0" }];
+  }, [alertsSource]);
 
   // ==== HANDLERS ====
   const handleIncidentSubmit = async (e) => {
@@ -383,23 +463,6 @@ export default function SpecialistDashboard() {
   };
 
   const handleIncrementPeiTrial = async (id) => {
-    if (id.toString().startsWith("MOCK")) {
-      setLocalMockPeiGoals((prev) =>
-        prev.map((g) =>
-          g.id === id
-            ? {
-                ...g,
-                trials: Math.min(g.totalTrials, g.trials + 1),
-                progress: Math.min(
-                  100,
-                  Math.round(((g.trials + 1) / g.totalTrials) * 100),
-                ),
-              }
-            : g,
-        ),
-      );
-      return;
-    }
     try {
       await incrementPeiTrial(id, selectedChildId);
     } catch (err) {
@@ -415,72 +478,95 @@ export default function SpecialistDashboard() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-6 md:p-8 flex flex-col gap-8 pb-12">
-            {/* Header Title Area */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 md:gap-3 transition-colors">
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 pb-12">
+            {/* Header Title Area - Estilo AdminDashboard */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-brand-700 dark:text-blue-400 flex items-center gap-2 md:gap-3 transition-colors">
                   <Users className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                   {activeChild
                     ? `Panel del Paciente: ${activeChild.nom_nino} ${activeChild.ape_nino}`
                     : `Bienvenido, ${userName || "Especialista"}`}
                 </h1>
-                <p className="text-subtitle-muted mt-1">
+                <p className="hidden sm:block text-subtitle-muted mt-1">
                   {activeChild
-                    ? "Seguimiento de progreso PEI, registro conductual y detonantes sensoriales."
-                    : "Resumen de pacientes, metas PEI y alertas generales."}
+                    ? "Seguimiento PEI, registro conductual y detonantes sensoriales."
+                    : "Resumen de pacientes, metas PEI y alertas."}
                 </p>
               </div>
 
               {activeChild ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Download className="w-3.5 h-3.5" />}
                     onClick={handleExportDashboard}
                     disabled={exporting}
-                    className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] rounded flex items-center gap-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors disabled:opacity-50"
                   >
-                    <Download className="w-3.5 h-3.5" />{" "}
                     {exporting ? "..." : "Reporte PDF"}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    leftIcon={<AlertCircle className="w-3.5 h-3.5" />}
                     onClick={() => setShowIncidentModal(true)}
-                    className="px-3 py-1.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 font-bold text-[11px] rounded flex items-center gap-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
                   >
-                    <AlertCircle className="w-3.5 h-3.5" />
                     Registrar Incidente
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    leftIcon={<FilePlus className="w-3.5 h-3.5" />}
                     onClick={() => setShowIndicacionModal(true)}
-                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] rounded flex items-center gap-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
                   >
-                    <FilePlus className="w-3.5 h-3.5" />
                     Anotar Indicación
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={<FileText className="w-3.5 h-3.5" />}
                     onClick={() => setShowSoapModal(true)}
-                    className="px-3 py-1.5 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 font-bold text-[11px] rounded flex items-center gap-1.5 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition-colors"
                   >
-                    <FileText className="w-3.5 h-3.5" />
                     Nota SOAP
-                  </button>
-                  <button
-                    onClick={() => navigate("historial")}
-                    className="px-4 py-2 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 text-white font-bold text-xs rounded shadow flex items-center gap-2 transition-colors"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={<Bell className="w-3.5 h-3.5" />}
+                    onClick={() => setShowAlertRules(true)}
                   >
-                    <TrendingUp className="w-4 h-4" />
+                    Alertas
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={<Settings className="w-3.5 h-3.5" />}
+                    onClick={() => setShowSettings(true)}
+                  >
+                    Config
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<TrendingUp className="w-4 h-4" />}
+                    onClick={() => navigate("historial")}
+                  >
                     Ver Historial Completo
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <button
+                  <Button
+                    variant="success"
+                    size="md"
+                    leftIcon={<Download className="w-4 h-4" />}
                     onClick={handleExportDashboard}
                     disabled={exporting}
-                    className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg shadow-sm border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center gap-2 text-sm disabled:opacity-50"
+                    fullWidth={false}
                   >
-                    <Download className="w-4 h-4" />{" "}
                     {exporting ? "Generando..." : "Generar Reporte"}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -494,7 +580,10 @@ export default function SpecialistDashboard() {
                 {!activeChild && (
                   <SpecialistGlobalView
                     globalStats={globalStats}
-                    globalAlertsFeed={globalAlertsFeed}
+                    globalAlertsFeed={alertsSource}
+                    behaviorData={globalBehaviorData}
+                    sensoryData={globalSensoryData}
+                    isDark={isDark}
                     quickActions={[
                       {
                         id: "historial",
@@ -610,15 +699,53 @@ export default function SpecialistDashboard() {
                     />
 
                     {crisisAlerts.length > 0 && (
-                      <PatientCrisisLog
-                        alertas={crisisAlerts}
-                        crisisTelemetry={crisisTelemetryMap}
-                        selectedAlertId={selectedAlertId}
-                        setSelectedAlertId={setSelectedAlertId}
-                        valMini={65}
-                        valMaxi={110}
-                        isDark={isDark}
-                      />
+                      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800/60">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <HeartPulse className="w-4 h-4 text-red-500" />
+                            Crisis Recientes
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => navigate("historial")}
+                          >
+                            Ver todo
+                          </Button>
+                        </div>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {crisisAlerts.slice(0, 3).map((al) => (
+                            <div
+                              key={al.id_alert}
+                              className="p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
+                            >
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="font-medium text-slate-700 dark:text-slate-300">
+                                  {new Date(al.fec_hora).toLocaleTimeString(
+                                    "es-ES",
+                                    { hour: "2-digit", minute: "2-digit" },
+                                  )}
+                                </span>
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                    al.est_dete === "SOBRECARGA"
+                                      ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
+                                      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                  }`}
+                                >
+                                  {al.est_dete === "SOBRECARGA"
+                                    ? "Crisis"
+                                    : "Precrisis"}
+                                </span>
+                              </div>
+                              <div className="flex gap-3 text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                                <span>BPM: {al.bpm_max}</span>
+                                <span>Estrés: {al.stress_index}%</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -654,6 +781,20 @@ export default function SpecialistDashboard() {
         setShowSoapModal={setShowSoapModal}
         activeChild={activeChild}
         onSave={handleSoapSave}
+      />
+
+      <AlertRulesConfig
+        showModal={showAlertRules}
+        setShowModal={setShowAlertRules}
+        config={specialistConfig}
+        onSave={updateSpecialistConfig}
+      />
+
+      <SpecialistSettings
+        showModal={showSettings}
+        setShowModal={setShowSettings}
+        settings={specialistConfig}
+        onSave={updateSpecialistConfig}
       />
     </div>
   );

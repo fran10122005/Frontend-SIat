@@ -29,6 +29,32 @@ import Topbar from "../components/layout/Topbar";
 
 // Eliminamos el array vacío mockBpmHistory porque ahora usaremos la data real de la DB
 
+const moodStyle = (anim) => {
+  switch (anim) {
+    case "Muy Calmo":
+      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
+    case "Estable":
+      return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+    case "Irritable":
+      return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+    case "Crisis / Sobrecarga":
+      return "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
+    default:
+      return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
+  }
+};
+
+function InlineField({ label, value }) {
+  return (
+    <span className="whitespace-nowrap">
+      <span className="font-semibold text-slate-700 dark:text-slate-200">
+        {label}:{" "}
+      </span>
+      <span className="text-slate-500 dark:text-slate-400">{value}</span>
+    </span>
+  );
+}
+
 export default function HomeAnalytics() {
   const { selectedChildId, navigate, userName, userRole } = useGlobalContext();
   const [isDark, setIsDark] = useState(false);
@@ -103,6 +129,15 @@ export default function HomeAnalytics() {
             time,
             bpm: bit.bit_bpm,
             dia,
+            anim: bit.bit_anim,
+            suen: `${bit.bit_suen}h - ${bit.bit_cali}`,
+            apet: bit.bit_apet,
+            crisi: bit.bit_crisi || 0,
+            diges: bit.bit_diges || "N/A",
+            medi: bit.bit_medi ? "Sí" : "No",
+            dese: bit.bit_dese,
+            senso: bit.bit_senso,
+            obse: bit.bit_obse,
             summaryText,
             extrasText,
           });
@@ -509,6 +544,23 @@ export default function HomeAnalytics() {
               </div>
             </div>
 
+            {/* Selector de día (práctico en móvil) */}
+            <div className="flex gap-2 overflow-x-auto pb-1 md:hidden -mx-1 px-1">
+              {displayHistoricalData.map((d) => (
+                <button
+                  key={d.rawDate}
+                  onClick={() => setSelectedDay(d.dia)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                    selectedDay === d.dia
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-white dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                  }`}
+                >
+                  {d.dia}
+                </button>
+              ))}
+            </div>
+
             {/* Registro Clínico Completo para el día seleccionado */}
             <div
               data-tour="ha-table"
@@ -541,36 +593,108 @@ export default function HomeAnalytics() {
                 <div className="space-y-3">
                   {dayNotes.map((note, i) => {
                     const isExpanded = expandedNote === i;
+                    const previewFields = [
+                      note.suen ? `Sueño ${note.suen}` : null,
+                      note.apet ? `Apetito: ${note.apet}` : null,
+                      note.crisi > 0 ? `Crisis: ${note.crisi}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join("  ·  ");
+
+                    const detailFields = [
+                      { label: "Sueño", value: note.suen },
+                      { label: "Estado de Ánimo", value: note.anim },
+                      { label: "Apetito", value: note.apet },
+                      {
+                        label: "Crisis",
+                        value: note.crisi ? String(note.crisi) : "0",
+                      },
+                      { label: "Digestión", value: note.diges },
+                      { label: "Medicación", value: note.medi },
+                    ];
+
+                    const extras = [
+                      note.dese
+                        ? { label: "Desencadenantes", value: note.dese }
+                        : null,
+                      note.senso
+                        ? { label: "Sensibilidad", value: note.senso }
+                        : null,
+                      note.obse
+                        ? { label: "Observaciones", value: note.obse }
+                        : null,
+                    ].filter(Boolean);
+
                     return (
                       <div
                         key={i}
                         onClick={() => setExpandedNote(isExpanded ? null : i)}
-                        className={`border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/40 overflow-hidden cursor-pointer transition-colors ${isExpanded ? "ring-1 ring-blue-400/40" : "hover:bg-slate-100/70 dark:hover:bg-slate-800/70"}`}
+                        className={`border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800/40 overflow-hidden cursor-pointer transition-colors ${
+                          isExpanded
+                            ? "ring-1 ring-blue-400/40"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-800/70"
+                        }`}
                       >
-                        <div className="flex items-center gap-3 px-4 py-3">
+                        {/* Vista previa */}
+                        <div className="flex items-center gap-2.5 px-3.5 py-3">
                           <span className="font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">
                             {note.time}
                           </span>
                           <span
-                            className={`shrink-0 px-2 py-1 rounded-md text-xs font-bold ${note.bpm && note.bpm > 100 ? "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400" : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"}`}
+                            className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${moodStyle(note.anim)}`}
                           >
-                            {note.bpm ? `${note.bpm} bpm` : "N/A"}
+                            {note.anim}
                           </span>
-                          <span className="flex-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 line-clamp-1">
-                            {note.summaryText}
+                          <span
+                            className={`shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                              note.bpm && note.bpm > 100
+                                ? "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400"
+                                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            }`}
+                          >
+                            {note.bpm ? `${note.bpm} bpm` : "—"}
                           </span>
                           <ChevronDown
-                            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                            className={`w-4 h-4 text-slate-400 shrink-0 ml-auto transition-transform duration-200 ${
+                              isExpanded ? "rotate-180" : ""
+                            }`}
                           />
                         </div>
+                        {!isExpanded && previewFields && (
+                          <p className="hidden sm:block px-3.5 pb-3 -mt-1.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+                            {previewFields}
+                          </p>
+                        )}
+
+                        {/* Detalle expandido */}
                         {isExpanded && (
-                          <div className="px-4 pb-4 -mt-1 space-y-2 animate-in slide-in-from-top-1 duration-150">
-                            <div className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-                              {note.summaryText}
+                          <div className="px-4 pb-4 -mt-1 space-y-3">
+                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                              {detailFields.map((f) => (
+                                <InlineField
+                                  key={f.label}
+                                  label={f.label}
+                                  value={f.value}
+                                />
+                              ))}
                             </div>
-                            <div className="text-sm italic text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700 pt-2">
-                              {note.extrasText || "Sin detalles adicionales"}
-                            </div>
+                            {extras.length > 0 && (
+                              <div className="border-t border-slate-100 dark:border-slate-700 pt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                                {extras.map((e) => (
+                                  <span
+                                    key={e.label}
+                                    className="whitespace-nowrap"
+                                  >
+                                    <span className="font-semibold text-indigo-500 dark:text-indigo-400">
+                                      {e.label}:{" "}
+                                    </span>
+                                    <span className="text-slate-600 dark:text-slate-300">
+                                      {e.value}
+                                    </span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

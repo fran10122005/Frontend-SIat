@@ -104,6 +104,7 @@ export default function AsignacionesTab({
         title="Asignar Paciente a Especialista"
         subtitle="Establecer el vínculo clínico de atención entre el paciente y el profesional"
         maxWidth="max-w-2xl"
+        icon={Link2}
       >
         <form
           onSubmit={async (e) => {
@@ -207,7 +208,7 @@ export default function AsignacionesTab({
             <button
               disabled={loading}
               type="submit"
-              className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Crear Asignación
@@ -258,7 +259,7 @@ export default function AsignacionesTab({
 
       <div
         data-tour="admin-asg-table"
-        className="bg-white dark:bg-[#1E293B] p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60"
+        className="bg-white dark:bg-[#1E293B] p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -268,7 +269,7 @@ export default function AsignacionesTab({
             <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full">
               {filtered.length} registros
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 data-tour="admin-asg-form-btn"
                 onClick={() => setShowAsignar(true)}

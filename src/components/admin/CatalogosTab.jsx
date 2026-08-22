@@ -35,7 +35,7 @@ export default function CatalogosTab({
         data-tour="admin-cat-institution"
         className="bg-white dark:bg-[#1E293B] p-4 md:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60"
       >
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
           <h2 className="text-base md:text-lg font-bold text-slate-900 dark:text-white">
             Configuración de Mi Fundación
           </h2>
