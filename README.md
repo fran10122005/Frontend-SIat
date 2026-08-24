@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./Logo.png" alt="SIAT Logo" width="120" />
+  <img src="./siat_tech_variation_2_1782859644790-removebg-preview.png" alt="SIAT Logo" width="120" />
   <h1 align="center">SIAT</h1>
   <p><strong>Sistema Integrado de Asistencia Terapéutica</strong></p>
   <p>Plataforma SaaS de telemonitoreo clínico para niños con TEA, basada en IoT</p>
@@ -70,9 +70,11 @@ Pulsera (ESP32) → WebSockets → Backend Node.js → PostgreSQL
 
 ### Transversales
 - **Autenticación JWT** con renovación automática
+- **Passkeys (WebAuthn)** como método de autenticación biométrica
 - **RBAC** (Control de Acceso Basado en Roles) estricto
 - **Modo offline** con almacenamiento local y sincronización
 - **Auto-logout** por inactividad (políticas de seguridad clínica)
+- **Tour interactivo** guiado para nuevos usuarios (driver.js)
 - **Notificaciones** de alertas en tiempo real
 - **Exportación** a PDF y Excel
 - **Modo oscuro**
@@ -82,18 +84,30 @@ Pulsera (ESP32) → WebSockets → Backend Node.js → PostgreSQL
 ## 🛠️ Stack Tecnológico
 
 ### Frontend
-| Tecnología | Versión |
-| :--- | :--- |
-| [React](https://react.dev/) | ^18.3.1 |
-| [Vite](https://vitejs.dev/) | ^5.4.1 |
-| [Tailwind CSS](https://tailwindcss.com/) | ^3.4.0 |
-| [Lucide React](https://lucide.dev/) | ^1.17.0 |
-| [Recharts](https://recharts.org/) | ^3.8.1 |
-| [jsPDF](https://github.com/parallax/jsPDF) | ^4.2.1 |
-| [xlsx](https://sheetjs.com/) | ^0.18.5 |
-| [Axios](https://axios-http.com/) | ^1.16.1 |
-| [Zod](https://zod.dev/) | ^4.4.3 |
-| [Socket.IO Client](https://socket.io/) | ^4.8.3 |
+| Tecnología | Versión | Uso |
+| :--- | :--- | :--- |
+| [React](https://react.dev/) | ^18.3.1 | Librería de UI |
+| [React Router DOM](https://reactrouter.com/) | ^7.18.1 | Navegación y enrutado |
+| [Vite](https://vitejs.dev/) | ^5.4.1 | Bundler y dev server |
+| [Tailwind CSS](https://tailwindcss.com/) | ^3.4.0 | Framework de estilos |
+| [Lucide React](https://lucide.dev/) | ^1.17.0 | Iconografía |
+| [Recharts](https://recharts.org/) | ^3.8.1 | Gráficos clínicos |
+| [jsPDF + autotable](https://github.com/parallax/jsPDF) | ^4.2.1 / ^5.0.8 | Exportación a PDF |
+| [xlsx](https://sheetjs.com/) | ^0.18.5 | Exportación a Excel |
+| [Axios](https://axios-http.com/) | ^1.16.1 | Cliente HTTP |
+| [Zod](https://zod.dev/) | ^4.4.3 | Validación de esquemas |
+| [Socket.IO Client](https://socket.io/) | ^4.8.3 | WebSockets en tiempo real |
+| [@simplewebauthn/browser](https://simplewebauthn.dev/) | ^13.3.0 | Autenticación con passkeys |
+| [driver.js](https://driverjs.com/) | ^1.8.0 | Tour interactivo de la UI |
+
+### Testing y Calidad de Código
+| Herramienta | Versión | Uso |
+| :--- | :--- | :--- |
+| [Vitest](https://vitest.dev/) | ^4.1.10 | Framework de pruebas unitarias |
+| [Testing Library](https://testing-library.com/) | ^16.3.2 | Pruebas de componentes React |
+| [ESLint](https://eslint.org/) | ^9.39.4 | Linter (config flat) |
+| [Prettier](https://prettier.io/) | ^3.9.6 | Formateo de código |
+| [Husky](https://typicode.github.io/husky/) | ^9.1.7 | Git hooks (lint-staged en pre-commit) |
 
 ### Backend (separado)
 - Node.js con WebSockets
@@ -124,6 +138,9 @@ cd siat
 # Instalar dependencias
 npm install
 
+# Configurar variables de entorno (opcional)
+cp .env.example .env
+
 # Iniciar en modo desarrollo
 npm run dev
 
@@ -136,7 +153,14 @@ npm run preview
 
 ### Configuración
 
-El frontend se conecta al backend en `http://localhost:3000/api` por defecto (configurable en `src/api/axios.js`). El backend debe estar corriendo de forma independiente.
+Variables de entorno (ver `.env.example`):
+
+| Variable | Descripción | Default |
+| :--- | :--- | :--- |
+| `VITE_API_URL` | URL base de la API del backend | `http://localhost:3000/api` |
+| `VITE_IDLE_TIMEOUT` | Tiempo de inactividad antes del auto-logout (segundos) | `900` |
+
+El backend debe estar corriendo de forma independiente.
 
 ---
 
@@ -157,73 +181,131 @@ El frontend se conecta al backend en `http://localhost:3000/api` por defecto (co
 siat/
 ├── index.html                 # Entry point HTML
 ├── package.json               # Dependencias y scripts
-├── vite.config.js             # Configuración de Vite
+├── vite.config.js             # Configuración de Vite + Vitest
 ├── tailwind.config.js         # Configuración de Tailwind CSS
 ├── postcss.config.js          # Configuración de PostCSS
+├── eslint.config.js           # ESLint (config flat)
+├── .env.example               # Variables de entorno de ejemplo
 └── src/
     ├── main.jsx               # Punto de entrada React
     ├── App.jsx                # Componente raíz + RBAC
-    ├── index.css              # Estilos globales
+    ├── index.css              # Estilos globales (Tailwind)
     ├── App.css                # Estilos de la aplicación
+    ├── setupTests.js          # Setup global de pruebas
     ├── api/
-    │   └── axios.js           # Cliente Axios con interceptores JWT
+    │   ├── axios.js           # Cliente Axios con interceptores JWT
+    │   └── passkey.js         # Autenticación con passkeys (WebAuthn)
+    ├── config/
+    │   ├── cloudinary.js      # Configuración de Cloudinary (subida de imágenes)
+    │   └── tourSteps.js       # Definición de pasos del tour interactivo
     ├── context/
-    │   └── GlobalState.jsx    # Estado global (Context API)
+    │   ├── GlobalState.jsx    # Estado global (Context API)
+    │   └── TourContext.jsx    # Estado del tour guiado
     ├── hooks/
-    │   ├── useTelemetry.js    # Hook de telemetría IoT
-    │   ├── useClinicalData.js # Hook de datos clínicos
-    │   └── useIdleTimer.js    # Hook de detección de inactividad
+    │   ├── socket.js          # Conexión WebSocket
+    │   ├── useTelemetry.js    # Telemetría IoT
+    │   ├── useClinicalData.js # Datos clínicos
+    │   ├── useIdleTimer.js    # Detección de inactividad
+    │   ├── useConsentimiento.js # Consentimiento informado
+    │   ├── useDebounce.js     # Debounce para inputs/búsquedas
+    │   ├── useExpandableRows.js # Filas expandibles en tablas
+    │   ├── useMediaQuery.js   # Media queries responsivas
+    │   └── useTour.jsx        # Lógica del tour interactivo
+    ├── pages/                 # Vistas principales por rol
+    │   ├── AdminDashboard.jsx       # Dashboard del administrador
+    │   ├── SpecialistDashboard.jsx  # Dashboard del especialista
+    │   ├── MainDashboard.jsx        # Dashboard del representante
+    │   ├── PatientManagement.jsx    # Gestión de pacientes
+    │   ├── StudentRecord.jsx        # Expediente del estudiante
+    │   ├── HistoryProgress.jsx      # Historial de evolución
+    │   ├── HardwareInventory.jsx    # Inventario de hardware / monitoreo
+    │   ├── Herramientas.jsx         # Herramientas del especialista
+    │   ├── HomeAnalytics.jsx        # Analíticas del hogar
+    │   ├── Routines.jsx             # Gestión de rutinas
+    │   ├── AgendaDiaria.jsx         # Agenda diaria
+    │   ├── DiarioHogar.jsx          # Diario del hogar
+    │   ├── ParentProfile.jsx        # Perfil del representante
+    │   └── UserProfile.jsx          # Perfil de usuario
     ├── utils/
-    │   ├── pdfGenerator.js    # Generación de PDFs clínicos
+    │   ├── errorHandler.js    # Manejo centralizado de errores
+    │   ├── pdfExporter.js     # Exportación genérica a PDF
+    │   ├── exportManualPdf*.js # Manuales en PDF por rol
+    │   ├── speech.js          # Síntesis de voz (accesibilidad CAA)
     │   └── dashboardMocks.js  # Datos mock para demostración
     └── components/
-        ├── Auth.jsx           # Login / Registro
-        ├── Login.jsx          # Componente de inicio de sesión
-        ├── Register.jsx       # Componente de registro
-        ├── Sidebar.jsx        # Barra lateral de navegación
-        ├── Topbar.jsx         # Barra superior
-        ├── MainDashboard.jsx  # Dashboard del representante
-        ├── SpecialistDashboard.jsx  # Dashboard del especialista
-        ├── AdminDashboard.jsx # Dashboard del administrador
-        ├── StudentRecord.jsx  # Expediente del estudiante
-        ├── PatientManagement.jsx # Gestión de pacientes
-        ├── Routines.jsx       # Gestión de rutinas
-        ├── AgendaDiaria.jsx   # Agenda diaria
-        ├── DiarioHogar.jsx    # Diario del hogar
-        ├── HistoryProgress.jsx # Historial de evolución
-        ├── HardwareInventory.jsx # Inventario de hardware / monitoreo
-        ├── Herramientas.jsx   # Herramientas del especialista
-        ├── HomeAnalytics.jsx  # Analíticas del hogar
-        ├── ParentProfile.jsx  # Perfil del representante
-        ├── UserProfile.jsx    # Perfil de usuario
-        ├── ForgotPassword.jsx # Recuperación de contraseña
-        ├── ResetPassword.jsx  # Restablecimiento de contraseña
-        ├── RegisterRepre.jsx  # Registro de representante
-        ├── AlertCenter.jsx    # Centro de alertas
-        ├── NotificationBell.jsx # Campana de notificaciones
-        ├── Indicaciones.jsx   # Indicaciones clínicas
-        ├── dashboard/
-        │   ├── TelemetryChart.jsx        # Gráfica de telemetría
-        │   ├── RegulationStatusCard.jsx  # Estado de regulación
+        ├── auth/              # Login, registro, recuperación de contraseña
+        │   ├── Auth.jsx             # Contenedor Login / Registro
+        │   ├── Login.jsx            # Inicio de sesión (+ passkeys)
+        │   ├── Register.jsx         # Registro
+        │   ├── RegisterRepre.jsx    # Registro de representante
+        │   ├── ForgotPassword.jsx   # Recuperación de contraseña
+        │   └── ResetPassword.jsx    # Restablecimiento de contraseña
+        ├── layout/
+        │   ├── Sidebar.jsx          # Barra lateral de navegación
+        │   ├── AdminSidebar.jsx     # Barra lateral del admin
+        │   ├── Topbar.jsx           # Barra superior
+        │   ├── Footer.jsx           # Pie de página
+        │   └── NotificationBell.jsx # Campana de notificaciones
+        ├── dashboard/         # Widgets del dashboard del representante
+        │   ├── TelemetryChart.jsx        # Gráfica de telemetría IoT
+        │   ├── RegulationStatusCard.jsx  # Estado de regulación emocional
+        │   ├── ChildStatusBanner.jsx     # Banner de estado del niño
+        │   ├── DaySummary.jsx            # Resumen del día
         │   ├── BreathingProtocolModal.jsx # Protocolo de respiración
-        │   └── AacBoardDrawer.jsx        # Tablero CAA
-        ├── specialist/
+        │   ├── AacBoardDrawer.jsx        # Tablero CAA
+        │   ├── Skeleton.jsx              # Placeholders de carga
+        │   └── LoadingState.jsx          # Estados de carga
+        ├── specialist/        # Módulos clínicos del especialista
         │   ├── SpecialistGlobalView.jsx  # Vista global del especialista
+        │   ├── SessionManager.jsx        # Gestión de sesiones terapéuticas
+        │   ├── SessionWizard.jsx         # Asistente de nueva sesión
+        │   ├── SoapNoteModal.jsx         # Notas SOAP
+        │   ├── SoapTemplateManager.jsx   # Plantillas SOAP
+        │   ├── PatientPeiGoals.jsx       # Metas PEI
+        │   ├── NewPeiGoalModal.jsx       # Nueva meta PEI
+        │   ├── PeiReportModal.jsx        # Reporte PEI
+        │   ├── AlertRulesConfig.jsx      # Configuración de reglas de alerta
+        │   ├── CrisisReportModal.jsx     # Reporte de crisis
+        │   ├── InterventionCatalog.jsx   # Catálogo de intervenciones
+        │   ├── MonthlyReportScheduler.jsx # Programador de reportes mensuales
+        │   ├── SpecialistSettings.jsx    # Ajustes del especialista
+        │   ├── ReadOnlyMode.jsx          # Modo solo lectura
+        │   ├── ActivityLog.jsx           # Registro de actividad
+        │   ├── IndicacionReadReceipt.jsx # Confirmación de lectura de indicaciones
         │   ├── PatientBehaviorChart.jsx  # Gráfico de comportamiento
         │   ├── PatientSensoryChart.jsx   # Gráfico sensorial
         │   ├── PatientCrisisLog.jsx      # Registro de crisis
-        │   ├── PatientPeiGoals.jsx       # Metas PEI
-        │   ├── SoapNoteModal.jsx         # Notas SOAP
+        │   ├── IncidentModal.jsx         # Modal de incidentes
         │   ├── IndicacionModal.jsx       # Modal de indicaciones
-        │   └── IncidentModal.jsx         # Modal de incidentes
-        ├── admin/
-        │   ├── AdminKPIs.jsx             # KPI del admin
+        │   └── SessionReportModal.jsx    # Modal de reporte de sesión
+        ├── admin/             # Módulos administrativos
+        │   ├── AdminKPIs.jsx             # KPIs institucionales
         │   ├── AdminCharts.jsx           # Gráficos del admin
         │   ├── AdminActivityLog.jsx      # Registro de actividad
         │   ├── UsuariosTab.jsx           # Gestión de usuarios
         │   ├── EspecialistasTab.jsx      # Gestión de especialistas
+        │   ├── RepresentantesTab.jsx     # Gestión de representantes
         │   ├── AsignacionesTab.jsx       # Asignaciones
-        │   └── CatalogosTab.jsx          # Catálogos
+        │   ├── CatalogosTab.jsx          # Catálogos
+        │   ├── HistorialClinicoTab.jsx   # Historial clínico
+        │   └── InfraestructuraTab.jsx    # Infraestructura / dispositivos
+        ├── shared/            # Componentes reutilizables
+        │   ├── AlertCenter.jsx       # Centro de alertas
+        │   ├── Indicaciones.jsx      # Indicaciones clínicas
+        │   ├── AdminModal.jsx        # Modal genérico del admin
+        │   ├── ConfirmDialog.jsx     # Diálogo de confirmación
+        │   ├── EmptyState.jsx        # Estado vacío
+        │   ├── FilterBar.jsx         # Barra de filtros
+        │   ├── FormAlert.jsx         # Alertas de formularios
+        │   ├── FotoUpload.jsx        # Subida de fotos
+        │   ├── Pagination.jsx        # Paginación
+        │   ├── StatusBadge.jsx       # Etiquetas de estado
+        │   ├── SplashScreen.jsx      # Pantalla de inicio
+        │   ├── RegisterChildModal.jsx # Registro de niño/paciente
+        │   └── ConsentimientoModal.jsx # Consentimiento informado
+        └── ui/                # Design system base
+            ├── Button.jsx               # Botón
+            └── index.js                 # Barrel export
 ```
 
 ---
@@ -235,6 +317,11 @@ siat/
 | `npm run dev` | Inicia el servidor de desarrollo Vite |
 | `npm run build` | Compila para producción |
 | `npm run preview` | Vista previa del build de producción |
+| `npm run lint` | Ejecuta ESLint sobre `src/` |
+| `npm run test` | Ejecuta las pruebas unitarias (Vitest) |
+| `npm run test:watch` | Pruebas en modo watch |
+
+> Los hooks de Husky ejecutan `eslint --fix` y `prettier --write` sobre los archivos staged antes de cada commit.
 
 ---
 

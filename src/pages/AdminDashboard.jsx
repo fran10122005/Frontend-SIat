@@ -775,23 +775,27 @@ function AdminDashboard({ onNavigate }) {
                   {activeTab === "usuarios" &&
                     "Control de Acceso y Cuentas de Usuario"}
                 </h1>
-                <p className="text-subtitle-muted mt-1">
+                <p
+                  title={
+                    activeTab === "dashboard" &&
+                    "Resumen de la operación clínica."
+                  }
+                  className="text-subtitle-muted mt-1 line-clamp-1"
+                >
                   {activeTab === "dashboard" &&
-                    "Visión general de la operación clínica, rendimiento de terapias y reportes de incidentes."}
+                    "Resumen de la operación clínica."}
                   {activeTab === "especialistas" &&
-                    "Administración del personal de salud, acreditaciones y especialidades médicas."}
+                    "Personal clínico y especialidades."}
                   {activeTab === "representantes" &&
-                    "Listado de padres, madres y tutores legales vinculados a los pacientes."}
+                    "Listado de padres y tutores legales."}
                   {activeTab === "historial_clinico" &&
-                    "Registro de incidentes, crisis y alertas fisiológicas de todos los pacientes."}
+                    "Incidentes, crisis y alertas globales."}
                   {activeTab === "asignaciones" &&
-                    "Vinculación formal entre pacientes pediátricos y el personal clínico."}
-                  {activeTab === "catalogos" &&
-                    "Datos de la institución: RIF, dirección y contacto principal."}
+                    "Pacientes asignados por especialista."}
+                  {activeTab === "catalogos" && "Datos de la institución."}
                   {activeTab === "infraestructura" &&
-                    "Estado operativo de los servicios de telemetría, bases de datos y respuesta de red."}
-                  {activeTab === "usuarios" &&
-                    "Gestión de credenciales, roles, fecha de creación y estado de activación de cuentas vinculadas."}
+                    "Servicios, base de datos y red."}
+                  {activeTab === "usuarios" && "Cuentas, roles y estados."}
                 </p>
               </div>
               {activeTab === "dashboard" && (

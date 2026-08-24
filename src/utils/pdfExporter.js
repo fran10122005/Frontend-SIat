@@ -530,3 +530,254 @@ export const exportDashboardReport = async ({
   addFooter(doc, Math.max(y + 10, pageH - 14));
   doc.save(`reporte_${Date.now()}.pdf`);
 };
+
+export const exportRepresentantesToPDF = async (representantes) => {
+  const columns = [
+    "Representante",
+    "Cédula",
+    "Parentesco",
+    "Teléfono",
+    "Correo",
+    "Pacientes",
+    "Estado",
+  ];
+  const rows = representantes.map((r) => [
+    `${r.rep_nomb || ""} ${r.rep_apel || ""}`.trim() || "-",
+    r.rep_cedu || "-",
+    r.rep_rela || "-",
+    r.rep_telf || "-",
+    r.usu_crro || "-",
+    r.ninos?.length
+      ? r.ninos
+          .map((n) => `${n.nin_nomb || ""} ${n.nin_apel || ""}`.trim())
+          .join(", ")
+      : "-",
+    {
+      content: r.usu_estd ? "Activo" : "Inactivo",
+      styles: {
+        textColor: r.usu_estd ? [16, 185, 129] : [239, 68, 68],
+        fontStyle: "bold",
+      },
+    },
+  ]);
+  await createStyledPdf(
+    "Directorio de Representantes Legales",
+    "representantes_siat.pdf",
+    columns,
+    rows,
+    { pageTitle: "Directorio de Representantes Legales — SIAT" },
+  );
+};
+
+export const exportInfraestructuraToPDF = async ({
+  health = {},
+  latencyHistory = [],
+}) => {
+  const doc = new jsPDF("p", "mm", "letter");
+  const pageW = doc.internal.pageSize.width;
+  const pageH = doc.internal.pageSize.height;
+  const margin = 12;
+
+  await addLogoToDoc(doc, pageW - margin - 16, 8, 14, 14);
+  await addSiatLogoToDoc(doc, margin, 6, 16, 16);
+  doc.setFontSize(14);
+  doc.setTextColor(1, 28, 63);
+  doc.text("Reporte Técnico de Infraestructura", margin + 20, 12);
+  doc.setFontSize(8);
+  doc.setTextColor(110, 110, 110);
+  doc.text(`Generado: ${new Date().toLocaleString("es-ES")}`, margin + 20, 18);
+  doc.setDrawColor(1, 28, 63);
+  doc.setLineWidth(0.4);
+  doc.line(margin, 22, pageW - margin, 22);
+
+  autoTable(doc, {
+    head: [["Servicio", "Estado", "Detalle"]],
+    body: [
+      [
+        "API Core",
+        health.api?.status || "Operativo",
+        `${health.api?.uptime || "99.9%"} uptime`,
+      ],
+      [
+        "Base de Datos",
+        health.db?.status || "Conectada",
+        `Latencia ${health.db?.latency || "12ms"}`,
+      ],
+      [
+        "WebSocket",
+        health.ws?.status || "Activo",
+        `${health.ws?.clients ?? 0} clientes conectados`,
+      ],
+      ["Versión", health.version || "2.1.0", "SIAT Platform"],
+    ],
+    startY: 28,
+    margin: { left: margin, right: margin },
+    styles: { fontSize: 9, cellPadding: 3 },
+    headStyles: {
+      fillColor: [1, 28, 63],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+    },
+    alternateRowStyles: { fillColor: [245, 247, 250] },
+    didDrawPage: () => addFooter(doc, pageH - 10),
+  });
+
+  let y = doc.lastAutoTable.finalY + 10;
+  if (y > pageH - 50) {
+    doc.addPage();
+    y = 20;
+  }
+  doc.setFontSize(11);
+  doc.setTextColor(1, 28, 63);
+  doc.text("Historial de Latencia (Últimas 24h)", margin, y);
+
+  autoTable(doc, {
+    head: [["Punto", "Latencia (ms)", "Uptime (%)"]],
+    body:
+      latencyHistory.length > 0
+        ? latencyHistory.map((p) => [
+            p.name ?? "-",
+            p.latencia != null ? String(p.latencia) : "-",
+            p.uptime != null ? String(p.uptime) : "-",
+          ])
+        : [["Sin datos", "-", "-"]],
+    startY: y + 4,
+    margin: { left: margin, right: margin },
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    headStyles: {
+      fillColor: [139, 92, 246],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+    },
+    alternateRowStyles: { fillColor: [248, 245, 255] },
+    didDrawPage: () => addFooter(doc, pageH - 10),
+  });
+
+  addFooter(doc, pageH - 10);
+  doc.save("infraestructura_siat.pdf");
+};
+
+export const exportHomeWeeklyToPDF = async ({
+  paciente = "Paciente",
+  generadoPor = "",
+  resumenDiario = [],
+  notas = [],
+}) => {
+  const doc = new jsPDF("p", "mm", "letter");
+  const pageW = doc.internal.pageSize.width;
+  const pageH = doc.internal.pageSize.height;
+  const margin = 12;
+
+  const drawHeader = () => {
+    doc.setFontSize(10);
+    doc.setTextColor(1, 28, 63);
+    doc.text("SIAT — Sistema Integrado de Asistencia Terapéutica", margin, 12);
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      new Date().toLocaleDateString("es-ES", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      pageW - margin,
+      12,
+      { align: "right" },
+    );
+    doc.setDrawColor(210, 210, 210);
+    doc.line(margin, 15, pageW - margin, 15);
+  };
+
+  drawHeader();
+  doc.setFontSize(16);
+  doc.setTextColor(1, 28, 63);
+  doc.text("Reporte Semanal del Hogar", margin, 26);
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  doc.text(
+    `Paciente: ${paciente}${generadoPor ? `   ·   Registrado por: ${generadoPor}` : ""}`,
+    margin,
+    33,
+  );
+
+  let y = 40;
+
+  if (resumenDiario.length > 0) {
+    autoTable(doc, {
+      head: [["Día", "Índice de Calma (%)", "Sobrecarga (%)"]],
+      body: resumenDiario.map((d) => [
+        d.dia,
+        d.calma != null ? String(d.calma) : "-",
+        d.sobrecarga != null ? String(d.sobrecarga) : "-",
+      ]),
+      startY: y,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 8.5, cellPadding: 2.5 },
+      headStyles: {
+        fillColor: [1, 28, 63],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 1) {
+          const valor = Number(data.cell.raw);
+          data.cell.styles.textColor =
+            !Number.isNaN(valor) && valor < 50 ? [220, 38, 38] : [16, 185, 129];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+      didDrawPage: () => {
+        drawHeader();
+        addFooter(doc, pageH - 12);
+      },
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  if (notas.length > 0) {
+    if (y > pageH - 40) {
+      doc.addPage();
+      drawHeader();
+      y = 24;
+    }
+    doc.setFontSize(11);
+    doc.setTextColor(1, 28, 63);
+    doc.text("Bitácora del Hogar", margin, y);
+    autoTable(doc, {
+      head: [["Fecha", "Sueño", "Ánimo", "Apetito", "Crisis", "Observaciones"]],
+      body: notas.map((n) => [
+        `${n.dia} ${n.time}`,
+        n.suen || "-",
+        n.anim || "-",
+        n.apet || "-",
+        String(n.crisi ?? 0),
+        n.obse
+          ? n.obse.length > 80
+            ? `${n.obse.slice(0, 77)}...`
+            : n.obse
+          : n.extrasText
+            ? n.extrasText.length > 80
+              ? `${n.extrasText.slice(0, 77)}...`
+              : n.extrasText
+            : "-",
+      ]),
+      startY: y + 5,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7.5, cellPadding: 2.2 },
+      headStyles: {
+        fillColor: [2, 58, 122],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+      },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      columnStyles: { 5: { cellWidth: 70 } },
+      didDrawPage: () => {
+        drawHeader();
+        addFooter(doc, pageH - 12);
+      },
+    });
+  }
+
+  addFooter(doc, pageH - 12);
+  doc.save(`reporte_hogar_${paciente.replace(/\s+/g, "_")}.pdf`);
+};

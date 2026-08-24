@@ -7,6 +7,7 @@ import Topbar from "../components/layout/Topbar";
 import Pagination from "../components/shared/Pagination";
 import RegisterChildModal from "../components/shared/RegisterChildModal";
 import FilterBar from "../components/shared/FilterBar";
+import Fab from "../components/ui/Fab";
 
 export default function PatientManagement() {
   const {
@@ -164,13 +165,17 @@ export default function PatientManagement() {
                   Gestión de Pacientes
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Panel de control para el seguimiento de pacientes asignados
+                  Pacientes asignados
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                <span
+                  title={`Mostrando ${filteredNinos.length} de ${listaNinos.length} pacientes registrados`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                >
                   <Users className="w-3.5 h-3.5 text-brand-500" />
-                  {filteredNinos.length} de {listaNinos.length} pacientes
+                  {filteredNinos.length}{" "}
+                  {filteredNinos.length === 1 ? "paciente" : "pacientes"}
                 </span>
               </div>
             </div>
@@ -285,7 +290,7 @@ export default function PatientManagement() {
               <button
                 onClick={() => setShowRegModal(true)}
                 data-tour="pm-register"
-                className="w-full md:w-auto px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 shrink-0"
+                className="hidden md:inline-flex w-full md:w-auto px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-sm transition-all items-center justify-center gap-2 shrink-0"
               >
                 <svg
                   className="w-5 h-5"
@@ -300,9 +305,13 @@ export default function PatientManagement() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                Registrar Nuevo Niño
+                Registrar Nuevo Paciente
               </button>
             </div>
+            <Fab
+              onClick={() => setShowRegModal(true)}
+              label="Registrar Nuevo Paciente"
+            />
 
             {/* [C] Objetos (Cuadrícula de Pacientes) */}
             <div
@@ -313,52 +322,63 @@ export default function PatientManagement() {
                 <div
                   key={nino.id_ninos}
                   data-tour="pm-card"
-                  onClick={() => setPreviewNino(nino)}
-                  className="group flex flex-col bg-white dark:bg-slate-800 rounded-2xl p-3 sm:p-6 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Abrir detalle de ${nino.nom_nino} ${nino.ape_nino}`}
+                  onClick={() => handleManagePatient(nino)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleManagePatient(nino);
+                    }
+                  }}
+                  className="group flex flex-col bg-white dark:bg-slate-800 rounded-2xl p-3 sm:p-4 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:border-brand-300 dark:hover:border-brand-700 transition-all duration-200 relative overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   {/* Decorative background glow on hover */}
                   <div className="absolute -inset-2 bg-gradient-to-r from-blue-100 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 dark:from-slate-700 dark:to-slate-800 pointer-events-none -z-10 blur-xl"></div>
 
-                  <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className="flex items-center gap-3 sm:gap-3.5 mb-2.5">
                     <Avatar
                       nino={nino}
-                      className="h-10 w-10 sm:h-16 sm:w-16 text-base sm:text-2xl"
+                      className="h-10 w-10 sm:h-12 sm:w-12 text-base sm:text-xl"
                     />
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white line-clamp-1 sm:line-clamp-none sm:mb-1">
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white line-clamp-1">
                         {nino.nom_nino} {nino.ape_nino}
                       </h3>
-                      <div className="flex items-center flex-wrap gap-1.5 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
-                        <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 font-sans font-semibold whitespace-nowrap">
+                      <div className="flex items-center flex-wrap gap-1.5 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50 font-sans font-semibold whitespace-nowrap">
                           <Cake className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                           {calcEdad(nino.nin_fnac)}
                         </span>
                       </div>
                     </div>
+
+                    <svg
+                      aria-hidden="true"
+                      className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all shrink-0 self-center"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
                   </div>
 
-                  <div className="mb-3 sm:mb-5 flex-1 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50">
-                      <svg
-                        className="w-3 h-3 mr-1.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                        />
-                      </svg>
-                      Clasificación: {nino.niv_desa}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50">
+                      Nv. {nino.niv_desa}
                     </span>
 
                     {/* Asignación clínica */}
                     <span
-                      className={`inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold border ${
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
                         nino.est_asign === "Activo"
                           ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800/50"
                           : "bg-gray-50 text-gray-500 border-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:border-slate-600"
@@ -370,7 +390,7 @@ export default function PatientManagement() {
                       }
                     >
                       <span
-                        className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
+                        className={`w-1.5 h-1.5 rounded-full ${
                           nino.est_asign === "Activo"
                             ? "bg-green-500"
                             : "bg-gray-400"
@@ -379,30 +399,6 @@ export default function PatientManagement() {
                       {nino.est_asign === "Activo" ? "Asignado" : "Sin asignar"}
                     </span>
                   </div>
-
-                  <button
-                    data-tour="pm-manage"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleManagePatient(nino);
-                    }}
-                    className="w-full py-2 sm:py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group/btn text-xs sm:text-sm"
-                  >
-                    Gestionar Paciente
-                    <svg
-                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 transform group-hover/btn:translate-x-1 transition-transform"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M14 5l7 7m0 0l-7 7m7-7H3"
-                      />
-                    </svg>
-                  </button>
                 </div>
               ))}
 

@@ -24,6 +24,7 @@ import {
   Moon,
   Sun,
   ChevronDown,
+  FileText,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 
@@ -56,7 +57,8 @@ function InlineField({ label, value }) {
 }
 
 export default function HomeAnalytics() {
-  const { selectedChildId, navigate, userName, userRole } = useGlobalContext();
+  const { selectedChildId, navigate, userName, userRole, showToast, nomNino } =
+    useGlobalContext();
   const [isDark, setIsDark] = useState(false);
   const [selectedDay, setSelectedDay] = useState("Vie");
   const [homeHistoricalData, setHomeHistoricalData] = useState([]);
@@ -229,6 +231,22 @@ export default function HomeAnalytics() {
   const displayHistoricalData = effectiveHomeData;
   const displayBpmData = bpmChartData.length > 0 ? bpmChartData : mockBpmData;
 
+  const exportarReporteSemanal = async () => {
+    try {
+      const { exportHomeWeeklyToPDF } = await import("../utils/pdfExporter");
+      await exportHomeWeeklyToPDF({
+        paciente: nomNino || "Paciente",
+        generadoPor: userName,
+        resumenDiario: effectiveHomeData,
+        notas: parentNotes,
+      });
+      showToast("✅ Reporte semanal del hogar generado");
+    } catch (err) {
+      console.error(err);
+      showToast("❌ Error al generar el reporte del hogar");
+    }
+  };
+
   if (!selectedChildId) {
     return (
       <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden">
@@ -264,26 +282,39 @@ export default function HomeAnalytics() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-7xl w-full mx-auto p-6 md:p-8 flex flex-col gap-8 pb-12">
-            <div>
-              <h1
-                data-tour="ha-header"
-                className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
-              >
-                <LCIcon className="w-6 h-6 text-brand-700 dark:text-blue-400" />
-                Análisis en Casa
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Datos del wearable fuera de la clínica, cruzados con las notas
-                del representante.
-              </p>
-              {fetchError && (
-                <div className="mt-4 p-3 bg-red-100 text-red-700 rounded border border-red-300">
-                  <span className="font-bold">Error obteniendo datos:</span>{" "}
-                  {fetchError}. Asegúrate de que el backend se haya reiniciado
-                  para aplicar las nuevas rutas.
-                </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h1
+                  data-tour="ha-header"
+                  className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
+                >
+                  <LCIcon className="w-6 h-6 text-brand-700 dark:text-blue-400 shrink-0" />
+                  Anǭlisis en Casa
+                </h1>
+                <p className="text-sm text-slate-500 mt-1 line-clamp-1">
+                  Datos del wearable fuera de la cl��nica, cruzados con las
+                  notas del representante.
+                </p>
+              </div>
+              {parentNotes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={exportarReporteSemanal}
+                  aria-label="Exportar reporte semanal en PDF"
+                  title="Exportar reporte semanal (PDF)"
+                  className="shrink-0 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
               )}
             </div>
+            {fetchError && (
+              <div className="mt-4 p-3 bg-red-100 text-red-700 rounded border border-red-300">
+                <span className="font-bold">Error obteniendo datos:</span>{" "}
+                {fetchError}. Asegúrate de que el backend se haya reiniciado
+                para aplicar las nuevas rutas.
+              </div>
+            )}
 
             {/* KPIs resumen */}
             <div

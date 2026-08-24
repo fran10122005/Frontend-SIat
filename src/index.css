@@ -827,15 +827,19 @@ html {
   gap: 0.125rem;
 }
 
-/* --- Campos base --- */
+/* --- Campos base (Mobile-First compactos: w-full + altura densa h-10) --- */
 .form-input,
 .form-select,
 .form-textarea {
   width: 100%;
   font-size: 0.875rem;
   border-radius: 0.625rem;
-  padding: 0.625rem 1rem;
+  padding: 0.5rem 0.875rem;
+  min-height: 2.5rem;
   transition: all 0.2s ease;
+}
+.form-textarea {
+  min-height: 4rem;
 }
 .form-select {
   cursor: pointer;

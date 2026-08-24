@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   UploadCloud,
   CheckCircle2,
-  AlertCircle,
   FileText,
   Trash2,
   Eye,
@@ -93,6 +92,36 @@ function FieldLabel({ children, required, tooltip }) {
   );
 }
 
+function InfoCollapse({ tone = "amber", title, children }) {
+  const tones = {
+    amber:
+      "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300",
+    blue: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 text-blue-800 dark:text-blue-300",
+  };
+  return (
+    <details
+      className={`group rounded-xl border ${tones[tone]} overflow-hidden`}
+    >
+      <summary className="flex items-center gap-2 px-4 py-3 text-xs font-bold cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden">
+        <Info className="w-4 h-4 shrink-0" />
+        <span className="flex-1">{title}</span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="w-4 h-4 shrink-0 opacity-60 transition-transform duration-200 group-open:rotate-180"
+        >
+          <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </summary>
+      <div className="px-4 pb-3 pt-1 text-[11px] leading-relaxed">
+        {children}
+      </div>
+    </details>
+  );
+}
+
 function InputField({ ...props }) {
   const { className = "", ...rest } = props;
   return <input {...rest} className={`form-input ${className}`} />;
@@ -135,7 +164,7 @@ function PhotoUploadZone({ preview, onFileSelect, uploading, progress }) {
         onDrop={handleDrop}
         className={`relative w-36 h-36 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 group
           ${dragging ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 scale-105" : "border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50"}
-          ${uploading ? "cursor-wait" : "hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-900/10"}`}
+          ${uploading ? "cursor-wait opacity-60" : "hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-900/10"}`}
       >
         {preview ? (
           <>
@@ -154,8 +183,8 @@ function PhotoUploadZone({ preview, onFileSelect, uploading, progress }) {
         ) : (
           <div className="flex flex-col items-center text-slate-400 dark:text-slate-500 group-hover:text-brand-500 transition-colors gap-2 px-3 text-center">
             <UploadCloud className="w-8 h-8" />
-            <span className="text-[10px] font-semibold leading-tight">
-              {dragging ? "Suelta aquí" : "Foto de perfil"}
+            <span className="text-[11px] font-semibold leading-tight">
+              {dragging ? "Suelta aquí" : "Subir foto"}
             </span>
           </div>
         )}
@@ -177,11 +206,6 @@ function PhotoUploadZone({ preview, onFileSelect, uploading, progress }) {
         onChange={(e) => onFileSelect(e.target.files[0])}
         className="hidden"
       />
-      <p className="text-[10px] text-slate-400 text-center max-w-[130px] leading-relaxed">
-        Foto de identificación del paciente.
-        <br />
-        JPG, PNG o WebP · Máx. 5 MB
-      </p>
     </div>
   );
 }
@@ -572,10 +596,11 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col border border-slate-200 dark:border-slate-700/80 max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col border-t border-slate-200 dark:border-slate-700/80 sm:border max-h-[94dvh] sm:max-h-[92vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
         {/* ── Header ── */}
-        <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
+        <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-blue-600 text-white shrink-0">
+          <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/40" />
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-xl">
@@ -585,16 +610,12 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                 <h3 className="text-lg font-bold">
                   Registro de Nuevo Paciente
                 </h3>
-                <p className="text-blue-100 text-sm mt-0.5">
-                  Formulario de ingreso al Sistema Integrado de Asignación y
-                  Seguimiento de Terapia
-                </p>
               </div>
             </div>
             <button
               onClick={onClose}
               aria-label="Cerrar"
-              className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors shrink-0"
+              className="text-white/70 hover:text-white p-2.5 -m-1 rounded-lg hover:bg-white/10 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               <X className="w-5 h-5" />
             </button>
@@ -602,7 +623,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* ── Stepper ── */}
-        <div className="px-7 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+        <div className="px-4 sm:px-7 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-0">
             {STEPS.map((s, i) => (
               <div key={s.num} className="flex items-center flex-1">
@@ -636,19 +657,24 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* ── Body ── */}
-        <div className="overflow-y-auto flex-1 px-7 py-6">
+        <div className="overflow-y-auto flex-1 px-4 sm:px-7 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6">
           {/* ════════════ PASO 1: IDENTIDAD DEL PACIENTE ════════════ */}
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="flex flex-col md:flex-row gap-6">
                 {/* Foto */}
                 <div className="md:border-r md:border-slate-200 md:dark:border-slate-700 md:pr-6 flex-shrink-0">
-                  <PhotoUploadZone
-                    preview={photoPreview}
-                    onFileSelect={handlePhotoSelect}
-                    uploading={photoUploading}
-                    progress={photoProgress}
-                  />
+                  <FieldLabel tooltip="JPG, PNG o WebP · Máx. 5 MB. Foto de identificación del paciente.">
+                    Foto de Perfil
+                  </FieldLabel>
+                  <div className="mt-2">
+                    <PhotoUploadZone
+                      preview={photoPreview}
+                      onFileSelect={handlePhotoSelect}
+                      uploading={photoUploading}
+                      progress={photoProgress}
+                    />
+                  </div>
                 </div>
 
                 {/* Datos personales */}
@@ -779,21 +805,15 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
           {/* ════════════ PASO 2: HISTORIAL CLÍNICO ════════════ */}
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl">
-                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-                    ¿Por qué es importante esta información?
-                  </p>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
-                    El algoritmo de detección de SIAT utiliza el perfil
-                    sensorial del paciente para
-                    <strong> calibrar los umbrales de alerta</strong> de los
-                    sensores IoT y reducir falsos positivos desde el primer día
-                    de monitoreo.
-                  </p>
-                </div>
-              </div>
+              <InfoCollapse
+                tone="amber"
+                title="¿Por qué pedimos esta información?"
+              >
+                El algoritmo de detección de SIAT utiliza el perfil sensorial
+                del paciente para{" "}
+                <strong>calibrar los umbrales de alerta</strong> de los sensores
+                IoT y evitar falsos positivos desde el primer día de monitoreo.
+              </InfoCollapse>
 
               <div>
                 <FieldLabel tooltip="La sensibilidad o comorbilidad principal que el equipo clínico debe conocer para el manejo de alertas en tiempo real.">
@@ -946,22 +966,19 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
           {/* ════════════ PASO 3: REPRESENTANTE LEGAL ════════════ */}
           {step === 3 && (
             <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl">
-                <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
-                  Según el <strong>Artículo 65 LOPNNA</strong>, el representante
-                  legal deberá completar el consentimiento informado
-                  digitalizado al activar su cuenta mediante el enlace que SIAT
-                  generará al finalizar este registro.
-                </p>
-              </div>
+              <InfoCollapse tone="blue" title="Protección legal (LOPNNA)">
+                Según el <strong>Artículo 65 LOPNNA</strong>, el representante
+                legal deberá completar el consentimiento informado digitalizado
+                al activar su cuenta mediante el enlace que SIAT generará al
+                finalizar este registro.
+              </InfoCollapse>
 
               {/* Cédula: identificador único del representante (primer campo) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <FieldLabel
                     required
-                    tooltip="Cédula de identidad del representante. Es única en el sistema: si ya está registrado, el nuevo paciente se vinculará automáticamente a su cuenta."
+                    tooltip="Identificador único en el sistema. Al salir del campo se verifica automáticamente si ya está registrado: en ese caso el nuevo paciente se vinculará a su cuenta existente."
                   >
                     <IdCard className="w-3 h-3" /> Cédula de Identidad
                   </FieldLabel>
@@ -977,15 +994,11 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                     placeholder="Ej. 12345678"
                     className="border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
                   />
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
-                    Al salir del campo se consultará si ya existe un
-                    representante registrado con esta cédula.
-                  </p>
                 </div>
                 <div>
                   <FieldLabel
                     required
-                    tooltip="Correo electrónico al que se enviará el enlace de activación de la cuenta del representante en SIAT."
+                    tooltip="SIAT generará credenciales seguras y enviará a este correo el enlace de activación de la cuenta del representante, cifrado de extremo a extremo."
                   >
                     <Mail className="w-3 h-3" /> Correo Electrónico de Acceso
                   </FieldLabel>
@@ -1001,11 +1014,6 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                         : "border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
                     }
                   />
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
-                    {repExistente
-                      ? "Se usará el correo ya registrado del representante."
-                      : "SIAT generará credenciales seguras y las enviará cifradas a este correo."}
-                  </p>
                 </div>
               </div>
 
@@ -1138,7 +1146,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* ── Footer ── */}
-        <div className="px-7 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 rounded-b-3xl flex items-center justify-between gap-4">
+        <div className="px-4 sm:px-7 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 rounded-b-3xl flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))] sm:[padding-bottom:1rem]">
           <div className="text-[10px] text-slate-400">
             Paso {step} de {STEPS.length} ·{" "}
             {step === 1
@@ -1152,7 +1160,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={() => setStep((s) => s - 1)}
-                className="px-4 py-2.5 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 flex items-center justify-center gap-1.5 text-sm text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" /> Atrás
               </button>
@@ -1160,7 +1168,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 text-sm text-slate-500 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 text-sm text-slate-500 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 Cancelar
               </button>
@@ -1170,7 +1178,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={handleNext}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold rounded-xl flex items-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20 hover:-translate-y-0.5"
+                className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold rounded-xl flex items-center justify-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20"
               >
                 Continuar <ChevronRight className="w-4 h-4" />
               </button>
@@ -1179,7 +1187,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading || !form.acepta_lopnna || docsUploading}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-xl flex items-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
+                className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>

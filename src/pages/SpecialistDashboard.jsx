@@ -496,18 +496,9 @@ export default function SpecialistDashboard() {
               </div>
 
               {activeChild ? (
-                <div className="flex flex-wrap gap-2 shrink-0">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end shrink-0 w-full sm:w-auto">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={<Download className="w-3.5 h-3.5" />}
-                    onClick={handleExportDashboard}
-                    disabled={exporting}
-                  >
-                    {exporting ? "..." : "Reporte PDF"}
-                  </Button>
-                  <Button
-                    variant="danger"
+                    variant="primary"
                     size="sm"
                     leftIcon={<AlertCircle className="w-3.5 h-3.5" />}
                     onClick={() => setShowIncidentModal(true)}
@@ -515,12 +506,21 @@ export default function SpecialistDashboard() {
                     Registrar Incidente
                   </Button>
                   <Button
-                    variant="primary"
+                    variant="outline"
                     size="sm"
                     leftIcon={<FilePlus className="w-3.5 h-3.5" />}
                     onClick={() => setShowIndicacionModal(true)}
                   >
                     Anotar Indicación
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<Download className="w-3.5 h-3.5" />}
+                    onClick={handleExportDashboard}
+                    disabled={exporting}
+                  >
+                    {exporting ? "..." : "Reporte PDF"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -547,12 +547,13 @@ export default function SpecialistDashboard() {
                     Config
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
                     leftIcon={<TrendingUp className="w-4 h-4" />}
                     onClick={() => navigate("historial")}
+                    className="col-span-2 sm:col-span-1"
                   >
-                    Ver Historial Completo
+                    Historial
                   </Button>
                 </div>
               ) : (

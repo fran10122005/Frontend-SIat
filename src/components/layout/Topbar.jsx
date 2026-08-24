@@ -22,18 +22,18 @@ export default function Topbar() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800/60 bg-white/80 dark:bg-[#0F172A]/80 px-6 backdrop-blur-md transition-colors duration-200">
+    <header className="sticky top-0 z-30 flex h-16 w-full shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800/60 bg-white/80 dark:bg-[#0F172A]/80 px-4 sm:px-6 pt-[env(safe-area-inset-top)] backdrop-blur-md transition-colors duration-200">
       {/* Botón menú hamburguesa en móvil */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="flex md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+        className="flex lg:hidden p-2.5 -ml-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors min-h-[44px] min-w-[44px] items-center justify-center"
         aria-label="Abrir Menú"
       >
         <Menu className="w-5.5 h-5.5" />
       </button>
 
       {/* Breadcrumb izquierdo para desktop */}
-      <div className="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+      <div className="hidden lg:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
         <span>SIAT</span>
         <span className="text-slate-300 dark:text-slate-700">/</span>
         <span className="text-slate-600 dark:text-slate-300">

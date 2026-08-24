@@ -86,14 +86,14 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
       {/* Backdrop de móvil */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       <aside
         id="tour-admin-sidebar"
-        className={`fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] dark:from-[#020617] dark:via-[#0B1120] dark:to-[#1E293B] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 dark:shadow-black/40 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-gradient-to-b from-[#011C3F] via-[#023A7A] to-[#034EA1] dark:from-[#020617] dark:via-[#0B1120] dark:to-[#1E293B] text-white flex flex-col shrink-0 h-full shadow-2xl shadow-blue-900/20 dark:shadow-black/40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

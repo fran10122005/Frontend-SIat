@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   Pencil,
   AlertCircle,
+  FileText,
+  Download,
 } from "lucide-react";
 import { useGlobalContext } from "../../context/GlobalState";
 import StatusBadge from "../shared/StatusBadge";
@@ -172,6 +174,47 @@ export default function RepresentantesTab({
     }
   };
 
+  const exportPDF = async () => {
+    try {
+      const { exportRepresentantesToPDF } =
+        await import("../../utils/pdfExporter");
+      await exportRepresentantesToPDF(filtered);
+      showToast("✅ Directorio de representantes exportado a PDF");
+    } catch (err) {
+      console.error(err);
+      showToast("❌ Error al exportar PDF de representantes");
+    }
+  };
+
+  const exportExcel = () => {
+    import("xlsx").then((XLSX) => {
+      try {
+        const data = filtered.map((r) => ({
+          Representante:
+            `${r.rep_nomb || ""} ${r.rep_apel || ""}`.trim() || "-",
+          Cédula: r.rep_cedu || "-",
+          Parentesco: r.rep_rela || "-",
+          Teléfono: r.rep_telf || "-",
+          Correo: r.usu_crro || "-",
+          Pacientes: r.ninos?.length
+            ? r.ninos
+                .map((n) => `${n.nin_nomb || ""} ${n.nin_apel || ""}`.trim())
+                .join(", ")
+            : "-",
+          Estado: r.usu_estd ? "Activo" : "Inactivo",
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Representantes");
+        XLSX.writeFile(workbook, "representantes_siat.xlsx");
+        showToast("✅ Directorio de representantes exportado a Excel");
+      } catch (err) {
+        console.error(err);
+        showToast("❌ Error al exportar Excel de representantes");
+      }
+    });
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <FilterBar
@@ -208,10 +251,28 @@ export default function RepresentantesTab({
           <h2 className="text-base font-bold text-slate-900 dark:text-white">
             Representantes Legales
           </h2>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full whitespace-nowrap">
               {filtered.length} registros
             </span>
+            <button
+              type="button"
+              onClick={exportPDF}
+              aria-label="Exportar a PDF"
+              title="Exportar a PDF"
+              className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              <FileText className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={exportExcel}
+              aria-label="Exportar a Excel"
+              title="Exportar a Excel"
+              className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              <Download className="w-4 h-4" />
+            </button>
             {onRegisterClick && (
               <button
                 type="button"

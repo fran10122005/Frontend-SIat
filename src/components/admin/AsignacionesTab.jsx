@@ -102,7 +102,6 @@ export default function AsignacionesTab({
         open={showAsignar}
         onClose={() => setShowAsignar(false)}
         title="Asignar Paciente a Especialista"
-        subtitle="Establecer el vínculo clínico de atención entre el paciente y el profesional"
         maxWidth="max-w-2xl"
         icon={Link2}
       >

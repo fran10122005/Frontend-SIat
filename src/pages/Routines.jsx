@@ -5,7 +5,6 @@ import {
   Play,
   Square,
   Clock,
-  FileText,
   CheckCircle2,
   Plus,
   Star,
@@ -33,6 +32,7 @@ import {
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 import Button from "../components/ui/Button";
+import Fab from "../components/ui/Fab";
 import FilterBar from "../components/shared/FilterBar";
 
 const EMPTY_FORM = {
@@ -75,9 +75,6 @@ const parseSteps = (inst = "") =>
       };
     })
     .filter((s) => s.text);
-
-const formatMinutes = (seconds) =>
-  seconds >= 60 ? `${Math.round(seconds / 60)} min` : `${seconds} seg`;
 
 const DIFFICULTY_STYLES = {
   Baja: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
@@ -396,10 +393,12 @@ export default function Routines() {
     };
   }, [sessionSteps, currentStep, sessionTime]);
 
-  // Auto-avance: el paso actual avanza según el tiempo estimado acumulado.
-  // La navegación manual solo adelanta; el tiempo siempre "empuja" hacia adelante.
+  // Auto-avance: el tiempo "empuja" el paso hacia adelante sin pelear con la
+  // navegación manual (Anterior). Solo avanza cuando el reloj cruza un nuevo
+  // límite de paso; si el padre retrocede manualmente, no se fuerza regreso.
+  const naturalIdxRef = useRef(-1);
   useEffect(() => {
-    if (!activeSession || sessionSteps.length === 0) return;
+    if (!activeSession || sessionSteps.length === 0 || isFinishing) return;
     const ends = [];
     let acc = 0;
     for (const s of sessionSteps) {
@@ -413,14 +412,46 @@ export default function Routines() {
         break;
       }
     }
-    setCurrentStep((prev) => Math.max(prev, idx));
-  }, [sessionTime, activeSession, sessionSteps]);
+    if (naturalIdxRef.current === -1 || idx > naturalIdxRef.current) {
+      naturalIdxRef.current = idx;
+      setCurrentStep((prev) => Math.max(prev, idx));
+    }
+  }, [sessionTime, activeSession, sessionSteps, isFinishing]);
+
+  // Último paso agotado → pantalla de cierre automáticamente
+  useEffect(() => {
+    if (
+      isFinishing ||
+      !activeSession ||
+      sessionSteps.length === 0 ||
+      totalDuration === 0
+    )
+      return;
+    const lastIdx = sessionSteps.length - 1;
+    if (
+      sessionTime > 0 &&
+      currentStep === lastIdx &&
+      sessionTime >= totalDuration
+    ) {
+      setIsFinishing(true);
+    }
+  }, [
+    sessionTime,
+    currentStep,
+    sessionSteps.length,
+    totalDuration,
+    activeSession,
+    isFinishing,
+  ]);
 
   const goPrevStep = () => setCurrentStep((p) => Math.max(p - 1, 0));
-  const goNextStep = () =>
-    setCurrentStep((p) =>
-      Math.min(p + 1, Math.max(sessionSteps.length - 1, 0)),
-    );
+  const goNextStep = () => {
+    if (currentStep >= sessionSteps.length - 1) {
+      setIsFinishing(true);
+      return;
+    }
+    setCurrentStep((p) => Math.min(p + 1, sessionSteps.length - 1));
+  };
 
   const startSession = async (routine) => {
     try {
@@ -437,6 +468,7 @@ export default function Routines() {
       });
       setSessionTime(0);
       setCurrentStep(0);
+      naturalIdxRef.current = -1;
       setIsFinishing(false);
       setCooperation(0);
       setNotes("");
@@ -450,6 +482,7 @@ export default function Routines() {
       });
       setSessionTime(0);
       setCurrentStep(0);
+      naturalIdxRef.current = -1;
       setIsFinishing(false);
       setCooperation(0);
       setNotes("");
@@ -494,122 +527,126 @@ export default function Routines() {
             {/* Si no hay sesión activa: Mostrar lista de rutinas */}
             {!activeSession && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
-                  <div className="flex flex-col gap-2" data-tour="rt-header">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+                  <div className="flex flex-col gap-1" data-tour="rt-header">
                     <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2">
                       <ListChecks className="w-6 h-6 text-brand-700 dark:text-blue-400" />
                       Terapias y Actividades
                     </h1>
-                    <p className="hidden sm:block text-sm text-slate-500 mt-1">
+                    <p className="hidden sm:block text-sm text-slate-500 mt-1 line-clamp-1">
                       Selecciona una rutina para iniciar el monitoreo clínico
                       para {nomNino || "el paciente"}.
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    {isGestion && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        leftIcon={<ListChecks className="w-4 h-4" />}
-                        onClick={() => {
-                          openCatCreate();
-                          setIsCatModalOpen(true);
-                        }}
-                        title="Gestionar categorías de actividades"
-                      >
-                        Categorías
-                      </Button>
-                    )}
-                    {isGestion && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        leftIcon={<Plus className="w-4 h-4" />}
-                        onClick={openCreateModal}
-                      >
-                        Crear Nueva Terapia
-                      </Button>
-                    )}
-                  </div>
+                  {isGestion && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      leftIcon={<Plus className="w-4 h-4" />}
+                      onClick={openCreateModal}
+                      className="hidden md:inline-flex"
+                    >
+                      Crear Nueva Terapia
+                    </Button>
+                  )}
                 </div>
 
-                {/* Barra de filtros */}
-                <FilterBar
-                  searchValue={filters.busqueda}
-                  onSearch={(v) => setFilters({ ...filters, busqueda: v })}
-                  searchPlaceholder="Buscar por nombre, descripción o materiales…"
-                  activeCount={
-                    (filters.busqueda ? 1 : 0) +
-                    (filters.cat_codi ? 1 : 0) +
-                    (filters.dificultad ? 1 : 0) +
-                    (filters.estado ? 1 : 0)
-                  }
-                  onClearAll={clearFilters}
-                  chips={[
-                    filters.cat_codi && {
-                      key: "cat_codi",
-                      label:
-                        categories.find((c) => c.cat_codi === filters.cat_codi)
-                          ?.cat_nomb || filters.cat_codi,
-                      onRemove: () => setFilters({ ...filters, cat_codi: "" }),
-                    },
-                    filters.dificultad && {
-                      key: "dificultad",
-                      label: `Dificultad: ${filters.dificultad}`,
-                      onRemove: () =>
-                        setFilters({ ...filters, dificultad: "" }),
-                    },
-                    filters.estado && {
-                      key: "estado",
-                      label: `Estado: ${filters.estado}`,
-                      onRemove: () => setFilters({ ...filters, estado: "" }),
-                    },
-                  ].filter(Boolean)}
-                >
-                  <select
-                    value={filters.cat_codi}
-                    onChange={(e) =>
-                      setFilters({ ...filters, cat_codi: e.target.value })
+                {/* Toolbar: Categorías + Filtros */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
+                  {isGestion && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<ListChecks className="w-4 h-4" />}
+                      onClick={() => {
+                        openCatCreate();
+                        setIsCatModalOpen(true);
+                      }}
+                      title="Gestionar categorías de actividades"
+                      className="shrink-0"
+                    >
+                      Categorías
+                    </Button>
+                  )}
+                  <FilterBar
+                    searchValue={filters.busqueda}
+                    onSearch={(v) => setFilters({ ...filters, busqueda: v })}
+                    searchPlaceholder="Buscar por nombre, descripción o materiales…"
+                    activeCount={
+                      (filters.busqueda ? 1 : 0) +
+                      (filters.cat_codi ? 1 : 0) +
+                      (filters.dificultad ? 1 : 0) +
+                      (filters.estado ? 1 : 0)
                     }
-                    className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    onClearAll={clearFilters}
+                    chips={[
+                      filters.cat_codi && {
+                        key: "cat_codi",
+                        label:
+                          categories.find(
+                            (c) => c.cat_codi === filters.cat_codi,
+                          )?.cat_nomb || filters.cat_codi,
+                        onRemove: () =>
+                          setFilters({ ...filters, cat_codi: "" }),
+                      },
+                      filters.dificultad && {
+                        key: "dificultad",
+                        label: `Dificultad: ${filters.dificultad}`,
+                        onRemove: () =>
+                          setFilters({ ...filters, dificultad: "" }),
+                      },
+                      filters.estado && {
+                        key: "estado",
+                        label: `Estado: ${filters.estado}`,
+                        onRemove: () => setFilters({ ...filters, estado: "" }),
+                      },
+                    ].filter(Boolean)}
                   >
-                    <option value="">Todas las categorías</option>
-                    {categories.map((c) => (
-                      <option key={c.cat_codi} value={c.cat_codi}>
-                        {c.cat_nomb}
-                      </option>
-                    ))}
-                  </select>
+                    <select
+                      value={filters.cat_codi}
+                      onChange={(e) =>
+                        setFilters({ ...filters, cat_codi: e.target.value })
+                      }
+                      className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value="">Todas las categorías</option>
+                      {categories.map((c) => (
+                        <option key={c.cat_codi} value={c.cat_codi}>
+                          {c.cat_nomb}
+                        </option>
+                      ))}
+                    </select>
 
-                  <select
-                    value={filters.dificultad}
-                    onChange={(e) =>
-                      setFilters({ ...filters, dificultad: e.target.value })
-                    }
-                    className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  >
-                    <option value="">Toda dificultad</option>
-                    <option value="Baja">Baja</option>
-                    <option value="Media">Media</option>
-                    <option value="Alta">Alta</option>
-                  </select>
+                    <select
+                      value={filters.dificultad}
+                      onChange={(e) =>
+                        setFilters({ ...filters, dificultad: e.target.value })
+                      }
+                      className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value="">Toda dificultad</option>
+                      <option value="Baja">Baja</option>
+                      <option value="Media">Media</option>
+                      <option value="Alta">Alta</option>
+                    </select>
 
-                  <select
-                    value={filters.estado}
-                    onChange={(e) =>
-                      setFilters({ ...filters, estado: e.target.value })
-                    }
-                    className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  >
-                    <option value="">Todo estado</option>
-                    <option value="Activa">Activas</option>
-                    <option value="Inactiva">Inactivas</option>
-                  </select>
-                </FilterBar>
+                    <select
+                      value={filters.estado}
+                      onChange={(e) =>
+                        setFilters({ ...filters, estado: e.target.value })
+                      }
+                      className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    >
+                      <option value="">Todo estado</option>
+                      <option value="Activa">Activas</option>
+                      <option value="Inactiva">Inactivas</option>
+                    </select>
+                  </FilterBar>
+                </div>
 
                 <div
                   data-tour="rt-catalog"
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5"
                 >
                   {isRoutinesLoading && routines.length === 0 ? (
                     Array.from({ length: 3 }).map((_, i) => (
@@ -665,130 +702,151 @@ export default function Routines() {
                     filteredRoutines.map((routine) => (
                       <div
                         key={routine.id}
-                        className="group bg-white dark:bg-[#1E293B] rounded-3xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between cursor-default"
+                        role={isGestion ? "button" : undefined}
+                        tabIndex={isGestion ? 0 : undefined}
+                        aria-label={
+                          isGestion
+                            ? `Iniciar sesión en vivo: ${routine.title}`
+                            : routine.title
+                        }
+                        onClick={
+                          isGestion ? () => startSession(routine) : undefined
+                        }
+                        onKeyDown={(e) => {
+                          if (
+                            isGestion &&
+                            (e.key === "Enter" || e.key === " ")
+                          ) {
+                            e.preventDefault();
+                            startSession(routine);
+                          }
+                        }}
+                        data-tour="rt-live"
+                        className="group bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-slate-200 dark:border-slate-800/60 shadow-sm hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-200 flex flex-col cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500"
                       >
-                        <div>
-                          <div className="flex justify-between items-start mb-5">
-                            <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-black uppercase tracking-widest rounded-lg">
-                              {routine.category}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              {routine.sessionCount > 0 && (
-                                <span
-                                  className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md flex items-center gap-1"
-                                  title="Sesiones realizadas"
-                                >
-                                  <ListChecks className="w-3 h-3" />{" "}
-                                  {routine.sessionCount}
-                                </span>
-                              )}
-                              <span className="text-xs font-bold text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded-md flex items-center gap-1">
-                                <Clock className="w-3 h-3" />{" "}
-                                {routine.durationStr}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 mb-3">
-                            <h3 className="text-lg font-black text-slate-800 dark:text-white leading-tight">
-                              {routine.title}
-                            </h3>
-                            {routine.status === "Inactiva" && (
-                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                                Inactiva
+                        <div className="flex justify-between items-start mb-2.5 gap-2">
+                          <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-lg truncate">
+                            {routine.category}
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {routine.sessionCount > 0 && (
+                              <span
+                                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-md flex items-center gap-1"
+                                title="Sesiones realizadas"
+                              >
+                                <ListChecks className="w-3 h-3" />{" "}
+                                {routine.sessionCount}
                               </span>
                             )}
+                            <span className="text-[11px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                              <Clock className="w-3 h-3" />{" "}
+                              {routine.durationStr}
+                            </span>
                           </div>
+                        </div>
 
-                          {routine.description && (
-                            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium mb-2 leading-relaxed">
-                              {routine.description}
-                            </p>
-                          )}
-
-                          <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed font-medium">
-                            {routine.inst || "Sin instrucciones registradas."}
-                          </p>
-
-                          {routine.media && (
-                            <div className="mt-3">
-                              {isVideoUrl(routine.media) ? (
-                                <a
-                                  href={routine.media}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 text-xs font-bold text-rose-500 hover:text-rose-600 bg-rose-50 dark:bg-rose-900/30 px-3 py-2 rounded-xl w-fit"
-                                >
-                                  <Video className="w-3.5 h-3.5" /> Ver video de
-                                  referencia
-                                </a>
-                              ) : (
-                                <img
-                                  src={routine.media}
-                                  alt={routine.title}
-                                  loading="lazy"
-                                  className="w-full h-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700"
-                                />
-                              )}
-                            </div>
-                          )}
-
-                          {routine.materials && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 flex items-start gap-1.5">
-                              <ListChecks className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                              <span className="line-clamp-2">
-                                Materiales: {routine.materials}
-                              </span>
-                            </p>
+                        <div className="flex items-start gap-2 mb-1.5">
+                          <h3 className="text-base font-black text-slate-800 dark:text-white leading-tight line-clamp-2 flex-1 min-w-0">
+                            {routine.title}
+                          </h3>
+                          {routine.status === "Inactiva" && (
+                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md shrink-0 mt-0.5">
+                              Inactiva
+                            </span>
                           )}
                         </div>
 
-                        <div className="mt-6 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={`text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${DIFFICULTY_STYLES[routine.difficulty] || DIFFICULTY_STYLES.Baja}`}
-                            >
-                              Dificultad {routine.difficulty}
+                        {routine.description && (
+                          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mb-1 line-clamp-1">
+                            {routine.description}
+                          </p>
+                        )}
+
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed font-medium mb-2">
+                          {routine.inst || "Sin instrucciones registradas."}
+                        </p>
+
+                        {routine.media && !isVideoUrl(routine.media) && (
+                          <img
+                            src={routine.media}
+                            alt={routine.title}
+                            loading="lazy"
+                            className="w-full h-24 object-cover rounded-lg border border-slate-200 dark:border-slate-700 mb-2"
+                          />
+                        )}
+                        {routine.media && isVideoUrl(routine.media) && (
+                          <a
+                            href={routine.media}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-500 hover:text-rose-600 bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-lg w-fit mb-2"
+                          >
+                            <Video className="w-3 h-3" /> Video de referencia
+                          </a>
+                        )}
+                        {routine.materials && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-1.5 mb-3">
+                            <ListChecks className="w-3 h-3 mt-0.5 shrink-0" />
+                            <span className="line-clamp-1">
+                              Materiales: {routine.materials}
                             </span>
-                            <div className="flex items-center gap-2">
-                              {isGestion && (
-                                <button
-                                  type="button"
-                                  onClick={() => openEditModal(routine)}
-                                  className="p-2.5 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-colors"
-                                  title="Editar terapia"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                              )}
-                              {isGestion && (
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmDelete(routine.id)}
-                                  className="p-2.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition-colors"
-                                  title="Eliminar terapia"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
+                          </p>
+                        )}
+
+                        <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                          <span
+                            className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${DIFFICULTY_STYLES[routine.difficulty] || DIFFICULTY_STYLES.Baja}`}
+                          >
+                            {routine.difficulty}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {isGestion && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditModal(routine);
+                                }}
+                                className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                                title="Editar terapia"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            )}
+                            {isGestion && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDelete(routine.id);
+                                }}
+                                className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
+                                title="Eliminar terapia"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                            {isGestion && (
+                              <span
+                                aria-hidden="true"
+                                title="Iniciar sesión en vivo"
+                                className="ml-1 w-9 h-9 rounded-full bg-brand-600 group-hover:bg-brand-700 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-all shrink-0"
+                              >
+                                <Play className="w-4 h-4 fill-current ml-0.5" />
+                              </span>
+                            )}
                           </div>
-                          {isGestion && (
-                            <button
-                              onClick={() => startSession(routine)}
-                              data-tour="rt-live"
-                              className="w-full py-3.5 bg-slate-900 dark:bg-slate-700 hover:bg-blue-600 dark:hover:bg-blue-600 text-white font-bold rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 group-hover:scale-[1.02]"
-                            >
-                              <Play className="w-4 h-4 fill-current" /> Iniciar
-                              Sesión en Vivo
-                            </button>
-                          )}
                         </div>
                       </div>
                     ))
                   )}
                 </div>
               </div>
+            )}
+
+            {isGestion && !activeSession && (
+              <Fab onClick={openCreateModal} label="Crear Nueva Terapia" />
             )}
 
             {/* Si hay sesión activa: Mostrar Live Monitor */}
@@ -835,7 +893,7 @@ export default function Routines() {
 
                   {isFinishing ? (
                     /* Formulario de Cierre (vista propia, sin cortes) */
-                    <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                    <div className="flex-1 overflow-y-auto p-6 md:p-10 [padding-bottom:max(6rem,env(safe-area-inset-bottom))] md:[padding-bottom:2.5rem]">
                       <div className="max-w-md w-full mx-auto flex flex-col items-center text-center">
                         <CheckCircle2 className="w-16 h-16 text-emerald-500 mb-5" />
                         <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">
@@ -893,7 +951,7 @@ export default function Routines() {
                         <div className="flex gap-3 w-full mt-8">
                           <button
                             onClick={() => setIsFinishing(false)}
-                            className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                            className="flex-1 py-3 bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-gray-400 transition-colors"
                           >
                             Volver
                           </button>
@@ -908,191 +966,121 @@ export default function Routines() {
                       </div>
                     </div>
                   ) : (
-                    /* Cuerpo Principal: Guía por pasos en vivo */
-                    <div className="flex-1 p-6 md:p-8 flex flex-col lg:flex-row gap-6 lg:gap-8 overflow-y-auto">
-                      {/* Columna izquierda: reloj + paso actual */}
-                      <div className="lg:w-72 shrink-0 flex flex-col items-center gap-6">
-                        <div
-                          data-tour="rt-live-timer"
-                          className="flex flex-col items-center"
-                        >
-                          <div className="w-44 h-44 md:w-52 md:h-52 rounded-full border-[12px] border-slate-100 dark:border-slate-800 flex items-center justify-center relative shadow-inner">
+                    /* Modo reproductor: un solo paso en pantalla, sin scroll */
+                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                      {/* Progreso del paso actual */}
+                      {currentStepInfo && (
+                        <div className="w-full max-w-md mx-auto px-4 pt-3 shrink-0">
+                          <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                             <div
-                              className={`absolute inset-0 rounded-full border-[12px] border-transparent ${!isFinishing ? "border-t-blue-500 animate-spin" : ""}`}
-                              style={{ animationDuration: "3s" }}
-                            ></div>
-                            <span className="text-4xl md:text-5xl font-black text-slate-800 dark:text-slate-100 tracking-tighter tabular-nums font-mono">
-                              {formatTime(sessionTime)}
+                              className="h-full bg-blue-500 transition-all duration-500"
+                              style={{
+                                width: `${
+                                  (currentStepInfo.elapsedInStep /
+                                    currentStepInfo.stepDuration) *
+                                  100
+                                }%`,
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest mt-1">
+                            <span className="text-blue-600 dark:text-blue-400">
+                              Paso {currentStep + 1} de {sessionSteps.length}
+                            </span>
+                            <span className="text-slate-400 tabular-nums">
+                              -{formatTime(currentStepInfo.remaining)}
                             </span>
                           </div>
-                          <p className="text-xs font-bold text-slate-400 mt-4 tracking-widest uppercase">
-                            Tiempo Registrado
-                          </p>
                         </div>
+                      )}
 
-                        {/* Tarjeta del paso actual */}
-                        {sessionSteps.length > 0 && currentStepInfo && (
-                          <div className="w-full bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 p-5 text-center">
-                            <p className="text-xs font-black uppercase tracking-widest text-blue-500 mb-1.5">
-                              Paso {currentStep + 1} de {sessionSteps.length}
-                            </p>
-                            <p className="text-base font-black text-slate-800 dark:text-white leading-snug line-clamp-2">
-                              {
-                                sessionSteps[
-                                  Math.min(currentStep, sessionSteps.length - 1)
-                                ].text
-                              }
-                            </p>
-                            <p className="text-sm font-bold text-amber-500 mt-2 tabular-nums">
-                              {formatTime(currentStepInfo.remaining)} restantes
-                            </p>
-                            <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mt-3 overflow-hidden">
-                              <div
-                                className="h-full bg-amber-400 transition-all duration-500"
-                                style={{
-                                  width: `${
-                                    (currentStepInfo.elapsedInStep /
-                                      currentStepInfo.stepDuration) *
-                                    100
-                                  }%`,
-                                }}
-                              />
-                            </div>
-                            <div className="flex gap-2 mt-4">
-                              <button
-                                type="button"
-                                onClick={goPrevStep}
-                                disabled={currentStep === 0}
-                                className="flex-1 py-2 px-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                              >
-                                ← Anterior
-                              </button>
-                              <button
-                                type="button"
-                                onClick={goNextStep}
-                                disabled={
-                                  currentStep >= sessionSteps.length - 1
-                                }
-                                className="flex-1 py-2 px-2 text-xs font-bold text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                              >
-                                Siguiente →
-                              </button>
-                            </div>
+                      {/* Centro: tiempo restante gigante + descripción completa */}
+                      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col items-center justify-center text-center gap-3">
+                        {currentStepInfo ? (
+                          <>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                              Tiempo restante del paso
+                            </span>
+                            <span
+                              data-tour="rt-live-timer"
+                              className={`text-7xl sm:text-8xl font-black tabular-nums font-mono leading-none transition-colors ${
+                                currentStepInfo.remaining <= 10
+                                  ? "text-rose-500 animate-pulse"
+                                  : "text-slate-800 dark:text-white"
+                              }`}
+                            >
+                              {formatTime(currentStepInfo.remaining)}
+                            </span>
+                          </>
+                        ) : (
+                          <div
+                            data-tour="rt-live-timer"
+                            className="flex flex-col items-center"
+                          >
+                            <span className="text-6xl font-black tabular-nums font-mono text-slate-800 dark:text-white leading-none">
+                              {formatTime(sessionTime)}
+                            </span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">
+                              Tiempo de sesión
+                            </span>
                           </div>
                         )}
-                      </div>
 
-                      {/* Columna derecha: demostración + pasos */}
-                      <div className="flex-1 min-w-0 flex flex-col gap-6">
+                        <p className="text-base md:text-lg font-bold text-slate-700 dark:text-slate-200 leading-relaxed max-w-md">
+                          {sessionSteps.length > 0
+                            ? sessionSteps[
+                                Math.min(currentStep, sessionSteps.length - 1)
+                              ].text
+                            : "Sesión libre: solo se registra el tiempo total."}
+                        </p>
+
                         {activeSession.media && (
-                          <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                            <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-slate-800/60">
-                              <span className="text-xs font-black uppercase tracking-widest text-blue-500 flex items-center gap-2">
-                                <Video className="w-3.5 h-3.5" /> Demostración
-                              </span>
-                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                Material de apoyo
-                              </span>
-                            </div>
+                          <div className="w-full max-w-sm rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
                             {isVideoUrl(activeSession.media) ? (
                               <video
                                 key={activeSession.ses_codi}
                                 src={activeSession.media}
                                 controls
                                 playsInline
-                                className="w-full max-h-72 bg-black"
+                                className="w-full h-40 bg-black"
                               />
                             ) : (
                               <img
                                 src={activeSession.media}
                                 alt={activeSession.title}
-                                className="w-full max-h-72 object-cover"
+                                className="w-full h-40 object-cover"
                               />
                             )}
                           </div>
                         )}
+                      </div>
 
-                        <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-                          <ListChecks className="w-4 h-4 text-blue-500" /> Guía
-                          por Pasos
-                        </h3>
-                        {sessionSteps.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-16 text-center bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                            <FileText className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-3" />
-                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium max-w-xs">
-                              Esta terapia no tiene pasos estructurados. Solo se
-                              registra el tiempo transcurrido.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {sessionSteps.map((step, i) => {
-                              const isDone = i < currentStep;
-                              const isCurrent = i === currentStep;
-                              return (
-                                <div
-                                  key={i}
-                                  className={`flex items-center gap-2 p-3 rounded-xl border transition-all duration-300 ${
-                                    isCurrent
-                                      ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 shadow-md"
-                                      : isDone
-                                        ? "border-emerald-200 bg-emerald-50/60 dark:bg-emerald-900/10 dark:border-emerald-800 opacity-80"
-                                        : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 opacity-60"
-                                  }`}
-                                >
-                                  <div
-                                    className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-black text-xs mt-0.5 ${
-                                      isDone
-                                        ? "bg-emerald-500 text-white"
-                                        : isCurrent
-                                          ? "bg-blue-600 text-white"
-                                          : "bg-slate-200 dark:bg-slate-700 text-slate-500"
-                                    }`}
-                                  >
-                                    {isDone ? (
-                                      <CheckCircle2 className="w-3.5 h-3.5" />
-                                    ) : isCurrent ? (
-                                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                                    ) : (
-                                      <span className="text-xs">{i + 1}</span>
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p
-                                      className={`text-sm font-bold truncate ${
-                                        isCurrent
-                                          ? "text-blue-700 dark:text-blue-300"
-                                          : isDone
-                                            ? "text-slate-500 dark:text-slate-400 line-through"
-                                            : "text-slate-600 dark:text-slate-300"
-                                      }`}
-                                    >
-                                      {step.text}
-                                    </p>
-                                    <p className="text-[10px] font-semibold text-slate-400 mt-0.5 flex items-center gap-1">
-                                      <Clock className="w-2.5 h-2.5" />{" "}
-                                      {formatMinutes(step.time)} estimados
-                                      {isCurrent && (
-                                        <span className="text-blue-500 font-bold">
-                                          · en curso
-                                        </span>
-                                      )}
-                                    </p>
-                                  </div>
-                                  {isCurrent && (
-                                    <Button
-                                      variant="primary"
-                                      size="xs"
-                                      onClick={goNextStep}
-                                    >
-                                      Siguiente
-                                    </Button>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                      {/* Controles: navegación mínima */}
+                      <div className="shrink-0 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 backdrop-blur px-4 py-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={goPrevStep}
+                          disabled={currentStep === 0}
+                          className="min-h-[44px] px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                        >
+                          ← Anterior
+                        </button>
+                        <button
+                          type="button"
+                          onClick={goNextStep}
+                          data-tour="rt-live-next"
+                          className={`flex-1 min-h-[48px] py-3 text-base font-black rounded-xl shadow-lg transition-all active:scale-[0.98] ${
+                            currentStep >= sessionSteps.length - 1 &&
+                            sessionSteps.length > 0
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/30"
+                              : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30"
+                          }`}
+                        >
+                          {currentStep >= sessionSteps.length - 1 &&
+                          sessionSteps.length > 0
+                            ? "Finalizar sesión ✓"
+                            : "Siguiente paso →"}
+                        </button>
                       </div>
                     </div>
                   )}

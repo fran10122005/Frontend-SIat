@@ -422,7 +422,6 @@ export default function EspecialistasTab({
             open={showRegistro}
             onClose={() => setShowRegistro(false)}
             title="Acreditación de Nuevo Especialista"
-            subtitle="Registrar un nuevo profesional clínico en la nómina médica"
             icon={BadgeCheck}
             maxWidth="max-w-3xl"
           >
@@ -1317,7 +1316,6 @@ export default function EspecialistasTab({
             open={showCatRegistro}
             onClose={() => setShowCatRegistro(false)}
             title="Registrar Nueva Especialidad"
-            subtitle="Añadir una especialidad médica al catálogo oficial de la institución"
             icon={Plus}
             maxWidth="max-w-3xl"
           >

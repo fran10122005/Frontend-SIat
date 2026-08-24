@@ -41,7 +41,7 @@ export default function ConfirmDialog({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-2.5 -m-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
@@ -50,10 +50,10 @@ export default function ConfirmDialog({
           className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed"
           dangerouslySetInnerHTML={{ __html: message }}
         />
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end [padding-bottom:max(0.25rem,env(safe-area-inset-bottom))] sm:[padding-bottom:0.25rem]">
           <button
             onClick={onClose}
-            className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-semibold transition-colors"
+            className="w-full sm:w-auto min-h-[38px] px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-semibold transition-colors"
           >
             {cancelLabel}
           </button>
@@ -62,7 +62,7 @@ export default function ConfirmDialog({
               onConfirm();
               onClose();
             }}
-            className={`px-4 py-2.5 text-white rounded-xl text-sm font-semibold transition-all shadow-sm ${
+            className={`w-full sm:w-auto min-h-[38px] px-4 py-2 text-white rounded-xl text-sm font-semibold transition-all shadow-sm ${
               isDanger
                 ? "bg-red-600 hover:bg-red-700 shadow-red-600/25"
                 : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/25"

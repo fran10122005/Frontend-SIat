@@ -42,10 +42,7 @@ export default function PatientBehaviorChart({ behaviorHistory, isDark }) {
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500">
             <Activity className="w-10 h-10 mb-2 opacity-50" />
-            <p className="text-sm">Sin datos conductuales registrados</p>
-            <p className="text-xs text-slate-500">
-              Los incidentes aparecerán aquí automáticamente
-            </p>
+            <p className="text-sm">Sin registros esta semana</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

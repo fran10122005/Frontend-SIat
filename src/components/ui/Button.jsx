@@ -6,10 +6,10 @@ const baseStyles =
 
 const sizeStyles = {
   xs: "px-2 py-1 text-[10px] gap-1",
-  sm: "px-3 py-1.5 text-xs gap-1.5",
-  md: "px-4 py-2 text-sm gap-2",
-  lg: "px-5 py-2.5 text-sm gap-2",
-  xl: "px-6 py-3 text-base gap-2.5",
+  sm: "px-2.5 py-1.5 text-xs gap-1",
+  md: "px-3 py-2 text-sm gap-1.5",
+  lg: "px-4 py-2 text-sm gap-2",
+  xl: "px-5 py-2.5 text-base gap-2",
 };
 
 const variantStyles = {
@@ -38,6 +38,7 @@ const Button = forwardRef(
       leftIcon,
       rightIcon,
       fullWidth = false,
+      responsive = true,
       className = "",
       children,
       type = "button",
@@ -46,13 +47,14 @@ const Button = forwardRef(
     ref,
   ) => {
     const isLoading = loading && !props.disabled;
+    const widthStyles = fullWidth || responsive ? "w-full sm:w-auto" : "w-auto";
 
     return (
       <button
         ref={ref}
         type={type}
         disabled={props.disabled || isLoading}
-        className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${fullWidth ? "w-full" : ""} ${className}`}
+        className={`${baseStyles} ${sizeStyles[size]} ${widthStyles} min-h-[38px] ${variantStyles[variant]} ${className}`}
         {...props}
       >
         {isLoading ? (

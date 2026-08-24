@@ -113,9 +113,15 @@ export default function PatientPeiGoals({
           >
             Nueva Meta
           </Button>
-          <span className="text-xs font-semibold px-2 py-1 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-md flex items-center gap-1.5">
-            <Trophy className="w-3.5 h-3.5" />
-            {completadas}/{total}
+          <span
+            className="text-xs font-semibold px-2 py-1 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-md flex items-center gap-1.5 whitespace-nowrap"
+            title={`${completadas} de ${total} metas completadas`}
+          >
+            <Trophy className="w-3.5 h-3.5 shrink-0" />
+            {completadas} de {total}
+            <span className="hidden sm:inline">
+              {total === 1 ? "meta" : "metas"}
+            </span>
           </span>
         </div>
       </div>

@@ -29,19 +29,20 @@ export default function ConsentimientoModal({ onAccept, loading }) {
   }).format(new Date());
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[94dvh] sm:max-h-[92vh] border-t border-slate-200 dark:border-slate-700/80 sm:border animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
+        <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-blue-600 text-white shrink-0">
+          <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/40" />
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl">
+            <div className="p-2 bg-white/20 rounded-xl shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold">
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold truncate">
                 Consentimiento Informado Legal
               </h2>
-              <p className="text-blue-100 text-sm mt-0.5">
+              <p className="text-blue-100 text-sm mt-0.5 line-clamp-1">
                 Requerido por la Ley de Infogobierno (Art. 79) y LOPNNA (Art.
                 65)
               </p>
@@ -50,10 +51,10 @@ export default function ConsentimientoModal({ onAccept, loading }) {
         </div>
 
         {/* Body / Documento */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
             <div className="flex items-center gap-2 mb-4 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-100 dark:border-slate-700 pb-2">
-              <FileText className="w-5 h-5 text-blue-500" />
+              <FileText className="w-5 h-5 text-blue-500 shrink-0" />
               Términos y Condiciones del Servicio
             </div>
             <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">
@@ -63,12 +64,12 @@ export default function ConsentimientoModal({ onAccept, loading }) {
         </div>
 
         {/* Footer / Acción */}
-        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700/50 flex flex-col gap-4 shrink-0">
-          <label className="flex items-start gap-3 p-3 rounded-xl border-2 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors">
+        <div className="px-4 sm:px-6 py-4 border-t border-slate-200 dark:border-slate-700/50 flex flex-col gap-4 shrink-0 [padding-bottom:max(1rem,env(safe-area-inset-bottom))] sm:[padding-bottom:1rem]">
+          <label className="flex items-start gap-3 p-3 rounded-xl border-2 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors min-h-[44px]">
             <div className="mt-0.5">
               <input
                 type="checkbox"
-                className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 dark:border-slate-600 dark:bg-slate-700"
+                className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 dark:border-slate-600 dark:bg-slate-700 cursor-pointer"
                 checked={acceptedCheck}
                 onChange={(e) => setAcceptedCheck(e.target.checked)}
               />
@@ -85,20 +86,18 @@ export default function ConsentimientoModal({ onAccept, loading }) {
             </div>
           </label>
 
-          <div className="flex justify-end">
-            <button
-              onClick={handleAccept}
-              disabled={!acceptedCheck || loading}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm shadow-blue-600/25"
-            >
-              {loading ? (
-                <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              ) : (
-                <CheckCircle className="w-5 h-5" />
-              )}
-              Aceptar y Continuar
-            </button>
-          </div>
+          <button
+            onClick={handleAccept}
+            disabled={!acceptedCheck || loading}
+            className="min-h-[48px] px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm shadow-blue-600/25 w-full"
+          >
+            {loading ? (
+              <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              <CheckCircle className="w-5 h-5" />
+            )}
+            Aceptar y Continuar
+          </button>
         </div>
       </div>
     </div>

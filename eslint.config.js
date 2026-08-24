@@ -37,6 +37,8 @@ export default [
         CustomEvent: 'readonly',
         SpeechSynthesisUtterance: 'readonly',
         speechSynthesis: 'readonly',
+        Notification: 'readonly',
+        Blob: 'readonly',
         performance: 'readonly',
         requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly',
