@@ -18,20 +18,18 @@ export default function PatientSensoryChart({ sensoryData = [], isDark }) {
   const principal = [...chartData].sort((a, b) => b.value - a.value)[0];
 
   return (
-    <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col h-[330px] sm:h-[310px] lg:h-[350px] transition-all duration-200">
-      <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+    <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col h-[330px] sm:h-[310px] lg:h-[350px] overflow-hidden transition-all duration-200">
+      <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4 min-w-0 shrink-0">
         <Zap className="w-5 h-5 text-amber-500 shrink-0" />
-        <span className="truncate">
-          Sensibilidad Sensorial (7 días)
-          {principal && (
-            <span
-              className="ml-2 text-xs font-semibold align-middle"
-              style={{ color: principal.color }}
-            >
-              Principal: {principal.name}
-            </span>
-          )}
-        </span>
+        <span className="truncate">Sensibilidad Sensorial (7 días)</span>
+        {principal && (
+          <span
+            className="ml-auto pl-2 text-xs font-semibold truncate"
+            style={{ color: principal.color }}
+          >
+            Principal: {principal.name}
+          </span>
+        )}
       </h2>
       <div className="relative flex-1 w-full min-h-0">
         {isEmpty ? (

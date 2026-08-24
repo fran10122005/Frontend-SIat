@@ -18,6 +18,8 @@ import Pagination from "../components/shared/Pagination";
 import FilterBar from "../components/shared/FilterBar";
 import Button from "../components/ui/Button";
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function HistoryProgress() {
   const { historicalData, globalPeiGoals } = useGlobalContext();
   const [dateRange, setDateRange] = useState("7days");
@@ -138,16 +140,12 @@ export default function HistoryProgress() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 lg:p-8 flex flex-col gap-6">
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="flex flex-col gap-2">
-                <h1
-                  data-tour="hp-header"
-                  className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
-                >
-                  <TrendingUp className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                <PageTitle icon={TrendingUp} data-tour="hp-header">
                   Historial de Evolución
-                </h1>
+                </PageTitle>
                 <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400">
                   Análisis histórico y tendencias de comportamiento
                 </p>

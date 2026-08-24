@@ -70,6 +70,9 @@ function Login({ onNavigate }) {
   const webAuthnSupported = () =>
     typeof window !== "undefined" && !!window.PublicKeyCredential;
 
+  // La opción de huella solo se muestra en dispositivos compatibles
+  const fpSupported = webAuthnSupported();
+
   const handleFingerprint = async () => {
     setError("");
     if (!webAuthnSupported()) {
@@ -101,17 +104,15 @@ function Login({ onNavigate }) {
   };
 
   return (
-    <div className="w-full flex flex-col justify-center px-4 sm:px-8 py-5 sm:py-8 bg-white dark:bg-slate-900 transition-colors duration-200">
+    <div className="w-full m-auto flex flex-col justify-center px-6 sm:px-10 pt-5 sm:pt-6 pb-8 sm:pb-10 bg-white dark:bg-slate-900 transition-colors duration-200">
       <div className="w-full">
         {/* Header (solo en desktop; en móvil el brand lo muestra Auth.jsx) */}
-        <div className="mb-5 sm:mb-8 text-center hidden md:block">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20 mx-auto mb-2.5 sm:mb-4">
-            <img
-              src={funautaLogo}
-              alt="Logo"
-              className="w-8 h-8 sm:w-9 sm:h-9 object-contain brightness-0 invert"
-            />
-          </div>
+        <div className="mb-5 text-center hidden md:block">
+          <img
+            src={funautaLogo}
+            alt="Logo"
+            className="w-10 h-10 object-contain mx-auto mb-2"
+          />
           <h1 className="text-lg sm:text-xl font-bold text-brand-700 dark:text-blue-400">
             SIAT-TEA
           </h1>
@@ -120,10 +121,14 @@ function Login({ onNavigate }) {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="space-y-4 sm:space-y-5"
+        >
           <FormAlert variant="error" message={error} />
 
-          <div className="space-y-1.5">
+          <div className="auth-rise auth-d1 space-y-1.5">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Correo Electrónico
             </label>
@@ -153,7 +158,7 @@ function Login({ onNavigate }) {
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="auth-rise auth-d2 space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Contraseña
@@ -215,7 +220,7 @@ function Login({ onNavigate }) {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-brand-500 to-blue-600 hover:from-brand-600 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-brand-500/25 dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-brand-500 to-blue-600 hover:from-brand-600 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-brand-500/25 dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 auth-rise auth-d3"
           >
             {isLoading ? (
               <svg
@@ -243,74 +248,61 @@ function Login({ onNavigate }) {
           </button>
         </form>
 
-        <div className="my-4 sm:my-5 flex items-center gap-3">
-          <span className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-          <span className="text-xs text-slate-400">o</span>
-          <span className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-        </div>
-
-        <button
-          type="button"
-          onClick={handleFingerprint}
-          disabled={isLoading || isFp}
-          className="group w-full flex items-center justify-center gap-3 py-3 sm:py-3.5 px-4 rounded-xl border border-brand-200 dark:border-blue-700/50 bg-brand-50/60 dark:bg-slate-800/70 text-brand-700 dark:text-blue-300 font-semibold transition-all duration-200 hover:bg-brand-100/70 dark:hover:bg-blue-900/30 hover:border-brand-300 dark:hover:border-blue-600 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500/10 dark:bg-blue-500/15 text-brand-600 dark:text-blue-400 ring-1 ring-brand-500/20 dark:ring-blue-500/20 transition-all duration-200 group-hover:bg-brand-500/15 dark:group-hover:bg-blue-500/20">
-            {isFp ? (
-              <svg
-                className="animate-spin h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
+        {fpSupported && (
+          <div className="auth-rise auth-d4 mt-7 flex justify-center">
+            <button
+              type="button"
+              onClick={handleFingerprint}
+              disabled={isLoading || isFp}
+              className="flex items-center gap-2 py-2 px-3.5 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 transition-colors duration-200 hover:text-brand-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-slate-800 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isFp ? (
+                <svg
+                  className="animate-spin h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
                   stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
-                <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
-                <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
-                <path d="M2 12a10 10 0 0 1 18-6" />
-                <path d="M2 16h.01" />
-                <path d="M21.8 16c.2-2 .131-5.354 0-6" />
-                <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
-                <path d="M8.65 22c.21-.66.45-1.32.57-2" />
-                <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
-              </svg>
-            )}
-          </span>
-          <span className="text-left leading-tight">
-            {isFp ? "Verificando con tu huella..." : "Ingresar con huella"}
-            <span className="block text-[11px] font-normal text-brand-500/80 dark:text-blue-400/70">
-              Usa tu huella o reconocimiento facial
-            </span>
-          </span>
-        </button>
-        <p className="mt-3 text-center text-[11px] text-slate-400 dark:text-slate-500">
-          Si aún no la configuras, inicia sesión con tu contraseña y regístrala
-          en tu perfil.
-        </p>
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+                  <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+                  <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+                  <path d="M2 12a10 10 0 0 1 18-6" />
+                  <path d="M2 16h.01" />
+                  <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+                  <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+                  <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+                  <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
+                </svg>
+              )}
+              {isFp ? "Verificando…" : "Ingresar con huella"}
+            </button>
+          </div>
+        )}
 
-        <div className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
+        <div className="auth-rise auth-d5 mt-6 pb-1 text-center text-sm text-gray-600 dark:text-gray-400">
           ¿No tienes cuenta?{" "}
           <button
             type="button"

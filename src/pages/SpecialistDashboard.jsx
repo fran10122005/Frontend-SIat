@@ -17,6 +17,7 @@ import api from "../api/axios";
 import Footer from "../components/layout/Footer";
 import { exportDashboardReport } from "../utils/pdfExporter";
 import Button from "../components/ui/Button";
+import PageTitle from "../components/ui/PageTitle";
 
 // Subcomponents
 import SpecialistGlobalView from "../components/specialist/SpecialistGlobalView";
@@ -480,14 +481,13 @@ export default function SpecialistDashboard() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 pb-12">
             {/* Header Title Area - Estilo AdminDashboard */}
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div className="flex flex-col gap-2">
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-brand-700 dark:text-blue-400 flex items-center gap-2 md:gap-3 transition-colors">
-                  <Users className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2 min-w-0">
+                <PageTitle icon={Users}>
                   {activeChild
                     ? `Panel del Paciente: ${activeChild.nom_nino} ${activeChild.ape_nino}`
                     : `Bienvenido, ${userName || "Especialista"}`}
-                </h1>
+                </PageTitle>
                 <p className="hidden sm:block text-subtitle-muted mt-1">
                   {activeChild
                     ? "Seguimiento PEI, registro conductual y detonantes sensoriales."
@@ -496,7 +496,7 @@ export default function SpecialistDashboard() {
               </div>
 
               {activeChild ? (
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end shrink-0 w-full sm:w-auto">
+                <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-row lg:flex-wrap lg:justify-end lg:gap-3">
                   <Button
                     variant="primary"
                     size="sm"
@@ -551,7 +551,7 @@ export default function SpecialistDashboard() {
                     size="sm"
                     leftIcon={<TrendingUp className="w-4 h-4" />}
                     onClick={() => navigate("historial")}
-                    className="col-span-2 sm:col-span-1"
+                    className="col-span-2"
                   >
                     Historial
                   </Button>

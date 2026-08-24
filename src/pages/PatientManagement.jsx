@@ -8,6 +8,7 @@ import Pagination from "../components/shared/Pagination";
 import RegisterChildModal from "../components/shared/RegisterChildModal";
 import FilterBar from "../components/shared/FilterBar";
 import Fab from "../components/ui/Fab";
+import PageTitle from "../components/ui/PageTitle";
 
 export default function PatientManagement() {
   const {
@@ -153,17 +154,13 @@ export default function PatientManagement() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-8 lg:p-10 flex flex-col gap-5 md:gap-8">
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-5 md:gap-8">
             {/* Header del Dashboard ([B] Ind. Empresa y [A] Logo + [D] Botones de Cambio) */}
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 md:gap-6">
               <div>
-                <h1
-                  data-tour="pm-header"
-                  className="text-lg md:text-xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 transition-colors"
-                >
-                  <Users className="w-5 h-5 text-brand-700 dark:text-blue-400" />
+                <PageTitle icon={Users} data-tour="pm-header">
                   Gestión de Pacientes
-                </h1>
+                </PageTitle>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Pacientes asignados
                 </p>

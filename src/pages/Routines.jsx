@@ -3,6 +3,7 @@ import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import {
   Play,
+  Pause,
   Square,
   Clock,
   CheckCircle2,
@@ -65,16 +66,36 @@ const parseTimeToSeconds = (raw = "") => {
 
 const parseSteps = (inst = "") =>
   String(inst || "")
-    .split("\n")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const match = line.match(/^\d+\.\s*(.*?)\s*\(([^)]+)\)\s*$/);
+      // Formato canónico: "1. texto (2 min)"
+      const match = line.match(/^\d+[.)]\s*(.*?)\s*\(([^)]+)\)\s*$/);
+      // Tolerante: "1. texto" o "- texto"
+      const loose = !match ? line.match(/^(?:\d+[.)]|[-•*])\s*(.*)$/) : null;
+      const text = (match ? match[1] : loose ? loose[1] : line).trim();
       return {
-        text: (match ? match[1] : line.replace(/^\d+\.\s*/, "")).trim(),
+        text,
         time: parseTimeToSeconds(match ? match[2] : ""),
       };
     })
     .filter((s) => s.text);
+
+// Pasos efectivos: guía parseada o, en su defecto, un paso único con la
+// descripción/título para que el reproductor siempre tenga contenido.
+const getEffectiveSteps = (routine) => {
+  if (!routine) return [];
+  const parsed = parseSteps(routine.inst);
+  if (parsed.length > 0) return parsed;
+  const fallback =
+    (routine.description || "").trim() ||
+    (routine.inst || "").trim() ||
+    routine.title ||
+    "Realiza la actividad acompañando al paciente.";
+  const minutes = Math.max(parseInt(routine.act_time, 10) || 5, 1);
+  return [{ text: fallback, time: minutes * 60 }];
+};
 
 const DIFFICULTY_STYLES = {
   Baja: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
@@ -82,6 +103,11 @@ const DIFFICULTY_STYLES = {
     "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
   Alta: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800",
 };
+
+// Circunferencia del anillo del cronómetro circular (r = 45 en viewBox 100)
+const RING_CIRCUMFERENCE = 2 * Math.PI * 45;
+
+import PageTitle from "../components/ui/PageTitle";
 
 export default function Routines() {
   const {
@@ -109,6 +135,10 @@ export default function Routines() {
   const [cooperation, setCooperation] = useState(0);
   const [notes, setNotes] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
+  const [previewRoutine, setPreviewRoutine] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [stepsDone, setStepsDone] = useState(0);
+  const [stepElapsed, setStepElapsed] = useState(0); // segundos dentro del paso actual
 
   // --- Advanced Routine Builder State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -343,15 +373,16 @@ export default function Routines() {
   // Timer Effect
   useEffect(() => {
     let interval = null;
-    if (activeSession && !isFinishing) {
+    if (activeSession && !isFinishing && !isPaused) {
       interval = setInterval(() => {
         setSessionTime((prev) => prev + 1);
+        setStepElapsed((prev) => prev + 1);
       }, 1000);
     } else {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [activeSession, isFinishing]);
+  }, [activeSession, isFinishing, isPaused]);
 
   const formatTime = (totalSeconds) => {
     const m = Math.floor(totalSeconds / 60)
@@ -363,94 +394,61 @@ export default function Routines() {
 
   // --- Guía por pasos del monitor en vivo ---
   const sessionSteps = useMemo(
-    () => (activeSession ? parseSteps(activeSession.inst) : []),
+    () => (activeSession ? getEffectiveSteps(activeSession) : []),
     [activeSession],
   );
-
-  const totalDuration = sessionSteps.reduce(
-    (acc, s) => acc + Math.max(s.time, 1),
-    0,
-  );
-  const totalProgress =
-    totalDuration > 0 ? Math.min(sessionTime / totalDuration, 1) : 0;
 
   const currentStepInfo = useMemo(() => {
     if (sessionSteps.length === 0) return null;
     const safeIndex = Math.min(currentStep, sessionSteps.length - 1);
-    let stepStart = 0;
-    for (let i = 0; i < safeIndex; i++)
-      stepStart += Math.max(sessionSteps[i].time, 1);
     const stepDuration = Math.max(sessionSteps[safeIndex].time, 1);
-    const elapsedInStep = Math.min(
-      Math.max(sessionTime - stepStart, 0),
-      stepDuration,
-    );
+    const elapsedInStep = Math.min(stepElapsed, stepDuration);
     return {
-      stepStart,
       stepDuration,
       elapsedInStep,
       remaining: Math.max(stepDuration - elapsedInStep, 0),
+      progress: Math.min(elapsedInStep / stepDuration, 1),
     };
-  }, [sessionSteps, currentStep, sessionTime]);
+  }, [sessionSteps, currentStep, stepElapsed]);
 
-  // Auto-avance: el tiempo "empuja" el paso hacia adelante sin pelear con la
-  // navegación manual (Anterior). Solo avanza cuando el reloj cruza un nuevo
-  // límite de paso; si el padre retrocede manualmente, no se fuerza regreso.
-  const naturalIdxRef = useRef(-1);
+  // Auto-avance por paso: cada paso corre su propio cronómetro; al agotarse
+  // avanza al siguiente y, en el último, abre el cierre de sesión. La pausa
+  // congela todo y la navegación manual reinicia el conteo del paso destino.
   useEffect(() => {
-    if (!activeSession || sessionSteps.length === 0 || isFinishing) return;
-    const ends = [];
-    let acc = 0;
-    for (const s of sessionSteps) {
-      acc += Math.max(s.time, 1);
-      ends.push(acc);
-    }
-    let idx = sessionSteps.length - 1;
-    for (let i = 0; i < ends.length; i++) {
-      if (sessionTime < ends[i]) {
-        idx = i;
-        break;
-      }
-    }
-    if (naturalIdxRef.current === -1 || idx > naturalIdxRef.current) {
-      naturalIdxRef.current = idx;
-      setCurrentStep((prev) => Math.max(prev, idx));
-    }
-  }, [sessionTime, activeSession, sessionSteps, isFinishing]);
-
-  // Último paso agotado → pantalla de cierre automáticamente
-  useEffect(() => {
-    if (
-      isFinishing ||
-      !activeSession ||
-      sessionSteps.length === 0 ||
-      totalDuration === 0
-    )
+    if (!activeSession || isFinishing || isPaused || sessionSteps.length === 0)
       return;
-    const lastIdx = sessionSteps.length - 1;
-    if (
-      sessionTime > 0 &&
-      currentStep === lastIdx &&
-      sessionTime >= totalDuration
-    ) {
+    const dur = Math.max(
+      sessionSteps[Math.min(currentStep, sessionSteps.length - 1)]?.time ?? 60,
+      1,
+    );
+    if (stepElapsed < dur) return;
+    if (currentStep < sessionSteps.length - 1) {
+      setCurrentStep((p) => p + 1);
+      setStepElapsed(0);
+    } else {
       setIsFinishing(true);
     }
   }, [
-    sessionTime,
+    stepElapsed,
     currentStep,
-    sessionSteps.length,
-    totalDuration,
+    sessionSteps,
     activeSession,
     isFinishing,
+    isPaused,
   ]);
 
-  const goPrevStep = () => setCurrentStep((p) => Math.max(p - 1, 0));
+  const goToStep = (i) => {
+    const clamped = Math.max(0, Math.min(i, sessionSteps.length - 1));
+    setCurrentStep(clamped);
+    setStepElapsed(0); // cada paso inicia su propio conteo en cero
+  };
+  const goPrevStep = () => goToStep(currentStep - 1);
   const goNextStep = () => {
     if (currentStep >= sessionSteps.length - 1) {
-      setIsFinishing(true);
+      endSession();
       return;
     }
-    setCurrentStep((p) => Math.min(p + 1, sessionSteps.length - 1));
+    goToStep(currentStep + 1);
   };
 
   const startSession = async (routine) => {
@@ -468,8 +466,9 @@ export default function Routines() {
       });
       setSessionTime(0);
       setCurrentStep(0);
-      naturalIdxRef.current = -1;
+      setStepElapsed(0);
       setIsFinishing(false);
+      setIsPaused(false);
       setCooperation(0);
       setNotes("");
     } catch (err) {
@@ -482,21 +481,26 @@ export default function Routines() {
       });
       setSessionTime(0);
       setCurrentStep(0);
-      naturalIdxRef.current = -1;
+      setStepElapsed(0);
       setIsFinishing(false);
+      setIsPaused(false);
       setCooperation(0);
       setNotes("");
     }
   };
 
   const endSession = () => {
+    setStepsDone(currentStep + 1);
     setIsFinishing(true);
   };
 
   const saveSession = async () => {
     try {
       const sesCodi = activeSession.ses_codi;
-      const parsedNota = `[Cooperación: ${cooperation}/5] ${notes}`;
+      const parsedNota = `[Cooperación: ${cooperation}/5 · Pasos: ${Math.min(
+        stepsDone,
+        sessionSteps.length,
+      )}/${sessionSteps.length}] ${notes}`;
       await api.put(`/sesiones/${sesCodi}/cerrar`, {
         ses_nota: parsedNota,
       });
@@ -529,10 +533,9 @@ export default function Routines() {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
                   <div className="flex flex-col gap-1" data-tour="rt-header">
-                    <h1 className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2">
-                      <ListChecks className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                    <PageTitle icon={ListChecks}>
                       Terapias y Actividades
-                    </h1>
+                    </PageTitle>
                     <p className="hidden sm:block text-sm text-slate-500 mt-1 line-clamp-1">
                       Selecciona una rutina para iniciar el monitoreo clínico
                       para {nomNino || "el paciente"}.
@@ -710,7 +713,9 @@ export default function Routines() {
                             : routine.title
                         }
                         onClick={
-                          isGestion ? () => startSession(routine) : undefined
+                          isGestion
+                            ? () => setPreviewRoutine(routine)
+                            : undefined
                         }
                         onKeyDown={(e) => {
                           if (
@@ -718,7 +723,7 @@ export default function Routines() {
                             (e.key === "Enter" || e.key === " ")
                           ) {
                             e.preventDefault();
-                            startSession(routine);
+                            setPreviewRoutine(routine);
                           }
                         }}
                         data-tour="rt-live"
@@ -828,13 +833,17 @@ export default function Routines() {
                               </button>
                             )}
                             {isGestion && (
-                              <span
-                                aria-hidden="true"
-                                title="Iniciar sesión en vivo"
-                                className="ml-1 w-9 h-9 rounded-full bg-brand-600 group-hover:bg-brand-700 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-all shrink-0"
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  startSession(routine);
+                                }}
+                                title="Iniciar sesión ahora"
+                                className="ml-1 w-9 h-9 rounded-full bg-brand-600 hover:bg-brand-700 text-white flex items-center justify-center shadow-sm hover:scale-105 active:scale-95 transition-all shrink-0"
                               >
                                 <Play className="w-4 h-4 fill-current ml-0.5" />
-                              </span>
+                              </button>
                             )}
                           </div>
                         </div>
@@ -849,241 +858,391 @@ export default function Routines() {
               <Fab onClick={openCreateModal} label="Crear Nueva Terapia" />
             )}
 
-            {/* Si hay sesión activa: Mostrar Live Monitor */}
+            {/* Si hay sesión activa: Live Monitor en overlay (sin scroll de fondo) */}
             {activeSession && (
-              <div className="animate-in fade-in zoom-in-95 duration-500 max-w-4xl mx-auto w-full mt-4">
-                {/* Panel de Monitoreo Guiado */}
-                <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-blue-200 dark:border-blue-900/50 shadow-2xl shadow-blue-500/10 overflow-hidden relative min-h-[420px] flex flex-col">
-                  {/* Header Flotante */}
-                  <div className="px-6 md:px-8 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex flex-wrap justify-between items-center gap-3 shrink-0">
-                    <div>
-                      <span className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                        Monitoreo en Curso
-                      </span>
-                      <h2 className="text-xl font-black text-slate-900 dark:text-white mt-0.5">
-                        {activeSession.title}
-                      </h2>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="px-3.5 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-800 dark:text-slate-100 tabular-nums">
-                        {formatTime(sessionTime)}
-                      </span>
-                      {!isFinishing && (
-                        <button
-                          data-tour="rt-live-stop"
-                          onClick={endSession}
-                          className="px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl shadow-sm flex items-center gap-2 transition-colors"
-                        >
-                          <Square className="w-4 h-4 fill-current" /> Detener
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Barra de progreso general de la actividad */}
-                  {!isFinishing && (
-                    <div className="h-1.5 bg-slate-100 dark:bg-slate-800 shrink-0">
-                      <div
-                        className="h-full bg-blue-500 transition-all duration-500"
-                        style={{ width: `${totalProgress * 100}%` }}
-                      />
-                    </div>
-                  )}
-
-                  {isFinishing ? (
-                    /* Formulario de Cierre (vista propia, sin cortes) */
-                    <div className="flex-1 overflow-y-auto p-6 md:p-10 [padding-bottom:max(6rem,env(safe-area-inset-bottom))] md:[padding-bottom:2.5rem]">
-                      <div className="max-w-md w-full mx-auto flex flex-col items-center text-center">
-                        <CheckCircle2 className="w-16 h-16 text-emerald-500 mb-5" />
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">
-                          Sesión Finalizada
-                        </h3>
-                        <p className="text-sm text-slate-500 mb-6 font-medium">
-                          Tiempo total registrado:{" "}
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
+              <div className="fixed inset-0 z-[110] bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm overflow-y-auto">
+                <div className="min-h-full flex items-start sm:items-center justify-center p-0 sm:p-6">
+                  <div className="animate-in fade-in zoom-in-95 duration-300 max-w-3xl w-full">
+                    {/* Panel de Monitoreo Guiado */}
+                    <div className="bg-white dark:bg-[#1E293B] rounded-none sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-900/5 dark:shadow-black/30 overflow-hidden relative min-h-[100dvh] sm:min-h-[440px] flex flex-col">
+                      {/* Franja superior: título · tiempo · detener */}
+                      <div className="px-5 md:px-7 py-3.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
+                        <div className="min-w-0">
+                          <span
+                            className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 ${
+                              isPaused
+                                ? "text-amber-500"
+                                : "text-blue-600 dark:text-blue-400"
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isPaused
+                                  ? "bg-amber-500"
+                                  : "bg-red-500 animate-pulse"
+                              }`}
+                            ></span>
+                            {isPaused
+                              ? "Sesión en pausa"
+                              : "Monitoreo en Curso"}
+                          </span>
+                          <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white truncate">
+                            {activeSession.title}
+                          </h2>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => setIsPaused((p) => !p)}
+                            aria-label={isPaused ? "Reanudar" : "Pausar"}
+                            title={isPaused ? "Reanudar" : "Pausar"}
+                            className="min-h-[36px] w-9 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition-colors"
+                          >
+                            {isPaused ? (
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                            ) : (
+                              <Pause className="w-3.5 h-3.5 fill-current" />
+                            )}
+                          </button>
+                          <span className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-black text-slate-800 dark:text-slate-100 tabular-nums">
                             {formatTime(sessionTime)}
                           </span>
-                          . Por favor, evalúa el desempeño.
-                        </p>
-
-                        <div className="w-full space-y-6 text-left">
-                          <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
-                            <label
-                              data-tour="rt-finish-rating"
-                              className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3 block text-center"
+                          {!isFinishing && (
+                            <button
+                              data-tour="rt-live-stop"
+                              onClick={endSession}
+                              className="px-4 py-2 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 font-bold rounded-lg text-sm flex items-center gap-1.5 transition-colors"
                             >
-                              Nivel de Cooperación del Paciente
-                            </label>
-                            <div className="flex justify-center gap-2">
-                              {[1, 2, 3, 4, 5].map((val) => (
-                                <button
-                                  key={val}
-                                  onClick={() => setCooperation(val)}
-                                  className="focus:outline-none transition-transform hover:scale-125"
-                                >
-                                  <Star
-                                    className={`w-9 h-9 ${val <= cooperation ? "fill-amber-400 text-amber-400 drop-shadow-md" : "text-slate-200 dark:text-slate-700 fill-transparent"}`}
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                              <Square className="w-3.5 h-3.5 fill-current" />{" "}
+                              Detener
+                            </button>
+                          )}
+                        </div>
+                      </div>
 
-                          <div>
+                      {/* Timeline de pasos: clic para saltar */}
+                      {!isFinishing && sessionSteps.length > 0 && (
+                        <div className="px-5 md:px-7 py-2.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                          <div className="flex gap-1">
+                            {sessionSteps.map((_, i) => {
+                              const state =
+                                i < currentStep
+                                  ? "done"
+                                  : i === currentStep
+                                    ? "current"
+                                    : "todo";
+                              return (
+                                <button
+                                  key={i}
+                                  onClick={() => goToStep(i)}
+                                  aria-label={`Ir al paso ${i + 1}`}
+                                  title={`Paso ${i + 1}`}
+                                  className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                                    state === "done"
+                                      ? "bg-blue-600"
+                                      : state === "current"
+                                        ? "bg-blue-400"
+                                        : "bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600"
+                                  }`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {isFinishing ? (
+                        /* Formulario de Cierre: fijo en pantalla, sin scroll */
+                        <div className="flex-1 min-h-0 overflow-hidden p-4 sm:p-6 lg:px-10 lg:py-6 flex">
+                          <div className="max-w-xl w-full mx-auto my-auto">
+                            {/* Encabezado contextual */}
+                            <div className="flex items-center gap-3.5 mb-4">
+                              <div className="w-11 h-11 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                              </div>
+                              <div className="min-w-0">
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
+                                  Sesión Finalizada
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                  {activeSession.title} ·{" "}
+                                  {new Date().toLocaleDateString("es-ES", {
+                                    day: "numeric",
+                                    month: "long",
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Resumen en cifras */}
+                            <div className="grid grid-cols-3 gap-2.5 mb-4">
+                              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl p-3 text-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                                  Tiempo
+                                </p>
+                                <p className="text-base sm:text-lg font-black text-slate-800 dark:text-white tabular-nums">
+                                  {formatTime(sessionTime)}
+                                </p>
+                              </div>
+                              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl p-3 text-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                                  Pasos
+                                </p>
+                                <p className="text-base sm:text-lg font-black text-slate-800 dark:text-white tabular-nums">
+                                  {Math.min(stepsDone, sessionSteps.length)}/
+                                  {sessionSteps.length}
+                                </p>
+                              </div>
+                              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl p-3 text-center">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                                  Cooperación
+                                </p>
+                                <p className="text-base sm:text-lg font-black text-slate-800 dark:text-white tabular-nums">
+                                  {cooperation > 0 ? `${cooperation}/5` : "—"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Evaluación */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 mb-4">
+                              <label
+                                data-tour="rt-finish-rating"
+                                className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 block"
+                              >
+                                Nivel de cooperación del paciente
+                              </label>
+                              <div className="flex justify-center gap-2">
+                                {[1, 2, 3, 4, 5].map((val) => (
+                                  <button
+                                    key={val}
+                                    onClick={() => setCooperation(val)}
+                                    className="focus:outline-none transition-transform hover:scale-125"
+                                  >
+                                    <Star
+                                      className={`w-8 h-8 ${val <= cooperation ? "fill-amber-400 text-amber-400 drop-shadow-md" : "text-slate-200 dark:text-slate-700 fill-transparent"}`}
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="flex justify-between text-[10px] font-semibold text-slate-400 mt-1.5 px-1">
+                                <span>Se opone</span>
+                                <span>Participa con gusto</span>
+                              </div>
+                            </div>
+
                             <label
                               data-tour="rt-finish-notes"
-                              className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3 block flex items-center gap-2"
+                              className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"
                             >
-                              <MessageSquare className="w-4 h-4" /> Notas u
-                              Observaciones (Opcional)
+                              <MessageSquare className="w-3.5 h-3.5" /> Notas u
+                              observaciones (opcional)
                             </label>
                             <textarea
                               rows="3"
-                              className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl resize-none outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium"
-                              placeholder="Ej: El paciente mostró rechazo inicial pero luego completó la actividad sin problemas..."
+                              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl resize-none outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium"
+                              placeholder="Ej: Rechazo inicial, requirió apoyo verbal en el paso 3..."
                               value={notes}
                               onChange={(e) => setNotes(e.target.value)}
                             ></textarea>
-                          </div>
-                        </div>
 
-                        <div className="flex gap-3 w-full mt-8">
-                          <button
-                            onClick={() => setIsFinishing(false)}
-                            className="flex-1 py-3 bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-gray-400 transition-colors"
-                          >
-                            Volver
-                          </button>
-                          <button
-                            onClick={saveSession}
-                            data-tour="rt-finish-save"
-                            className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5"
-                          >
-                            Guardar Bitácora
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Modo reproductor: un solo paso en pantalla, sin scroll */
-                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                      {/* Progreso del paso actual */}
-                      {currentStepInfo && (
-                        <div className="w-full max-w-md mx-auto px-4 pt-3 shrink-0">
-                          <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-500 transition-all duration-500"
-                              style={{
-                                width: `${
-                                  (currentStepInfo.elapsedInStep /
-                                    currentStepInfo.stepDuration) *
-                                  100
-                                }%`,
-                              }}
-                            />
+                            <div className="flex gap-3 mt-5">
+                              <button
+                                onClick={() => setIsFinishing(false)}
+                                className="flex-1 min-h-[44px] py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold text-sm rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                              >
+                                Volver a la sesión
+                              </button>
+                              <button
+                                onClick={saveSession}
+                                data-tour="rt-finish-save"
+                                className="flex-1 min-h-[44px] py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 shadow-sm transition-all active:scale-[0.98]"
+                              >
+                                Guardar Bitácora
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest mt-1">
-                            <span className="text-blue-600 dark:text-blue-400">
-                              Paso {currentStep + 1} de {sessionSteps.length}
-                            </span>
-                            <span className="text-slate-400 tabular-nums">
-                              -{formatTime(currentStepInfo.remaining)}
-                            </span>
+                        </div>
+                      ) : (
+                        /* Modo reproductor: un solo paso en pantalla, sin scroll */
+                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                          <div className="flex-1 min-h-0 overflow-y-auto px-6 sm:px-10 pt-6 pb-3 flex flex-col items-center">
+                            {/* Indicadores del paso integrados a la tarjeta */}
+                            {currentStepInfo && (
+                              <div className="w-full max-w-xl shrink-0">
+                                <div className="flex items-center justify-between gap-3 mb-1.5">
+                                  <span className="text-[11px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                                    Paso {currentStep + 1} de{" "}
+                                    {sessionSteps.length}
+                                  </span>
+                                </div>
+                                <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-blue-500 transition-all duration-500"
+                                    style={{
+                                      width: `${
+                                        (currentStepInfo.elapsedInStep /
+                                          currentStepInfo.stepDuration) *
+                                        100
+                                      }%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Cronómetro circular + instrucción, juntos */}
+                            <div className="flex-1 flex flex-col items-center justify-center text-center py-5 w-full">
+                              <div
+                                data-tour="rt-live-timer"
+                                className="relative w-36 h-36 sm:w-44 sm:h-44 shrink-0"
+                              >
+                                <svg
+                                  viewBox="0 0 100 100"
+                                  className="w-full h-full -rotate-90"
+                                >
+                                  <circle
+                                    cx="50"
+                                    cy="50"
+                                    r="45"
+                                    fill="none"
+                                    strokeWidth="7"
+                                    className="stroke-slate-100 dark:stroke-slate-800"
+                                  />
+                                  <circle
+                                    cx="50"
+                                    cy="50"
+                                    r="45"
+                                    fill="none"
+                                    strokeWidth="7"
+                                    strokeLinecap="round"
+                                    stroke="currentColor"
+                                    strokeDasharray={RING_CIRCUMFERENCE}
+                                    strokeDashoffset={
+                                      RING_CIRCUMFERENCE *
+                                      (1 -
+                                        (currentStepInfo
+                                          ? currentStepInfo.progress
+                                          : 0))
+                                    }
+                                    className={`transition-all duration-500 ${
+                                      isPaused
+                                        ? "text-slate-300 dark:text-slate-600"
+                                        : currentStepInfo &&
+                                            currentStepInfo.remaining <= 10
+                                          ? "text-rose-500"
+                                          : "text-blue-500"
+                                    }`}
+                                  />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                  <span
+                                    className={`text-3xl sm:text-4xl font-black tabular-nums font-mono leading-none transition-colors ${
+                                      isPaused
+                                        ? "text-slate-400 dark:text-slate-500"
+                                        : currentStepInfo &&
+                                            currentStepInfo.remaining <= 10
+                                          ? "text-rose-500 animate-pulse"
+                                          : "text-slate-800 dark:text-white"
+                                    }`}
+                                  >
+                                    {currentStepInfo
+                                      ? formatTime(currentStepInfo.remaining)
+                                      : formatTime(sessionTime)}
+                                  </span>
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1.5">
+                                    {isPaused ? "En pausa" : "Restante"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <p className="mt-5 text-base md:text-xl font-bold text-slate-700 dark:text-slate-200 leading-relaxed max-w-lg">
+                                {sessionSteps.length > 0
+                                  ? sessionSteps[
+                                      Math.min(
+                                        currentStep,
+                                        sessionSteps.length - 1,
+                                      )
+                                    ].text
+                                  : "Sesión libre: solo se registra el tiempo total."}
+                              </p>
+
+                              {/* Material de apoyo del paso/sesión */}
+                              {activeSession.materials && (
+                                <div className="flex flex-wrap justify-center gap-1.5 mt-3 max-w-lg">
+                                  {String(activeSession.materials)
+                                    .split(",")
+                                    .map(
+                                      (m, i) =>
+                                        m.trim() && (
+                                          <span
+                                            key={i}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                                          >
+                                            <ListChecks className="w-3 h-3" />
+                                            {m.trim()}
+                                          </span>
+                                        ),
+                                    )}
+                                </div>
+                              )}
+
+                              {activeSession.media && (
+                                <div className="w-full max-w-sm rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 mt-3">
+                                  {isVideoUrl(activeSession.media) ? (
+                                    <video
+                                      key={activeSession.ses_codi}
+                                      src={activeSession.media}
+                                      controls
+                                      playsInline
+                                      className="w-full h-40 bg-black"
+                                    />
+                                  ) : (
+                                    <img
+                                      src={activeSession.media}
+                                      alt={activeSession.title}
+                                      className="w-full h-40 object-cover"
+                                    />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Controles: anterior izquierda · avanzar/finalizar derecha */}
+                          <div className="shrink-0 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 backdrop-blur px-4 sm:px-8 py-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={goPrevStep}
+                              disabled={currentStep === 0}
+                              className="min-h-[44px] px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                            >
+                              ← Anterior
+                            </button>
+                            {currentStep >= sessionSteps.length - 1 &&
+                            sessionSteps.length > 0 ? (
+                              <button
+                                type="button"
+                                onClick={endSession}
+                                data-tour="rt-live-next"
+                                className="min-h-[44px] px-5 py-2.5 text-sm font-bold rounded-xl bg-brand-700 hover:bg-brand-800 text-white border border-brand-800/40 shadow-sm transition-colors flex items-center gap-2 active:scale-[0.98]"
+                              >
+                                Finalizar sesión
+                                <CheckCircle2 className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={goNextStep}
+                                data-tour="rt-live-next"
+                                className="min-h-[44px] px-5 py-2.5 text-sm font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors flex items-center gap-2 active:scale-[0.98]"
+                              >
+                                Siguiente paso →
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
-
-                      {/* Centro: tiempo restante gigante + descripción completa */}
-                      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col items-center justify-center text-center gap-3">
-                        {currentStepInfo ? (
-                          <>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                              Tiempo restante del paso
-                            </span>
-                            <span
-                              data-tour="rt-live-timer"
-                              className={`text-7xl sm:text-8xl font-black tabular-nums font-mono leading-none transition-colors ${
-                                currentStepInfo.remaining <= 10
-                                  ? "text-rose-500 animate-pulse"
-                                  : "text-slate-800 dark:text-white"
-                              }`}
-                            >
-                              {formatTime(currentStepInfo.remaining)}
-                            </span>
-                          </>
-                        ) : (
-                          <div
-                            data-tour="rt-live-timer"
-                            className="flex flex-col items-center"
-                          >
-                            <span className="text-6xl font-black tabular-nums font-mono text-slate-800 dark:text-white leading-none">
-                              {formatTime(sessionTime)}
-                            </span>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">
-                              Tiempo de sesión
-                            </span>
-                          </div>
-                        )}
-
-                        <p className="text-base md:text-lg font-bold text-slate-700 dark:text-slate-200 leading-relaxed max-w-md">
-                          {sessionSteps.length > 0
-                            ? sessionSteps[
-                                Math.min(currentStep, sessionSteps.length - 1)
-                              ].text
-                            : "Sesión libre: solo se registra el tiempo total."}
-                        </p>
-
-                        {activeSession.media && (
-                          <div className="w-full max-w-sm rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
-                            {isVideoUrl(activeSession.media) ? (
-                              <video
-                                key={activeSession.ses_codi}
-                                src={activeSession.media}
-                                controls
-                                playsInline
-                                className="w-full h-40 bg-black"
-                              />
-                            ) : (
-                              <img
-                                src={activeSession.media}
-                                alt={activeSession.title}
-                                className="w-full h-40 object-cover"
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Controles: navegación mínima */}
-                      <div className="shrink-0 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 backdrop-blur px-4 py-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={goPrevStep}
-                          disabled={currentStep === 0}
-                          className="min-h-[44px] px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 border border-gray-300 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                        >
-                          ← Anterior
-                        </button>
-                        <button
-                          type="button"
-                          onClick={goNextStep}
-                          data-tour="rt-live-next"
-                          className={`flex-1 min-h-[48px] py-3 text-base font-black rounded-xl shadow-lg transition-all active:scale-[0.98] ${
-                            currentStep >= sessionSteps.length - 1 &&
-                            sessionSteps.length > 0
-                              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/30"
-                              : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30"
-                          }`}
-                        >
-                          {currentStep >= sessionSteps.length - 1 &&
-                          sessionSteps.length > 0
-                            ? "Finalizar sesión ✓"
-                            : "Siguiente paso →"}
-                        </button>
-                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1660,6 +1819,125 @@ export default function Routines() {
                           <Plus className="w-5 h-5" /> Generar Terapia
                         </>
                       )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Vista previa de pasos antes de iniciar la sesión */}
+            {previewRoutine && (
+              <div
+                className="fixed inset-0 z-[125] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+                onClick={() => setPreviewRoutine(null)}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-lg bg-white dark:bg-[#0F172A] rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col overflow-hidden"
+                >
+                  <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
+                        Vista previa de la sesión
+                      </span>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white truncate">
+                        {previewRoutine.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                        {previewRoutine.category} •{" "}
+                        {previewRoutine.difficulty || "Baja"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setPreviewRoutine(null)}
+                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 shrink-0"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4">
+                    {previewRoutine.description && (
+                      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {previewRoutine.description}
+                      </p>
+                    )}
+
+                    {previewRoutine.materials && (
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                          Materiales necesarios
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {String(previewRoutine.materials)
+                            .split(",")
+                            .map(
+                              (m, i) =>
+                                m.trim() && (
+                                  <span
+                                    key={i}
+                                    className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                                  >
+                                    {m.trim()}
+                                  </span>
+                                ),
+                            )}
+                        </div>
+                      </div>
+                    )}
+
+                    <ol className="space-y-2">
+                      {getEffectiveSteps(previewRoutine).map((s, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40"
+                        >
+                          <span className="shrink-0 w-6 h-6 rounded-full bg-brand-500 text-white text-[11px] font-black flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 leading-snug">
+                            {s.text}
+                          </span>
+                          <span className="shrink-0 text-xs font-black text-slate-400 tabular-nums flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            {formatTime(s.time)}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 pt-1">
+                      <span>
+                        {getEffectiveSteps(previewRoutine).length} pasos
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" /> Duración estimada:{" "}
+                        {formatTime(
+                          getEffectiveSteps(previewRoutine).reduce(
+                            (a, s) => a + Math.max(s.time, 1),
+                            0,
+                          ),
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex gap-3 shrink-0">
+                    <button
+                      onClick={() => setPreviewRoutine(null)}
+                      className="flex-1 min-h-[44px] py-2.5 rounded-xl border border-gray-300 dark:border-slate-600 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => {
+                        const r = previewRoutine;
+                        setPreviewRoutine(null);
+                        startSession(r);
+                      }}
+                      className="flex-1 min-h-[44px] py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-blue-600 hover:from-brand-600 hover:to-blue-700 text-white text-sm font-bold shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      <Play className="w-4 h-4 fill-current" /> Iniciar Sesión
                     </button>
                   </div>
                 </div>

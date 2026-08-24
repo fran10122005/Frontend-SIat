@@ -20,7 +20,7 @@ import {
 
 export default function SpecialistGlobalView({
   globalStats,
-  globalAlertsFeed,
+  globalAlertsFeed = [],
   behaviorData = [],
   sensoryData = [],
   isDark = false,
@@ -231,19 +231,53 @@ export default function SpecialistGlobalView({
           </h2>
         </div>
         <div className="flex-1 overflow-y-auto space-y-3">
-          {globalAlertsFeed.map((al, idx) => (
-            <div
-              key={al.id || al.alertId || `alert-${idx}`}
-              className="p-4 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 relative pl-5 border-l-4 border-l-rose-500"
-            >
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-                {al.time} • {al.paciente}
-              </p>
-              <p className="text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed whitespace-pre-line">
-                {al.text}
-              </p>
-            </div>
-          ))}
+          {globalAlertsFeed.map((al, idx) => {
+            const rawDate = al.fec_hora || al.fecha || al.created_at;
+            const d = rawDate ? new Date(rawDate) : null;
+            const fecha =
+              al.time ||
+              (d && !isNaN(d)
+                ? d.toLocaleString("es-ES", {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "");
+            const tipo = al.tipo || al.est_dete || "Evento";
+            const detalle =
+              al.text ||
+              al.mensaje ||
+              [
+                al.bpm_max != null && `BPM máx ${al.bpm_max}`,
+                al.mov_max != null && `Movimiento ${al.mov_max}G`,
+                al.stress_index != null && `Estrés ${al.stress_index}%`,
+                al.descripcion,
+              ]
+                .filter(Boolean)
+                .join(" • ") ||
+              "Sin detalles adicionales.";
+            const esCrisis =
+              String(tipo).toUpperCase().includes("SOBRECARGA") ||
+              al.severity === "crisis";
+            return (
+              <div
+                key={al.id || al.alertId || `alert-${idx}`}
+                className={`p-4 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 relative pl-5 border-l-4 ${
+                  esCrisis ? "border-l-rose-500" : "border-l-amber-400"
+                }`}
+              >
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
+                  {fecha}
+                  {fecha && " • "}
+                  <span className="uppercase">{tipo}</span>
+                </p>
+                <p className="text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+                  {detalle}
+                </p>
+              </div>
+            );
+          })}
           {globalAlertsFeed.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 min-h-[150px]">
               <ShieldAlert className="w-8 h-8 mb-2 opacity-50" />

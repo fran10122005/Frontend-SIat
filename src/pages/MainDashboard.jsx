@@ -24,6 +24,8 @@ import DaySummary from "../components/dashboard/DaySummary";
 import BreathingProtocolModal from "../components/dashboard/BreathingProtocolModal";
 import AacBoardDrawer from "../components/dashboard/AacBoardDrawer";
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function MainDashboard() {
   const {
     nomNino,
@@ -114,14 +116,11 @@ export default function MainDashboard() {
       <main className="flex-1 flex flex-col h-full overflow-hidden">
         <Topbar />
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1200px] w-full mx-auto p-6 md:p-8 flex flex-col gap-6 pb-12">
+          <div className="max-w-[1200px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 pb-12">
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
               <div>
-                <h1 className="text-lg md:text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <LayoutDashboard className="w-5 h-5 text-brand-700 dark:text-blue-400" />
-                  Inicio
-                </h1>
+                <PageTitle icon={LayoutDashboard}>Inicio</PageTitle>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Paciente:{" "}
                   <span className="font-semibold text-slate-700 dark:text-slate-300">

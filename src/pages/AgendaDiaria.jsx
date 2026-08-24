@@ -25,6 +25,8 @@ import {
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function AgendaDiaria() {
   const {
     nomNino,
@@ -301,20 +303,16 @@ export default function AgendaDiaria() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-6 md:p-8 flex flex-col gap-6 pb-12">
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 pb-12">
             {/* Si no hay sesión activa, muestra el panel Día a Día completo */}
             {!activeSession && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
                 {/* Header del Módulo */}
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                   <div>
-                    <h1
-                      data-tour="ag-header"
-                      className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
-                    >
-                      <CheckSquare className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                    <PageTitle icon={CheckSquare} data-tour="ag-header">
                       Día a Día (Agenda y Terapias)
-                    </h1>
+                    </PageTitle>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                       Gestiona el cronograma de {nomNino || "el niño"} y lanza
                       las guías clínicas en casa en un solo lugar.

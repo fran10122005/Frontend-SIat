@@ -249,6 +249,8 @@ function CardHeader({ icon: Icon, title, subtitle, tone = "slate" }) {
   );
 }
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function UserProfile() {
   const {
     userRole,
@@ -758,12 +760,9 @@ export default function UserProfile() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1100px] mx-auto p-4 md:p-8 lg:p-10 flex flex-col gap-6 pb-[max(3rem,env(safe-area-inset-bottom))] sm:pb-12">
+          <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-6 pb-[max(3rem,env(safe-area-inset-bottom))] sm:pb-12">
             <header>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight text-brand-700 dark:text-blue-400 flex items-center gap-2">
-                <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
-                Centro de Cuenta
-              </h1>
+              <PageTitle icon={UserCircle}>Centro de Cuenta</PageTitle>
               <p className="hidden sm:block text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Gestiona tu identidad, seguridad, notificaciones y privacidad en
                 SIAT.

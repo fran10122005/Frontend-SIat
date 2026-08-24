@@ -26,6 +26,8 @@ import LoadingState from "../components/dashboard/LoadingState";
 import { useConsentimiento } from "../hooks/useConsentimiento";
 import ConsentimientoModal from "../components/shared/ConsentimientoModal";
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function ParentProfile() {
   const { userRole, navigate, showToast, selectedChildId } = useGlobalContext();
   const [activeTab, setActiveTab] = useState("perfil");
@@ -136,15 +138,11 @@ export default function ParentProfile() {
         {/* Content Container with Tabs */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header */}
-          <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 px-6 md:px-8 pt-4 md:pt-5 shrink-0">
+          <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 px-4 md:px-6 pt-4 shrink-0">
             <div className="flex flex-col gap-2">
-              <h1
-                data-tour="pp-header"
-                className="text-xl md:text-2xl font-bold tracking-tight text-brand-700 dark:text-blue-400 flex items-center gap-2"
-              >
-                <Activity className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+              <PageTitle icon={Activity} data-tour="pp-header">
                 Expediente Clínico
-              </h1>
+              </PageTitle>
               <p className="hidden sm:block text-sm text-slate-500 dark:text-slate-400">
                 Información clínica del paciente asociado a tu cuenta.
               </p>
@@ -154,7 +152,7 @@ export default function ParentProfile() {
           {/* Tab Bar */}
           <div
             data-tour="pp-tabs"
-            className="px-6 md:px-8 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 shrink-0"
+            className="px-4 md:px-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 shrink-0"
           >
             <div className="flex gap-6 overflow-x-auto no-scrollbar">
               <button
@@ -190,7 +188,7 @@ export default function ParentProfile() {
           {/* Dynamic Content */}
           <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900">
             {activeTab === "perfil" && (
-              <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
+              <div className="max-w-[1400px] mx-auto p-4 md:p-6">
                 <div
                   data-tour="pp-perfil"
                   className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors duration-200"
@@ -431,12 +429,12 @@ export default function ParentProfile() {
             )}
 
             {activeTab === "alertas" && (
-              <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
+              <div className="max-w-[1400px] mx-auto p-4 md:p-6">
                 <AlertCenter />
               </div>
             )}
             {activeTab === "indicaciones" && (
-              <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
+              <div className="max-w-[1400px] mx-auto p-4 md:p-6">
                 <Indicaciones />
               </div>
             )}

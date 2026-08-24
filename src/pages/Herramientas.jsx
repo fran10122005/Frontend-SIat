@@ -225,6 +225,8 @@ const defaultThenRewards = [
   { label: "Canción favorita", emoji: "🎵" },
 ];
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function Herramientas() {
   const { nomNino, userRole, showToast } = useGlobalContext();
   const [activeTool, setActiveTool] = useState("aac");
@@ -731,10 +733,7 @@ export default function Herramientas() {
             {/* Header & Tabs */}
             <div className="flex flex-col gap-3">
               <div data-tour="ht-header">
-                <h1 className="text-lg md:text-xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 transition-colors">
-                  <Puzzle className="w-5 h-5 text-brand-700 dark:text-blue-400" />
-                  Herramientas de Apoyo
-                </h1>
+                <PageTitle icon={Puzzle}>Herramientas de Apoyo</PageTitle>
                 <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
                   Paciente: {nomNino || "Paciente"}
                 </p>

@@ -36,6 +36,7 @@ import RegisterChildModal from "../components/shared/RegisterChildModal";
 import Topbar from "../components/layout/Topbar";
 import Footer from "../components/layout/Footer";
 import LoadingState from "../components/dashboard/LoadingState";
+import PageTitle from "../components/ui/PageTitle";
 
 function AdminDashboard({ onNavigate }) {
   const {
@@ -755,11 +756,10 @@ function AdminDashboard({ onNavigate }) {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl w-full mx-auto p-6 md:p-8 flex flex-col gap-8 pb-12">
+          <div className="max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-8 pb-12">
             <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="flex flex-col gap-2">
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2 md:gap-3 transition-colors">
-                  <Building2 className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                <PageTitle icon={Building2}>
                   {activeTab === "dashboard" && "Panel Clínico Institucional"}
                   {activeTab === "especialistas" &&
                     "Directorio de Especialistas"}
@@ -774,7 +774,7 @@ function AdminDashboard({ onNavigate }) {
                     "Monitoreo de Infraestructura"}
                   {activeTab === "usuarios" &&
                     "Control de Acceso y Cuentas de Usuario"}
-                </h1>
+                </PageTitle>
                 <p
                   title={
                     activeTab === "dashboard" &&

@@ -28,6 +28,7 @@ import {
 import { getSocket } from "../hooks/socket";
 import { useTelemetry } from "../hooks/useTelemetry";
 import Topbar from "../components/layout/Topbar";
+import PageTitle from "../components/ui/PageTitle";
 import api from "../api/axios";
 
 export default function HardwareInventory() {
@@ -222,20 +223,16 @@ export default function HardwareInventory() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-8 flex flex-col gap-6 md:gap-8 pb-12">
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 md:gap-8 pb-12">
             {userRole !== "ESPECIALISTA" ? (
               // 👪 REPRESENTANTE - COCKPIT DE SEGUIMIENTO EN VIVO
               <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Header parent */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 md:pb-5">
                   <div>
-                    <h1
-                      data-tour="hw-title"
-                      className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
-                    >
-                      <Activity className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                    <PageTitle icon={Activity} data-tour="hw-title">
                       Seguimiento en Vivo
-                    </h1>
+                    </PageTitle>
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-1">
                       Paciente: {nomNino || "Paciente"}
                     </p>
@@ -528,13 +525,9 @@ export default function HardwareInventory() {
                 {/* Header Specialist */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 md:gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 md:pb-5">
                   <div>
-                    <h1
-                      data-tour="hw-title"
-                      className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
-                    >
-                      <Cpu className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                    <PageTitle icon={Cpu} data-tour="hw-title">
                       Calibración de Dispositivos
-                    </h1>
+                    </PageTitle>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                       Gestión y calibración de hardware de biotelemetría
                       asignado a pacientes.

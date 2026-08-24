@@ -72,6 +72,8 @@ const mockBitacoras = [
   },
 ];
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function DiarioHogar() {
   const { userRole, selectedChildId, navigate, showToast, listaNinos } =
     useGlobalContext();
@@ -282,17 +284,13 @@ export default function DiarioHogar() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] mx-auto p-4 md:p-8 lg:p-10 space-y-6 md:space-y-8 animate-in fade-in duration-300 pb-20">
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 space-y-6 animate-in fade-in duration-300 pb-20">
             {/* Header del Módulo */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 md:gap-4">
               <div>
-                <h1
-                  data-tour="dh-header"
-                  className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
-                >
-                  <NotebookPen className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+                <PageTitle icon={NotebookPen} data-tour="dh-header">
                   Diario de Hogar
-                </h1>
+                </PageTitle>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                   Registro diario del estado y evolución de {art} {ninoLabel}
                 </p>

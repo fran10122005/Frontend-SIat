@@ -20,6 +20,8 @@ import { exportManualPDFEspecialista } from "../utils/exportManualPdfEspecialist
 import { toastError } from "../utils/errorHandler";
 import FotoUpload from "../components/shared/FotoUpload";
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function StudentRecord({ onNavigate }) {
   const { showToast, selectedChildId, fetchNinos } = useGlobalContext();
   const [isEditing, setIsEditing] = useState(false);
@@ -190,15 +192,11 @@ export default function StudentRecord({ onNavigate }) {
 
         {/* Main Content Scrollable Area */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-8 lg:p-10 flex flex-col gap-5 md:gap-6">
+          <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-5 md:gap-6">
             <header>
-              <h1
-                data-tour="sr-header"
-                className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
-              >
-                <UserCircle className="w-6 h-6 text-brand-700 dark:text-blue-400" />
+              <PageTitle icon={UserCircle} data-tour="sr-header">
                 Ficha del Paciente
-              </h1>
+              </PageTitle>
               <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors">
                 Datos maestros, parámetros de sensibilidad e información clínica
                 del paciente.

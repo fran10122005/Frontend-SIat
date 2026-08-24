@@ -56,6 +56,8 @@ function InlineField({ label, value }) {
   );
 }
 
+import PageTitle from "../components/ui/PageTitle";
+
 export default function HomeAnalytics() {
   const { selectedChildId, navigate, userName, userRole, showToast, nomNino } =
     useGlobalContext();
@@ -281,19 +283,15 @@ export default function HomeAnalytics() {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl w-full mx-auto p-6 md:p-8 flex flex-col gap-8 pb-12">
+          <div className="max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6 pb-12">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1
-                  data-tour="ha-header"
-                  className="text-xl md:text-2xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center gap-2 md:gap-3 transition-colors"
-                >
-                  <LCIcon className="w-6 h-6 text-brand-700 dark:text-blue-400 shrink-0" />
-                  Anǭlisis en Casa
-                </h1>
+                <PageTitle icon={LCIcon} data-tour="ha-header">
+                  Análisis en Casa
+                </PageTitle>
                 <p className="text-sm text-slate-500 mt-1 line-clamp-1">
-                  Datos del wearable fuera de la cl��nica, cruzados con las
-                  notas del representante.
+                  Datos del wearable fuera de la clínica, cruzados con las notas
+                  del representante.
                 </p>
               </div>
               {parentNotes.length > 0 && (

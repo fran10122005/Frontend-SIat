@@ -877,3 +877,79 @@ html {
 .dark .form-hint {
   color: #64748B;
 }
+
+/* ============================================================
+   AUTH — Micro-animaciones premium (sutiles, sobrias, clínicas)
+   Entradas escalonadas ≤0.5s, sin rebotes. Respetan
+   prefers-reduced-motion.
+   ============================================================ */
+@keyframes auth-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes auth-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-2%, 2%) scale(1.07);
+    opacity: 0.85;
+  }
+}
+.auth-fade {
+  animation: auth-fade 0.4s ease-out both;
+}
+.auth-rise {
+  opacity: 0;
+  animation: auth-rise 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+.auth-d0 {
+  animation-delay: 0.05s;
+}
+.auth-d1 {
+  animation-delay: 0.15s;
+}
+.auth-d2 {
+  animation-delay: 0.25s;
+}
+.auth-d3 {
+  animation-delay: 0.35s;
+}
+.auth-d4 {
+  animation-delay: 0.45s;
+}
+.auth-d5 {
+  animation-delay: 0.55s;
+}
+.auth-orb {
+  animation: auth-drift 16s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-fade,
+  .auth-rise,
+  .auth-orb {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .auth-rise {
+    opacity: 1;
+  }
+}
