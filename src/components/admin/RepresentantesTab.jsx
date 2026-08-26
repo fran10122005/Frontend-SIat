@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Mail,
   Phone,
@@ -22,11 +22,233 @@ import FilterBar from "../shared/FilterBar";
 import Pagination from "../shared/Pagination";
 import AdminModal from "../shared/AdminModal";
 import FotoUpload from "../shared/FotoUpload";
+import DocumentosClinicos from "../shared/DocumentosClinicos";
 import api from "../../api/axios";
 import useExpandableRows from "../../hooks/useExpandableRows";
 import { toastError } from "../../utils/errorHandler";
 
 const PAGE_SIZE = 10;
+
+function NinoExpedientePanel({ ninos, onUpdateFoto }) {
+  const { showToast } = useGlobalContext();
+  const [ninoActivo, setNinoActivo] = useState(0);
+  const [ficha, setFicha] = useState(null);
+  const [cargando, setCargando] = useState(false);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const fotoInputRef = useRef(null);
+
+  const nino =
+    ninos && ninos.length > 0
+      ? ninos[Math.min(ninoActivo, ninos.length - 1)]
+      : null;
+
+  useEffect(() => {
+    setFicha(null);
+    if (!nino?.nin_codi) return;
+    let cancel = false;
+    setCargando(true);
+    api
+      .get(`/ninos/${nino.nin_codi}/ficha`)
+      .then((res) => {
+        if (!cancel) setFicha(res.data?.data || null);
+      })
+      .catch((err) => {
+        if (!cancel)
+          toastError(
+            err,
+            showToast,
+            "Error al cargar el expediente del paciente.",
+          );
+      })
+      .finally(() => {
+        if (!cancel) setCargando(false);
+      });
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nino?.nin_codi]);
+
+  const handleFotoChange = async (file) => {
+    if (!file || !nino) return;
+    if (!file.type.startsWith("image/")) {
+      showToast("❌ Solo se permiten archivos de imagen.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("❌ La foto no puede superar los 5 MB.");
+      return;
+    }
+    setSubiendoFoto(true);
+    try {
+      const { uploadToCloudinary } = await import("../../config/cloudinary");
+      const { url } = await uploadToCloudinary(
+        file,
+        "image",
+        "siat/pacientes/fotos",
+      );
+      onUpdateFoto(nino.nin_codi, url);
+      setFicha((prev) => (prev ? { ...prev, nin_foto: url } : prev));
+    } catch {
+      showToast("❌ No se pudo subir la foto. Inténtalo de nuevo.");
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
+
+  if (!nino) {
+    return (
+      <p className="text-sm text-slate-500 dark:text-slate-400 py-6 text-center">
+        Sin paciente asociado.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-4 animate-in fade-in duration-200">
+      {ninos.length > 1 && (
+        <div className="flex gap-2 flex-wrap">
+          {ninos.map((n, idx) => (
+            <button
+              key={n.nin_codi || idx}
+              type="button"
+              onClick={() => setNinoActivo(idx)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-all ${idx === ninoActivo ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-blue-300" : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300"}`}
+            >
+              {n.nin_nomb} {n.nin_apel}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Cabecera compacta del niño con foto editable */}
+      <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
+        <div
+          onClick={() => !subiendoFoto && fotoInputRef.current?.click()}
+          className={`relative w-16 h-16 rounded-full flex items-center justify-center overflow-hidden shrink-0 cursor-pointer transition-all duration-200
+            ${nino.nin_foto ? "border-2 border-brand-100 dark:border-brand-900/30" : "border-2 border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900"}
+            ${subiendoFoto ? "cursor-wait opacity-70" : "hover:border-blue-400"}`}
+          title="Cambiar foto del perfil"
+        >
+          {nino.nin_foto ? (
+            <>
+              <img
+                src={nino.nin_foto}
+                alt={`Foto de ${nino.nin_nomb}`}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
+                <Camera className="w-4 h-4 text-white mb-0.5" />
+                <span className="text-[8px] font-bold text-white leading-tight text-center px-1">
+                  Cambiar foto del perfil
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center text-slate-400 dark:text-slate-500">
+              <Camera className="w-5 h-5 mb-0.5" />
+              <span className="text-[9px] font-semibold">Subir foto</span>
+            </div>
+          )}
+          {subiendoFoto && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            </div>
+          )}
+        </div>
+        <input
+          ref={fotoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(e) => handleFotoChange(e.target.files[0])}
+          className="hidden"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
+            {nino.nin_nomb} {nino.nin_apel}
+          </div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+            <span>{nino.nin_gner === "M" ? "Masculino" : "Femenino"}</span>
+            <span>·</span>
+            <span>{calcEdad(nino.nin_fnac)}</span>
+            <span>·</span>
+            <span>{nino.nin_nivd}</span>
+          </div>
+          <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <Cake className="w-3 h-3" />
+              {nino.nin_fnac
+                ? new Date(nino.nin_fnac).toLocaleDateString("es-VE", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "Sin fecha"}
+            </span>
+            <span className="font-mono">ID: {nino.nin_codi}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Expediente clínico (carga automática) */}
+      {cargando ? (
+        <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400">
+          <span className="w-4 h-4 border-2 border-slate-300 border-t-brand-500 rounded-full animate-spin" />
+          Cargando expediente clínico...
+        </div>
+      ) : ficha ? (
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {[
+              {
+                label: "Diagnóstico Clínico",
+                value: ficha.nin_diag || "Sin diagnóstico registrado",
+                full: true,
+              },
+              {
+                label: "Perfil Sensorial",
+                value: ficha.sensibilidad
+                  ? `${ficha.sensibilidad.sen_tipo} · ${ficha.sensibilidad.sen_nvli}`
+                  : "No reportado",
+              },
+              {
+                label: "Especialista Asignado",
+                value: ficha.especialista || "Sin asignar",
+              },
+              {
+                label: "Ingreso al Sistema",
+                value: ficha.nin_ingr
+                  ? new Date(ficha.nin_ingr).toLocaleDateString("es-VE", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "-",
+              },
+              {
+                label: "Institución",
+                value: ficha.institucion?.ins_nomb || "No registrada",
+              },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className={`p-3 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 ${item.full ? "sm:col-span-2" : ""}`}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5">
+                  {item.label}
+                </p>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+          <DocumentosClinicos docs={ficha.nin_docs} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 const calcEdad = (fechaNac) => {
   if (!fechaNac) return "Edad no disponible";
@@ -61,18 +283,35 @@ export default function RepresentantesTab({
   const [page, setPage] = useState(0);
   const [resettingId, setResettingId] = useState(null);
   const [previewRep, setPreviewRep] = useState(null);
+  const [previewTab, setPreviewTab] = useState("rep");
   const [editErrores, setEditErrores] = useState({});
   const [updatingFotoNin, setUpdatingFotoNin] = useState(null);
 
   const validarEditCampo = (campo) => {
     if (campo === "rep_telf") return VALIDACIONES_TELF(editingRep?.rep_telf);
+    if (campo === "rep_cedu") {
+      const cedu = String(editingRep?.rep_cedu || "").trim();
+      if (!cedu) return "";
+      return /^\d{6,8}$/.test(cedu)
+        ? ""
+        : "La cédula debe tener entre 6 y 8 dígitos";
+    }
+    if (campo === "usu_crro") {
+      const correo = String(editingRep?.usu_crro || "").trim();
+      if (!correo) return "El correo es requerido";
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)
+        ? ""
+        : "Correo electrónico inválido";
+    }
     return "";
   };
 
   const validarEditTodo = () => {
     const nuevos = {};
-    const telf = VALIDACIONES_TELF(editingRep?.rep_telf);
-    if (telf) nuevos.rep_telf = telf;
+    ["rep_telf", "rep_cedu", "usu_crro"].forEach((campo) => {
+      const err = validarEditCampo(campo);
+      if (err) nuevos[campo] = err;
+    });
     setEditErrores(nuevos);
     return Object.keys(nuevos).length === 0;
   };
@@ -337,10 +576,18 @@ export default function RepresentantesTab({
                         data-label="Representante"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold shrink-0 text-sm">
-                            {r.rep_nomb?.charAt(0) || "?"}
-                            {r.rep_apel?.charAt(0) || ""}
-                          </div>
+                          {r.rep_foto ? (
+                            <img
+                              src={r.rep_foto}
+                              alt={`${r.rep_nomb} ${r.rep_apel}`}
+                              className="w-9 h-9 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold shrink-0 text-sm">
+                              {r.rep_nomb?.charAt(0) || "?"}
+                              {r.rep_apel?.charAt(0) || ""}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <div className="font-semibold text-slate-900 dark:text-white truncate">
                               {r.rep_nomb} {r.rep_apel}
@@ -431,6 +678,9 @@ export default function RepresentantesTab({
                                 rep_apel: r.rep_apel || "",
                                 rep_telf: r.rep_telf || "",
                                 rep_rela: r.rep_rela || "",
+                                rep_cedu: r.rep_cedu || "",
+                                rep_foto: r.rep_foto || "",
+                                usu_crro: r.usu_crro || "",
                               });
                             }}
                             title="Editar"
@@ -501,6 +751,24 @@ export default function RepresentantesTab({
           }}
           className="space-y-5"
         >
+          {/* Foto del representante */}
+          <div className="flex items-center gap-4">
+            <FotoUpload
+              value={editingRep?.rep_foto || ""}
+              onChange={(url) =>
+                setEditingRep((prev) => ({ ...prev, rep_foto: url || "" }))
+              }
+              label="Foto de perfil"
+              alt={`${editingRep?.rep_nomb || ""} ${editingRep?.rep_apel || ""}`.trim()}
+              size="w-20 h-20"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+              JPG, PNG o WebP · Máx. 5 MB.
+              <br />
+              Se muestra en el directorio y en el expediente clínico.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="form-label">Nombres</label>
@@ -533,24 +801,29 @@ export default function RepresentantesTab({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Teléfono de Contacto</label>
+              <label className="form-label">Cédula de Identidad</label>
               <input
-                maxLength={15}
+                required
+                inputMode="numeric"
+                maxLength={8}
                 type="text"
-                value={editingRep?.rep_telf || ""}
+                value={editingRep?.rep_cedu || ""}
                 onChange={(e) => {
-                  setEditingRep({ ...editingRep, rep_telf: e.target.value });
+                  setEditingRep({
+                    ...editingRep,
+                    rep_cedu: e.target.value.replace(/\D/g, ""),
+                  });
                   setEditErrores((prev) => ({
                     ...prev,
-                    rep_telf: validarEditCampo("rep_telf"),
+                    rep_cedu: validarEditCampo("rep_cedu"),
                   }));
                 }}
-                className={`form-input ${editErrores.rep_telf ? "form-input-invalid" : ""}`}
-                placeholder="+58 412 0000000"
+                className={`form-input ${editErrores.rep_cedu ? "form-input-invalid" : ""}`}
+                placeholder="Ej. 12345678"
               />
-              {editErrores.rep_telf && (
+              {editErrores.rep_cedu && (
                 <p className="form-error">
-                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_telf}
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_cedu}
                 </p>
               )}
             </div>
@@ -577,6 +850,56 @@ export default function RepresentantesTab({
               </select>
             </div>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Correo Electrónico (acceso)</label>
+              <input
+                required
+                maxLength={50}
+                type="email"
+                value={editingRep?.usu_crro || ""}
+                onChange={(e) => {
+                  setEditingRep({ ...editingRep, usu_crro: e.target.value });
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    usu_crro: validarEditCampo("usu_crro"),
+                  }));
+                }}
+                className={`form-input ${editErrores.usu_crro ? "form-input-invalid" : ""}`}
+                placeholder="correo@ejemplo.com"
+              />
+              {editErrores.usu_crro && (
+                <p className="form-error">
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.usu_crro}
+                </p>
+              )}
+              <p className="text-[10px] text-slate-400 mt-1">
+                Se usa para iniciar sesión en SIAT.
+              </p>
+            </div>
+            <div>
+              <label className="form-label">Teléfono de Contacto</label>
+              <input
+                maxLength={15}
+                type="text"
+                value={editingRep?.rep_telf || ""}
+                onChange={(e) => {
+                  setEditingRep({ ...editingRep, rep_telf: e.target.value });
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    rep_telf: validarEditCampo("rep_telf"),
+                  }));
+                }}
+                className={`form-input ${editErrores.rep_telf ? "form-input-invalid" : ""}`}
+                placeholder="+58 412 0000000"
+              />
+              {editErrores.rep_telf && (
+                <p className="form-error">
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_telf}
+                </p>
+              )}
+            </div>
+          </div>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-1 border-t border-slate-200 dark:border-slate-700">
             <button
@@ -601,146 +924,116 @@ export default function RepresentantesTab({
       {previewRep && (
         <AdminModal
           open={!!previewRep}
-          onClose={() => setPreviewRep(null)}
-          title="Vista previa del Representante"
+          onClose={() => {
+            setPreviewRep(null);
+            setPreviewTab("rep");
+          }}
+          title="Perfil del Representante"
           subtitle={`${previewRep.rep_nomb || ""} ${previewRep.rep_apel || ""}`.trim()}
-          maxWidth="max-w-xl"
+          maxWidth="max-w-2xl"
           icon={UserRound}
         >
-          <div className="space-y-6">
-            {/* Ficha del representante */}
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold text-lg shrink-0">
-                {previewRep.rep_nomb?.charAt(0) || "?"}
-                {previewRep.rep_apel?.charAt(0) || ""}
-              </div>
-              <div className="min-w-0">
-                <div className="text-base font-bold text-slate-900 dark:text-white">
-                  {previewRep.rep_nomb} {previewRep.rep_apel}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                  ID: {previewRep.rep_codi || previewRep.usu_codi}
-                </div>
-                <div className="mt-1.5">
-                  <StatusBadge active={previewRep.usu_estd} />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                  <Mail className="w-3.5 h-3.5" /> Correo Electrónico
-                </div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-200 break-all">
-                  {previewRep.usu_crro || "-"}
-                </p>
-              </div>
-              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                  <Phone className="w-3.5 h-3.5" /> Teléfono de Contacto
-                </div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                  {previewRep.rep_telf || "-"}
-                </p>
-              </div>
-              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Vínculo Legal
-                </div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                  {previewRep.rep_rela || "No especificado"}
-                </p>
-              </div>
-              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                  <IdCard className="w-3.5 h-3.5" /> Código de Usuario
-                </div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-200 font-mono">
-                  {previewRep.usu_codi || "-"}
-                </p>
-              </div>
-            </div>
-
-            {/* Pacientes asociados */}
-            <div>
-              <div className="form-section-title">
-                <Baby className="form-section-title-icon" />
-                <h4 className="form-section-title-text">Pacientes Asociados</h4>
-                <span className="form-section-title-line" />
-              </div>
-              {(previewRep.ninos && previewRep.ninos.length > 0) ||
-              previewRep.tm_ninos ? (
-                <div className="space-y-3">
-                  {(previewRep.ninos && previewRep.ninos.length > 0
-                    ? previewRep.ninos
-                    : [previewRep.tm_ninos]
-                  ).map((nino, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40"
-                    >
-                      {nino.nin_foto ? (
-                        <img
-                          src={nino.nin_foto}
-                          alt={`Foto de ${nino.nin_nomb}`}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-brand-100 dark:border-brand-900/30 shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold text-base shrink-0">
-                          {nino.nin_nomb?.charAt(0) || "?"}
-                          {nino.nin_apel?.charAt(0) || ""}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-slate-900 dark:text-white">
-                          {nino.nin_nomb} {nino.nin_apel}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                          <span>
-                            {nino.nin_gner === "M" ? "Masculino" : "Femenino"}
-                          </span>
-                          <span>{calcEdad(nino.nin_fnac)}</span>
-                          <span>{nino.nin_nivd}</span>
-                        </div>
-                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                          <Cake className="w-3.5 h-3.5" />
-                          {nino.nin_fnac
-                            ? new Date(nino.nin_fnac).toLocaleDateString(
-                                "es-VE",
-                                {
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                },
-                              )
-                            : "Fecha no disponible"}
-                        </div>
-                        <div className="text-xs text-slate-400 font-mono mt-1">
-                          ID: {nino.nin_codi}
-                        </div>
-                        <div className="mt-3">
-                          <FotoUpload
-                            value={nino.nin_foto || ""}
-                            onChange={(url) =>
-                              handleUpdateNinoFoto(nino.nin_codi, url)
-                            }
-                            label="Foto del paciente"
-                            alt={`Foto de ${nino.nin_nomb}`}
-                            size="w-16 h-16"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Sin paciente asociado.
-                </p>
-              )}
-            </div>
+          {/* Tab bar */}
+          <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl mb-5">
+            <button
+              type="button"
+              onClick={() => setPreviewTab("rep")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${previewTab === "rep" ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-blue-400 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"}`}
+            >
+              <UserRound className="w-3.5 h-3.5" /> Representante
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewTab("nino")}
+              disabled={!previewRep.ninos?.length && !previewRep.tm_ninos}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${previewTab === "nino" ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-blue-400 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700"}`}
+            >
+              <Baby className="w-3.5 h-3.5" />
+              Paciente
+              {(previewRep.ninos?.length || (previewRep.tm_ninos ? 1 : 0)) > 1
+                ? "s"
+                : ""}
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold">
+                {previewRep.ninos?.length || (previewRep.tm_ninos ? 1 : 0)}
+              </span>
+            </button>
           </div>
+
+          {/* ══ TAB: REPRESENTANTE ══ */}
+          {previewTab === "rep" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
+                {previewRep.rep_foto ? (
+                  <img
+                    src={previewRep.rep_foto}
+                    alt={`${previewRep.rep_nomb} ${previewRep.rep_apel}`}
+                    className="w-14 h-14 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800 shrink-0"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-bold text-lg shrink-0">
+                    {previewRep.rep_nomb?.charAt(0) || "?"}
+                    {previewRep.rep_apel?.charAt(0) || ""}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-base font-bold text-slate-900 dark:text-white truncate">
+                    {previewRep.rep_nomb} {previewRep.rep_apel}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
+                    ID: {previewRep.rep_codi || previewRep.usu_codi}
+                  </div>
+                </div>
+                <StatusBadge active={previewRep.usu_estd} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                    <Mail className="w-3.5 h-3.5" /> Correo Electrónico
+                  </div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200 break-all">
+                    {previewRep.usu_crro || "-"}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                    <Phone className="w-3.5 h-3.5" /> Teléfono
+                  </div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    {previewRep.rep_telf || "-"}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                    <IdCard className="w-3.5 h-3.5" /> Cédula de Identidad
+                  </div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200 font-mono">
+                    {previewRep.rep_cedu || "No registrada"}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40">
+                  <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Vínculo Legal
+                  </div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    {previewRep.rep_rela || "No especificado"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══ TAB: PACIENTE(S) ══ */}
+          {previewTab === "nino" && (
+            <NinoExpedientePanel
+              ninos={
+                previewRep.ninos && previewRep.ninos.length > 0
+                  ? previewRep.ninos
+                  : [previewRep.tm_ninos].filter(Boolean)
+              }
+              onUpdateFoto={handleUpdateNinoFoto}
+            />
+          )}
         </AdminModal>
       )}
     </div>

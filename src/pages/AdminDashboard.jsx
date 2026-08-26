@@ -18,6 +18,8 @@ import {
   Stethoscope,
   Link2,
   Clock,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 
 import AdminKPIs from "../components/admin/AdminKPIs";
@@ -428,6 +430,11 @@ function AdminDashboard({ onNavigate }) {
         rep_apel: editingRep.rep_apel,
         rep_telf: editingRep.rep_telf,
         rep_rela: editingRep.rep_rela,
+        ...(editingRep.rep_foto !== undefined && {
+          rep_foto: editingRep.rep_foto || null,
+        }),
+        ...(editingRep.rep_cedu && { rep_cedu: editingRep.rep_cedu }),
+        ...(editingRep.usu_crro && { usu_crro: editingRep.usu_crro }),
       });
       showToast("✅ Representante actualizado con éxito.");
       setEditingRep(null);

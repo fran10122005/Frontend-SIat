@@ -19,6 +19,7 @@ import api from "../api/axios";
 import { exportManualPDFEspecialista } from "../utils/exportManualPdfEspecialista";
 import { toastError } from "../utils/errorHandler";
 import FotoUpload from "../components/shared/FotoUpload";
+import DocumentosClinicos from "../components/shared/DocumentosClinicos";
 
 import PageTitle from "../components/ui/PageTitle";
 
@@ -43,6 +44,7 @@ export default function StudentRecord({ onNavigate }) {
     especialista: "",
     representante: null,
   });
+  const [docsClinicos, setDocsClinicos] = useState([]);
 
   // Poblar los datos del niño seleccionado desde la API
   useEffect(() => {
@@ -67,6 +69,7 @@ export default function StudentRecord({ onNavigate }) {
           representante: null,
         });
         setIsEditing(false);
+        setDocsClinicos([]);
         return;
       }
 
@@ -97,6 +100,7 @@ export default function StudentRecord({ onNavigate }) {
           especialista: data.especialista || "",
           representante: data.representante || null,
         });
+        setDocsClinicos(Array.isArray(data.nin_docs) ? data.nin_docs : []);
       } catch (err) {
         console.error("Error fetching child clinical record:", err);
         toastError(err, showToast, "Error al cargar la ficha clínica.");
@@ -523,6 +527,12 @@ export default function StudentRecord({ onNavigate }) {
                   </div>
                 </div>
               </form>
+            )}
+
+            {selectedChildId && (
+              <div className="animate-in fade-in duration-300">
+                <DocumentosClinicos docs={docsClinicos} />
+              </div>
             )}
 
             <div

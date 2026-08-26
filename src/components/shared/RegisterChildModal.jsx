@@ -336,6 +336,7 @@ const INITIAL_FORM = {
   rep_telf: "",
   rep_cedu: "",
   usu_crro: "",
+  rep_foto: "",
   // Consentimiento
   acepta_lopnna: false,
 };
@@ -358,6 +359,8 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   const [photoUploading, setPhotoUploading] = useState(false);
 
   const [docFiles, setDocFiles] = useState([]);
+  const [repPhotoPreview, setRepPhotoPreview] = useState(null);
+  const [repPhotoUploading, setRepPhotoUploading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -485,6 +488,32 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
+  // ── Handler foto del representante ──
+  const handleRepPhotoSelect = async (file) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("❌ La foto no puede superar 5 MB");
+      return;
+    }
+    setRepPhotoPreview(URL.createObjectURL(file));
+    if (!isCloudinaryReady()) return;
+
+    setRepPhotoUploading(true);
+    try {
+      const { url } = await uploadToCloudinary(
+        file,
+        "image",
+        "siat/representantes/fotos",
+      );
+      set("rep_foto", url);
+      showToast("✅ Foto del representante subida correctamente");
+    } catch {
+      showToast("❌ Error al subir la foto del representante.");
+    } finally {
+      setRepPhotoUploading(false);
+    }
+  };
+
   const handleDocRemove = (idx) => {
     setDocFiles((prev) => prev.filter((_, i) => i !== idx));
   };
@@ -547,12 +576,19 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         nin_fnac: form.nin_fnac,
         nin_gner: form.nin_gner,
         nin_nivd: form.nin_nivd,
+        ...(form.nin_diag.trim() && { nin_diag: form.nin_diag.trim() }),
+        ...(docFiles.filter((d) => d.uploadedUrl).length > 0 && {
+          nin_docs: docFiles
+            .filter((d) => d.uploadedUrl)
+            .map((d) => d.uploadedUrl),
+        }),
         rep_nomb: rep?.rep_nomb || form.rep_nomb,
         rep_apel: rep?.rep_apel || form.rep_apel,
         rep_rela: rep?.rep_rela || form.rep_rela,
         rep_telf: rep?.rep_telf || form.rep_telf,
         rep_cedu: rep?.rep_cedu || ceduDigits,
         usu_crro: rep?.usu_crro || form.usu_crro,
+        ...(!rep && form.rep_foto && { rep_foto: form.rep_foto }),
         ...(form.sen_tipo && {
           sen_tipo: form.sen_tipo,
           sen_nvli: form.sen_nvli,
@@ -576,6 +612,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
       setPhotoFile(null);
       setPhotoPreview(null);
       setDocFiles([]);
+      setRepPhotoPreview(null);
       setStep(1);
       onClose();
     } catch (err) {
@@ -974,46 +1011,95 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
               </InfoCollapse>
 
               {/* Cédula: identificador único del representante (primer campo) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="Identificador único en el sistema. Al salir del campo se verifica automáticamente si ya está registrado: en ese caso el nuevo paciente se vinculará a su cuenta existente."
-                  >
-                    <IdCard className="w-3 h-3" /> Cédula de Identidad
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                {/* Foto del representante */}
+                <div className="shrink-0">
+                  <FieldLabel tooltip="JPG, PNG o WebP · Máx. 5 MB. Foto de identificación del representante legal.">
+                    Foto del Representante{" "}
+                    <span className="text-slate-400 font-normal">
+                      (Opcional)
+                    </span>
                   </FieldLabel>
-                  <InputField
-                    type="text"
-                    inputMode="numeric"
-                    value={form.rep_cedu}
-                    onChange={(e) => {
-                      set("rep_cedu", e.target.value.replace(/\D/g, ""));
-                      setRepExistente(null);
-                    }}
-                    onBlur={(e) => buscarRep(e.target.value)}
-                    placeholder="Ej. 12345678"
-                    className="border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                  <div
+                    onClick={() =>
+                      !repPhotoUploading &&
+                      document.getElementById("rep-photo-input")?.click()
+                    }
+                    className={`relative w-20 h-20 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 group mt-2
+                      ${repPhotoUploading ? "cursor-wait opacity-60" : "border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 hover:border-brand-500"}`}
+                  >
+                    {repPhotoPreview ? (
+                      <>
+                        <img
+                          src={repPhotoPreview}
+                          alt="Foto del representante"
+                          className="w-full h-full object-cover"
+                        />
+                        {form.rep_foto && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <User className="w-6 h-6 text-slate-400 group-hover:text-brand-500 transition-colors" />
+                    )}
+                    {repPhotoUploading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    id="rep-photo-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => handleRepPhotoSelect(e.target.files[0])}
+                    className="hidden"
                   />
                 </div>
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="SIAT generará credenciales seguras y enviará a este correo el enlace de activación de la cuenta del representante, cifrado de extremo a extremo."
-                  >
-                    <Mail className="w-3 h-3" /> Correo Electrónico de Acceso
-                  </FieldLabel>
-                  <InputField
-                    type="email"
-                    value={form.usu_crro}
-                    onChange={(e) => set("usu_crro", e.target.value)}
-                    placeholder="correo@ejemplo.com"
-                    disabled={!!repExistente}
-                    className={
-                      repExistente
-                        ? "opacity-70"
-                        : "border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
-                    }
-                  />
+
+                <div className="grid grid-cols-1 flex-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel
+                      required
+                      tooltip="Identificador único en el sistema. Al salir del campo se verifica automáticamente si ya está registrado: en ese caso el nuevo paciente se vinculará a su cuenta existente."
+                    >
+                      <IdCard className="w-3 h-3" /> Cédula de Identidad
+                    </FieldLabel>
+                    <InputField
+                      type="text"
+                      inputMode="numeric"
+                      value={form.rep_cedu}
+                      onChange={(e) => {
+                        set("rep_cedu", e.target.value.replace(/\D/g, ""));
+                        setRepExistente(null);
+                      }}
+                      onBlur={(e) => buscarRep(e.target.value)}
+                      placeholder="Ej. 12345678"
+                      className="border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel
+                      required
+                      tooltip="SIAT generará credenciales seguras y enviará a este correo el enlace de activación de la cuenta del representante, cifrado de extremo a extremo."
+                    >
+                      <Mail className="w-3 h-3" /> Correo Electrónico de Acceso
+                    </FieldLabel>
+                    <InputField
+                      type="email"
+                      value={form.usu_crro}
+                      onChange={(e) => set("usu_crro", e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                      disabled={!!repExistente}
+                      className={
+                        repExistente
+                          ? "opacity-70"
+                          : "border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                      }
+                    />
+                  </div>
                 </div>
               </div>
 

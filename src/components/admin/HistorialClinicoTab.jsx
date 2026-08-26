@@ -20,82 +20,6 @@ import useExpandableRows from "../../hooks/useExpandableRows";
 
 const PAGE_SIZE = 10;
 
-const MOCK_INCIDENTES = [
-  {
-    id: "INC-001",
-    nin_nomb: "Mateo Pérez",
-    esp_nomb: "Dra. María Fernández",
-    tipo: "CRISIS",
-    severidad: "SEVERA",
-    duracion_min: 15,
-    bpm_max: 142,
-    fecha: "2026-08-03T14:30:00Z",
-    descripcion:
-      "Sobrecarga sensorial provocada por ruido ambiental elevado. Disparador: sirena de ambulancia.",
-    intervencion:
-      "Se aplicó protocolo de respiración de 3 minutos con audio sensorial. Regulación exitosa.",
-    estado: "RESUELTO",
-  },
-  {
-    id: "INC-002",
-    nin_nomb: "Sofia Gómez",
-    esp_nomb: "Dr. Carlos Mendoza",
-    tipo: "INCIDENTE",
-    severidad: "MODERADA",
-    duracion_min: 8,
-    bpm_max: 118,
-    fecha: "2026-08-02T10:15:00Z",
-    descripcion:
-      "Resistencia a transición de actividad durante sesión ocupacional.",
-    intervencion:
-      "Uso de pictogramas en tablero CAA para secuenciación visual de tareas.",
-    estado: "RESUELTO",
-  },
-  {
-    id: "INC-003",
-    nin_nomb: "Lucas Rodríguez",
-    esp_nomb: "Dra. Ana Silva",
-    tipo: "DIARIO_HOGAR",
-    severidad: "LEVE",
-    duracion_min: 5,
-    bpm_max: 95,
-    fecha: "2026-08-01T19:45:00Z",
-    descripcion:
-      "Dificultad para conciliación del sueño reportada por el representante.",
-    intervencion:
-      "Indicación de rutina de baja estimulación táctil previo a acostarse.",
-    estado: "EN_SEGUIMIENTO",
-  },
-  {
-    id: "INC-004",
-    nin_nomb: "Mateo Pérez",
-    esp_nomb: "Dra. María Fernández",
-    tipo: "CRISIS",
-    severidad: "MODERADA",
-    duracion_min: 12,
-    bpm_max: 130,
-    fecha: "2026-07-30T11:20:00Z",
-    descripcion: "Episodio de agitación motora durante terapia del lenguaje.",
-    intervencion: "Pausa activa con compresión profunda en articulaciones.",
-    estado: "RESUELTO",
-  },
-  {
-    id: "INC-005",
-    nin_nomb: "Valentina Martínez",
-    esp_nomb: "Dr. Carlos Mendoza",
-    tipo: "EVALUACION",
-    severidad: "LEVE",
-    duracion_min: 0,
-    bpm_max: 82,
-    fecha: "2026-07-28T09:00:00Z",
-    descripcion:
-      "Evaluación trimestral de metas PEI completada con progreso favorable.",
-    intervencion:
-      "Actualización de objetivos de autorregulación para el siguiente trimestre.",
-    estado: "COMPLETADO",
-  },
-];
-
 export default function HistorialClinicoTab({ incidentesData = [], loading }) {
   const { showToast } = useGlobalContext();
   const { expandedId, toggle } = useExpandableRows();
@@ -107,9 +31,7 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
   const [page, setPage] = useState(0);
   const [selectedIncident, setSelectedIncident] = useState(null);
 
-  const items = useMemo(() => {
-    return incidentesData.length > 0 ? incidentesData : MOCK_INCIDENTES;
-  }, [incidentesData]);
+  const items = useMemo(() => incidentesData, [incidentesData]);
 
   const filtered = useMemo(() => {
     return items.filter((item) => {

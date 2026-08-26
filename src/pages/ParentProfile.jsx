@@ -24,6 +24,7 @@ import Button from "../components/ui/Button";
 import Topbar from "../components/layout/Topbar";
 import LoadingState from "../components/dashboard/LoadingState";
 import { useConsentimiento } from "../hooks/useConsentimiento";
+import DocumentosClinicos from "../components/shared/DocumentosClinicos";
 import ConsentimientoModal from "../components/shared/ConsentimientoModal";
 
 import PageTitle from "../components/ui/PageTitle";
@@ -412,6 +413,11 @@ export default function ParentProfile() {
                               </div>
                             </div>
                           </div>
+                        </div>
+
+                        {/* Documentos Clínicos */}
+                        <div className="mt-8">
+                          <DocumentosClinicos docs={childProfile.nin_docs} />
                         </div>
                       </>
                     )}
