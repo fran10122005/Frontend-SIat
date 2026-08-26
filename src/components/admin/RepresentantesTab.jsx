@@ -205,6 +205,15 @@ function NinoExpedientePanel({ ninos, onUpdateFoto }) {
                 value: ficha.nin_diag || "Sin diagnóstico registrado",
                 full: true,
               },
+              ...(ficha.sensibilidad?.sen_nota
+                ? [
+                    {
+                      label: "Notas Clínicas de la Condición",
+                      value: ficha.sensibilidad.sen_nota,
+                      full: true,
+                    },
+                  ]
+                : []),
               {
                 label: "Perfil Sensorial",
                 value: ficha.sensibilidad

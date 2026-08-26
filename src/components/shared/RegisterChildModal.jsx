@@ -592,6 +592,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         ...(form.sen_tipo && {
           sen_tipo: form.sen_tipo,
           sen_nvli: form.sen_nvli,
+          ...(form.sen_nota.trim() && { sen_nota: form.sen_nota.trim() }),
         }),
         ...(form.nin_foto &&
           form.nin_foto !== "__local__" && { nin_foto: form.nin_foto }),
