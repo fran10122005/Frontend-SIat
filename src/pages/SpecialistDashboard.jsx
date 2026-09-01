@@ -28,7 +28,7 @@ import IncidentModal from "../components/specialist/IncidentModal";
 import IndicacionModal from "../components/specialist/IndicacionModal";
 import SoapNoteModal from "../components/specialist/SoapNoteModal";
 import AlertRulesConfig from "../components/specialist/AlertRulesConfig";
-import SpecialistSettings from "../components/specialist/SpecialistSettings";
+import UserPreferencesModal from "../components/shared/UserPreferencesModal";
 import LoadingState from "../components/dashboard/LoadingState";
 
 // Hooks
@@ -791,11 +791,9 @@ export default function SpecialistDashboard() {
         onSave={updateSpecialistConfig}
       />
 
-      <SpecialistSettings
-        showModal={showSettings}
-        setShowModal={setShowSettings}
-        settings={specialistConfig}
-        onSave={updateSpecialistConfig}
+      <UserPreferencesModal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
       />
     </div>
   );

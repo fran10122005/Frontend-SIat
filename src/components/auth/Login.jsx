@@ -129,16 +129,26 @@ function Login({ onNavigate }) {
           <FormAlert variant="error" message={error} />
 
           <div className="auth-rise auth-d1 space-y-1.5">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              htmlFor="login-email"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               Correo Electrónico
             </label>
             <div className="relative group">
               <input
+                id="login-email"
+                name="email"
                 type="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
+                inputMode="email"
                 placeholder="ejemplo@correo.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full pl-4 pr-10 py-3.5 sm:py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-base sm:text-sm"
                 required
               />
               <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
@@ -160,30 +170,39 @@ function Login({ onNavigate }) {
 
           <div className="auth-rise auth-d2 space-y-1.5">
             <div className="flex justify-between items-center">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="login-password"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Contraseña
               </label>
               <button
                 type="button"
                 onClick={() => onNavigate("forgot")}
-                className="text-sm font-medium text-brand-500 dark:text-blue-400 hover:text-brand-600 dark:hover:text-blue-300 transition-colors"
+                className="text-xs sm:text-sm font-medium text-brand-500 dark:text-blue-400 hover:text-brand-600 dark:hover:text-blue-300 transition-colors py-1 px-1 -mr-1"
               >
                 ¿Olvidaste tu contraseña?
               </button>
             </div>
             <div className="relative group">
               <input
+                id="login-password"
+                name="password"
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                className="w-full pl-4 pr-12 py-3.5 sm:py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-base sm:text-sm"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+                className="absolute inset-y-0 right-0 px-3.5 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus:outline-none min-w-[44px] min-h-[44px]"
               >
                 {showPassword ? (
                   <svg
@@ -220,7 +239,7 @@ function Login({ onNavigate }) {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-brand-500 to-blue-600 hover:from-brand-600 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-brand-500/25 dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 auth-rise auth-d3"
+            className="w-full min-h-[48px] bg-gradient-to-r from-brand-500 to-blue-600 hover:from-brand-600 hover:to-blue-700 text-white font-semibold py-3.5 sm:py-3 px-4 rounded-xl shadow-lg shadow-brand-500/25 dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 auth-rise auth-d3 text-base sm:text-sm"
           >
             {isLoading ? (
               <svg
@@ -249,16 +268,16 @@ function Login({ onNavigate }) {
         </form>
 
         {fpSupported && (
-          <div className="auth-rise auth-d4 mt-7 flex justify-center">
+          <div className="auth-rise auth-d4 mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/80">
             <button
               type="button"
               onClick={handleFingerprint}
               disabled={isLoading || isFp}
-              className="flex items-center gap-2 py-2 px-3.5 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 transition-colors duration-200 hover:text-brand-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-slate-800 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full min-h-[46px] flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 hover:bg-brand-50/50 dark:hover:bg-slate-800 hover:border-brand-300 dark:hover:border-blue-500/40 hover:text-brand-600 dark:hover:text-blue-400 active:scale-[0.98] transition-all duration-200 group text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
             >
               {isFp ? (
                 <svg
-                  className="animate-spin h-4 w-4"
+                  className="animate-spin h-5 w-5 text-brand-500 dark:text-blue-400"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -277,27 +296,31 @@ function Login({ onNavigate }) {
                   />
                 </svg>
               ) : (
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
-                  <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
-                  <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
-                  <path d="M2 12a10 10 0 0 1 18-6" />
-                  <path d="M2 16h.01" />
-                  <path d="M21.8 16c.2-2 .131-5.354 0-6" />
-                  <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
-                  <path d="M8.65 22c.21-.66.45-1.32.57-2" />
-                  <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
-                </svg>
+                <div className="p-1 rounded-lg bg-brand-50 dark:bg-blue-500/10 text-brand-500 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                  <svg
+                    className="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+                    <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+                    <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+                    <path d="M2 12a10 10 0 0 1 18-6" />
+                    <path d="M2 16h.01" />
+                    <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+                    <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+                    <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+                    <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
+                  </svg>
+                </div>
               )}
-              {isFp ? "Verificando…" : "Ingresar con huella"}
+              <span>
+                {isFp ? "Verificando huella…" : "Ingresar con huella"}
+              </span>
             </button>
           </div>
         )}
@@ -306,7 +329,7 @@ function Login({ onNavigate }) {
           ¿No tienes cuenta?{" "}
           <button
             type="button"
-            className="font-semibold text-brand-500 dark:text-blue-400 hover:text-brand-600 dark:hover:text-blue-300 transition-colors"
+            className="font-semibold text-brand-500 dark:text-blue-400 hover:text-brand-600 dark:hover:text-blue-300 transition-colors py-1"
             onClick={() => onNavigate("register")}
           >
             Cómo obtener acceso

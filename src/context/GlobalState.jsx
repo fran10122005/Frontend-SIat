@@ -79,14 +79,108 @@ export const GlobalProvider = ({ children }) => {
     document.documentElement.classList.contains("dark"),
   );
 
-  const toggleTheme = () => {
-    if (isDark) {
+  const toggleTheme = (mode) => {
+    // mode: 'light' | 'dark' | 'system' | undefined (toggle)
+    if (mode === "light") {
       document.documentElement.classList.remove("dark");
-    } else {
+      localStorage.setItem("siat_theme", "light");
+      setIsDark(false);
+    } else if (mode === "dark") {
       document.documentElement.classList.add("dark");
+      localStorage.setItem("siat_theme", "dark");
+      setIsDark(true);
+    } else if (mode === "system") {
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      document.documentElement.classList.toggle("dark", prefersDark);
+      localStorage.setItem("siat_theme", "system");
+      setIsDark(prefersDark);
+    } else {
+      // simple toggle
+      if (isDark) {
+        document.documentElement.classList.remove("dark");
+      } else {
+        document.documentElement.classList.add("dark");
+      }
+      setIsDark(!isDark);
     }
-    setIsDark(!isDark);
   };
+
+  // UI Preferences: accent color, font size, density
+  const [uiPrefs, setUiPrefs] = useState(() => {
+    try {
+      const saved = localStorage.getItem("siat_ui_prefs");
+      return saved
+        ? JSON.parse(saved)
+        : {
+            accentColor: "blue",
+            fontSize: "normal",
+            density: "normal",
+            theme: "system",
+          };
+    } catch {
+      return {
+        accentColor: "blue",
+        fontSize: "normal",
+        density: "normal",
+        theme: "system",
+      };
+    }
+  });
+
+  const ACCENT_COLORS = {
+    blue: { primary: "#2563eb", ring: "#3b82f6", css: "accent-blue" },
+    indigo: { primary: "#4f46e5", ring: "#6366f1", css: "accent-indigo" },
+    violet: { primary: "#7c3aed", ring: "#8b5cf6", css: "accent-violet" },
+    emerald: { primary: "#059669", ring: "#10b981", css: "accent-emerald" },
+    cyan: { primary: "#0891b2", ring: "#06b6d4", css: "accent-cyan" },
+    rose: { primary: "#e11d48", ring: "#f43f5e", css: "accent-rose" },
+  };
+
+  const applyUiPrefs = (prefs) => {
+    const root = document.documentElement;
+    // Accent color CSS vars
+    const accent = ACCENT_COLORS[prefs.accentColor] || ACCENT_COLORS.blue;
+    root.style.setProperty("--color-brand", accent.primary);
+    root.style.setProperty("--color-brand-ring", accent.ring);
+    // Font size
+    const fontMap = { small: "14px", normal: "16px", large: "18px" };
+    root.style.setProperty(
+      "--base-font-size",
+      fontMap[prefs.fontSize] || "16px",
+    );
+    // Density
+    root.dataset.density = prefs.density || "normal";
+  };
+
+  const updateUiPrefs = (newPrefs) => {
+    setUiPrefs((prev) => {
+      const merged = { ...prev, ...newPrefs };
+      localStorage.setItem("siat_ui_prefs", JSON.stringify(merged));
+      applyUiPrefs(merged);
+      // Also handle theme change
+      if (newPrefs.theme !== undefined) {
+        toggleTheme(newPrefs.theme);
+      }
+      return merged;
+    });
+  };
+
+  // Apply prefs on mount
+  useEffect(() => {
+    applyUiPrefs(uiPrefs);
+    // Restore theme
+    const savedTheme = localStorage.getItem("siat_theme");
+    if (savedTheme === "light") {
+      document.documentElement.classList.remove("dark");
+      setIsDark(false);
+    } else if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+      setIsDark(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [specialistConfig, setSpecialistConfig] = useState(() => {
     try {
@@ -969,6 +1063,9 @@ export const GlobalProvider = ({ children }) => {
         specialistConfig,
         updateSpecialistConfig,
         isQuietHours,
+        uiPrefs,
+        updateUiPrefs,
+        ACCENT_COLORS,
       }}
     >
       {children}

@@ -86,7 +86,7 @@ export default function SoapNoteModal({
       onClick={() => setShowSoapModal(false)}
     >
       <div
-        className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-5 bg-blue-600 text-white shrink-0">

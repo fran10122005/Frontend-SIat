@@ -14,30 +14,30 @@ export default function Auth({ currentView, onNavigate }) {
   return (
     <div className="relative min-h-[100dvh] w-full bg-[#F4F7F9] dark:bg-slate-900 overflow-hidden font-sans">
       {/* Mobile Layout: limpio, aireado, sin ruido visual */}
-      <div className="relative flex flex-col md:hidden h-[100dvh] w-full overflow-y-auto bg-[#F4F7F9] dark:bg-slate-950">
+      <div className="relative flex flex-col justify-between md:hidden min-h-[100dvh] w-full overflow-y-auto bg-[#F4F7F9] dark:bg-slate-950 pb-6">
         {/* Brand mark mínimo */}
-        <div className="relative z-10 flex flex-col items-center pt-5 pb-2 px-6 text-center shrink-0">
+        <div className="relative z-10 flex flex-col items-center pt-6 pb-3 px-6 text-center shrink-0">
           <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 w-80 h-40 bg-blue-200/50 dark:bg-blue-500/10 rounded-full blur-3xl" />
           <img
             src={funautaLogo}
             alt="Logo SIAT-TEA"
-            className="auth-rise auth-d0 w-12 h-12 object-contain drop-shadow-sm"
+            className="auth-rise auth-d0 w-12 h-12 object-contain drop-shadow-sm transition-transform active:scale-95"
           />
           <h2 className="auth-rise auth-d1 mt-1.5 text-lg font-bold text-brand-700 dark:text-blue-400 tracking-tight">
             SIAT-TEA
           </h2>
-          <p className="auth-rise auth-d1 mt-0.5 text-[11px] leading-relaxed text-gray-400 dark:text-gray-500 max-w-[16rem]">
+          <p className="auth-rise auth-d1 mt-0.5 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 max-w-[16rem]">
             Sistema Inteligente de Acompañamiento Terapéutico
           </p>
-          <div className="auth-rise auth-d2 mt-2 flex items-center gap-1.5 rounded-full border border-brand-500/15 dark:border-blue-400/15 bg-white/70 dark:bg-slate-900/70 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-500 dark:text-blue-400">
+          <div className="auth-rise auth-d2 mt-2 flex items-center gap-1.5 rounded-full border border-brand-500/15 dark:border-blue-400/15 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-600 dark:text-blue-400 shadow-sm">
             <ShieldCheck className="w-3.5 h-3.5" />
             Plataforma clínica segura
           </div>
         </div>
 
         {/* Form card */}
-        <div className="relative z-10 w-full max-w-md mx-auto px-4 pb-6">
-          <div className="auth-fade bg-white dark:bg-slate-900 rounded-2xl shadow-md shadow-slate-200/60 dark:shadow-black/40 border border-slate-100 dark:border-slate-800 overflow-hidden">
+        <div className="relative z-10 w-full max-w-md mx-auto px-4 py-2">
+          <div className="auth-fade bg-white dark:bg-slate-900 rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-black/50 border border-slate-100 dark:border-slate-800 overflow-hidden">
             {isLogin ? (
               <Login onNavigate={onNavigate} />
             ) : (

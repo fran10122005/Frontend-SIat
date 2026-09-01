@@ -23,7 +23,7 @@ export default function CatalogosTab({
     setEditingInst({ ...inst, [field]: e.target.value });
 
   const inputClass = (editable) =>
-    `form-input ${
+    `w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${
       editable
         ? ""
         : "!bg-slate-100 dark:!bg-slate-800/50 !text-slate-600 dark:!text-slate-400 cursor-default"

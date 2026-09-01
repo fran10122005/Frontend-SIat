@@ -340,17 +340,15 @@ export default function UsuariosTab({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse responsive-table">
+            <table className="w-full text-left text-xs sm:text-sm border-collapse responsive-table">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="px-6 py-4">Usuario</th>
-                  <th className="px-6 py-4">Rol</th>
-                  <th className="px-6 py-4 hidden md:table-cell">Creación</th>
-                  <th className="px-6 py-4 hidden lg:table-cell">
-                    Último Acceso
-                  </th>
-                  <th className="px-6 py-4 text-center">Estado</th>
-                  <th className="px-6 py-4 text-right">Acciones</th>
+                  <th className="px-3 sm:px-4 py-3">Usuario</th>
+                  <th className="px-3 sm:px-4 py-3">Rol</th>
+                  <th className="px-3 sm:px-4 py-3">Creación</th>
+                  <th className="px-3 sm:px-4 py-3">Último Acceso</th>
+                  <th className="px-3 sm:px-4 py-3 text-center">Estado</th>
+                  <th className="px-3 sm:px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -373,20 +371,20 @@ export default function UsuariosTab({
                         className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${expandedId === user.usu_codi ? "mobile-expanded" : ""}`}
                       >
                         <td
-                          className="px-6 py-4 mobile-summary"
+                          className="px-3 sm:px-4 py-3 mobile-summary"
                           data-label="Usuario"
                         >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
                             <div
-                              className={`p-2.5 rounded-lg flex items-center justify-center ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
+                              className={`p-2 rounded-lg flex items-center justify-center shrink-0 ${isActive ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}
                             >
-                              <User className="h-4.5 w-4.5" />
+                              <User className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
                               <div className="font-semibold text-slate-900 dark:text-white leading-tight truncate">
                                 {name}
                               </div>
-                              <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-1 truncate">
+                              <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 truncate">
                                 <Mail className="h-3 w-3 shrink-0" />{" "}
                                 {user.usu_crro}
                               </div>
@@ -409,31 +407,31 @@ export default function UsuariosTab({
                           </button>
                         </td>
                         <td
-                          className="px-6 py-4 whitespace-nowrap mobile-detail"
+                          className="px-3 sm:px-4 py-3 whitespace-nowrap mobile-detail"
                           data-label="Rol"
                         >
                           {getRoleBadge(user.rol_codi)}
                         </td>
                         <td
-                          className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden md:table-cell whitespace-nowrap mobile-detail"
+                          className="px-3 sm:px-4 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap mobile-detail"
                           data-label="Creación"
                         >
                           <div className="flex items-center gap-1.5 text-xs">
-                            <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                            <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                             {formatDate(user.usu_crea)}
                           </div>
                         </td>
                         <td
-                          className="px-6 py-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell whitespace-nowrap mobile-detail"
+                          className="px-3 sm:px-4 py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap mobile-detail"
                           data-label="Último Acceso"
                         >
                           <div className="flex items-center gap-1.5 text-xs">
-                            <Clock className="h-3.5 w-3.5 text-slate-400" />
+                            <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                             {formatDate(user.usu_logi)}
                           </div>
                         </td>
                         <td
-                          className="px-6 py-4 text-center whitespace-nowrap mobile-detail"
+                          className="px-3 sm:px-4 py-3 text-center whitespace-nowrap mobile-detail"
                           data-label="Estado"
                         >
                           <button
@@ -450,7 +448,7 @@ export default function UsuariosTab({
                           </button>
                         </td>
                         <td
-                          className="px-6 py-4 text-right whitespace-nowrap mobile-detail"
+                          className="px-3 sm:px-4 py-3 text-right whitespace-nowrap mobile-detail"
                           data-label="Acciones"
                         >
                           <div className="flex justify-end gap-2">

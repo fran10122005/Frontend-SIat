@@ -12,6 +12,7 @@ import {
   Grid,
   LayoutDashboard,
   Download,
+  Settings2,
 } from "lucide-react";
 import Footer from "../components/layout/Footer";
 import { exportDashboardReport } from "../utils/pdfExporter";
@@ -23,6 +24,7 @@ import ChildStatusBanner from "../components/dashboard/ChildStatusBanner";
 import DaySummary from "../components/dashboard/DaySummary";
 import BreathingProtocolModal from "../components/dashboard/BreathingProtocolModal";
 import AacBoardDrawer from "../components/dashboard/AacBoardDrawer";
+import UserPreferencesModal from "../components/shared/UserPreferencesModal";
 
 import PageTitle from "../components/ui/PageTitle";
 
@@ -39,6 +41,7 @@ export default function MainDashboard() {
   const [showBreathing, setShowBreathing] = useState(false);
   const [showAac, setShowAac] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [showPrefs, setShowPrefs] = useState(false);
 
   const { liveBpm, liveStress, liveMov, isWebSocketActive } = useTelemetry();
   const { alertsList } = useClinicalData();

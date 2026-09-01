@@ -20,6 +20,10 @@ import {
   Clock,
   CheckCircle2,
   X,
+  Send,
+  Mail,
+  CheckSquare,
+  Sparkles,
 } from "lucide-react";
 
 import AdminKPIs from "../components/admin/AdminKPIs";
@@ -35,6 +39,7 @@ import CatalogosTab from "../components/admin/CatalogosTab";
 import UsuariosTab from "../components/admin/UsuariosTab";
 import ConfirmDialog from "../components/shared/ConfirmDialog";
 import RegisterChildModal from "../components/shared/RegisterChildModal";
+import AdminModal from "../components/shared/AdminModal";
 import Topbar from "../components/layout/Topbar";
 import Footer from "../components/layout/Footer";
 import LoadingState from "../components/dashboard/LoadingState";
@@ -139,12 +144,23 @@ function AdminDashboard({ onNavigate }) {
   // Clinical Invitation States
   const [showRegModal, setShowRegModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [scheduleConfig, setScheduleConfig] = useState(() => {
-    const saved = localStorage.getItem("reportSchedule");
-    return saved
-      ? JSON.parse(saved)
-      : { enabled: false, frequency: "weekly", day: "monday", email: "" };
+  const [scheduleConfig, setScheduleConfig] = useState({
+    enabled: false,
+    frequency: "weekly",
+    day: "lunes",
+    time: "08:00",
+    email: "",
+    additionalEmails: "",
+    subject: "Reporte Ejecutivo de Gestión Clínica — SIAT",
+    modules: {
+      metricas: true,
+      pacientes: true,
+      especialistas: true,
+      auditoria: true,
+    },
   });
+  const [sendingTest, setSendingTest] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
 
@@ -1146,33 +1162,28 @@ function AdminDashboard({ onNavigate }) {
         </div>
       )}
 
-      {/* MODAL: Programar Reporte */}
+      {/* MODAL: Programar Reporte Profesional */}
       {showScheduleModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl">
-                    <Clock className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-lg font-bold">Programar Reporte</h3>
-                </div>
-                <button
-                  onClick={() => setShowScheduleModal(false)}
-                  className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+        <AdminModal
+          open={showScheduleModal}
+          onClose={() => setShowScheduleModal(false)}
+          title="Programador de Reportes Ejecutivos"
+          subtitle="Configura el envío automático periódico y el contenido por correo electrónico"
+          icon={Clock}
+          maxWidth="max-w-xl"
+        >
+          <div className="space-y-5">
+            {/* Activar/Desactivar */}
+            <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900 dark:text-white">
+                  Envío Automático Programado
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  El servidor enviará el correo según la frecuencia configurada.
+                </p>
               </div>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Configura el envío automático del reporte del dashboard por
-                correo electrónico.
-              </p>
-
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
                 <input
                   type="checkbox"
                   checked={scheduleConfig.enabled}
@@ -1182,116 +1193,272 @@ function AdminDashboard({ onNavigate }) {
                       enabled: e.target.checked,
                     })
                   }
-                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="sr-only peer"
                 />
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  Activar reporte automático
-                </span>
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-blue-600"></div>
               </label>
+            </div>
 
-              {scheduleConfig.enabled && (
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <label className="form-label">Frecuencia</label>
-                    <select
-                      value={scheduleConfig.frequency}
-                      onChange={(e) =>
-                        setScheduleConfig({
-                          ...scheduleConfig,
-                          frequency: e.target.value,
-                        })
-                      }
-                      className="form-select"
-                    >
-                      <option value="daily">Diario</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="monthly">Mensual</option>
-                    </select>
-                  </div>
-                  {scheduleConfig.frequency === "weekly" && (
-                    <div>
-                      <label className="form-label">Día de la semana</label>
-                      <select
-                        value={scheduleConfig.day}
-                        onChange={(e) =>
-                          setScheduleConfig({
-                            ...scheduleConfig,
-                            day: e.target.value,
-                          })
-                        }
-                        className="form-select"
-                      >
-                        {[
-                          "lunes",
-                          "martes",
-                          "miércoles",
-                          "jueves",
-                          "viernes",
-                          "sábado",
-                          "domingo",
-                        ].map((d) => (
-                          <option key={d} value={d}>
-                            {d.charAt(0).toUpperCase() + d.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <div>
-                    <label className="form-label">Correo destino</label>
+            {/* Módulos / Contenido del Reporte */}
+            <div>
+              <label className="form-label mb-2 block">
+                Módulos e Información a Incluir en el Correo
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {[
+                  { key: "metricas", label: "📊 Indicadores Generales (KPIs)" },
+                  {
+                    key: "pacientes",
+                    label: "👶 Resumen Clínico de Pacientes",
+                  },
+                  {
+                    key: "especialistas",
+                    label: "🩺 Estado de Personal Médico",
+                  },
+                  {
+                    key: "auditoria",
+                    label: "🚨 Bitácora de Alertas del Sistema",
+                  },
+                ].map((item) => (
+                  <label
+                    key={item.key}
+                    className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900/30 cursor-pointer hover:border-blue-400 transition-colors"
+                  >
                     <input
-                      type="email"
-                      value={scheduleConfig.email}
+                      type="checkbox"
+                      checked={!!scheduleConfig.modules?.[item.key]}
                       onChange={(e) =>
                         setScheduleConfig({
                           ...scheduleConfig,
-                          email: e.target.value,
+                          modules: {
+                            ...scheduleConfig.modules,
+                            [item.key]: e.target.checked,
+                          },
                         })
                       }
-                      className="form-input"
-                      placeholder="admin@fundacion.org"
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
-                  </div>
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {item.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Frecuencia y Horarios */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="form-label">Frecuencia</label>
+                <select
+                  value={scheduleConfig.frequency}
+                  onChange={(e) =>
+                    setScheduleConfig({
+                      ...scheduleConfig,
+                      frequency: e.target.value,
+                    })
+                  }
+                  className="form-select text-xs"
+                >
+                  <option value="daily">Diario</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="monthly">Mensual</option>
+                </select>
+              </div>
+
+              {scheduleConfig.frequency === "weekly" && (
+                <div>
+                  <label className="form-label">Día preferido</label>
+                  <select
+                    value={scheduleConfig.day}
+                    onChange={(e) =>
+                      setScheduleConfig({
+                        ...scheduleConfig,
+                        day: e.target.value,
+                      })
+                    }
+                    className="form-select text-xs"
+                  >
+                    {[
+                      "lunes",
+                      "martes",
+                      "miércoles",
+                      "jueves",
+                      "viernes",
+                      "sábado",
+                      "domingo",
+                    ].map((d) => (
+                      <option key={d} value={d}>
+                        {d.charAt(0).toUpperCase() + d.slice(1)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-700/50">
+              <div>
+                <label className="form-label">Hora de envío</label>
+                <input
+                  type="time"
+                  value={scheduleConfig.time || "08:00"}
+                  onChange={(e) =>
+                    setScheduleConfig({
+                      ...scheduleConfig,
+                      time: e.target.value,
+                    })
+                  }
+                  className="form-input text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Destinatarios y Asunto */}
+            <div className="space-y-3">
+              <div>
+                <label className="form-label">Asunto del Correo</label>
+                <input
+                  type="text"
+                  value={
+                    scheduleConfig.subject ||
+                    "Reporte Ejecutivo de Gestión Clínica — SIAT"
+                  }
+                  onChange={(e) =>
+                    setScheduleConfig({
+                      ...scheduleConfig,
+                      subject: e.target.value,
+                    })
+                  }
+                  className="form-input text-xs"
+                  placeholder="Ej. Reporte Semanal de la Clínica SIAT"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="form-label">Correo Principal</label>
+                  <input
+                    type="email"
+                    value={scheduleConfig.email}
+                    onChange={(e) =>
+                      setScheduleConfig({
+                        ...scheduleConfig,
+                        email: e.target.value,
+                      })
+                    }
+                    className="form-input text-xs"
+                    placeholder="admin@fundacion.org"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">
+                    Correos adicionales (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={scheduleConfig.additionalEmails || ""}
+                    onChange={(e) =>
+                      setScheduleConfig({
+                        ...scheduleConfig,
+                        additionalEmails: e.target.value,
+                      })
+                    }
+                    className="form-input text-xs"
+                    placeholder="director@fundacion.org, gerencia@..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between gap-3">
+              <button
+                type="button"
+                disabled={sendingTest}
+                onClick={async () => {
+                  if (!scheduleConfig.email) {
+                    showToast(
+                      "⚠️ Ingresa un correo electrónico para enviar la prueba",
+                    );
+                    return;
+                  }
+                  setSendingTest(true);
+                  try {
+                    await api.post(
+                      "/admin/reportes/enviar-ahora",
+                      scheduleConfig,
+                    );
+                    showToast(
+                      `✅ Reporte de prueba enviado exitosamente a ${scheduleConfig.email}`,
+                    );
+                  } catch (err) {
+                    toastError(
+                      err,
+                      showToast,
+                      "No se pudo enviar el reporte por correo.",
+                    );
+                  } finally {
+                    setSendingTest(false);
+                  }
+                }}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {sendingTest ? (
+                  <span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                Enviar Prueba Ahora
+              </button>
+
+              <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={() => {
-                    setShowScheduleModal(false);
-                    localStorage.setItem(
-                      "reportSchedule",
-                      JSON.stringify(scheduleConfig),
-                    );
-                    if (scheduleConfig.enabled && scheduleConfig.email) {
-                      api
-                        .post("/admin/reportes/programados", scheduleConfig)
-                        .then(() =>
-                          showToast("✅ Reporte programado exitosamente."),
-                        )
-                        .catch(() =>
-                          showToast(
-                            "⚠️ Configuración guardada localmente. El envío automático estará disponible cuando el backend esté conectado.",
-                          ),
-                        );
-                    } else {
-                      showToast("📋 Configuración guardada.");
+                  type="button"
+                  disabled={savingSchedule}
+                  onClick={async () => {
+                    setSavingSchedule(true);
+                    try {
+                      await api.post(
+                        "/admin/reportes/programados",
+                        scheduleConfig,
+                      );
+                      localStorage.setItem(
+                        "reportSchedule",
+                        JSON.stringify(scheduleConfig),
+                      );
+                      showToast(
+                        scheduleConfig.enabled
+                          ? `✅ Programación activada (${scheduleConfig.frequency}) para ${scheduleConfig.email}`
+                          : "📋 Programación guardada en estado inactivo.",
+                      );
+                      setShowScheduleModal(false);
+                    } catch (err) {
+                      toastError(
+                        err,
+                        showToast,
+                        "Error al guardar la programación.",
+                      );
+                    } finally {
+                      setSavingSchedule(false);
                     }
                   }}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm shadow-blue-600/25 transition-all"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
-                  Guardar Configuración
+                  {savingSchedule && (
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  Guardar Programación
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </AdminModal>
       )}
     </div>
   );

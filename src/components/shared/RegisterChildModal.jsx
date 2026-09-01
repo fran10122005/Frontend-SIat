@@ -124,7 +124,12 @@ function InfoCollapse({ tone = "amber", title, children }) {
 
 function InputField({ ...props }) {
   const { className = "", ...rest } = props;
-  return <input {...rest} className={`form-input ${className}`} />;
+  return (
+    <input
+      {...rest}
+      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${className}`}
+    />
+  );
 }
 
 function SelectField({ children, ...props }) {
@@ -576,11 +581,13 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         nin_fnac: form.nin_fnac,
         nin_gner: form.nin_gner,
         nin_nivd: form.nin_nivd,
-        ...(form.nin_diag.trim() && { nin_diag: form.nin_diag.trim() }),
-        ...(docFiles.filter((d) => d.uploadedUrl).length > 0 && {
-          nin_docs: docFiles
-            .filter((d) => d.uploadedUrl)
-            .map((d) => d.uploadedUrl),
+        ...(form.nin_diag &&
+          form.nin_diag.trim() && { nin_diag: form.nin_diag.trim() }),
+        ...((form.nin_docs?.length > 0 || docFiles.length > 0) && {
+          nin_docs: [
+            ...(Array.isArray(form.nin_docs) ? form.nin_docs : []),
+            ...docFiles.map((d) => d.uploadedUrl || d.url).filter(Boolean),
+          ].filter((url, index, self) => self.indexOf(url) === index),
         }),
         rep_nomb: rep?.rep_nomb || form.rep_nomb,
         rep_apel: rep?.rep_apel || form.rep_apel,
@@ -635,7 +642,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col border-t border-slate-200 dark:border-slate-700/80 sm:border max-h-[94dvh] sm:max-h-[92vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl flex flex-col border-t border-slate-200 dark:border-slate-700/80 sm:border max-h-[95dvh] sm:max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
         {/* ── Header ── */}
         <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-blue-600 text-white shrink-0">
           <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/40" />

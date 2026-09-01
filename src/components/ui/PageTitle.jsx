@@ -8,11 +8,17 @@ export default function PageTitle({
   icon: Icon,
   children,
   className = "",
+  title,
   ...props
 }) {
+  const safeTitle =
+    typeof title === "string" || typeof title === "number"
+      ? String(title)
+      : undefined;
   return (
     <h1
       className={`text-lg md:text-xl font-bold text-brand-700 dark:text-blue-400 tracking-tight flex items-center flex-wrap gap-2 transition-colors ${className}`}
+      {...(safeTitle ? { title: safeTitle } : {})}
       {...props}
     >
       {Icon && (

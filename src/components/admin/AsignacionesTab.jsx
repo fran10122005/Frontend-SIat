@@ -102,7 +102,7 @@ export default function AsignacionesTab({
         open={showAsignar}
         onClose={() => setShowAsignar(false)}
         title="Asignar Paciente a Especialista"
-        maxWidth="max-w-2xl"
+        maxWidth="max-w-xl"
         icon={Link2}
       >
         <form
@@ -188,7 +188,7 @@ export default function AsignacionesTab({
                   onChange={(e) =>
                     setAsignacion({ ...asignacion, asi_inic: e.target.value })
                   }
-                  className="form-input"
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
                 />
               </div>
               <div>

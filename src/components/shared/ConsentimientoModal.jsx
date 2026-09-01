@@ -30,7 +30,7 @@ export default function ConsentimientoModal({ onAccept, loading }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[94dvh] sm:max-h-[92vh] border-t border-slate-200 dark:border-slate-700/80 sm:border animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden flex flex-col max-h-[94dvh] sm:max-h-[92vh] border-t border-slate-200 dark:border-slate-700/80 sm:border animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
         {/* Header */}
         <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-blue-600 text-white shrink-0">
           <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/40" />

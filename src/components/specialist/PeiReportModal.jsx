@@ -57,7 +57,7 @@ export default function PeiReportModal({
       onClick={() => setShowModal(false)}
     >
       <div
-        className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

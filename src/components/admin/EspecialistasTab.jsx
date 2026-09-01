@@ -14,13 +14,15 @@ import {
   User,
   Mail,
   BadgeCheck,
-  UploadCloud,
   Camera,
   AlertCircle,
   Phone,
   IdCard,
   Cake,
   Users,
+  X,
+  CalendarDays,
+  Award,
 } from "lucide-react";
 import {
   uploadToCloudinary,
@@ -77,32 +79,29 @@ function FotoPerfilZona({
 }) {
   const inputRef = useRef(null);
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
       <div
         onClick={() => !uploading && inputRef.current?.click()}
-        className={`relative w-20 h-20 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 shrink-0
-          ${uploading ? "cursor-wait" : "hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10"}`}
+        title="Cambiar foto"
+        className={`relative w-12 h-12 rounded-full overflow-hidden cursor-pointer bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 transition-opacity ${uploading ? "opacity-60 cursor-wait" : ""}`}
       >
         {preview ? (
-          <>
-            <img
-              src={preview}
-              alt="Foto del especialista"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-              <Camera className="w-5 h-5 text-white" />
-            </div>
-          </>
+          <img
+            src={preview}
+            alt="Foto del especialista"
+            className="w-full h-full object-cover"
+          />
         ) : (
-          <div className="flex flex-col items-center text-slate-400 dark:text-slate-500 gap-0.5">
-            <UploadCloud className="w-6 h-6" />
-            <span className="text-[9px] font-semibold">Foto</span>
-          </div>
+          <Camera className="w-5 h-5 text-slate-400" />
         )}
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+          <Camera className="w-4 h-4 text-white" />
+        </div>
         {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <span className="text-white text-xs font-bold">{progress}%</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+            <span className="text-white text-[10px] font-bold">
+              {progress}%
+            </span>
           </div>
         )}
       </div>
@@ -113,22 +112,34 @@ function FotoPerfilZona({
         onChange={(e) => onFileSelect(e.target.files[0])}
         className="hidden"
       />
-      <div>
+      <div className="flex flex-col gap-0.5">
         <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-          Foto de Perfil
+          Foto de perfil
         </p>
-        <p className="text-[11px] text-slate-400">
-          JPG, PNG o WebP · Máx. 5 MB
-        </p>
-        {preview && !uploading && (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={onRemove}
-            className="text-[11px] text-rose-500 hover:text-rose-600 font-semibold mt-1"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold disabled:opacity-50"
           >
-            Quitar foto
+            {preview ? "Cambiar" : "Subir foto"}
           </button>
-        )}
+          {preview && !uploading && (
+            <>
+              <span className="text-slate-300 dark:text-slate-600 text-[11px]">
+                ·
+              </span>
+              <button
+                type="button"
+                onClick={onRemove}
+                className="flex items-center gap-0.5 text-[11px] text-rose-500 hover:text-rose-600 font-medium"
+              >
+                <X className="w-3 h-3" /> Quitar
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -423,7 +434,7 @@ export default function EspecialistasTab({
             onClose={() => setShowRegistro(false)}
             title="Acreditación de Nuevo Especialista"
             icon={BadgeCheck}
-            maxWidth="max-w-3xl"
+            maxWidth="max-w-xl"
           >
             <form
               onSubmit={async (e) => {
@@ -486,7 +497,7 @@ export default function EspecialistasTab({
                           esp_codi: validarCampo("esp_codi"),
                         }));
                       }}
-                      className={`form-input ${errores.esp_codi ? "form-input-invalid" : ""}`}
+                      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${errores.esp_codi ? "form-input-invalid" : ""}`}
                       placeholder="Ej. 12345678"
                     />
                     {errores.esp_codi && (
@@ -508,7 +519,7 @@ export default function EspecialistasTab({
                       onChange={(e) =>
                         setNewEsp({ ...newEsp, esp_nomb: e.target.value })
                       }
-                      className="form-input"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
                       placeholder="Ej. Roberto"
                     />
                   </div>
@@ -522,7 +533,7 @@ export default function EspecialistasTab({
                       onChange={(e) =>
                         setNewEsp({ ...newEsp, esp_apel: e.target.value })
                       }
-                      className="form-input"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
                       placeholder="Ej. Sánchez"
                     />
                   </div>
@@ -576,9 +587,7 @@ export default function EspecialistasTab({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="form-label">
-                      Correo Electrónico Corporativo
-                    </label>
+                    <label className="form-label">Correo Electrónico</label>
                     <input
                       required
                       maxLength={50}
@@ -587,7 +596,7 @@ export default function EspecialistasTab({
                       onChange={(e) =>
                         setNewEsp({ ...newEsp, usu_crro: e.target.value })
                       }
-                      className="form-input"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
                       placeholder="dr@clinica.com"
                     />
                   </div>
@@ -604,7 +613,7 @@ export default function EspecialistasTab({
                           esp_telf: validarCampo("esp_telf"),
                         }));
                       }}
-                      className={`form-input ${errores.esp_telf ? "form-input-invalid" : ""}`}
+                      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${errores.esp_telf ? "form-input-invalid" : ""}`}
                       placeholder="+58 412 0000000"
                     />
                     {errores.esp_telf && (
@@ -640,7 +649,7 @@ export default function EspecialistasTab({
                           esp_licencia: validarCampo("esp_licencia"),
                         }));
                       }}
-                      className={`form-input ${errores.esp_licencia ? "form-input-invalid" : ""}`}
+                      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${errores.esp_licencia ? "form-input-invalid" : ""}`}
                       placeholder="Ej. CM-90800"
                     />
                     {errores.esp_licencia && (
@@ -701,7 +710,7 @@ export default function EspecialistasTab({
             title="Editar Especialista"
             subtitle={`${editingEsp?.esp_nomb || ""} ${editingEsp?.esp_apel || ""}`.trim()}
             icon={Pencil}
-            maxWidth="max-w-3xl"
+            maxWidth="max-w-xl"
           >
             <form
               onSubmit={async (e) => {
@@ -759,9 +768,7 @@ export default function EspecialistasTab({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="form-label">
-                    Correo Electrónico Corporativo
-                  </label>
+                  <label className="form-label">Correo Electrónico</label>
                   <input
                     required
                     maxLength={50}
@@ -790,7 +797,7 @@ export default function EspecialistasTab({
                         esp_telf: validarCampoEdit("esp_telf"),
                       }));
                     }}
-                    className={`form-input ${editErrores.esp_telf ? "form-input-invalid" : ""}`}
+                    className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${editErrores.esp_telf ? "form-input-invalid" : ""}`}
                     placeholder="+58 412 0000000"
                   />
                   {editErrores.esp_telf && (
@@ -818,7 +825,7 @@ export default function EspecialistasTab({
                         esp_licencia: validarCampoEdit("esp_licencia"),
                       }));
                     }}
-                    className={`form-input ${editErrores.esp_licencia ? "form-input-invalid" : ""}`}
+                    className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${editErrores.esp_licencia ? "form-input-invalid" : ""}`}
                     placeholder="Ej. CM-90800"
                   />
                   {editErrores.esp_licencia && (
@@ -1168,140 +1175,132 @@ export default function EspecialistasTab({
             />
           </div>
 
-          {/* Vista previa del especialista */}
+          {/* Vista previa del especialista — Ficha Integral */}
           {previewEsp && (
             <AdminModal
               open={!!previewEsp}
               onClose={() => setPreviewEsp(null)}
-              title="Vista previa del Especialista"
+              title="Ficha del Especialista"
               subtitle={`${previewEsp.esp_nomb || ""} ${previewEsp.esp_apel || ""}`.trim()}
               icon={Stethoscope}
               maxWidth="max-w-xl"
             >
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 shadow-sm">
+              <div className="space-y-4">
+                {/* Header formal: avatar + titulación */}
+                <div className="flex items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+                  <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                     {previewEsp.esp_foto ? (
                       <img
                         src={previewEsp.esp_foto}
-                        alt={`Foto de ${previewEsp.esp_nomb} ${previewEsp.esp_apel}`}
+                        alt={`Foto de ${previewEsp.esp_nomb}`}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold text-lg">
+                      <div className="w-full h-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-lg">
                         {previewEsp.esp_nomb?.charAt(0) || "?"}
                         {previewEsp.esp_apel?.charAt(0) || ""}
                       </div>
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-base font-bold text-slate-900 dark:text-white">
-                      {previewEsp.esp_gner === "M" ? "Dr." : "Dra."}{" "}
-                      {previewEsp.esp_nomb} {previewEsp.esp_apel}
-                    </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                      ID: {previewEsp.esp_codi}
-                    </div>
-                    <div className="mt-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                        {previewEsp.esp_gner === "M" ? "Dr." : "Dra."}{" "}
+                        {previewEsp.esp_nomb} {previewEsp.esp_apel}
+                      </h3>
                       <StatusBadge active={previewEsp.tm_usuar?.usu_estd} />
                     </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                      <Mail className="w-3.5 h-3.5" /> Correo Electrónico
-                    </div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 break-all">
-                      {previewEsp.tm_usuar?.usu_crro || "-"}
+                    <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
+                      {previewEsp.tm_especi?.esc_nomb ||
+                        "Sin especialidad asignada"}
                     </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                      <Phone className="w-3.5 h-3.5" /> Teléfono de Contacto
-                    </div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                      {previewEsp.esp_telf || "-"}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                      <Stethoscope className="w-3.5 h-3.5" /> Especialidad
-                    </div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                      {previewEsp.tm_especi?.esc_nomb || "-"}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                      <IdCard className="w-3.5 h-3.5" /> Licencia Médica
-                    </div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 font-mono">
-                      {previewEsp.esp_licencia || "-"}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                      <User className="w-3.5 h-3.5" /> Sexo
-                    </div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                      {previewEsp.esp_gner === "M" ? "Masculino" : "Femenino"}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                      <Users className="w-3.5 h-3.5" /> Pacientes Asignados
-                    </div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                      {(() => {
-                        const n = previewEsp._count?.tc_asign ?? 0;
-                        return `${n} paciente${n === 1 ? "" : "s"} activo${n === 1 ? "" : "s"}`;
-                      })()}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1">
-                      <Cake className="w-3.5 h-3.5" /> Fecha de Nacimiento
-                    </div>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                      {previewEsp.esp_fnac
-                        ? new Date(previewEsp.esp_fnac).toLocaleDateString(
-                            "es-VE",
-                            {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            },
-                          )
-                        : "-"}
+                    <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                      Código: {previewEsp.esp_codi}{" "}
+                      {previewEsp.esp_licencia
+                        ? `· Licencia: ${previewEsp.esp_licencia}`
+                        : ""}
                     </p>
                   </div>
                 </div>
 
-                <div>
-                  <div className="form-section-title">
-                    <ShieldCheck className="form-section-title-icon" />
-                    <h4 className="form-section-title-text">
-                      Acreditación Clínica
-                    </h4>
-                    <span className="form-section-title-line" />
-                  </div>
-                  <div className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40">
-                    <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-400 shrink-0">
-                      <BadgeCheck className="w-6 h-6" />
+                {/* Lista formal de datos */}
+                <div className="space-y-2">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Información Profesional y de Contacto
+                  </h4>
+                  <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60 divide-y divide-slate-200/60 dark:divide-slate-700/60 text-xs">
+                    <div className="flex justify-between items-center px-4 py-2.5">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        Correo Electrónico
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 break-all">
+                        {previewEsp.tm_usuar?.usu_crro || "-"}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-slate-900 dark:text-white">
-                        {previewEsp.tm_especi?.esc_nomb || "Sin especialidad"}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {previewEsp.tm_usuar?.usu_estd
-                          ? "Especialista activo"
-                          : "Especialista inactivo"}
-                      </div>
+                    <div className="flex justify-between items-center px-4 py-2.5">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        Teléfono de Contacto
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {previewEsp.esp_telf || "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2.5">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        Licencia Médica
+                      </span>
+                      <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        {previewEsp.esp_licencia || "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2.5">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        Sexo
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {previewEsp.esp_gner === "M" ? "Masculino" : "Femenino"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2.5">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        Fecha de Nacimiento
+                      </span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {previewEsp.esp_fnac
+                          ? new Date(previewEsp.esp_fnac).toLocaleDateString(
+                              "es-VE",
+                              {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              },
+                            )
+                          : "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2.5">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        Pacientes Asignados
+                      </span>
+                      <span className="font-bold text-blue-600 dark:text-blue-400">
+                        {(() => {
+                          const n = previewEsp._count?.tc_asign ?? 0;
+                          return `${n} paciente${n === 1 ? "" : "s"} activo${n === 1 ? "" : "s"}`;
+                        })()}
+                      </span>
                     </div>
                   </div>
+                </div>
+
+                {/* Footer */}
+                <div className="pt-2 flex justify-end border-t border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewEsp(null)}
+                    className="px-5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    Cerrar
+                  </button>
                 </div>
               </div>
             </AdminModal>
@@ -1317,7 +1316,7 @@ export default function EspecialistasTab({
             onClose={() => setShowCatRegistro(false)}
             title="Registrar Nueva Especialidad"
             icon={Plus}
-            maxWidth="max-w-3xl"
+            maxWidth="max-w-xl"
           >
             <form
               onSubmit={async (e) => {
@@ -1364,7 +1363,7 @@ export default function EspecialistasTab({
                           esc_codi: e.target.value.toUpperCase(),
                         })
                       }
-                      className="form-input !pl-9 !pr-4 font-mono"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors !pl-9 !pr-4 font-mono"
                       placeholder="PSIC-01"
                     />
                   </div>
@@ -1410,7 +1409,7 @@ export default function EspecialistasTab({
             title="Editar Especialidad"
             subtitle={editingEspCat?.esc_nomb || ""}
             icon={Pencil}
-            maxWidth="max-w-3xl"
+            maxWidth="max-w-xl"
           >
             <form
               onSubmit={async (e) => {
@@ -1436,7 +1435,7 @@ export default function EspecialistasTab({
                         esc_nomb: e.target.value,
                       })
                     }
-                    className="form-input"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
                     placeholder="Ej. Psicología Clínica Infantil"
                   />
                 </div>
@@ -1449,7 +1448,7 @@ export default function EspecialistasTab({
                       maxLength={20}
                       type="text"
                       value={editingEspCat?.esc_codi || ""}
-                      className="form-input !pl-9 !pr-4 font-mono opacity-70 cursor-not-allowed"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors !pl-9 !pr-4 font-mono opacity-70 cursor-not-allowed"
                     />
                   </div>
                 </div>

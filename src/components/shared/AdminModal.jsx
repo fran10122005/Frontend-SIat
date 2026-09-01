@@ -7,7 +7,7 @@ export default function AdminModal({
   subtitle,
   icon: Icon,
   children,
-  maxWidth = "max-w-3xl",
+  maxWidth = "max-w-xl",
 }) {
   if (!open) return null;
 
