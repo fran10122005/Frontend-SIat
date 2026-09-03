@@ -114,7 +114,13 @@ export default function App() {
 
     // Matriz estricta de permisos por rol
     const rolePermissions = {
-      ADMIN_INSTITUCION: ["admin", "inventario", "sensores", "profile"],
+      ADMIN_INSTITUCION: [
+        "admin",
+        "inventario",
+        "sensores",
+        "profile",
+        "settings",
+      ],
       ESPECIALISTA: [
         "dashboard",
         "student",
@@ -127,6 +133,7 @@ export default function App() {
         "historial",
         "home_analytics",
         "profile",
+        "settings",
       ],
       REPRESENTANTE: [
         "dashboard",
@@ -136,6 +143,7 @@ export default function App() {
         "diario_hogar",
         "historial",
         "profile",
+        "settings",
         "sensores",
         "herramientas",
       ],
@@ -190,6 +198,8 @@ export default function App() {
     if (safeView === "perfil_padre") return <ParentProfile />;
     if (safeView === "diario_hogar") return <DiarioHogar />;
     if (safeView === "profile") return <UserProfile />;
+    if (safeView === "settings")
+      return <UserProfile initialTab="preferencias" />;
     if (safeView === "inventario" || safeView === "sensores")
       return <HardwareInventory />;
     if (safeView === "historial")

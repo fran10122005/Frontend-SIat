@@ -13,10 +13,10 @@ export default function Auth({ currentView, onNavigate }) {
 
   return (
     <div className="relative min-h-[100dvh] w-full bg-[#F4F7F9] dark:bg-slate-900 overflow-hidden font-sans">
-      {/* Mobile Layout: limpio, aireado, sin ruido visual */}
-      <div className="relative flex flex-col justify-between md:hidden min-h-[100dvh] w-full overflow-y-auto bg-[#F4F7F9] dark:bg-slate-950 pb-6">
+      {/* Mobile Layout: limpio, aireado, centrado verticalmente */}
+      <div className="relative flex flex-col justify-center md:hidden min-h-[100dvh] w-full overflow-y-auto bg-[#F4F7F9] dark:bg-slate-950 py-8">
         {/* Brand mark mínimo */}
-        <div className="relative z-10 flex flex-col items-center pt-6 pb-3 px-6 text-center shrink-0">
+        <div className="relative z-10 flex flex-col items-center pt-2 pb-4 px-6 text-center shrink-0">
           <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 w-80 h-40 bg-blue-200/50 dark:bg-blue-500/10 rounded-full blur-3xl" />
           <img
             src={funautaLogo}
@@ -36,7 +36,7 @@ export default function Auth({ currentView, onNavigate }) {
         </div>
 
         {/* Form card */}
-        <div className="relative z-10 w-full max-w-md mx-auto px-4 py-2">
+        <div className="relative z-10 w-full max-w-md mx-auto px-4">
           <div className="auth-fade bg-white dark:bg-slate-900 rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-black/50 border border-slate-100 dark:border-slate-800 overflow-hidden">
             {isLogin ? (
               <Login onNavigate={onNavigate} />

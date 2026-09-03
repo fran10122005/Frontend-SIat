@@ -33,6 +33,12 @@ import {
   Smartphone,
   Clock,
   ShieldAlert,
+  Sun,
+  Moon,
+  Type,
+  LayoutGrid,
+  Palette,
+  Settings2,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import LoadingState from "../components/dashboard/LoadingState";
@@ -59,10 +65,10 @@ Privacidad y Biometría:
 Este consentimiento se fundamenta en el Artículo 79 de la Ley de Infogobierno y el Artículo 65 de la LOPNNA de la República Bolivariana de Venezuela. Usted tiene el derecho de solicitar el acceso, rectificación o eliminación de estos datos comunicándose con la administración de la institución.`;
 
 const NOTIF_DEFAULTS = {
-  crisis_correo: true,
-  crisis_push: true,
+  alertas_correo: true,
+  alertas_push: true,
   resumen_diario: true,
-  recordatorios: true,
+  recordatorios_sesiones: true,
   novedades: false,
 };
 
@@ -251,7 +257,216 @@ function CardHeader({ icon: Icon, title, subtitle, tone = "slate" }) {
 
 import PageTitle from "../components/ui/PageTitle";
 
-export default function UserProfile() {
+const ACCENT_MAP = {
+  blue: { label: "Azul", bg: "#2563eb" },
+  indigo: { label: "Índigo", bg: "#4f46e5" },
+  violet: { label: "Violeta", bg: "#7c3aed" },
+  emerald: { label: "Esmeralda", bg: "#059669" },
+  cyan: { label: "Cyan", bg: "#0891b2" },
+  rose: { label: "Rosa", bg: "#e11d48" },
+};
+
+const FONT_SIZES = [
+  { value: "small", label: "Pequeño", sample: "text-xs" },
+  { value: "normal", label: "Normal", sample: "text-sm" },
+  { value: "large", label: "Grande", sample: "text-base" },
+];
+
+const DENSITIES = [
+  { value: "normal", label: "Normal", desc: "Espaciado estándar", icon: "▤" },
+  {
+    value: "compact",
+    label: "Compacto",
+    desc: "Más contenido visible",
+    icon: "▦",
+  },
+];
+
+function PrefSectionLabel({ icon, label }) {
+  return (
+    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+      {icon}
+      {label}
+    </p>
+  );
+}
+
+function PreferenciasPanel() {
+  const { uiPrefs, updateUiPrefs, isDark } = useGlobalContext();
+  const local = {
+    theme: uiPrefs?.theme || (isDark ? "dark" : "light"),
+    accentColor: uiPrefs?.accentColor || "blue",
+    fontSize: uiPrefs?.fontSize || "normal",
+    density: uiPrefs?.density || "normal",
+  };
+
+  const set = (patch) => updateUiPrefs(patch);
+
+  return (
+    <Card className="p-5 sm:p-6 space-y-7">
+      {/* Tema */}
+      <section>
+        <PrefSectionLabel
+          icon={<Moon className="w-3.5 h-3.5" />}
+          label="Tema Visual"
+        />
+        <div className="grid grid-cols-3 gap-2.5 mt-3">
+          {[
+            { value: "light", Icon: Sun, label: "Claro" },
+            { value: "system", Icon: Monitor, label: "Sistema" },
+            { value: "dark", Icon: Moon, label: "Oscuro" },
+          ].map(({ value, Icon, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => set({ theme: value })}
+              className={`flex flex-col items-center gap-2 py-3.5 px-2 rounded-xl border-2 transition-all text-xs font-semibold ${
+                local.theme === value
+                  ? "border-[var(--color-brand,#2563eb)] bg-blue-50 dark:bg-blue-900/20 text-[var(--color-brand,#2563eb)] dark:text-blue-300"
+                  : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600"
+              }`}
+            >
+              <div
+                className={`p-2 rounded-lg ${
+                  local.theme === value
+                    ? "bg-[var(--color-brand,#2563eb)]/10"
+                    : "bg-slate-100 dark:bg-slate-800"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+              </div>
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Color de acento */}
+      <section>
+        <PrefSectionLabel
+          icon={<Palette className="w-3.5 h-3.5" />}
+          label="Color de Acento"
+        />
+        <div className="grid grid-cols-6 gap-2.5 mt-3">
+          {Object.entries(ACCENT_MAP).map(([key, { label, bg }]) => (
+            <button
+              key={key}
+              type="button"
+              title={label}
+              onClick={() => set({ accentColor: key })}
+              className="flex flex-col items-center gap-1.5"
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105"
+                style={{
+                  backgroundColor: bg,
+                  boxShadow:
+                    local.accentColor === key
+                      ? `0 0 0 3px white, 0 0 0 5px ${bg}`
+                      : undefined,
+                  transform:
+                    local.accentColor === key ? "scale(1.1)" : undefined,
+                }}
+              >
+                {local.accentColor === key && (
+                  <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                )}
+              </div>
+              <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 text-center">
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Tamaño de fuente */}
+      <section>
+        <PrefSectionLabel
+          icon={<Type className="w-3.5 h-3.5" />}
+          label="Tamaño de Fuente"
+        />
+        <div className="grid grid-cols-3 gap-2.5 mt-3">
+          {FONT_SIZES.map(({ value, label, sample }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => set({ fontSize: value })}
+              className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all ${
+                local.fontSize === value
+                  ? "border-[var(--color-brand,#2563eb)] bg-blue-50 dark:bg-blue-900/20"
+                  : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+              }`}
+            >
+              <span
+                className={`font-bold text-slate-700 dark:text-slate-200 ${sample}`}
+              >
+                Aa
+              </span>
+              <span
+                className={`text-[10px] font-semibold ${
+                  local.fontSize === value
+                    ? "text-[var(--color-brand,#2563eb)] dark:text-blue-300"
+                    : "text-slate-500 dark:text-slate-400"
+                }`}
+              >
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Densidad */}
+      <section>
+        <PrefSectionLabel
+          icon={<LayoutGrid className="w-3.5 h-3.5" />}
+          label="Densidad de Interfaz"
+        />
+        <div className="grid grid-cols-2 gap-2.5 mt-3">
+          {DENSITIES.map(({ value, label, desc, icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => set({ density: value })}
+              className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all text-left ${
+                local.density === value
+                  ? "border-[var(--color-brand,#2563eb)] bg-blue-50 dark:bg-blue-900/20"
+                  : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+              }`}
+            >
+              <span className="text-2xl leading-none text-slate-400 dark:text-slate-500 shrink-0">
+                {icon}
+              </span>
+              <div className="min-w-0">
+                <p
+                  className={`text-xs font-bold ${
+                    local.density === value
+                      ? "text-[var(--color-brand,#2563eb)] dark:text-blue-300"
+                      : "text-slate-700 dark:text-slate-200"
+                  }`}
+                >
+                  {label}
+                </p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  {desc}
+                </p>
+              </div>
+              {local.density === value && (
+                <Check
+                  className="w-4 h-4 ml-auto shrink-0 text-[var(--color-brand,#2563eb)]"
+                  strokeWidth={2.5}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      </section>
+    </Card>
+  );
+}
+
+export default function UserProfile({ initialTab }) {
   const {
     userRole,
     showToast,
@@ -262,7 +477,7 @@ export default function UserProfile() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("personal");
+  const [activeTab, setActiveTab] = useState(initialTab || "personal");
 
   const [profile, setProfile] = useState({
     nomb: "",
@@ -277,6 +492,11 @@ export default function UserProfile() {
     rol_nomb: "",
     gner: "",
     foto: "",
+    especialidad: "",
+    especialidadLabel: "",
+    institucion: "",
+    ins_codi: "",
+    cargo: "",
   });
   const savedProfileRef = useRef(profile);
 
@@ -329,6 +549,23 @@ export default function UserProfile() {
       } catch {}
     };
     loadPasskeys();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .get("/auth/notificaciones")
+      .then((res) => {
+        if (!active) return;
+        const data = res.data?.data || {};
+        setNotifPrefs((prev) => ({ ...prev, ...data }));
+      })
+      .catch(() => {
+        /* mantiene los valores por defecto o cacheados */
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -391,7 +628,12 @@ export default function UserProfile() {
           licencia = "",
           rela = "",
           gner = "",
-          foto = "";
+          foto = "",
+          especialidad = "",
+          especialidadLabel = "",
+          institucion = "",
+          ins_codi = "",
+          cargo = "";
 
         if (userData.rol_codi === "ROL_ESP" && userData.tm_espec) {
           nomb = userData.tm_espec.esp_nomb;
@@ -404,6 +646,11 @@ export default function UserProfile() {
           licencia = userData.tm_espec.esp_licencia || "";
           gner = userData.tm_espec.esp_gner || "F";
           foto = userData.tm_espec.esp_foto || "";
+          especialidad = userData.tm_espec.esc_codi || "";
+          especialidadLabel = userData.tm_espec.tm_especi?.esc_nomb || "";
+          institucion = userData.tm_espec.tm_insti?.ins_nomb || "";
+          ins_codi = userData.tm_espec.ins_codi || "";
+          cargo = "Especialista Terapéutico";
         } else if (userData.rol_codi === "ROL_REP" && userData.tm_repre) {
           nomb = userData.tm_repre.rep_nomb;
           apel = userData.tm_repre.rep_apel;
@@ -411,10 +658,14 @@ export default function UserProfile() {
           cedu = userData.tm_repre.rep_cedu || "";
           rela = userData.tm_repre.rep_rela || "";
           foto = userData.tm_repre.rep_foto || "";
+          cargo = "Representante Legal";
         } else if (userData.rol_codi === "ROL_ADM" && userData.tm_admin) {
           nomb = userData.tm_admin.adm_nomb;
           apel = userData.tm_admin.adm_apel;
           foto = userData.tm_admin.adm_foto || "";
+          institucion = userData.tm_admin.tm_insti?.ins_nomb || "";
+          ins_codi = userData.tm_admin.ins_codi || "";
+          cargo = "Administrador de Institución";
         }
 
         const loaded = {
@@ -430,6 +681,11 @@ export default function UserProfile() {
           foto,
           email: userData.usu_crro,
           rol_nomb: userData.tm_roles?.rol_nomb || "Usuario",
+          especialidad,
+          especialidadLabel,
+          institucion,
+          ins_codi,
+          cargo,
         };
         setProfile(loaded);
         savedProfileRef.current = loaded;
@@ -517,6 +773,12 @@ export default function UserProfile() {
         telf: profile.telf,
         foto: profile.foto || null,
       };
+      if (userRole === "ADMIN_INSTITUCION") {
+        payload.email =
+          profile.email && profile.email.trim() !== ""
+            ? profile.email.trim()
+            : undefined;
+      }
       if (userRole === "ESPECIALISTA") {
         payload.licencia = profile.licencia;
         payload.tdoc = profile.tdoc;
@@ -617,6 +879,17 @@ export default function UserProfile() {
     const next = { ...notifPrefs, [key]: value };
     setNotifPrefs(next);
     localStorage.setItem("siat_notif_prefs", JSON.stringify(next));
+    api
+      .put("/auth/notificaciones", next)
+      .then((res) => {
+        const data = res.data?.data || {};
+        const merged = { ...next, ...data };
+        setNotifPrefs(merged);
+        localStorage.setItem("siat_notif_prefs", JSON.stringify(merged));
+      })
+      .catch(() => {
+        showToast("⚠️ No se pudieron guardar las preferencias");
+      });
   };
 
   const solicitarPermisoPush = async () => {
@@ -731,6 +1004,7 @@ export default function UserProfile() {
     { id: "personal", label: "Información Personal", icon: User },
     { id: "seguridad", label: "Seguridad y Acceso", icon: ShieldCheck },
     { id: "notificaciones", label: "Notificaciones", icon: Bell },
+    { id: "preferencias", label: "Preferencias", icon: Settings2 },
     { id: "consentimiento", label: "Consentimiento", icon: FileText },
     { id: "peligro", label: "Zona de Peligro", icon: AlertTriangle },
   ];
@@ -964,33 +1238,221 @@ export default function UserProfile() {
                               </div>
                             </>
                           )}
-
-                          {userRole === "ESPECIALISTA" && (
-                            <div className="space-y-2">
-                              <label
-                                className={`${labelClass} flex items-center gap-1`}
-                              >
-                                <Hash className="w-3 h-3" /> Licencia Médica
-                              </label>
-                              <input
-                                type="text"
-                                name="licencia"
-                                value={profile.licencia}
-                                onChange={handleProfileChange}
-                                className={inputClass}
-                              />
-                            </div>
-                          )}
                         </div>
+
+                        {/* Correo según rol */}
+                        {userRole === "ADMIN_INSTITUCION" && (
+                          <div className="space-y-2">
+                            <label
+                              className={`${labelClass} flex items-center gap-1`}
+                            >
+                              <Mail className="w-3 h-3" /> Correo Electrónico
+                              Corporativo
+                            </label>
+                            <input
+                              type="email"
+                              name="email"
+                              value={profile.email}
+                              onChange={handleProfileChange}
+                              className={inputClass}
+                            />
+                            <p className="text-[10px] text-slate-400 leading-relaxed">
+                              Puedes cambiar tu correo institucional libremente.
+                              Se te solicitará al iniciar sesión con el nuevo
+                              correo.
+                            </p>
+                          </div>
+                        )}
+
+                        {userRole !== "ADMIN_INSTITUCION" && (
+                          <div className="space-y-2">
+                            <label
+                              className={`${labelClass} flex items-center gap-1`}
+                            >
+                              <Mail className="w-3 h-3" /> Correo Electrónico
+                            </label>
+                            <input
+                              type="email"
+                              name="email"
+                              value={profile.email}
+                              readOnly
+                              disabled
+                              className={`${inputClass} opacity-70 cursor-not-allowed`}
+                            />
+                          </div>
+                        )}
+
+                        {/* Información extra según rol */}
+                        {userRole === "ADMIN_INSTITUCION" && (
+                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
+                            <label className={labelClass}>
+                              Información de la Institución
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5 mt-3">
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Institución
+                                </label>
+                                <input
+                                  type="text"
+                                  value={profile.institucion || "No registrada"}
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Código (ins_codi)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={profile.ins_codi || "—"}
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className={labelClass}>Cargo</label>
+                                <input
+                                  type="text"
+                                  value={profile.cargo}
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-relaxed mt-3">
+                              Estos datos son de solo lectura y los gestiona la
+                              plataforma. Para cambios contacta al área de
+                              soporte.
+                            </p>
+                          </div>
+                        )}
+
+                        {userRole === "ESPECIALISTA" && (
+                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
+                            <label className={labelClass}>
+                              Credenciales Profesionales
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mt-3">
+                              <div className="space-y-2">
+                                <label
+                                  className={`${labelClass} flex items-center gap-1`}
+                                >
+                                  <Hash className="w-3 h-3" /> Registro
+                                  Profesional / Licencia
+                                </label>
+                                <input
+                                  type="text"
+                                  name="licencia"
+                                  value={profile.licencia}
+                                  onChange={handleProfileChange}
+                                  className={inputClass}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Especialidad
+                                </label>
+                                <input
+                                  type="text"
+                                  value={
+                                    profile.especialidadLabel ||
+                                    "Sin especificar"
+                                  }
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-relaxed mt-3">
+                              Actualiza tu registro/licencia profesional cuando
+                              corresponda. La especialidad la asigna tu
+                              administrador.
+                            </p>
+                          </div>
+                        )}
+
+                        {userRole === "REPRESENTANTE" && (
+                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
+                            <label className={labelClass}>
+                              Contacto de Emergencia
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mt-3">
+                              <div className="space-y-2">
+                                <label
+                                  className={`${labelClass} flex items-center gap-1`}
+                                >
+                                  <Phone className="w-3 h-3" /> Teléfono de
+                                  Contacto
+                                </label>
+                                <input
+                                  type="tel"
+                                  name="telf"
+                                  value={profile.telf}
+                                  onChange={handleProfileChange}
+                                  className={inputClass}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Relación con el Niño
+                                </label>
+                                <select
+                                  name="rela"
+                                  value={profile.rela}
+                                  onChange={handleProfileChange}
+                                  className={inputClass}
+                                >
+                                  <option value="Padre">Padre</option>
+                                  <option value="Madre">Madre</option>
+                                  <option value="Tutor Legal">
+                                    Tutor Legal
+                                  </option>
+                                  <option value="Abuelo/a">Abuelo/a</option>
+                                  <option value="Otro Familiar">
+                                    Otro Familiar Directo
+                                  </option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         <CollapsibleNote
                           icon={Info}
                           tone="blue"
-                          title="Correo electrónico bloqueado"
+                          title={
+                            userRole === "ADMIN_INSTITUCION"
+                              ? "Indicaciones"
+                              : "Correo electrónico bloqueado"
+                          }
                         >
-                          El correo <strong>{profile.email}</strong> está
-                          vinculado a tu cuenta y no puede modificarse. Contacta
-                          a un administrador si necesitas cambiarlo.
+                          {userRole === "ADMIN_INSTITUCION" ? (
+                            <>
+                              Guarda los cambios para confirmar. Un cambio de
+                              correo cierra las demás sesiones activas por
+                              seguridad.
+                            </>
+                          ) : userRole === "ESPECIALISTA" ? (
+                            <>
+                              El correo <strong>{profile.email}</strong> está
+                              vinculado a tu credencial de especialista y no
+                              puede modificarse. Es gestionado por tu
+                              administrador en la gestión de especialistas.
+                            </>
+                          ) : (
+                            <>
+                              El correo <strong>{profile.email}</strong> está
+                              bloqueado por razones legales y de seguridad, ya
+                              que está vinculado a los datos de un menor de
+                              edad. Para modificarlo contacta al administrador.
+                            </>
+                          )}
                         </CollapsibleNote>
                       </div>
                       <div className="px-4 sm:px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -1403,13 +1865,13 @@ export default function UserProfile() {
                     <div className="p-4 sm:p-6 space-y-2">
                       {[
                         {
-                          key: "crisis_correo",
-                          titulo: "Alertas de crisis por correo electrónico",
+                          key: "alertas_correo",
+                          titulo: "Alertas por correo electrónico",
                           desc: "Correo inmediato al detectar una crisis.",
                         },
                         {
-                          key: "crisis_push",
-                          titulo: "Alertas de crisis push (navegador)",
+                          key: "alertas_push",
+                          titulo: "Alertas push (navegador)",
                           desc: "Notificación instantánea en pantalla.",
                         },
                         {
@@ -1418,7 +1880,7 @@ export default function UserProfile() {
                           desc: "Informe cada mañana del día anterior.",
                         },
                         {
-                          key: "recordatorios",
+                          key: "recordatorios_sesiones",
                           titulo: "Recordatorios de sesiones y terapia",
                           desc: "Avisos previos a citas y actividades.",
                         },
@@ -1449,7 +1911,7 @@ export default function UserProfile() {
                         </div>
                       ))}
 
-                      {pushPermiso !== "granted" && notifPrefs.crisis_push && (
+                      {pushPermiso !== "granted" && notifPrefs.alertas_push && (
                         <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 p-3.5 rounded-xl">
                           <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
                           <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed flex-1">
@@ -1479,6 +1941,20 @@ export default function UserProfile() {
                       </CollapsibleNote>
                     </div>
                   </Card>
+                )}
+
+                {/* ═══ PESTAÑA: PREFERENCIAS ═══ */}
+                {activeTab === "preferencias" && (
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader
+                        icon={Settings2}
+                        title="Preferencias del Sistema"
+                        subtitle="Personaliza el tema visual, color de acento y densidad de la interfaz en SIAT."
+                      />
+                    </Card>
+                    <PreferenciasPanel />
+                  </div>
                 )}
 
                 {/* ═══ PESTAÑA: CONSENTIMIENTO ═══ */}

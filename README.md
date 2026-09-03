@@ -79,6 +79,13 @@ Pulsera (ESP32) → WebSockets → Backend Node.js → PostgreSQL
 - **Exportación** a PDF y Excel
 - **Modo oscuro**
 
+### Preferencias del Sistema (`/configuracion`)
+Accesible desde el menú **Configuración** de la barra lateral (disponible para los tres roles):
+- **Tema visual**: Claro / Sistema / Oscuro
+- **Color de acento**: Azul, Índigo, Violeta, Esmeralda, Cyan o Rosa
+- **Tamaño de fuente**: Pequeño / Normal / Grande
+- **Densidad de interfaz**: Normal / Compacta
+
 ---
 
 ## 🛠️ Stack Tecnológico

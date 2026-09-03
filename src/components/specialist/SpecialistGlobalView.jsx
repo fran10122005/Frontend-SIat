@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   UserCircle2,
   CheckCircle2,
@@ -26,6 +27,7 @@ export default function SpecialistGlobalView({
   isDark = false,
   quickActions = [],
 }) {
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
   const tooltipStyle = {
     borderRadius: "8px",
     border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
@@ -230,59 +232,82 @@ export default function SpecialistGlobalView({
             Alertas y Novedades
           </h2>
         </div>
-        <div className="flex-1 overflow-y-auto space-y-3">
-          {globalAlertsFeed.map((al, idx) => {
-            const rawDate = al.fec_hora || al.fecha || al.created_at;
-            const d = rawDate ? new Date(rawDate) : null;
-            const fecha =
-              al.time ||
-              (d && !isNaN(d)
-                ? d.toLocaleString("es-ES", {
-                    day: "2-digit",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "");
-            const tipo = al.tipo || al.est_dete || "Evento";
-            const detalle =
-              al.text ||
-              al.mensaje ||
-              [
-                al.bpm_max != null && `BPM máx ${al.bpm_max}`,
-                al.mov_max != null && `Movimiento ${al.mov_max}G`,
-                al.stress_index != null && `Estrés ${al.stress_index}%`,
-                al.descripcion,
-              ]
-                .filter(Boolean)
-                .join(" • ") ||
-              "Sin detalles adicionales.";
-            const esCrisis =
-              String(tipo).toUpperCase().includes("SOBRECARGA") ||
-              al.severity === "crisis";
-            return (
-              <div
-                key={al.id || al.alertId || `alert-${idx}`}
-                className={`p-4 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 relative pl-5 border-l-4 ${
-                  esCrisis ? "border-l-rose-500" : "border-l-amber-400"
-                }`}
-              >
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-                  {fecha}
-                  {fecha && " • "}
-                  <span className="uppercase">{tipo}</span>
-                </p>
-                <p className="text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
-                  {detalle}
-                </p>
+        <div className="flex-1 overflow-y-auto">
+          <div
+            className={
+              showAllAlerts
+                ? "space-y-2"
+                : "space-y-2 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]"
+            }
+          >
+            {globalAlertsFeed
+              .slice(0, showAllAlerts ? undefined : 4)
+              .map((al, idx) => {
+                const rawDate = al.fec_hora || al.fecha || al.created_at;
+                const d = rawDate ? new Date(rawDate) : null;
+                const fecha =
+                  al.time ||
+                  (d && !isNaN(d)
+                    ? d.toLocaleString("es-ES", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "");
+                const tipo = al.tipo || al.est_dete || "Evento";
+                const detalle =
+                  al.text ||
+                  al.mensaje ||
+                  [
+                    al.bpm_max != null && `BPM máx ${al.bpm_max}`,
+                    al.mov_max != null && `Movimiento ${al.mov_max}G`,
+                    al.stress_index != null && `Estrés ${al.stress_index}%`,
+                    al.descripcion,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ") ||
+                  "Sin detalles adicionales.";
+                const esCrisis =
+                  String(tipo).toUpperCase().includes("SOBRECARGA") ||
+                  al.severity === "crisis";
+                return (
+                  <div
+                    key={al.id || al.alertId || `alert-${idx}`}
+                    className={`px-3 py-2.5 rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 border-l-4 ${
+                      esCrisis ? "border-l-rose-500" : "border-l-amber-400"
+                    }`}
+                  >
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-0.5">
+                      {fecha}
+                      {fecha && " • "}
+                      <span className="text-slate-500 dark:text-slate-400 uppercase">
+                        {tipo}
+                      </span>
+                    </p>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-snug line-clamp-2">
+                      {detalle}
+                    </p>
+                  </div>
+                );
+              })}
+            {globalAlertsFeed.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 min-h-[150px]">
+                <ShieldAlert className="w-8 h-8 mb-2 opacity-50" />
+                <p className="text-sm">No hay alertas recientes.</p>
               </div>
-            );
-          })}
-          {globalAlertsFeed.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 min-h-[150px]">
-              <ShieldAlert className="w-8 h-8 mb-2 opacity-50" />
-              <p className="text-sm">No hay alertas recientes.</p>
-            </div>
+            )}
+          </div>
+          {globalAlertsFeed.length > 4 && (
+            <button
+              type="button"
+              onClick={() => setShowAllAlerts((v) => !v)}
+              className="mt-3 w-full py-2 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+              {showAllAlerts
+                ? "Ver menos"
+                : `Ver todas (${globalAlertsFeed.length})`}
+            </button>
           )}
         </div>
       </div>

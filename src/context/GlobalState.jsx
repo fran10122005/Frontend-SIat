@@ -32,6 +32,7 @@ const viewToPath = {
   perfil_padre: "/perfil-padre",
   diario_hogar: "/diario-hogar",
   profile: "/profile",
+  settings: "/configuracion",
   inventario: "/inventario",
   sensores: "/sensores",
   historial: "/historial",
@@ -73,6 +74,7 @@ export const GlobalProvider = ({ children }) => {
   const [userName, setUserName] = useState(
     () => localStorage.getItem("userName") || "",
   );
+  const [userFoto, setUserFoto] = useState("");
   const [adminActiveTab, setAdminActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(() =>
@@ -349,6 +351,47 @@ export const GlobalProvider = ({ children }) => {
       fetchCategories();
     }
   }, [currentView, userRole, selectedChildId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const isPublic =
+      currentView === "login" ||
+      currentView === "register" ||
+      currentView === "forgot" ||
+      currentView === "reset-password" ||
+      currentView === "register-repre";
+
+    let active = true;
+    if (!token || isPublic) {
+      setUserFoto("");
+      return () => {
+        active = false;
+      };
+    }
+
+    api
+      .get("/auth/me")
+      .then((res) => {
+        if (!active) return;
+        const u = res.data?.data || {};
+        let foto = "";
+        if (u.rol_codi === "ROL_ESP" && u.tm_espec) {
+          foto = u.tm_espec.esp_foto || "";
+        } else if (u.rol_codi === "ROL_REP" && u.tm_repre) {
+          foto = u.tm_repre.rep_foto || "";
+        } else if (u.rol_codi === "ROL_ADM" && u.tm_admin) {
+          foto = u.tm_admin.adm_foto || "";
+        }
+        if (foto) setUserFoto(foto);
+      })
+      .catch(() => {
+        /* si falla, se mantiene el estado actual */
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentView, userRole]);
 
   const [routines, setRoutines] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -1010,6 +1053,8 @@ export const GlobalProvider = ({ children }) => {
         setNomNino,
         setUserRole,
         setUserName,
+        userFoto,
+        setUserFoto,
         setSelectedChildId,
         showToast,
         alertas,

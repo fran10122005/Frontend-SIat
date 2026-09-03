@@ -1060,6 +1060,11 @@ function AdminDashboard({ onNavigate }) {
                   handleUpdateInstitucion={handleUpdateInstitucion}
                   exportEspecialidadesToPDF={exportEspecialidadesToPDF}
                   exportEspecialidadesToExcel={exportEspecialidadesToExcel}
+                  ninosCount={ninos.length}
+                  especialistasCount={especialistas.length}
+                  representantesCount={representantes.length}
+                  usuariosCount={usuarios.length}
+                  onNavigateTab={changeTab}
                 />
               </div>
             )}

@@ -193,11 +193,8 @@ export default function AsignacionesTab({
               </div>
               <div>
                 <label className="form-label">Estado Inicial</label>
-                <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-2">
+                <div className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center">
                   <StatusBadge active />
-                  <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">
-                    Activo
-                  </span>
                 </div>
               </div>
             </div>

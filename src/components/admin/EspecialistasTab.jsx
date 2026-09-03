@@ -940,52 +940,58 @@ export default function EspecialistasTab({
               onClearAll={clearEspFilters}
               chips={espFilterChips}
             >
-              <select
-                value={filterEspecialidad}
-                onChange={(e) => setFilterEspecialidad(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-              >
-                <option value="TODAS">Todas las especialidades</option>
-                {catalogos.especialidades
-                  .filter((es) => es.esc_estd !== false)
-                  .map((es) => (
-                    <option key={es.esc_codi} value={es.esc_codi}>
-                      {es.esc_nomb}
-                    </option>
-                  ))}
-              </select>
-              <select
-                value={filterEstado}
-                onChange={(e) => setFilterEstado(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-              >
-                <option value="TODOS">Todos los estados</option>
-                <option value="ACTIVO">Activo</option>
-                <option value="INACTIVO">Inactivo</option>
-              </select>
-              <select
-                value={filterGenero}
-                onChange={(e) => setFilterGenero(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-              >
-                <option value="TODOS">Todos los géneros</option>
-                <option value="M">Masculino</option>
-                <option value="F">Femenino</option>
-              </select>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                title="Fecha desde"
-              />
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                title="Fecha hasta"
-              />
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 w-full sm:w-auto sm:min-w-[560px] lg:min-w-[680px]">
+                <div className="grid grid-cols-2 col-span-2 lg:col-span-3 gap-3">
+                  <select
+                    value={filterEspecialidad}
+                    onChange={(e) => setFilterEspecialidad(e.target.value)}
+                    className="col-span-2 lg:col-span-1 w-full min-w-0 px-3 py-2 text-sm text-ellipsis bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="TODAS">Todas las especialidades</option>
+                    {catalogos.especialidades
+                      .filter((es) => es.esc_estd !== false)
+                      .map((es) => (
+                        <option key={es.esc_codi} value={es.esc_codi}>
+                          {es.esc_nomb}
+                        </option>
+                      ))}
+                  </select>
+                  <select
+                    value={filterEstado}
+                    onChange={(e) => setFilterEstado(e.target.value)}
+                    className="w-full min-w-0 px-3 py-2 text-sm text-ellipsis bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="TODOS">Todos los estados</option>
+                    <option value="ACTIVO">Activo</option>
+                    <option value="INACTIVO">Inactivo</option>
+                  </select>
+                  <select
+                    value={filterGenero}
+                    onChange={(e) => setFilterGenero(e.target.value)}
+                    className="w-full min-w-0 px-3 py-2 text-sm text-ellipsis bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="TODOS">Todos los géneros</option>
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 col-span-2 lg:col-span-2 gap-3">
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full min-w-0 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    title="Fecha desde"
+                  />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full min-w-0 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    title="Fecha hasta"
+                  />
+                </div>
+              </div>
             </FilterBar>
 
             <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">

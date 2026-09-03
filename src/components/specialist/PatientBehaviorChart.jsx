@@ -10,6 +10,91 @@ import {
 } from "recharts";
 import { Activity } from "lucide-react";
 
+const SERIES = [
+  { key: "Berrinche", label: "Berrinche", color: "#F43F5E" },
+  { key: "Estereotipia", label: "Estereotipia", color: "#6366F1" },
+  { key: "Agresión", label: "Agresión", color: "#F59E0B" },
+];
+
+const TOTAL_LABEL = "Total final";
+
+function BarTooltip({ active, payload, label, isDark }) {
+  if (!active || !payload || payload.length === 0) return null;
+  const total = payload.reduce((acc, entry) => acc + (entry.value || 0), 0);
+  const items = [...payload].sort((a, b) => (b.value || 0) - (a.value || 0));
+  return (
+    <div
+      className="rounded-lg border shadow-lg px-3 py-2 text-xs"
+      style={{
+        backgroundColor: isDark ? "#1E293B" : "#ffffff",
+        borderColor: isDark ? "#334155" : "#e2e8f0",
+      }}
+    >
+      <p
+        className="font-bold mb-1"
+        style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
+      >
+        {label}
+      </p>
+      <ul className="space-y-1">
+        {items.map((entry) => (
+          <li
+            key={entry.dataKey}
+            className="flex items-center gap-2 whitespace-nowrap"
+          >
+            <span
+              className="w-2 h-2 rounded-sm shrink-0"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span style={{ color: isDark ? "#cbd5e1" : "#475569" }}>
+              {entry.name}:
+            </span>
+            <span
+              className="font-bold"
+              style={{ color: isDark ? "#f1f5f9" : "#1e293b" }}
+            >
+              {entry.value}
+            </span>
+            <span style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
+              ({total > 0 ? Math.round(((entry.value || 0) / total) * 100) : 0}
+              %)
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p
+        className="mt-1.5 pt-1.5 border-t flex justify-between gap-6 font-bold"
+        style={{
+          color: isDark ? "#f1f5f9" : "#1e293b",
+          borderColor: isDark ? "#334155" : "#e2e8f0",
+        }}
+      >
+        <span>{TOTAL_LABEL}</span>
+        <span>{total}</span>
+      </p>
+    </div>
+  );
+}
+
+function ChartLegend() {
+  return (
+    <div className="flex gap-4 flex-wrap">
+      {SERIES.map((s) => (
+        <div
+          key={s.key}
+          className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
+        >
+          <div
+            className="w-3 h-3 rounded-sm"
+            style={{ backgroundColor: s.color }}
+          />
+          {s.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function PatientBehaviorChart({ behaviorHistory, isDark }) {
   const chartData = useMemo(() => {
     return behaviorHistory && behaviorHistory.length > 0 ? behaviorHistory : [];
@@ -25,16 +110,7 @@ export default function PatientBehaviorChart({ behaviorHistory, isDark }) {
           Historial Conductual y Crisis (Semana)
         </h2>
         <div className="flex gap-4 flex-wrap">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            <div className="w-3 h-3 bg-rose-500 rounded-sm"></div> Berrinche
-          </div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            <div className="w-3 h-3 bg-indigo-500 rounded-sm"></div>{" "}
-            Estereotipia
-          </div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            <div className="w-3 h-3 bg-amber-500 rounded-sm"></div> Agresión
-          </div>
+          <ChartLegend />
         </div>
       </div>
 
@@ -67,14 +143,13 @@ export default function PatientBehaviorChart({ behaviorHistory, isDark }) {
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
+                allowDecimals={false}
+                domain={[0, "auto"]}
+                width={32}
               />
               <RechartsTooltip
                 cursor={{ fill: isDark ? "#334155" : "#f1f5f9" }}
-                contentStyle={{
-                  backgroundColor: isDark ? "#1E293B" : "#fff",
-                  borderColor: isDark ? "#334155" : "#e2e8f0",
-                  borderRadius: "8px",
-                }}
+                content={<BarTooltip isDark={isDark} />}
               />
               <Bar
                 dataKey="Berrinche"

@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { useGlobalContext } from "../../context/GlobalState";
 import { useTourContext } from "../../context/TourContext";
-import { Sun, Moon, Menu, HelpCircle, Settings2 } from "lucide-react";
+import { Sun, Moon, Menu, HelpCircle } from "lucide-react";
 import NotificationBell from "./NotificationBell";
-import UserPreferencesModal from "../shared/UserPreferencesModal";
 
 export default function Topbar() {
   const {
     userRole,
     userName,
+    userFoto,
     currentView,
     setCurrentView,
     isSidebarOpen,
@@ -17,7 +17,24 @@ export default function Topbar() {
     toggleTheme,
   } = useGlobalContext();
   const { startContextualTour } = useTourContext();
-  const [showPrefs, setShowPrefs] = useState(false);
+  const [fotoError, setFotoError] = useState(false);
+
+  const initials = userName
+    ? userName
+        .replace("Dra. ", "")
+        .replace("Dr. ", "")
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase()
+    : userRole === "ESPECIALISTA"
+      ? "ES"
+      : userRole === "ADMIN_INSTITUCION"
+        ? "AD"
+        : "US";
+
+  const showPhoto = !!userFoto && !fotoError;
 
   const handleStartTour = () => {
     startContextualTour(userRole, currentView);
@@ -68,20 +85,6 @@ export default function Topbar() {
             )}
           </button>
 
-          {/* Preferencias — solo para Especialista y Representante */}
-          {(userRole === "ESPECIALISTA" ||
-            userRole === "REPRESENTANTE" ||
-            userRole === "REPRE") && (
-            <button
-              onClick={() => setShowPrefs(true)}
-              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
-              title="Preferencias del Sistema"
-              aria-label="Abrir Preferencias"
-            >
-              <Settings2 className="w-5 h-5" />
-            </button>
-          )}
-
           <div
             onClick={() => setCurrentView("profile")}
             className="flex items-center gap-3 cursor-pointer p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors pl-4 border-l border-slate-200 dark:border-slate-700"
@@ -104,31 +107,22 @@ export default function Topbar() {
               </span>
             </div>
             <div
-              className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white shadow-sm ring-2 ring-white dark:ring-slate-800 ${userRole === "ESPECIALISTA" ? "bg-indigo-600" : userRole === "ADMIN_INSTITUCION" ? "bg-slate-700" : "bg-blue-600"}`}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white shadow-sm ring-2 ring-white dark:ring-slate-800 overflow-hidden ${userRole === "ESPECIALISTA" ? "bg-indigo-600" : userRole === "ADMIN_INSTITUCION" ? "bg-slate-700" : "bg-blue-600"}`}
             >
-              {userName
-                ? userName
-                    .replace("Dra. ", "")
-                    .replace("Dr. ", "")
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .substring(0, 2)
-                    .toUpperCase()
-                : userRole === "ESPECIALISTA"
-                  ? "ES"
-                  : userRole === "ADMIN_INSTITUCION"
-                    ? "AD"
-                    : "US"}
+              {showPhoto ? (
+                <img
+                  src={userFoto}
+                  alt="Foto de perfil"
+                  className="h-full w-full object-cover"
+                  onError={() => setFotoError(true)}
+                />
+              ) : (
+                initials
+              )}
             </div>
           </div>
         </div>
       </header>
-
-      <UserPreferencesModal
-        open={showPrefs}
-        onClose={() => setShowPrefs(false)}
-      />
     </>
   );
 }

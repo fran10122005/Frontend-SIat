@@ -37,6 +37,10 @@ export default function MainDashboard() {
     userName,
     homeHistoricalData,
     routines,
+    listaNinos,
+    selectedChildId,
+    setSelectedChildId,
+    setNomNino,
   } = useGlobalContext();
   const [showBreathing, setShowBreathing] = useState(false);
   const [showAac, setShowAac] = useState(false);
@@ -149,6 +153,53 @@ export default function MainDashboard() {
                 </button>
               </div>
             </div>
+
+            {/* Selector multi-hijo (solo visible cuando hay más de 1 hijo) */}
+            {listaNinos && listaNinos.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2 p-3 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mr-1">
+                  Niño:
+                </span>
+                {listaNinos.map((child) => {
+                  const isActive = selectedChildId === child.id_ninos;
+                  const initials =
+                    `${(child.nom_nino || "")[0] || ""}${(child.ape_nino || "")[0] || ""}`.toUpperCase();
+                  return (
+                    <button
+                      key={child.id_ninos}
+                      onClick={() => {
+                        setSelectedChildId(child.id_ninos);
+                        setNomNino(child.nom_nino);
+                      }}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        isActive
+                          ? "bg-blue-600 text-white shadow-sm shadow-blue-500/30"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
+                    >
+                      {child.nin_foto ? (
+                        <img
+                          src={child.nin_foto}
+                          alt={child.nom_nino}
+                          className="w-5 h-5 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                            isActive
+                              ? "bg-white/20 text-white"
+                              : "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                          }`}
+                        >
+                          {initials}
+                        </span>
+                      )}
+                      {child.nom_nino}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Estado del niño */}
             <ChildStatusBanner

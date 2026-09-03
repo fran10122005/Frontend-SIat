@@ -12,6 +12,7 @@ import {
   BookOpen,
   UserRound,
   Activity,
+  Settings2,
 } from "lucide-react";
 
 export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
@@ -23,6 +24,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
     isSidebarOpen,
     setIsSidebarOpen,
     showToast,
+    setCurrentView,
   } = useGlobalContext();
 
   const menuItems = [
@@ -79,6 +81,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
           { id: "manual", icon: BookOpen, label: "Manual", count: null },
         ]
       : []),
+    { id: "settings", icon: Settings2, label: "Configuración", count: null },
   ];
 
   return (
@@ -133,6 +136,11 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
                     setIsSidebarOpen(false);
                     showToast("📖 Generando manual de usuario en PDF...");
                     exportManualPDF();
+                    return;
+                  }
+                  if (item.id === "settings") {
+                    setCurrentView("settings");
+                    setIsSidebarOpen(false);
                     return;
                   }
                   setActiveTab(item.id);

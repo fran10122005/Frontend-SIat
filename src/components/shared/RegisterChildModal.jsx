@@ -143,7 +143,13 @@ function SelectField({ children, ...props }) {
 
 // ─── Zona de subida de foto circular ───────────────────────────────────────
 
-function PhotoUploadZone({ preview, onFileSelect, uploading, progress }) {
+function PhotoUploadZone({
+  preview,
+  onFileSelect,
+  uploading,
+  progress,
+  onRemove,
+}) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
@@ -158,52 +164,114 @@ function PhotoUploadZone({ preview, onFileSelect, uploading, progress }) {
   );
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div
-        onClick={() => !uploading && inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        className={`relative w-36 h-36 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 group
-          ${dragging ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 scale-105" : "border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50"}
-          ${uploading ? "cursor-wait opacity-60" : "hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-brand-900/10"}`}
-      >
-        {preview ? (
-          <>
-            <img
-              src={preview}
-              alt="Foto del paciente"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-1">
-              <Camera className="w-6 h-6 text-white" />
-              <span className="text-white text-[10px] font-semibold">
-                Cambiar foto
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+      className={`relative rounded-xl border border-dashed p-2.5 transition-all duration-200 ${
+        dragging
+          ? "border-brand-500 bg-brand-50/60 dark:bg-brand-900/20 scale-[1.01]"
+          : "border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:border-brand-400 dark:hover:border-brand-500"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        {/* Compact Avatar Circle */}
+        <div
+          onClick={() => !uploading && inputRef.current?.click()}
+          title="Subir / cambiar foto"
+          className={`relative w-14 h-14 rounded-full border border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer group transition-all ${
+            uploading
+              ? "opacity-60 cursor-wait"
+              : "hover:ring-2 hover:ring-brand-500/30 hover:border-brand-500"
+          }`}
+        >
+          {preview ? (
+            <>
+              <img
+                src={preview}
+                alt="Foto del paciente"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="w-4 h-4 text-white" />
+              </div>
+            </>
+          ) : (
+            <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 group-hover:text-brand-500 transition-colors">
+              <Camera className="w-5 h-5" />
+            </div>
+          )}
+
+          {uploading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mb-0.5" />
+              <span className="text-[9px] font-bold">{progress}%</span>
+            </div>
+          )}
+        </div>
+
+        {/* Info & Actions */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                Foto de Perfil
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                (Opcional)
               </span>
             </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center text-slate-400 dark:text-slate-500 group-hover:text-brand-500 transition-colors gap-2 px-3 text-center">
-            <UploadCloud className="w-8 h-8" />
-            <span className="text-[11px] font-semibold leading-tight">
-              {dragging ? "Suelta aquí" : "Subir foto"}
-            </span>
           </div>
-        )}
 
-        {/* Progress ring */}
-        {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <div className="text-white text-center">
-              <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-1"></div>
-              <span className="text-xs font-bold">{progress}%</span>
+          {preview ? (
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={uploading}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline disabled:opacity-50"
+              >
+                <UploadCloud className="w-3.5 h-3.5" /> Cambiar foto
+              </button>
+              {onRemove && (
+                <>
+                  <span className="text-slate-300 dark:text-slate-600 text-[11px]">
+                    ·
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onRemove}
+                    disabled={uploading}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 disabled:opacity-50"
+                  >
+                    <X className="w-3.5 h-3.5" /> Quitar
+                  </button>
+                </>
+              )}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="mt-0.5">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => !uploading && inputRef.current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" /> Subir foto
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                JPG, PNG o WebP · Máx. 5 MB
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+
       <input
         ref={inputRef}
         type="file"
@@ -433,6 +501,12 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
       setPhotoUploading(false);
       setPhotoProgress(0);
     }
+  };
+
+  const handlePhotoRemove = () => {
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    set("nin_foto", "");
   };
 
   // ── Handlers de documentos ──
@@ -705,92 +779,82 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         <div className="overflow-y-auto flex-1 px-4 sm:px-7 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6">
           {/* ════════════ PASO 1: IDENTIDAD DEL PACIENTE ════════════ */}
           {step === 1 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* Foto */}
-                <div className="md:border-r md:border-slate-200 md:dark:border-slate-700 md:pr-6 flex-shrink-0">
-                  <FieldLabel tooltip="JPG, PNG o WebP · Máx. 5 MB. Foto de identificación del paciente.">
-                    Foto de Perfil
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+              {/* Foto de perfil compacta */}
+              <PhotoUploadZone
+                preview={photoPreview}
+                onFileSelect={handlePhotoSelect}
+                uploading={photoUploading}
+                progress={photoProgress}
+                onRemove={handlePhotoRemove}
+              />
+
+              {/* Datos personales */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel
+                    required
+                    tooltip="Nombre(s) completo(s) según partida de nacimiento o cédula escolar."
+                  >
+                    Nombre(s) del Paciente
                   </FieldLabel>
-                  <div className="mt-2">
-                    <PhotoUploadZone
-                      preview={photoPreview}
-                      onFileSelect={handlePhotoSelect}
-                      uploading={photoUploading}
-                      progress={photoProgress}
-                    />
-                  </div>
+                  <InputField
+                    type="text"
+                    value={form.nin_nomb}
+                    onChange={(e) => set("nin_nomb", e.target.value)}
+                    placeholder="Ej. José Andrés"
+                  />
                 </div>
+                <div>
+                  <FieldLabel
+                    required
+                    tooltip="Apellido(s) completo(s) según documento de identidad."
+                  >
+                    Apellido(s)
+                  </FieldLabel>
+                  <InputField
+                    type="text"
+                    value={form.nin_apel}
+                    onChange={(e) => set("nin_apel", e.target.value)}
+                    placeholder="Ej. Rodríguez Pérez"
+                  />
+                </div>
+              </div>
 
-                {/* Datos personales */}
-                <div className="flex-1 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <FieldLabel
-                        required
-                        tooltip="Nombre(s) completo(s) según partida de nacimiento o cédula escolar."
-                      >
-                        Nombre(s) del Paciente
-                      </FieldLabel>
-                      <InputField
-                        type="text"
-                        value={form.nin_nomb}
-                        onChange={(e) => set("nin_nomb", e.target.value)}
-                        placeholder="Ej. José Andrés"
-                      />
-                    </div>
-                    <div>
-                      <FieldLabel
-                        required
-                        tooltip="Apellido(s) completo(s) según documento de identidad."
-                      >
-                        Apellido(s)
-                      </FieldLabel>
-                      <InputField
-                        type="text"
-                        value={form.nin_apel}
-                        onChange={(e) => set("nin_apel", e.target.value)}
-                        placeholder="Ej. Rodríguez Pérez"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <FieldLabel
-                        required
-                        tooltip="Fecha de nacimiento exacta. Se usa para calcular la edad y adaptar los protocolos de seguimiento."
-                      >
-                        Fecha de Nacimiento
-                      </FieldLabel>
-                      <InputField
-                        type="date"
-                        value={form.nin_fnac}
-                        max={new Date().toISOString().split("T")[0]}
-                        onChange={(e) => set("nin_fnac", e.target.value)}
-                      />
-                      {edad !== null && (
-                        <p className="text-[10px] text-brand-600 dark:text-brand-400 mt-1 font-semibold">
-                          → {edad} año{edad !== 1 ? "s" : ""} de edad
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <FieldLabel
-                        required
-                        tooltip="Sexo biológico del paciente, relevante para el protocolo clínico y estadísticas de la institución."
-                      >
-                        Sexo Biológico
-                      </FieldLabel>
-                      <SelectField
-                        value={form.nin_gner}
-                        onChange={(e) => set("nin_gner", e.target.value)}
-                      >
-                        <option value="M">Masculino</option>
-                        <option value="F">Femenino</option>
-                      </SelectField>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel
+                    required
+                    tooltip="Fecha de nacimiento exacta. Se usa para calcular la edad y adaptar los protocolos de seguimiento."
+                  >
+                    Fecha de Nacimiento
+                  </FieldLabel>
+                  <InputField
+                    type="date"
+                    value={form.nin_fnac}
+                    max={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => set("nin_fnac", e.target.value)}
+                  />
+                  {edad !== null && (
+                    <p className="text-[10px] text-brand-600 dark:text-brand-400 mt-1 font-semibold">
+                      → {edad} año{edad !== 1 ? "s" : ""} de edad
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <FieldLabel
+                    required
+                    tooltip="Sexo biológico del paciente, relevante para el protocolo clínico y estadísticas de la institución."
+                  >
+                    Sexo Biológico
+                  </FieldLabel>
+                  <SelectField
+                    value={form.nin_gner}
+                    onChange={(e) => set("nin_gner", e.target.value)}
+                  >
+                    <option value="M">Masculino</option>
+                    <option value="F">Femenino</option>
+                  </SelectField>
                 </div>
               </div>
 

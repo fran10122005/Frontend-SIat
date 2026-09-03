@@ -619,7 +619,7 @@ export default function DiarioHogar() {
                     </span>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {pagedBitacoras.map((bitacora, idx) => {
                       const dateObj = new Date(bitacora.bit_fech);
                       const diaSemana = dateObj.toLocaleDateString("es-ES", {
@@ -645,87 +645,81 @@ export default function DiarioHogar() {
                       return (
                         <div
                           key={bitacora.bit_codi || idx}
-                          className="p-4 md:p-5 rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          className="px-3 py-2.5 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800/60"
                         >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-slate-400" />
-                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate">
                                 {fechaTexto}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${crisisColor}`}
-                              >
-                                <AlertTriangle className="w-3 h-3" />{" "}
-                                {bitacora.bit_crisi || 0} crisis
-                              </span>
-                            </div>
+                            <span
+                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap shrink-0 ${crisisColor}`}
+                            >
+                              <AlertTriangle className="w-3 h-3" />{" "}
+                              {bitacora.bit_crisi || 0} crisis
+                            </span>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0">
-                              <span className="text-base shrink-0">
+                          <div className="grid grid-cols-4 gap-1.5">
+                            <div
+                              className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                              title={bitacora.bit_anim}
+                            >
+                              <span className="text-sm shrink-0">
                                 {animoIconos[bitacora.bit_anim] || "😐"}
                               </span>
-                              <div className="min-w-0">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                  Ánimo
-                                </p>
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
-                                  {bitacora.bit_anim}
-                                </p>
-                              </div>
+                              <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                {bitacora.bit_anim}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0">
-                              <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                  Sueño
-                                </p>
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                                  {bitacora.bit_suen
-                                    ? `${bitacora.bit_suen}h`
-                                    : "—"}
-                                </p>
-                              </div>
+                            <div
+                              className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                              title={
+                                bitacora.bit_suen
+                                  ? `${bitacora.bit_suen}h`
+                                  : "—"
+                              }
+                            >
+                              <Moon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                              <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                {bitacora.bit_suen
+                                  ? `${bitacora.bit_suen}h`
+                                  : "—"}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0">
-                              <Utensils className="w-4 h-4 text-amber-400 shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                  Apetito
-                                </p>
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
-                                  {bitacora.bit_apet || "—"}
-                                </p>
-                              </div>
+                            <div
+                              className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                              title={bitacora.bit_apet || "—"}
+                            >
+                              <Utensils className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                {bitacora.bit_apet || "—"}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0">
-                              <Heart className="w-4 h-4 text-rose-400 shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                                  Positivo
-                                </p>
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
-                                  {bitacora.positiveNote || "—"}
-                                </p>
-                              </div>
+                            <div
+                              className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                              title={bitacora.positiveNote || "—"}
+                            >
+                              <Heart className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                              <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                {bitacora.positiveNote || "—"}
+                              </span>
                             </div>
                           </div>
 
                           {(bitacora.bit_dese || bitacora.bit_obse) && (
-                            <div className="flex flex-wrap gap-2">
+                            <div className="mt-1.5 space-y-0.5">
                               {bitacora.bit_dese && (
-                                <span className="text-[10px] px-2 py-1 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 border border-amber-200 dark:border-amber-900/30">
+                                <p className="text-[10px] text-amber-700 dark:text-amber-300 truncate">
                                   🧩 {bitacora.bit_dese}
-                                </span>
+                                </p>
                               )}
                               {bitacora.bit_obse && (
-                                <span className="text-[10px] px-2 py-1 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-200 dark:border-blue-900/30">
+                                <p className="text-[10px] text-blue-700 dark:text-blue-300 truncate">
                                   💬 {bitacora.bit_obse}
-                                </span>
+                                </p>
                               )}
                             </div>
                           )}

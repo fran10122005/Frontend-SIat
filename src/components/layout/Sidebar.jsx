@@ -16,6 +16,7 @@ import {
   CheckSquare,
   NotebookPen,
   BookOpen,
+  Settings2,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -42,16 +43,24 @@ export default function Sidebar() {
     { id: "rutinas", icon: Puzzle, label: "Terapias y Actividades" },
     { id: "inventario", icon: Cpu, label: "Seguimiento en Vivo" },
     { id: "manual_especialista", icon: BookOpen, label: "Manual de Usuario" },
+    { id: "settings", icon: Settings2, label: "Configuración" },
   ];
 
   const parentItems = [
     { id: "dashboard", icon: LayoutDashboard, label: "Inicio" },
     { id: "sensores", icon: Activity, label: "Seguimiento en Vivo" },
     { id: "agenda", icon: CheckSquare, label: "Día a Día" },
+    {
+      id: "historial",
+      icon: TrendingUp,
+      label: "Progreso del Niño",
+      requiresChild: true,
+    },
     { id: "diario_hogar", icon: NotebookPen, label: "Diario de Hogar" },
     { id: "herramientas", icon: Puzzle, label: "Herramientas de Apoyo" },
     { id: "perfil_padre", icon: UserCircle, label: "Mi Perfil" },
     { id: "manual_repre", icon: BookOpen, label: "Manual de Usuario" },
+    { id: "settings", icon: Settings2, label: "Configuración" },
   ];
 
   const menuItems = userRole === "ESPECIALISTA" ? specialistItems : parentItems;
@@ -105,11 +114,17 @@ export default function Sidebar() {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isBlocked =
-              userRole === "ESPECIALISTA" &&
-              !selectedChildId &&
-              ["rutinas", "historial", "home_analytics", "inventario"].includes(
-                item.id,
-              );
+              (userRole === "ESPECIALISTA" &&
+                !selectedChildId &&
+                [
+                  "rutinas",
+                  "historial",
+                  "home_analytics",
+                  "inventario",
+                ].includes(item.id)) ||
+              (userRole !== "ESPECIALISTA" &&
+                item.requiresChild &&
+                !selectedChildId);
 
             return (
               <button

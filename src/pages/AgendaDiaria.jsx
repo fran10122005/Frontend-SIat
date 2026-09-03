@@ -26,6 +26,7 @@ import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 
 import PageTitle from "../components/ui/PageTitle";
+import TherapySessionPlayer from "../components/shared/TherapySessionPlayer";
 
 export default function AgendaDiaria() {
   const {
@@ -191,10 +192,19 @@ export default function AgendaDiaria() {
     setIsFinishing(true);
   };
 
-  const saveSession = async () => {
+  const saveSession = async ({
+    sessionTime,
+    cooperation,
+    notes,
+    stepsDone,
+    sessionSteps,
+  }) => {
     try {
       const sesCodi = activeSession.ses_codi;
-      const parsedNota = `[Cooperación: ${cooperation}/5] ${notes}`;
+      const parsedNota = `[Cooperación: ${cooperation}/5 · Pasos: ${Math.min(
+        stepsDone,
+        sessionSteps.length,
+      )}/${sessionSteps.length}] ${notes}`;
       await api.put(`/sesiones/${sesCodi}/cerrar`, {
         ses_nota: parsedNota,
       });
@@ -512,134 +522,12 @@ export default function AgendaDiaria() {
               </div>
             )}
 
-            {/* Si hay sesión activa: Mostrar Live Monitor */}
-            {activeSession && (
-              <div className="animate-in fade-in zoom-in-95 duration-500 max-w-4xl mx-auto w-full mt-4">
-                <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-blue-200 dark:border-blue-900/50 shadow-2xl shadow-blue-500/10 overflow-hidden relative min-h-[400px] md:min-h-[550px] flex flex-col">
-                  {/* Header Flotante */}
-                  <div className="px-8 py-6 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-150 dark:border-slate-800 flex justify-between items-center shrink-0">
-                    <div>
-                      <span className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                        Guía de Terapia Activa
-                      </span>
-                      <h2 className="text-xl font-black text-slate-900 dark:text-white mt-1">
-                        {activeSession.title}
-                      </h2>
-                    </div>
-                    {!isFinishing && (
-                      <button
-                        onClick={endSession}
-                        className="px-5 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-sm flex items-center gap-2 transition-colors"
-                      >
-                        <Square className="w-3.5 h-3.5 fill-current" /> Detener
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Cuerpo Principal del Monitor */}
-                  <div className="flex-1 p-8 md:p-12 flex flex-col md:flex-row gap-10 items-center justify-center">
-                    {/* Reloj Grande */}
-                    <div className="flex flex-col items-center justify-center relative shrink-0">
-                      <div className="w-48 h-48 rounded-full border-[10px] border-slate-100 dark:border-slate-800 flex items-center justify-center relative shadow-inner">
-                        <div
-                          className={`absolute inset-0 rounded-full border-[10px] border-transparent ${!isFinishing ? "border-t-blue-500 animate-spin" : ""}`}
-                          style={{ animationDuration: "3s" }}
-                        ></div>
-                        <span className="text-5xl font-black text-slate-850 dark:text-slate-100 tracking-tighter tabular-nums font-mono">
-                          {formatTime(sessionTime)}
-                        </span>
-                      </div>
-                      <p className="text-xs font-bold text-slate-400 mt-4 tracking-widest uppercase">
-                        Tiempo Registrado
-                      </p>
-                    </div>
-
-                    {/* Instrucciones Clínicas */}
-                    <div className="flex-1 w-full bg-slate-50 dark:bg-slate-900/30 p-6 md:p-8 rounded-[1.5rem] border border-slate-150 dark:border-slate-800/80 shadow-inner">
-                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-500" />
-                        Paso a paso Clínico
-                      </h3>
-                      <div className="prose dark:prose-invert prose-sm">
-                        <p className="whitespace-pre-line text-slate-650 dark:text-slate-350 font-medium text-sm leading-relaxed">
-                          {activeSession.inst}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Formulario de Cierre Flotante */}
-                  {isFinishing && (
-                    <div className="absolute inset-0 top-[77px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 flex flex-col justify-start md:justify-center items-center p-8 overflow-y-auto animate-in fade-in slide-in-from-bottom-8">
-                      <div className="max-w-md w-full flex flex-col items-center text-center my-auto pb-8">
-                        <CheckCircle2 className="w-16 h-16 text-emerald-500 mb-5" />
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">
-                          Sesión Finalizada
-                        </h3>
-                        <p className="text-sm text-slate-500 mb-6 font-medium">
-                          Tiempo total registrado:{" "}
-                          <span className="font-bold text-slate-800 dark:text-slate-200">
-                            {formatTime(sessionTime)}
-                          </span>
-                          . Por favor, evalúa el desempeño.
-                        </p>
-
-                        <div className="w-full space-y-6 text-left">
-                          <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3 block text-center">
-                              Nivel de Cooperación del Paciente
-                            </label>
-                            <div className="flex justify-center gap-2">
-                              {[1, 2, 3, 4, 5].map((val) => (
-                                <button
-                                  key={val}
-                                  onClick={() => setCooperation(val)}
-                                  className="focus:outline-none transition-transform hover:scale-125"
-                                >
-                                  <Star
-                                    className={`w-8 h-8 ${val <= cooperation ? "fill-amber-400 text-amber-400 drop-shadow-md" : "text-slate-200 dark:text-slate-700 fill-transparent"}`}
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-500 mb-2 block flex items-center gap-1.5">
-                              <MessageSquare className="w-3.5 h-3.5" /> Notas u
-                              Observaciones (Opcional)
-                            </label>
-                            <textarea
-                              rows="3"
-                              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-850 rounded-2xl resize-none outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-xs font-medium"
-                              placeholder="Ej: El paciente mostró rechazo inicial pero luego completó la actividad sin problemas..."
-                              value={notes}
-                              onChange={(e) => setNotes(e.target.value)}
-                            ></textarea>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-4 w-full mt-8">
-                          <button
-                            onClick={() => setIsFinishing(false)}
-                            className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors"
-                          >
-                            Volver
-                          </button>
-                          <button
-                            onClick={saveSession}
-                            className="flex-1 py-3 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all hover:-translate-y-0.5"
-                          >
-                            Guardar Sesión
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Si hay sesión activa: Mostrar Live Monitor (TherapySessionPlayer) */}
+            <TherapySessionPlayer
+              activeSession={activeSession}
+              onClose={() => setActiveSession(null)}
+              onSaveSession={saveSession}
+            />
 
             {/* Modal / Drawer para Constructor Avanzado de Rutinas */}
             {isModalOpen && (

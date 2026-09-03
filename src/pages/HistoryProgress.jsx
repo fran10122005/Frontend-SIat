@@ -21,7 +21,9 @@ import Button from "../components/ui/Button";
 import PageTitle from "../components/ui/PageTitle";
 
 export default function HistoryProgress() {
-  const { historicalData, globalPeiGoals } = useGlobalContext();
+  const { historicalData, globalPeiGoals, userRole, nomNino } =
+    useGlobalContext();
+  const isRepresentante = userRole === "REPRESENTANTE";
   const [dateRange, setDateRange] = useState("7days");
   const [searchNotes, setSearchNotes] = useState("");
   const [filterEfectividad, setFilterEfectividad] = useState("TODOS");
@@ -144,23 +146,29 @@ export default function HistoryProgress() {
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="flex flex-col gap-2">
                 <PageTitle icon={TrendingUp} data-tour="hp-header">
-                  Historial de Evolución
+                  {isRepresentante
+                    ? `Progreso de ${nomNino || "tu niño"}`
+                    : "Historial de Evolución"}
                 </PageTitle>
                 <p className="hidden sm:block text-sm text-gray-500 dark:text-gray-400">
-                  Análisis histórico y tendencias de comportamiento
+                  {isRepresentante
+                    ? "Evolución y avance terapéutico registrado por el especialista"
+                    : "Análisis histórico y tendencias de comportamiento"}
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<Download className="w-4 h-4" />}
-                  onClick={handleExportPDF}
-                >
-                  Exportar PDF
-                </Button>
-              </div>
+              {!isRepresentante && (
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Download className="w-4 h-4" />}
+                    onClick={handleExportPDF}
+                  >
+                    Exportar PDF
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-6">

@@ -110,13 +110,15 @@ export default function StudentRecord({ onNavigate }) {
     fetchFicha();
   }, [selectedChildId]);
 
-  const currentTimestamp = new Date().toLocaleString("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const registroTimestamp = extraInfo.nin_ingr
+    ? new Date(extraInfo.nin_ingr).toLocaleString("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -493,7 +495,7 @@ export default function StudentRecord({ onNavigate }) {
                     <span className="font-medium dark:text-gray-300">
                       Registro en sistema:
                     </span>{" "}
-                    {currentTimestamp}
+                    {registroTimestamp || "Sin registrar"}
                   </div>
                   <div className="flex w-full md:w-auto items-center gap-2">
                     {!isEditing ? (

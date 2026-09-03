@@ -69,7 +69,13 @@ api.interceptors.response.use(
       return api.request(config);
     }
 
-    if (error.response?.status === 401 && !isRedirecting) {
+    const requestUrl = config.url || "";
+    const isAuthEndpoint =
+      /\/auth\/login$/.test(requestUrl) || requestUrl.includes("/auth/login");
+
+    // Un 401 del login significa "credenciales inválidas", no sesión expirada.
+    // No redirigir ni tocar el estado: el componente Login muestra el error.
+    if (error.response?.status === 401 && !isAuthEndpoint && !isRedirecting) {
       isRedirecting = true;
       clearAuth();
       showGlobalToast("⏱️ Sesión expirada. Redirigiendo al inicio...");
