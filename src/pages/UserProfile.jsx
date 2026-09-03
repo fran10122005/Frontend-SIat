@@ -470,14 +470,35 @@ export default function UserProfile({ initialTab }) {
   const {
     userRole,
     showToast,
+    currentView,
     setCurrentView,
     setAdminActiveTab,
     setUserName,
   } = useGlobalContext();
 
+  const isSettingsMode =
+    currentView === "settings" || initialTab === "preferencias";
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState(initialTab || "personal");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (isSettingsMode) return "preferencias";
+    return initialTab && initialTab !== "preferencias"
+      ? initialTab
+      : "personal";
+  });
+
+  useEffect(() => {
+    if (isSettingsMode) {
+      if (activeTab !== "preferencias" && activeTab !== "notificaciones") {
+        setActiveTab("preferencias");
+      }
+    } else {
+      if (activeTab === "preferencias") {
+        setActiveTab("personal");
+      }
+    }
+  }, [isSettingsMode]);
 
   const [profile, setProfile] = useState({
     nomb: "",
@@ -648,7 +669,7 @@ export default function UserProfile({ initialTab }) {
           foto = userData.tm_espec.esp_foto || "";
           especialidad = userData.tm_espec.esc_codi || "";
           especialidadLabel = userData.tm_espec.tm_especi?.esc_nomb || "";
-          institucion = userData.tm_espec.tm_insti?.ins_nomb || "";
+          institucion = userData.tm_espec.tm_instit?.ins_nomb || "";
           ins_codi = userData.tm_espec.ins_codi || "";
           cargo = "Especialista Terapéutico";
         } else if (userData.rol_codi === "ROL_REP" && userData.tm_repre) {
@@ -1000,14 +1021,20 @@ export default function UserProfile({ initialTab }) {
     showToast("Solicitud de eliminación cancelada");
   };
 
-  const TABS = [
+  const profileTabs = [
     { id: "personal", label: "Información Personal", icon: User },
     { id: "seguridad", label: "Seguridad y Acceso", icon: ShieldCheck },
     { id: "notificaciones", label: "Notificaciones", icon: Bell },
-    { id: "preferencias", label: "Preferencias", icon: Settings2 },
     { id: "consentimiento", label: "Consentimiento", icon: FileText },
     { id: "peligro", label: "Zona de Peligro", icon: AlertTriangle },
   ];
+
+  const settingsTabs = [
+    { id: "preferencias", label: "Preferencias de Interfaz", icon: Settings2 },
+    { id: "notificaciones", label: "Notificaciones y Alertas", icon: Bell },
+  ];
+
+  const TABS = isSettingsMode ? settingsTabs : profileTabs;
 
   const inputClass =
     "w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all placeholder:text-slate-400 placeholder:font-normal";
@@ -1036,10 +1063,13 @@ export default function UserProfile({ initialTab }) {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-6 pb-[max(3rem,env(safe-area-inset-bottom))] sm:pb-12">
             <header>
-              <PageTitle icon={UserCircle}>Centro de Cuenta</PageTitle>
+              <PageTitle icon={isSettingsMode ? Settings2 : UserCircle}>
+                {isSettingsMode ? "Configuración del Sistema" : "Mi Perfil"}
+              </PageTitle>
               <p className="hidden sm:block text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Gestiona tu identidad, seguridad, notificaciones y privacidad en
-                SIAT.
+                {isSettingsMode
+                  ? "Personaliza el tema visual, color de acento, tipografía, densidad y notificaciones."
+                  : "Gestiona tu información personal, contraseña, biometría y seguridad en SIAT."}
               </p>
             </header>
 
@@ -1047,39 +1077,41 @@ export default function UserProfile({ initialTab }) {
               <LoadingState variant="profile" />
             ) : (
               <>
-                {/* Resumen de cuenta */}
-                <Card className="hover:shadow-md">
-                  <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-                    <FotoUpload
-                      value={profile.foto}
-                      onChange={(url) =>
-                        setProfile((prev) => ({ ...prev, foto: url }))
-                      }
-                      label="Tu foto de perfil"
-                      alt="Foto de perfil"
-                      size="w-20 h-20 sm:w-24 sm:h-24"
-                    />
-                    <div className="flex-1 text-center sm:text-left min-w-0">
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">
-                        {profile.nomb} {profile.apel}
-                      </h2>
-                      <div className="mt-1.5 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                        <span className="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full uppercase tracking-wider">
-                          {profile.rol_nomb}
-                        </span>
-                        {twoFA && (
-                          <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
-                            <ShieldCheck className="w-3 h-3" /> 2FA
+                {/* Resumen de cuenta (Solo visible en Mi Perfil) */}
+                {!isSettingsMode && (
+                  <Card className="hover:shadow-md">
+                    <div className="p-4 sm:p-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+                      <FotoUpload
+                        value={profile.foto}
+                        onChange={(url) =>
+                          setProfile((prev) => ({ ...prev, foto: url }))
+                        }
+                        label="Tu foto de perfil"
+                        alt="Foto de perfil"
+                        size="w-20 h-20 sm:w-24 sm:h-24"
+                      />
+                      <div className="flex-1 text-center sm:text-left min-w-0">
+                        <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                          {profile.nomb} {profile.apel}
+                        </h2>
+                        <div className="mt-1.5 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                          <span className="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-full uppercase tracking-wider">
+                            {profile.rol_nomb}
                           </span>
-                        )}
-                        <span className="text-xs text-slate-400 flex items-center gap-1.5 min-w-0">
-                          <Mail className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{profile.email}</span>
-                        </span>
+                          {twoFA && (
+                            <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3" /> 2FA
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-400 flex items-center gap-1.5 min-w-0">
+                            <Mail className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">{profile.email}</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                )}
 
                 {/* Navegación de pestañas */}
                 <nav
