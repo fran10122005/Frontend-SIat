@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import Topbar from "../components/layout/Topbar";
 import AdminSidebar from "../components/layout/AdminSidebar";
@@ -488,26 +488,22 @@ export default function UserProfile({ initialTab }) {
       : "personal";
   });
 
-  useEffect(() => {
-    if (isSettingsMode) {
-      if (activeTab !== "preferencias" && activeTab !== "notificaciones") {
-        setActiveTab("preferencias");
-      }
-    } else {
-      if (activeTab === "preferencias") {
-        setActiveTab("personal");
-      }
-    }
-  }, [isSettingsMode]);
+  const isAdmin = userRole === "ADMIN_INSTITUCION" || userRole === "ROL_ADM";
+  const isEspecialista = userRole === "ESPECIALISTA" || userRole === "ROL_ESP";
+  const isRepresentante =
+    userRole === "REPRESENTANTE" || userRole === "ROL_REP";
 
   const [profile, setProfile] = useState({
     nomb: "",
     apel: "",
     telf: "",
+    telf_alt: "",
     tdoc: "V",
     fecnac: "",
     cedu: "",
     licencia: "",
+    universidad: "",
+    experiencia: "",
     rela: "",
     email: "",
     rol_nomb: "",
@@ -519,6 +515,55 @@ export default function UserProfile({ initialTab }) {
     ins_codi: "",
     cargo: "",
   });
+
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    setProfile((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const profileTabs = useMemo(() => {
+    const tabs = [
+      { id: "personal", label: "Información Personal", icon: User },
+      { id: "seguridad", label: "Seguridad y Acceso", icon: ShieldCheck },
+      { id: "notificaciones", label: "Notificaciones", icon: Bell },
+    ];
+
+    // Consentimiento y Zona de Peligro son EXCLUSIVOS para el Representante (Padre/Tutor)
+    if (isRepresentante) {
+      tabs.push({
+        id: "consentimiento",
+        label: "Consentimiento",
+        icon: FileText,
+      });
+      tabs.push({
+        id: "peligro",
+        label: "Zona de Peligro",
+        icon: AlertTriangle,
+      });
+    }
+
+    return tabs;
+  }, [isRepresentante]);
+
+  const settingsTabs = [
+    { id: "preferencias", label: "Preferencias de Interfaz", icon: Settings2 },
+    { id: "notificaciones", label: "Notificaciones y Alertas", icon: Bell },
+  ];
+
+  const TABS = isSettingsMode ? settingsTabs : profileTabs;
+
+  useEffect(() => {
+    if (isSettingsMode) {
+      if (activeTab !== "preferencias" && activeTab !== "notificaciones") {
+        setActiveTab("preferencias");
+      }
+    } else {
+      const validTabs = profileTabs.map((t) => t.id);
+      if (!validTabs.includes(activeTab)) {
+        setActiveTab("personal");
+      }
+    }
+  }, [isSettingsMode, profileTabs, activeTab]);
   const savedProfileRef = useRef(profile);
 
   const [passwordData, setPasswordData] = useState({
@@ -733,11 +778,6 @@ export default function UserProfile({ initialTab }) {
     fetchProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleProfileChange = (e) => {
-    const { name, value } = e.target;
-    setProfile((prev) => ({ ...prev, [name]: value }));
-  };
 
   const cancelProfile = () => {
     setProfile(savedProfileRef.current);
@@ -1021,21 +1061,6 @@ export default function UserProfile({ initialTab }) {
     showToast("Solicitud de eliminación cancelada");
   };
 
-  const profileTabs = [
-    { id: "personal", label: "Información Personal", icon: User },
-    { id: "seguridad", label: "Seguridad y Acceso", icon: ShieldCheck },
-    { id: "notificaciones", label: "Notificaciones", icon: Bell },
-    { id: "consentimiento", label: "Consentimiento", icon: FileText },
-    { id: "peligro", label: "Zona de Peligro", icon: AlertTriangle },
-  ];
-
-  const settingsTabs = [
-    { id: "preferencias", label: "Preferencias de Interfaz", icon: Settings2 },
-    { id: "notificaciones", label: "Notificaciones y Alertas", icon: Bell },
-  ];
-
-  const TABS = isSettingsMode ? settingsTabs : profileTabs;
-
   const inputClass =
     "w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all placeholder:text-slate-400 placeholder:font-normal";
 
@@ -1147,7 +1172,13 @@ export default function UserProfile({ initialTab }) {
                       <CardHeader
                         icon={User}
                         title="Información Personal"
-                        subtitle="Datos de identificación visibles para tu institución"
+                        subtitle={
+                          isAdmin
+                            ? "Datos de identificación y contacto institucional"
+                            : isEspecialista
+                              ? "Perfil profesional y credenciales sanitarias"
+                              : "Datos del representante legal vinculado al paciente"
+                        }
                       />
                       <div className="p-4 sm:p-6 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
@@ -1173,40 +1204,181 @@ export default function UserProfile({ initialTab }) {
                               className={inputClass}
                             />
                           </div>
-                          <div className="space-y-2">
-                            <label
-                              className={`${labelClass} flex items-center gap-1`}
-                            >
-                              <Phone className="w-3 h-3" /> Teléfono
-                            </label>
-                            <input
-                              type="tel"
-                              name="telf"
-                              value={profile.telf}
-                              onChange={handleProfileChange}
-                              className={inputClass}
-                            />
-                          </div>
+                        </div>
 
-                          {userRole === "ESPECIALISTA" && (
+                        {/* Correo Electrónico según Rol */}
+                        <div className="space-y-2">
+                          <label
+                            className={`${labelClass} flex items-center gap-1`}
+                          >
+                            <Mail className="w-3 h-3" /> Correo Electrónico{" "}
+                            {isAdmin
+                              ? "Institucional (Editable)"
+                              : "Registrado"}
+                          </label>
+                          {isAdmin ? (
                             <>
+                              <input
+                                type="email"
+                                name="email"
+                                value={profile.email}
+                                onChange={handleProfileChange}
+                                required
+                                className={inputClass}
+                              />
+                              <p className="text-[10px] text-slate-400 leading-relaxed">
+                                Como Administrador, puedes actualizar tu correo
+                                corporativo institucional libremente.
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <input
+                                type="email"
+                                name="email"
+                                value={profile.email}
+                                readOnly
+                                disabled
+                                className={`${inputClass} opacity-70 cursor-not-allowed`}
+                              />
+                              <p className="text-[10px] text-slate-400 leading-relaxed">
+                                {isEspecialista
+                                  ? "El correo profesional es administrado por la institución."
+                                  : "Correo verificado vinculado al expediente legal del paciente. Contacta a soporte para cambios."}
+                              </p>
+                            </>
+                          )}
+                        </div>
+
+                        {/* ═══ SECCIÓN ESPECÍFICA: ADMIN_INSTITUCION ═══ */}
+                        {isAdmin && (
+                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
+                              Información Institucional
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Institución
+                                </label>
+                                <input
+                                  type="text"
+                                  value={profile.institucion || "No registrada"}
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Código Institucional (ins_codi)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={profile.ins_codi || "—"}
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className={labelClass}>Cargo</label>
+                                <input
+                                  type="text"
+                                  value={
+                                    profile.cargo ||
+                                    "Administrador Institucional"
+                                  }
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+                              <div className="space-y-2 md:col-span-3">
+                                <label
+                                  className={`${labelClass} flex items-center gap-1`}
+                                >
+                                  <Phone className="w-3 h-3" /> Teléfono de
+                                  Contacto Institucional
+                                </label>
+                                <input
+                                  type="tel"
+                                  name="telf"
+                                  value={profile.telf}
+                                  onChange={handleProfileChange}
+                                  className={inputClass}
+                                  placeholder="+58 212-0000000"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ═══ SECCIÓN ESPECÍFICA: ESPECIALISTA ═══ */}
+                        {isEspecialista && (
+                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
+                              Credenciales Profesionales y Sanitarias
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                               <div className="space-y-2">
                                 <label
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
-                                  <IdCard className="w-3 h-3" /> Tipo de
-                                  Documento
+                                  <IdCard className="w-3 h-3" /> Documento de
+                                  Identidad / Cédula
                                 </label>
-                                <select
-                                  name="tdoc"
-                                  value={profile.tdoc}
-                                  onChange={handleProfileChange}
-                                  className={inputClass}
+                                <div className="flex gap-2">
+                                  <select
+                                    name="tdoc"
+                                    value={profile.tdoc}
+                                    onChange={handleProfileChange}
+                                    className="w-24 px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-xs font-bold text-slate-900 dark:text-white"
+                                  >
+                                    <option value="V">V-</option>
+                                    <option value="E">E-</option>
+                                    <option value="P">P-</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    name="cedu"
+                                    value={profile.cedu}
+                                    onChange={handleProfileChange}
+                                    placeholder="Cédula profesional"
+                                    className={inputClass}
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <label
+                                  className={`${labelClass} flex items-center gap-1`}
                                 >
-                                  <option value="V">Venezolano (V)</option>
-                                  <option value="E">Extranjero (E)</option>
-                                  <option value="P">Pasaporte (P)</option>
-                                </select>
+                                  <Hash className="w-3 h-3" /> Registro
+                                  Profesional / Licencia MPPS
+                                </label>
+                                <input
+                                  type="text"
+                                  name="licencia"
+                                  value={profile.licencia}
+                                  onChange={handleProfileChange}
+                                  placeholder="Ej: MPPS-129402"
+                                  className={inputClass}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Especialidad Terapéutica
+                                </label>
+                                <input
+                                  type="text"
+                                  value={
+                                    profile.especialidadLabel ||
+                                    "Especialista Clínico SIAT"
+                                  }
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
                               </div>
                               <div className="space-y-2">
                                 <label
@@ -1224,11 +1396,33 @@ export default function UserProfile({ initialTab }) {
                                   className={inputClass}
                                 />
                               </div>
-                            </>
-                          )}
+                              <div className="space-y-2 md:col-span-2">
+                                <label
+                                  className={`${labelClass} flex items-center gap-1`}
+                                >
+                                  <Phone className="w-3 h-3" /> Teléfono de
+                                  Contacto Profesional
+                                </label>
+                                <input
+                                  type="tel"
+                                  name="telf"
+                                  value={profile.telf}
+                                  onChange={handleProfileChange}
+                                  className={inputClass}
+                                  placeholder="+58 412-0000000"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
-                          {userRole === "REPRESENTANTE" && (
-                            <>
+                        {/* ═══ SECCIÓN ESPECÍFICA: REPRESENTANTE ═══ */}
+                        {isRepresentante && (
+                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
+                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
+                              Identificación y Contacto de Emergencia
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                               <div className="space-y-2">
                                 <label
                                   className={`${labelClass} flex items-center gap-1`}
@@ -1238,19 +1432,21 @@ export default function UserProfile({ initialTab }) {
                                 </label>
                                 <input
                                   type="text"
-                                  value={profile.cedu || "No registrada"}
+                                  value={
+                                    profile.cedu || "Registrada en expediente"
+                                  }
                                   readOnly
                                   disabled
                                   className={`${inputClass} opacity-70 cursor-not-allowed`}
                                 />
-                                <p className="text-[10px] text-slate-400 leading-relaxed">
-                                  La cédula es tu identificador único en SIAT.
-                                  Para modificarla contacta al administrador de
-                                  tu institución.
+                                <p className="text-[10px] text-slate-400">
+                                  Identificador legal único en el sistema.
                                 </p>
                               </div>
                               <div className="space-y-2">
-                                <label className={labelClass}>Parentesco</label>
+                                <label className={labelClass}>
+                                  Parentesco / Relación con el Niño
+                                </label>
                                 <select
                                   name="rela"
                                   value={profile.rela}
@@ -1268,188 +1464,37 @@ export default function UserProfile({ initialTab }) {
                                   </option>
                                 </select>
                               </div>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Correo según rol */}
-                        {userRole === "ADMIN_INSTITUCION" && (
-                          <div className="space-y-2">
-                            <label
-                              className={`${labelClass} flex items-center gap-1`}
-                            >
-                              <Mail className="w-3 h-3" /> Correo Electrónico
-                              Corporativo
-                            </label>
-                            <input
-                              type="email"
-                              name="email"
-                              value={profile.email}
-                              onChange={handleProfileChange}
-                              className={inputClass}
-                            />
-                            <p className="text-[10px] text-slate-400 leading-relaxed">
-                              Puedes cambiar tu correo institucional libremente.
-                              Se te solicitará al iniciar sesión con el nuevo
-                              correo.
-                            </p>
-                          </div>
-                        )}
-
-                        {userRole !== "ADMIN_INSTITUCION" && (
-                          <div className="space-y-2">
-                            <label
-                              className={`${labelClass} flex items-center gap-1`}
-                            >
-                              <Mail className="w-3 h-3" /> Correo Electrónico
-                            </label>
-                            <input
-                              type="email"
-                              name="email"
-                              value={profile.email}
-                              readOnly
-                              disabled
-                              className={`${inputClass} opacity-70 cursor-not-allowed`}
-                            />
-                          </div>
-                        )}
-
-                        {/* Información extra según rol */}
-                        {userRole === "ADMIN_INSTITUCION" && (
-                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
-                            <label className={labelClass}>
-                              Información de la Institución
-                            </label>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5 mt-3">
-                              <div className="space-y-2">
-                                <label className={labelClass}>
-                                  Institución
-                                </label>
-                                <input
-                                  type="text"
-                                  value={profile.institucion || "No registrada"}
-                                  readOnly
-                                  disabled
-                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className={labelClass}>
-                                  Código (ins_codi)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={profile.ins_codi || "—"}
-                                  readOnly
-                                  disabled
-                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className={labelClass}>Cargo</label>
-                                <input
-                                  type="text"
-                                  value={profile.cargo}
-                                  readOnly
-                                  disabled
-                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
-                                />
-                              </div>
-                            </div>
-                            <p className="text-[10px] text-slate-400 leading-relaxed mt-3">
-                              Estos datos son de solo lectura y los gestiona la
-                              plataforma. Para cambios contacta al área de
-                              soporte.
-                            </p>
-                          </div>
-                        )}
-
-                        {userRole === "ESPECIALISTA" && (
-                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
-                            <label className={labelClass}>
-                              Credenciales Profesionales
-                            </label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mt-3">
                               <div className="space-y-2">
                                 <label
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
-                                  <Hash className="w-3 h-3" /> Registro
-                                  Profesional / Licencia
-                                </label>
-                                <input
-                                  type="text"
-                                  name="licencia"
-                                  value={profile.licencia}
-                                  onChange={handleProfileChange}
-                                  className={inputClass}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className={labelClass}>
-                                  Especialidad
-                                </label>
-                                <input
-                                  type="text"
-                                  value={
-                                    profile.especialidadLabel ||
-                                    "Sin especificar"
-                                  }
-                                  readOnly
-                                  disabled
-                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
-                                />
-                              </div>
-                            </div>
-                            <p className="text-[10px] text-slate-400 leading-relaxed mt-3">
-                              Actualiza tu registro/licencia profesional cuando
-                              corresponda. La especialidad la asigna tu
-                              administrador.
-                            </p>
-                          </div>
-                        )}
-
-                        {userRole === "REPRESENTANTE" && (
-                          <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
-                            <label className={labelClass}>
-                              Contacto de Emergencia
-                            </label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mt-3">
-                              <div className="space-y-2">
-                                <label
-                                  className={`${labelClass} flex items-center gap-1`}
-                                >
-                                  <Phone className="w-3 h-3" /> Teléfono de
-                                  Contacto
+                                  <Phone className="w-3 h-3" /> Teléfono
+                                  Principal
                                 </label>
                                 <input
                                   type="tel"
                                   name="telf"
                                   value={profile.telf}
                                   onChange={handleProfileChange}
+                                  placeholder="+58 412-0000000"
                                   className={inputClass}
                                 />
                               </div>
                               <div className="space-y-2">
-                                <label className={labelClass}>
-                                  Relación con el Niño
-                                </label>
-                                <select
-                                  name="rela"
-                                  value={profile.rela}
-                                  onChange={handleProfileChange}
-                                  className={inputClass}
+                                <label
+                                  className={`${labelClass} flex items-center gap-1`}
                                 >
-                                  <option value="Padre">Padre</option>
-                                  <option value="Madre">Madre</option>
-                                  <option value="Tutor Legal">
-                                    Tutor Legal
-                                  </option>
-                                  <option value="Abuelo/a">Abuelo/a</option>
-                                  <option value="Otro Familiar">
-                                    Otro Familiar Directo
-                                  </option>
-                                </select>
+                                  <Phone className="w-3 h-3 text-rose-500" />{" "}
+                                  Teléfono Alternativo de Emergencia
+                                </label>
+                                <input
+                                  type="tel"
+                                  name="telf_alt"
+                                  value={profile.telf_alt}
+                                  onChange={handleProfileChange}
+                                  placeholder="+58 424-0000000"
+                                  className={inputClass}
+                                />
                               </div>
                             </div>
                           </div>

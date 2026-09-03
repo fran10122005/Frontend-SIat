@@ -1,23 +1,21 @@
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import logoPath from "../assets/Logo.png";
+﻿import { renderManualPDF } from "./pdfManualRenderer";
 
 export const seccionesManualRepresentante = [
   {
     id: "introduccion",
-    titulo: "Introducción",
+    titulo: "IntroducciÃ³n",
     icono: "introduccion",
     descripcion: "Bienvenido al sistema SIAT para representantes",
     contenido: [
       {
         tipo: "texto",
         valor:
-          "El módulo de Representante está diseñado para padres, madres o tutores de niños con Trastorno del Espectro Autista (TEA). Desde este panel podrá monitorear en tiempo real las constantes vitales de su hijo, registrar reportes diarios, gestionar rutinas terapéuticas, comunicarse con el especialista y acceder a herramientas de apoyo durante crisis sensoriales.",
+          "El mÃ³dulo de Representante estÃ¡ diseÃ±ado para padres, madres o tutores de niÃ±os con Trastorno del Espectro Autista (TEA). Desde este panel podrÃ¡ monitorear en tiempo real las constantes vitales de su hijo, registrar reportes diarios, gestionar rutinas terapÃ©uticas, comunicarse con el especialista y acceder a herramientas de apoyo durante crisis sensoriales.",
       },
       {
         tipo: "texto",
         valor:
-          "SIAT integra wearables IoT (pulseras biométricas) que permiten la detección temprana de crisis de sobrecarga sensorial, brindando tranquilidad y herramientas de intervención inmediata.",
+          "SIAT integra wearables IoT (pulseras biomÃ©tricas) que permiten la detecciÃ³n temprana de crisis de sobrecarga sensorial, brindando tranquilidad y herramientas de intervenciÃ³n inmediata.",
       },
     ],
   },
@@ -25,7 +23,7 @@ export const seccionesManualRepresentante = [
     id: "estructura",
     titulo: "Estructura del Panel",
     icono: "estructura",
-    descripcion: "Distribución de la interfaz del representante",
+    descripcion: "DistribuciÃ³n de la interfaz del representante",
     contenido: [
       {
         tipo: "texto",
@@ -35,41 +33,41 @@ export const seccionesManualRepresentante = [
       {
         tipo: "lista",
         items: [
-          "Barra lateral izquierda: Navegación entre las secciones del panel.",
-          "Barra superior: Muestra el nombre del usuario, campana de notificaciones en tiempo real y botón de modo oscuro.",
-          "Área principal: Contenido dinámico según la sección seleccionada.",
+          "Barra lateral izquierda: NavegaciÃ³n entre las secciones del panel.",
+          "Barra superior: Muestra el nombre del usuario, campana de notificaciones en tiempo real y botÃ³n de modo oscuro.",
+          "Ãrea principal: Contenido dinÃ¡mico segÃºn la secciÃ³n seleccionada.",
         ],
       },
       { tipo: "subtitulo", valor: "Secciones de la Barra Lateral" },
       {
         tipo: "tabla",
-        encabezados: ["Sección", "Descripción"],
+        encabezados: ["SecciÃ³n", "DescripciÃ³n"],
         filas: [
           [
             "Panel Principal",
-            "Resumen del estado regulatorio, últimas alertas y acceso rápido a herramientas de crisis.",
+            "Resumen del estado regulatorio, Ãºltimas alertas y acceso rÃ¡pido a herramientas de crisis.",
           ],
           [
             "Seguimiento en Vivo",
-            "Monitoreo en tiempo real de frecuencia cardíaca, movimiento e índice de estrés.",
+            "Monitoreo en tiempo real de frecuencia cardÃ­aca, movimiento e Ã­ndice de estrÃ©s.",
           ],
           [
-            "Día a Día",
-            "Agenda visual, checklist de tareas diarias y catálogo de terapias con cronómetro.",
+            "DÃ­a a DÃ­a",
+            "Agenda visual, checklist de tareas diarias y catÃ¡logo de terapias con cronÃ³metro.",
           ],
           [
             "Diario de Hogar",
-            "Registro diario de observaciones clínicas (sueño, ánimo, apetito, crisis).",
+            "Registro diario de observaciones clÃ­nicas (sueÃ±o, Ã¡nimo, apetito, crisis).",
           ],
           [
             "Herramientas de Apoyo",
-            "Tablero de comunicación AAC y sistema de economía de fichas.",
+            "Tablero de comunicaciÃ³n AAC y sistema de economÃ­a de fichas.",
           ],
           [
-            "Expediente Clínico",
-            "Perfil del niño, historial de alertas e indicaciones del especialista.",
+            "Expediente ClÃ­nico",
+            "Perfil del niÃ±o, historial de alertas e indicaciones del especialista.",
           ],
-          ["Manual de Usuario", "Esta guía de referencia completa."],
+          ["Manual de Usuario", "Esta guÃ­a de referencia completa."],
         ],
       },
     ],
@@ -84,44 +82,44 @@ export const seccionesManualRepresentante = [
       {
         tipo: "texto",
         valor:
-          "Tarjeta principal que muestra en tiempo real el nivel de estrés del niño:",
+          "Tarjeta principal que muestra en tiempo real el nivel de estrÃ©s del niÃ±o:",
       },
       {
         tipo: "lista",
         items: [
-          'Verde (≤ 40%): "Calma Basal" — el niño está en estado óptimo.',
-          'Amarillo (≤ 75%): "Agitación Moderada" — se recomienda monitorear.',
-          'Rojo (> 75%): "Crisis Sensorial / Sobrecarga" — requiere intervención inmediata.',
+          'Verde (â‰¤ 40%): "Calma Basal" â€” el niÃ±o estÃ¡ en estado Ã³ptimo.',
+          'Amarillo (â‰¤ 75%): "AgitaciÃ³n Moderada" â€” se recomienda monitorear.',
+          'Rojo (> 75%): "Crisis Sensorial / Sobrecarga" â€” requiere intervenciÃ³n inmediata.',
         ],
       },
       {
         tipo: "texto",
         valor:
-          "Además se muestra el pulso actual en BPM y un corazón animado que late al ritmo del paciente.",
+          "AdemÃ¡s se muestra el pulso actual en BPM y un corazÃ³n animado que late al ritmo del paciente.",
       },
 
       { tipo: "subtitulo", valor: "Zona SOS Sensorial" },
       {
         tipo: "texto",
         valor:
-          "Acceso rápido a dos herramientas de intervención durante crisis:",
+          "Acceso rÃ¡pido a dos herramientas de intervenciÃ³n durante crisis:",
       },
       {
         tipo: "lista",
         items: [
-          "Respiración Tortuga: Guía interactiva de respiración (inhala 4s → retén 4s → exhala 4s) con círculo animado.",
-          "Tablero AAC Rápido: Comunicación aumentativa con pictogramas básicos (comer, beber, baño, ayuda, etc.) y sintetizador de voz.",
+          "RespiraciÃ³n Tortuga: GuÃ­a interactiva de respiraciÃ³n (inhala 4s â†’ retÃ©n 4s â†’ exhala 4s) con cÃ­rculo animado.",
+          "Tablero AAC RÃ¡pido: ComunicaciÃ³n aumentativa con pictogramas bÃ¡sicos (comer, beber, baÃ±o, ayuda, etc.) y sintetizador de voz.",
         ],
       },
 
-      { tipo: "subtitulo", valor: "Foco Clínico de la Semana" },
+      { tipo: "subtitulo", valor: "Foco ClÃ­nico de la Semana" },
       {
         tipo: "texto",
         valor:
-          'Muestra el objetivo terapéutico semanal definido por el especialista. Presione "Ver Agenda Visual" para acceder al plan detallado.',
+          'Muestra el objetivo terapÃ©utico semanal definido por el especialista. Presione "Ver Agenda Visual" para acceder al plan detallado.',
       },
 
-      { tipo: "subtitulo", valor: "Últimos Eventos" },
+      { tipo: "subtitulo", valor: "Ãšltimos Eventos" },
       {
         tipo: "texto",
         valor:
@@ -132,7 +130,7 @@ export const seccionesManualRepresentante = [
       {
         tipo: "texto",
         valor:
-          "Indicador del estado de la pulsera biométrica: conexión, nivel de batería y calidad de señal.",
+          "Indicador del estado de la pulsera biomÃ©trica: conexiÃ³n, nivel de baterÃ­a y calidad de seÃ±al.",
       },
     ],
   },
@@ -140,50 +138,50 @@ export const seccionesManualRepresentante = [
     id: "sensores",
     titulo: "Seguimiento en Vivo",
     icono: "sensores",
-    descripcion: "Monitoreo biométrico en tiempo real",
+    descripcion: "Monitoreo biomÃ©trico en tiempo real",
     contenido: [
-      { tipo: "subtitulo", valor: "Cockpit de Biotelemetría" },
+      { tipo: "subtitulo", valor: "Cockpit de BiotelemetrÃ­a" },
       {
         tipo: "texto",
         valor:
-          "Panel de monitoreo en tiempo real de las constantes fisiológicas del paciente desde la pulsera IoT.",
+          "Panel de monitoreo en tiempo real de las constantes fisiolÃ³gicas del paciente desde la pulsera IoT.",
       },
 
       { tipo: "subtitulo", valor: "Indicadores en Vivo" },
       {
         tipo: "tabla",
-        encabezados: ["Indicador", "Rango Normal", "Descripción"],
+        encabezados: ["Indicador", "Rango Normal", "DescripciÃ³n"],
         filas: [
           [
-            "Ritmo Cardíaco (BPM)",
-            "Según umbral calibrado",
-            "Frecuencia cardíaca actual del paciente",
+            "Ritmo CardÃ­aco (BPM)",
+            "SegÃºn umbral calibrado",
+            "Frecuencia cardÃ­aca actual del paciente",
           ],
           [
             "Movimiento (G)",
             "< 1.2G reposo, > 5.0G estereotipias",
-            "Nivel de actividad física y movimientos",
+            "Nivel de actividad fÃ­sica y movimientos",
           ],
           [
-            "Índice de Estrés",
+            "Ãndice de EstrÃ©s",
             "0-100%",
-            "Porcentaje calculado de estrés en tiempo real",
+            "Porcentaje calculado de estrÃ©s en tiempo real",
           ],
         ],
       },
-      { tipo: "subtitulo", valor: "Gráfico de Señal" },
+      { tipo: "subtitulo", valor: "GrÃ¡fico de SeÃ±al" },
       {
         tipo: "texto",
         valor:
-          "Gráfico de líneas con ventana deslizante que muestra la evolución del BPM (rojo) y el índice de estrés (púrpura) en los últimos instantes.",
+          "GrÃ¡fico de lÃ­neas con ventana deslizante que muestra la evoluciÃ³n del BPM (rojo) y el Ã­ndice de estrÃ©s (pÃºrpura) en los Ãºltimos instantes.",
       },
 
       { tipo: "subtitulo", valor: "Estado del Hardware" },
       {
         tipo: "lista",
         items: [
-          "Batería: Nivel de carga de la pulsera biométrica.",
-          "Señal: Calidad de la conexión Bluetooth/red.",
+          "BaterÃ­a: Nivel de carga de la pulsera biomÃ©trica.",
+          "SeÃ±al: Calidad de la conexiÃ³n Bluetooth/red.",
           "Conectividad: Estado del WebSocket con el servidor.",
         ],
       },
@@ -192,21 +190,21 @@ export const seccionesManualRepresentante = [
         tipo: "nota",
         variante: "info",
         valor:
-          "Los datos se actualizan automáticamente cada pocos segundos vía WebSocket. No necesita recargar la página.",
+          "Los datos se actualizan automÃ¡ticamente cada pocos segundos vÃ­a WebSocket. No necesita recargar la pÃ¡gina.",
       },
     ],
   },
   {
     id: "agenda",
-    titulo: "Día a Día",
+    titulo: "DÃ­a a DÃ­a",
     icono: "agenda",
     descripcion: "Agenda visual y terapias interactivas",
     contenido: [
-      { tipo: "subtitulo", valor: "Foco Clínico Semanal" },
+      { tipo: "subtitulo", valor: "Foco ClÃ­nico Semanal" },
       {
         tipo: "texto",
         valor:
-          'Objetivo terapéutico de la semana definido por el especialista. Presione "Reportar Avance de Hoy" para notificar el progreso.',
+          'Objetivo terapÃ©utico de la semana definido por el especialista. Presione "Reportar Avance de Hoy" para notificar el progreso.',
       },
 
       { tipo: "subtitulo", valor: "Agenda Visual de Hoy" },
@@ -220,24 +218,24 @@ export const seccionesManualRepresentante = [
         items: [
           "Cada tarea se marca como completada al hacer clic.",
           "Una barra de progreso muestra el porcentaje de cumplimiento.",
-          "Al completar todas las tareas, aparece un mensaje de felicitación.",
+          "Al completar todas las tareas, aparece un mensaje de felicitaciÃ³n.",
         ],
       },
 
-      { tipo: "subtitulo", valor: "Catálogo de Terapias y Rutinas" },
+      { tipo: "subtitulo", valor: "CatÃ¡logo de Terapias y Rutinas" },
       {
         tipo: "texto",
         valor:
-          "Grid de tarjetas con terapias disponibles. Cada tarjeta muestra categoría, duración, título e instrucciones.",
+          "Grid de tarjetas con terapias disponibles. Cada tarjeta muestra categorÃ­a, duraciÃ³n, tÃ­tulo e instrucciones.",
       },
       {
         tipo: "pasos",
         items: [
-          "Seleccione una terapia del catálogo.",
-          'Presione "Iniciar Sesión en Vivo".',
-          "Siga las instrucciones paso a paso mientras el cronómetro corre.",
-          "Al finalizar, evalúe la cooperación del niño (1-5 estrellas) y agregue notas.",
-          'Presione "Guardar Sesión" para registrar los resultados.',
+          "Seleccione una terapia del catÃ¡logo.",
+          'Presione "Iniciar SesiÃ³n en Vivo".',
+          "Siga las instrucciones paso a paso mientras el cronÃ³metro corre.",
+          "Al finalizar, evalÃºe la cooperaciÃ³n del niÃ±o (1-5 estrellas) y agregue notas.",
+          'Presione "Guardar SesiÃ³n" para registrar los resultados.',
         ],
       },
 
@@ -251,9 +249,9 @@ export const seccionesManualRepresentante = [
         tipo: "lista",
         items: [
           "Nombre de la Terapia",
-          "Categoría: Higiene, Terapéutico, Alimentación, Educativo, Regulación Sensorial",
-          "Duración Estimada y Dificultad (Baja/Media/Alta)",
-          "Pasos estructurados con instrucción y tiempo estimado",
+          "CategorÃ­a: Higiene, TerapÃ©utico, AlimentaciÃ³n, Educativo, RegulaciÃ³n Sensorial",
+          "DuraciÃ³n Estimada y Dificultad (Baja/Media/Alta)",
+          "Pasos estructurados con instrucciÃ³n y tiempo estimado",
         ],
       },
     ],
@@ -262,12 +260,12 @@ export const seccionesManualRepresentante = [
     id: "diario_hogar",
     titulo: "Diario de Hogar",
     icono: "diario_hogar",
-    descripcion: "Registro diario de observaciones clínicas",
+    descripcion: "Registro diario de observaciones clÃ­nicas",
     contenido: [
       {
         tipo: "texto",
         valor:
-          "Formulario para registrar observaciones clínicas diarias del niño en casa. Esta información es enviada al especialista para dar seguimiento.",
+          "Formulario para registrar observaciones clÃ­nicas diarias del niÃ±o en casa. Esta informaciÃ³n es enviada al especialista para dar seguimiento.",
       },
 
       { tipo: "subtitulo", valor: "Campos del Formulario" },
@@ -276,24 +274,24 @@ export const seccionesManualRepresentante = [
         encabezados: ["Campo", "Tipo", "Opciones"],
         filas: [
           ["Fecha del Reporte", "Fecha", "Por defecto: hoy"],
-          ["Horas de Sueño", "Número", "0-24 horas"],
-          ["Calidad de Sueño", "Select", "Excelente, Interrumpido, Insomnio"],
+          ["Horas de SueÃ±o", "NÃºmero", "0-24 horas"],
+          ["Calidad de SueÃ±o", "Select", "Excelente, Interrumpido, Insomnio"],
           ["Apetito", "Select", "Bueno, Regular, Malo / Selectivo"],
           [
-            "Estado de Ánimo",
+            "Estado de Ãnimo",
             "Select",
             "Muy Calmo, Estable, Irritable, Crisis / Sobrecarga",
           ],
-          ["Cant. de Crisis Hoy", "Número", "Entero (mínimo 0)"],
-          ["BPM Estimado", "Número", "Opcional"],
+          ["Cant. de Crisis Hoy", "NÃºmero", "Entero (mÃ­nimo 0)"],
+          ["BPM Estimado", "NÃºmero", "Opcional"],
           ["Desencadenantes", "Texto", "Ej: luces fuertes, cambio de rutina"],
-          ["Sensibilidades Sensoriales", "Texto", "Descripción libre"],
+          ["Sensibilidades Sensoriales", "Texto", "DescripciÃ³n libre"],
           [
             "Estado Digestivo",
             "Select",
-            "Normal, Estreñimiento, Diarrea, Malestar abdominal",
+            "Normal, EstreÃ±imiento, Diarrea, Malestar abdominal",
           ],
-          ["Medicación Administrada", "Checkbox", "Sí / No"],
+          ["MedicaciÃ³n Administrada", "Checkbox", "SÃ­ / No"],
           ["Observaciones", "Texto largo", "Notas adicionales"],
         ],
       },
@@ -302,7 +300,7 @@ export const seccionesManualRepresentante = [
       {
         tipo: "texto",
         valor:
-          "Tabla con el historial de reportes enviados, mostrando día, BPM y resumen clínico. Los BPM altos (>100) se resaltan en rojo.",
+          "Tabla con el historial de reportes enviados, mostrando dÃ­a, BPM y resumen clÃ­nico. Los BPM altos (>100) se resaltan en rojo.",
       },
 
       {
@@ -310,14 +308,14 @@ export const seccionesManualRepresentante = [
         items: [
           "Complete todos los campos del formulario.",
           'Presione "Enviar Reporte al Especialista".',
-          "El reporte quedará registrado en el historial y será visible para su especialista.",
+          "El reporte quedarÃ¡ registrado en el historial y serÃ¡ visible para su especialista.",
         ],
       },
       {
         tipo: "nota",
         variante: "info",
         valor:
-          "Se recomienda llenar el Diario de Hogar al final del día para tener un registro completo de la jornada.",
+          "Se recomienda llenar el Diario de Hogar al final del dÃ­a para tener un registro completo de la jornada.",
       },
     ],
   },
@@ -325,26 +323,26 @@ export const seccionesManualRepresentante = [
     id: "herramientas",
     titulo: "Herramientas de Apoyo",
     icono: "herramientas",
-    descripcion: "AAC y sistema de economía de fichas",
+    descripcion: "AAC y sistema de economÃ­a de fichas",
     contenido: [
-      { tipo: "subtitulo", valor: "Tablero de Comunicación AAC" },
+      { tipo: "subtitulo", valor: "Tablero de ComunicaciÃ³n AAC" },
       {
         tipo: "texto",
         valor:
-          "Sistema de Comunicación Aumentativa y Alternativa con pictogramas para facilitar la expresión del niño.",
+          "Sistema de ComunicaciÃ³n Aumentativa y Alternativa con pictogramas para facilitar la expresiÃ³n del niÃ±o.",
       },
       {
         tipo: "lista",
         items: [
-          "Pictogramas por categorías: Necesidades, Emociones, Acciones.",
-          "Constructor de frases: toque pictogramas para armar una frase (máximo 5).",
-          'Botón "Hablar": Reproduce la frase con sintetizador de voz en español.',
-          "Frases frecuentes: las últimas 4 frases se guardan automáticamente.",
-          "Pictogramas personalizados: cree sus propios pictogramas con nombre, emoji y categoría.",
+          "Pictogramas por categorÃ­as: Necesidades, Emociones, Acciones.",
+          "Constructor de frases: toque pictogramas para armar una frase (mÃ¡ximo 5).",
+          'BotÃ³n "Hablar": Reproduce la frase con sintetizador de voz en espaÃ±ol.',
+          "Frases frecuentes: las Ãºltimas 4 frases se guardan automÃ¡ticamente.",
+          "Pictogramas personalizados: cree sus propios pictogramas con nombre, emoji y categorÃ­a.",
         ],
       },
 
-      { tipo: "subtitulo", valor: "Economía de Fichas" },
+      { tipo: "subtitulo", valor: "EconomÃ­a de Fichas" },
       {
         tipo: "texto",
         valor:
@@ -355,8 +353,8 @@ export const seccionesManualRepresentante = [
         items: [
           "Saldo de estrellas: contador visible en la parte superior.",
           "Tareas conductuales: checklist con valor en estrellas. Al completar una tarea, se suman estrellas.",
-          "Catálogo de recompensas: canjee estrellas por premios predefinidos.",
-          "Historial de canjes: registro cronológico de todas las recompensas canjeadas.",
+          "CatÃ¡logo de recompensas: canjee estrellas por premios predefinidos.",
+          "Historial de canjes: registro cronolÃ³gico de todas las recompensas canjeadas.",
           "Tareas y recompensas personalizadas: cree las suyas propias.",
         ],
       },
@@ -364,28 +362,28 @@ export const seccionesManualRepresentante = [
         tipo: "nota",
         variante: "info",
         valor:
-          "Todos los datos de herramientas se guardan automáticamente en su navegador (localStorage). No se pierden al cerrar sesión.",
+          "Todos los datos de herramientas se guardan automÃ¡ticamente en su navegador (localStorage). No se pierden al cerrar sesiÃ³n.",
       },
     ],
   },
   {
     id: "expediente",
-    titulo: "Expediente Clínico",
+    titulo: "Expediente ClÃ­nico",
     icono: "expediente",
-    descripcion: "Perfil del niño, alertas e indicaciones",
+    descripcion: "Perfil del niÃ±o, alertas e indicaciones",
     contenido: [
       {
         tipo: "texto",
-        valor: "El Expediente Clínico agrupa tres secciones en pestañas:",
+        valor: "El Expediente ClÃ­nico agrupa tres secciones en pestaÃ±as:",
       },
 
-      { tipo: "subtitulo", valor: "Información del Perfil" },
+      { tipo: "subtitulo", valor: "InformaciÃ³n del Perfil" },
       { tipo: "texto", valor: "Datos del paciente registrados en el sistema:" },
       {
         tipo: "lista",
         items: [
-          "Nombre completo del niño.",
-          "Código de sistema (ID).",
+          "Nombre completo del niÃ±o.",
+          "CÃ³digo de sistema (ID).",
           "Fecha de nacimiento y edad.",
           "Nivel de desarrollo TEA (Nivel 1 - Leve, Nivel 2 - Moderado, Nivel 3 - Severo).",
           "Perfil sensorial principal.",
@@ -396,28 +394,29 @@ export const seccionesManualRepresentante = [
         tipo: "nota",
         variante: "warning",
         valor:
-          "La información del perfil es de solo lectura. Si necesita actualizar algún dato, solicítelo al especialista a cargo.",
+          "La informaciÃ³n del perfil es de solo lectura. Si necesita actualizar algÃºn dato, solicÃ­telo al especialista a cargo.",
       },
 
       { tipo: "subtitulo", valor: "Registro de Alertas" },
       {
         tipo: "texto",
-        valor: "Línea de tiempo de todas las alertas registradas del paciente.",
+        valor:
+          "LÃ­nea de tiempo de todas las alertas registradas del paciente.",
       },
       {
         tipo: "lista",
         items: [
           "Filtros por fecha y estado (Pendiente, Efectiva, No Efectiva).",
-          "Cada alerta muestra: hora, tipo (Crisis/Precrisis), detalles fisiológicos (BPM, movimiento, estrés).",
-          'Puede evaluar la efectividad de la intervención: "Sí, fue efectiva" o "No fue efectiva".',
+          "Cada alerta muestra: hora, tipo (Crisis/Precrisis), detalles fisiolÃ³gicos (BPM, movimiento, estrÃ©s).",
+          'Puede evaluar la efectividad de la intervenciÃ³n: "SÃ­, fue efectiva" o "No fue efectiva".',
         ],
       },
 
-      { tipo: "subtitulo", valor: "Indicaciones Clínicas" },
+      { tipo: "subtitulo", valor: "Indicaciones ClÃ­nicas" },
       {
         tipo: "texto",
         valor:
-          "Listado de indicaciones y recomendaciones dadas por el especialista para el cuidado del niño en casa.",
+          "Listado de indicaciones y recomendaciones dadas por el especialista para el cuidado del niÃ±o en casa.",
       },
     ],
   },
@@ -425,7 +424,7 @@ export const seccionesManualRepresentante = [
     id: "crisis",
     titulo: "Manejo de Crisis Sensoriales",
     icono: "crisis",
-    descripcion: "Protocolos de intervención durante crisis",
+    descripcion: "Protocolos de intervenciÃ³n durante crisis",
     contenido: [
       {
         tipo: "texto",
@@ -435,43 +434,43 @@ export const seccionesManualRepresentante = [
 
       {
         tipo: "subtitulo",
-        valor: "Protocolo de Respiración (Respiración Tortuga)",
+        valor: "Protocolo de RespiraciÃ³n (RespiraciÃ³n Tortuga)",
       },
       {
         tipo: "texto",
         valor:
-          "Técnica de anclaje para regular el sistema nervioso durante una crisis:",
+          "TÃ©cnica de anclaje para regular el sistema nervioso durante una crisis:",
       },
       {
         tipo: "lista",
         items: [
-          "Ciclo de 3 fases: Inhala (4s) → Retén (4s) → Exhala (4s).",
-          "Círculo animado que se expande y contrae guiando la respiración.",
-          "Números regresivos en el centro para mantener el ritmo.",
-          "Botón de pausa/reanudar para adaptarse al ritmo del niño.",
+          "Ciclo de 3 fases: Inhala (4s) â†’ RetÃ©n (4s) â†’ Exhala (4s).",
+          "CÃ­rculo animado que se expande y contrae guiando la respiraciÃ³n.",
+          "NÃºmeros regresivos en el centro para mantener el ritmo.",
+          "BotÃ³n de pausa/reanudar para adaptarse al ritmo del niÃ±o.",
         ],
       },
 
-      { tipo: "subtitulo", valor: "Tablero AAC (Comunicación Aumentativa)" },
+      { tipo: "subtitulo", valor: "Tablero AAC (ComunicaciÃ³n Aumentativa)" },
       {
         tipo: "texto",
         valor:
-          "Durante una crisis, la comunicación verbal puede ser difícil. Use el tablero AAC con pictogramas básicos para entender las necesidades del niño.",
+          "Durante una crisis, la comunicaciÃ³n verbal puede ser difÃ­cil. Use el tablero AAC con pictogramas bÃ¡sicos para entender las necesidades del niÃ±o.",
       },
 
       { tipo: "subtitulo", valor: "Notificaciones de Alerta" },
       {
         tipo: "texto",
         valor:
-          "Cuando el sistema detecta una posible crisis (BPM elevado + movimientos estereotípicos):",
+          "Cuando el sistema detecta una posible crisis (BPM elevado + movimientos estereotÃ­picos):",
       },
       {
         tipo: "lista",
         items: [
           "La campana de notificaciones vibra y suena.",
           "Aparece un toast emergente con los detalles de la alerta.",
-          "Puede acceder al seguimiento en vivo para monitorear la evolución.",
-          "Después de la crisis, evalúe si la intervención fue efectiva desde el Expediente Clínico.",
+          "Puede acceder al seguimiento en vivo para monitorear la evoluciÃ³n.",
+          "DespuÃ©s de la crisis, evalÃºe si la intervenciÃ³n fue efectiva desde el Expediente ClÃ­nico.",
         ],
       },
     ],
@@ -490,65 +489,65 @@ export const seccionesManualRepresentante = [
       {
         tipo: "lista",
         items: [
-          "Campana en la barra superior con contador de notificaciones no leídas.",
-          "Las alertas de crisis aparecen automáticamente con sonido y vibración.",
+          "Campana en la barra superior con contador de notificaciones no leÃ­das.",
+          "Las alertas de crisis aparecen automÃ¡ticamente con sonido y vibraciÃ³n.",
           "Puede ver el detalle de cada alerta en el dropdown de notificaciones.",
-          'Botón "Limpiar" para eliminar todas las notificaciones.',
+          'BotÃ³n "Limpiar" para eliminar todas las notificaciones.',
         ],
       },
       { tipo: "subtitulo", valor: "Modo Oscuro" },
       {
         tipo: "texto",
         valor:
-          "Haga clic en el ícono de Luna/Sol en la barra superior para alternar entre modo claro y oscuro.",
+          "Haga clic en el Ã­cono de Luna/Sol en la barra superior para alternar entre modo claro y oscuro.",
       },
       { tipo: "subtitulo", valor: "Modo Offline" },
       {
         tipo: "texto",
         valor:
-          "SIAT soporta modo offline. Cuando pierde conexión a internet, los datos se guardan localmente y se sincronizan automáticamente cuando la conexión se restablece.",
+          "SIAT soporta modo offline. Cuando pierde conexiÃ³n a internet, los datos se guardan localmente y se sincronizan automÃ¡ticamente cuando la conexiÃ³n se restablece.",
       },
     ],
   },
   {
     id: "solucion",
-    titulo: "Solución de Problemas",
+    titulo: "SoluciÃ³n de Problemas",
     icono: "solucion",
     descripcion: "Problemas comunes y soluciones",
     contenido: [
       {
         tipo: "tabla",
-        encabezados: ["Problema", "Causa", "Solución"],
+        encabezados: ["Problema", "Causa", "SoluciÃ³n"],
         filas: [
           [
             "No veo los datos de mi hijo",
-            "El niño no está asignado a su cuenta",
-            "Contacte al administrador de la institución",
+            "El niÃ±o no estÃ¡ asignado a su cuenta",
+            "Contacte al administrador de la instituciÃ³n",
           ],
           [
             "La pulsera no muestra datos",
-            "El wearable está desconectado o sin batería",
-            "Verifique que la pulsera esté encendida y cargada",
+            "El wearable estÃ¡ desconectado o sin baterÃ­a",
+            "Verifique que la pulsera estÃ© encendida y cargada",
           ],
           [
             "No recibo notificaciones",
             "WebSocket desconectado",
-            "Verifique su conexión a internet y recargue la página",
+            "Verifique su conexiÃ³n a internet y recargue la pÃ¡gina",
           ],
           [
             "Error al enviar reporte",
-            "Conexión inestable",
-            "Intente de nuevo más tarde. Los datos se guardan localmente",
+            "ConexiÃ³n inestable",
+            "Intente de nuevo mÃ¡s tarde. Los datos se guardan localmente",
           ],
           [
-            "No puedo iniciar sesión",
+            "No puedo iniciar sesiÃ³n",
             "Credenciales incorrectas o cuenta inactiva",
-            'Use "¿Olvidaste tu contraseña?" o contacte al administrador',
+            'Use "Â¿Olvidaste tu contraseÃ±a?" o contacte al administrador',
           ],
           [
-            "El enlace de invitación no funciona",
+            "El enlace de invitaciÃ³n no funciona",
             "El enlace ha expirado",
-            "Solicite un nuevo enlace de invitación al administrador",
+            "Solicite un nuevo enlace de invitaciÃ³n al administrador",
           ],
         ],
       },
@@ -558,26 +557,29 @@ export const seccionesManualRepresentante = [
     id: "glosario",
     titulo: "Glosario",
     icono: "glosario",
-    descripcion: "Términos técnicos y siglas",
+    descripcion: "TÃ©rminos tÃ©cnicos y siglas",
     contenido: [
       {
         tipo: "tabla",
-        encabezados: ["Término", "Definición"],
+        encabezados: ["TÃ©rmino", "DefiniciÃ³n"],
         filas: [
           ["TEA", "Trastorno del Espectro Autista"],
           [
             "AAC",
-            "Comunicación Aumentativa y Alternativa — métodos de comunicación no verbal",
+            "ComunicaciÃ³n Aumentativa y Alternativa â€” mÃ©todos de comunicaciÃ³n no verbal",
           ],
           [
             "BPM",
-            "Latidos por minuto (Beats Per Minute) — frecuencia cardíaca",
+            "Latidos por minuto (Beats Per Minute) â€” frecuencia cardÃ­aca",
           ],
-          ["IoT", "Internet de las Cosas — dispositivos conectados a internet"],
-          ["PEI", "Plan de Educación Individualizada"],
+          [
+            "IoT",
+            "Internet de las Cosas â€” dispositivos conectados a internet",
+          ],
+          ["PEI", "Plan de EducaciÃ³n Individualizada"],
           [
             "Sobrecarga Sensorial",
-            "Estado de crisis por exceso de estímulos sensoriales",
+            "Estado de crisis por exceso de estÃ­mulos sensoriales",
           ],
           [
             "Estereotipia",
@@ -585,14 +587,14 @@ export const seccionesManualRepresentante = [
           ],
           [
             "WebSocket",
-            "Canal de comunicación en tiempo real entre la pulsera y el sistema",
+            "Canal de comunicaciÃ³n en tiempo real entre la pulsera y el sistema",
           ],
           [
             "Pictograma",
-            "Representación gráfica utilizada en comunicación aumentativa",
+            "RepresentaciÃ³n grÃ¡fica utilizada en comunicaciÃ³n aumentativa",
           ],
           [
-            "Economía de Fichas",
+            "EconomÃ­a de Fichas",
             "Sistema de recompensas para reforzar conductas positivas",
           ],
         ],
@@ -602,268 +604,9 @@ export const seccionesManualRepresentante = [
 ];
 
 export async function exportManualPDFRepresentante() {
-  const doc = new jsPDF("p", "mm", "a4");
-  const pageW = 210;
-  const pageH = 297;
-  const margin = 12;
-  const contentW = pageW - margin * 2;
-  const maxY = 275;
-  const headerH = 14;
-  const lineH = 4;
-
-  let logoData = null;
-  try {
-    const img = new Image();
-    img.src = logoPath;
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    logoData = canvas.toDataURL("image/png");
-  } catch (e) {
-    console.warn("Logo no disponible para PDF:", e);
-  }
-
-  const secciones = seccionesManualRepresentante;
-
-  const addHeader = (doc, pageNum, totalPages, sectionTitle) => {
-    if (logoData) {
-      doc.addImage(logoData, "PNG", pageW - margin - 22, 4, 18, 18);
-    }
-    doc.setFontSize(6);
-    doc.setTextColor(160, 160, 160);
-    doc.text(
-      `SIAT — Manual del Representante v1.0 | ${sectionTitle}`,
-      margin,
-      10,
-    );
-    doc.text(`${pageNum} / ${totalPages}`, pageW - margin, 10, {
-      align: "right",
-    });
-    doc.setDrawColor(220, 220, 220);
-    doc.line(margin, 12, pageW - margin, 12);
-  };
-
-  const addFooter = (doc, y) => {
-    doc.setDrawColor(220, 220, 220);
-    doc.line(margin, y, pageW - margin, y);
-  };
-
-  const checkPage = (needed) => {
-    if (yy + needed > maxY) {
-      addFooter(doc, yy + 2);
-      doc.addPage();
-      pageNum++;
-      addHeader(doc, pageNum, totalPages, sectionTitle);
-      yy = headerH + 4;
-    }
-  };
-
-  // ---- PORTADA ----
-  doc.setFillColor(1, 28, 63);
-  doc.rect(0, 0, pageW, pageH, "F");
-  doc.setTextColor(255, 255, 255);
-  if (logoData) {
-    doc.addImage(logoData, "PNG", pageW / 2 - 20, 50, 40, 40);
-  }
-  doc.setFontSize(26);
-  doc.text("Manual de Usuario", pageW / 2, 110, { align: "center" });
-  doc.setFontSize(16);
-  doc.text("Módulo del Representante", pageW / 2, 120, { align: "center" });
-  doc.setFontSize(11);
-  doc.text(
-    "SIAT — Sistema Integrado de Asistencia Terapéutica",
-    pageW / 2,
-    135,
-    { align: "center" },
+  await renderManualPDF(
+    seccionesManualRepresentante,
+    "Representante",
+    "manual_usuario_representante_siat.pdf",
   );
-  doc.setFontSize(9);
-  doc.text(
-    `Versión 1.0 — ${new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })}`,
-    pageW / 2,
-    145,
-    { align: "center" },
-  );
-  doc.text("Funauta — Fundación de Apoyo al Autista", pageW / 2, 160, {
-    align: "center",
-  });
-  doc.text("Guía para padres, madres y tutores", pageW / 2, 175, {
-    align: "center",
-  });
-
-  // ---- ÍNDICE ----
-  doc.addPage();
-  doc.setTextColor(1, 28, 63);
-  doc.setFontSize(14);
-  doc.text("Índice de Contenidos", margin, 20);
-  doc.setDrawColor(1, 28, 63);
-  doc.setLineWidth(0.3);
-  doc.line(margin, 23, pageW - margin, 23);
-  let y = 30;
-  doc.setTextColor(60, 60, 60);
-  doc.setFontSize(9);
-  secciones.forEach((sec, i) => {
-    if (y > 265) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.text(
-      `${String(i + 1).padStart(2, "0")}   ${sec.titulo}`,
-      margin + 2,
-      y,
-    );
-    doc.setFontSize(7);
-    doc.setTextColor(140, 140, 140);
-    doc.text(sec.descripcion, margin + 14, y + 3.5);
-    doc.setTextColor(60, 60, 60);
-    doc.setFontSize(9);
-    y += 8;
-  });
-
-  // ---- CONTENIDO ----
-  const totalPages = secciones.length + 1;
-  let pageNum = 2;
-  let sectionTitle = secciones[0].titulo;
-  doc.addPage();
-  pageNum++;
-  addHeader(doc, pageNum, totalPages, sectionTitle);
-  let yy = headerH + 4;
-
-  secciones.forEach((sec, idx) => {
-    const estTitleLines = 6;
-    checkPage(estTitleLines + 3);
-
-    doc.setFillColor(1, 28, 63);
-    doc.rect(margin, yy - 1.5, contentW, 5.5, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.text(sec.titulo, margin + 2, yy + 2.5);
-    doc.setTextColor(60, 60, 60);
-    sectionTitle = sec.titulo;
-    yy += 7.5;
-
-    sec.contenido.forEach((bloque) => {
-      checkPage(0);
-
-      switch (bloque.tipo) {
-        case "texto":
-          doc.setFontSize(8);
-          const txtLines = doc.splitTextToSize(bloque.valor, contentW);
-          checkPage(txtLines.length * lineH + 2);
-          doc.text(txtLines, margin, yy);
-          yy += txtLines.length * lineH + 1.5;
-          break;
-
-        case "subtitulo":
-          checkPage(6);
-          doc.setFontSize(9);
-          doc.setTextColor(1, 60, 100);
-          doc.text(bloque.valor, margin, yy);
-          yy += 5;
-          doc.setTextColor(60, 60, 60);
-          break;
-
-        case "lista":
-          doc.setFontSize(8);
-          bloque.items.forEach((item) => {
-            const iLines = doc.splitTextToSize(`• ${item}`, contentW - 4);
-            checkPage(iLines.length * lineH + 1);
-            doc.text(iLines, margin + 4, yy);
-            yy += iLines.length * lineH + 0.5;
-          });
-          yy += 1.5;
-          break;
-
-        case "pasos":
-          doc.setFontSize(8);
-          bloque.items.forEach((item, i) => {
-            const sLines = doc.splitTextToSize(
-              `${i + 1}. ${item}`,
-              contentW - 4,
-            );
-            checkPage(sLines.length * lineH + 1);
-            doc.text(sLines, margin + 4, yy);
-            yy += sLines.length * lineH + 0.5;
-          });
-          yy += 1.5;
-          break;
-
-        case "tabla":
-          if (bloque.filas.length > 0) {
-            try {
-              const colCount = bloque.encabezados.length;
-              const colW = contentW / colCount;
-              autoTable(doc, {
-                head: [bloque.encabezados],
-                body: bloque.filas,
-                startY: Math.min(yy, maxY - 15),
-                margin: { left: margin, right: margin },
-                styles: { fontSize: 7, cellPadding: 1.5 },
-                headStyles: {
-                  fillColor: [1, 60, 100],
-                  textColor: [255, 255, 255],
-                  fontSize: 7,
-                  fontStyle: "bold",
-                },
-                columnStyles: Object.fromEntries(
-                  bloque.encabezados.map((_, i) => [i, { cellWidth: colW }]),
-                ),
-                tableLineColor: [220, 220, 220],
-                tableLineWidth: 0.1,
-                didDrawPage: () => {
-                  pageNum++;
-                  addHeader(doc, pageNum, totalPages, sectionTitle);
-                  yy = headerH + 4;
-                },
-              });
-              yy = doc.lastAutoTable.finalY + 4;
-            } catch {
-              yy += 3;
-            }
-          }
-          break;
-
-        case "nota": {
-          doc.setFontSize(7.5);
-          doc.setTextColor(90, 90, 90);
-          const nIcon =
-            bloque.variante === "warning"
-              ? "⚠ "
-              : bloque.variante === "success"
-                ? "✓ "
-                : "ℹ ";
-          const nLines = doc.splitTextToSize(
-            nIcon + bloque.valor,
-            contentW - 8,
-          );
-          const noteH = nLines.length * lineH + 4;
-          checkPage(noteH + 3);
-          const colorMap = {
-            info: [230, 240, 255],
-            warning: [255, 245, 220],
-            success: [225, 245, 225],
-          };
-          const bg = colorMap[bloque.variante] || [230, 240, 255];
-          doc.setFillColor(bg[0], bg[1], bg[2]);
-          doc.roundedRect(margin, yy - 1, contentW, noteH, 1, 1, "F");
-          doc.setDrawColor(180, 180, 180);
-          doc.roundedRect(margin, yy - 1, contentW, noteH, 1, 1, "S");
-          doc.text(nLines, margin + 4, yy + 2);
-          yy += noteH + 3;
-          doc.setTextColor(60, 60, 60);
-          break;
-        }
-      }
-    });
-
-    yy += 2;
-  });
-
-  addFooter(doc, yy + 2);
-  doc.save("manual_usuario_representante_siat.pdf");
 }

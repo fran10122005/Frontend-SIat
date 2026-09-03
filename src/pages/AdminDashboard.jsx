@@ -800,8 +800,9 @@ function AdminDashboard({ onNavigate }) {
                 </PageTitle>
                 <p
                   title={
-                    activeTab === "dashboard" &&
-                    "Resumen de la operación clínica."
+                    activeTab === "dashboard"
+                      ? "Resumen de la operación clínica."
+                      : undefined
                   }
                   className="text-subtitle-muted mt-1 line-clamp-1"
                 >

@@ -8,9 +8,12 @@ import {
   FileText,
   TrendingUp,
   Download,
-  HeartPulse,
-  Settings,
   Bell,
+  Waves,
+  Sun,
+  Target,
+  Plus,
+  MoreHorizontal,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
@@ -18,17 +21,15 @@ import Footer from "../components/layout/Footer";
 import { exportDashboardReport } from "../utils/pdfExporter";
 import Button from "../components/ui/Button";
 import PageTitle from "../components/ui/PageTitle";
+import Card from "../components/ui/Card";
 
 // Subcomponents
 import SpecialistGlobalView from "../components/specialist/SpecialistGlobalView";
-import PatientPeiGoals from "../components/specialist/PatientPeiGoals";
-import PatientSensoryChart from "../components/specialist/PatientSensoryChart";
-import PatientBehaviorChart from "../components/specialist/PatientBehaviorChart";
+import NewPeiGoalModal from "../components/specialist/NewPeiGoalModal";
 import IncidentModal from "../components/specialist/IncidentModal";
 import IndicacionModal from "../components/specialist/IndicacionModal";
 import SoapNoteModal from "../components/specialist/SoapNoteModal";
 import AlertRulesConfig from "../components/specialist/AlertRulesConfig";
-import UserPreferencesModal from "../components/shared/UserPreferencesModal";
 import LoadingState from "../components/dashboard/LoadingState";
 
 // Hooks
@@ -44,7 +45,6 @@ export default function SpecialistDashboard() {
     crearIndicacion,
     clinicalAlerts = [],
     globalPeiGoals = [],
-    incrementPeiTrial,
     crearPeiGoal,
     crisisAlerts = [],
     isDark,
@@ -52,6 +52,9 @@ export default function SpecialistDashboard() {
     specialistConfig,
     updateSpecialistConfig,
     isQuietHours,
+    parentNotes,
+    homeHistoricalData,
+    reports,
   } = useGlobalContext();
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +64,9 @@ export default function SpecialistDashboard() {
   const [indicacionText, setIndicacionText] = useState({});
   const [showSoapModal, setShowSoapModal] = useState(false);
   const [showAlertRules, setShowAlertRules] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showNewGoal, setShowNewGoal] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const moreActionsRef = useRef(null);
 
   // Form States
   const [incidentData, setIncidentData] = useState({
@@ -135,6 +140,23 @@ export default function SpecialistDashboard() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
+
+  // Cierra el menú "Más acciones" al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        moreActionsRef.current &&
+        !moreActionsRef.current.contains(e.target)
+      ) {
+        setShowMoreActions(false);
+      }
+    };
+    if (showMoreActions) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showMoreActions]);
 
   // FASE 4.4: Filter alerts by config
   const filteredAlerts = useMemo(() => {
@@ -245,38 +267,6 @@ export default function SpecialistDashboard() {
     filteredAlerts,
   ]);
 
-  // Historial Conductual (BarChart) - Optimizado para evitar recálculos en re-renders
-  const behaviorHistory = useMemo(() => {
-    if (!activeChild) return [];
-    const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-    const histMap = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      histMap[d.toISOString().substring(0, 10)] = {
-        dia: diasSemana[d.getDay()],
-        Berrinche: 0,
-        Estereotipia: 0,
-        Agresión: 0,
-      };
-    }
-
-    alertsSource.forEach((alert) => {
-      if (!alert.fec_hora) return;
-      const dateStr = new Date(alert.fec_hora).toISOString().substring(0, 10);
-      if (histMap[dateStr] && histMap[dateStr][alert.est_dete] !== undefined) {
-        histMap[dateStr][alert.est_dete] += 1;
-      }
-    });
-
-    const result = Object.values(histMap);
-    const totalCount = result.reduce(
-      (sum, d) => sum + d.Berrinche + d.Estereotipia + d.Agresión,
-      0,
-    );
-    return totalCount === 0 ? [] : result;
-  }, [alertsSource, activeChild]);
-
   // Análisis Sensorial (PieChart) - Optimizado
   const sensoryData = useMemo(() => {
     if (!activeChild) return [];
@@ -346,6 +336,90 @@ export default function SpecialistDashboard() {
         }))
       : [{ name: "Sin eventos", value: 1, color: "#e2e8f0" }];
   }, [alertsSource]);
+
+  // ==== DATOS DEL PANEL DEL PACIENTE (resumen rápido, estático) ====
+
+  // Últimas 3 alertas recientes formateadas (relativo)
+  const recentAlerts = useMemo(() => {
+    return [...alertsSource]
+      .filter((a) => a.fec_hora)
+      .sort((a, b) => new Date(b.fec_hora) - new Date(a.fec_hora))
+      .slice(0, 3);
+  }, [alertsSource]);
+
+  // Detonantes sensoriales derivados de los eventos recientes
+  const sensoryTriggers = useMemo(() => {
+    if (!activeChild) return [];
+    const count = {};
+    alertsSource.forEach((a) => {
+      const key = a.est_dete || a.est_deto;
+      if (key) count[key] = (count[key] || 0) + 1;
+    });
+    if (Object.keys(count).length > 0) {
+      return Object.keys(count)
+        .sort((a, b) => count[b] - count[a])
+        .slice(0, 4);
+    }
+    return ["Ruidos fuertes", "Luces", "Transición"];
+  }, [alertsSource, activeChild]);
+
+  // Resumen del día (datos del representante)
+  const dailySummary = useMemo(() => {
+    if (!parentNotes || parentNotes.length === 0) return null;
+    const latest = parentNotes[0];
+    const matchSueño = latest.text?.match(/Sueño:\s*([^.]+?)\s*\]/i);
+    const matchApetito = latest.text?.match(/Apetito:\s*([^.]+?)\s*\]/i);
+    const sueno = matchSueño?.[1]?.trim() || "—";
+    const apetito = matchApetito?.[1]?.trim() || "—";
+
+    // Ánimo derivado del nivel de calma registrado hoy (homeHistoricalData)
+    const hoy = parentNotes[0]?.dia || "Hoy";
+    const hoyData = homeHistoricalData.find((h) => h.dia === hoy);
+    const calma = hoyData?.calma;
+    let animo = "—";
+    if (calma != null) {
+      if (calma >= 80) animo = "Estable";
+      else if (calma >= 50) animo = "Regulado";
+      else if (calma >= 30) animo = "Irritable";
+      else animo = "Sobrecarga";
+    }
+
+    return { sueno, apetito, animo, texto: latest.text || "" };
+  }, [parentNotes, homeHistoricalData]);
+
+  // Notas / indicaciones recientes (de la base de datos de reportes)
+  const recentNotes = useMemo(() => {
+    return [...reports]
+      .sort((a, b) => new Date(b.fec_repo || 0) - new Date(a.fec_repo || 0))
+      .slice(0, 2)
+      .map((r) => ({
+        title: r.com_tend || "Nota clínica",
+        date: r.fec_repo
+          ? new Date(r.fec_repo).toLocaleDateString("es-ES")
+          : "",
+      }));
+  }, [reports]);
+
+  // Meta PEI actual (primera no completada) para el mini-progreso
+  const currentPeiGoal = useMemo(() => {
+    const activa =
+      peiGoals.find((g) => g.progress < 100) || peiGoals[0] || null;
+    return activa;
+  }, [peiGoals]);
+
+  // Formatea un timestamp a lenguaje relativo ("Hace 2 días")
+  const timeAgo = (fec) => {
+    if (!fec) return "";
+    const diff = Date.now() - new Date(fec).getTime();
+    const mins = Math.round(diff / 60000);
+    if (mins < 1) return "Ahora";
+    if (mins < 60) return `Hace ${mins} min`;
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return `Hace ${hours} h`;
+    const days = Math.round(hours / 24);
+    if (days === 1) return "Hace 1 día";
+    return `Hace ${days} días`;
+  };
 
   // ==== HANDLERS ====
   const handleIncidentSubmit = async (e) => {
@@ -463,14 +537,6 @@ export default function SpecialistDashboard() {
     }
   };
 
-  const handleIncrementPeiTrial = async (id) => {
-    try {
-      await incrementPeiTrial(id, selectedChildId);
-    } catch (err) {
-      showToast("❌ Error al actualizar progreso de la meta.");
-    }
-  };
-
   return (
     <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
       <Sidebar />
@@ -481,7 +547,7 @@ export default function SpecialistDashboard() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 pb-12">
             {/* Header Title Area - Estilo AdminDashboard */}
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex flex-col gap-2 min-w-0">
                 <PageTitle icon={Users}>
                   {activeChild
@@ -496,66 +562,147 @@ export default function SpecialistDashboard() {
               </div>
 
               {activeChild ? (
-                <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-row lg:flex-wrap lg:justify-end lg:gap-3">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    leftIcon={<AlertCircle className="w-3.5 h-3.5" />}
-                    onClick={() => setShowIncidentModal(true)}
-                  >
-                    Registrar Incidente
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={<FilePlus className="w-3.5 h-3.5" />}
-                    onClick={() => setShowIndicacionModal(true)}
-                  >
-                    Anotar Indicación
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    leftIcon={<Download className="w-3.5 h-3.5" />}
-                    onClick={handleExportDashboard}
-                    disabled={exporting}
-                  >
-                    {exporting ? "..." : "Reporte PDF"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    leftIcon={<FileText className="w-3.5 h-3.5" />}
-                    onClick={() => setShowSoapModal(true)}
-                  >
-                    Nota SOAP
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    leftIcon={<Bell className="w-3.5 h-3.5" />}
-                    onClick={() => setShowAlertRules(true)}
-                  >
-                    Alertas
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    leftIcon={<Settings className="w-3.5 h-3.5" />}
-                    onClick={() => setShowSettings(true)}
-                  >
-                    Config
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    leftIcon={<TrendingUp className="w-4 h-4" />}
-                    onClick={() => navigate("historial")}
-                    className="col-span-2"
-                  >
-                    Historial
-                  </Button>
-                </div>
+                <>
+                  {/* ==== PC: barra de acciones jerárquica en una sola fila ==== */}
+                  <div className="hidden lg:flex lg:flex-row lg:items-center lg:justify-end lg:gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      responsive={false}
+                      className="whitespace-nowrap shadow-sm shadow-brand-500/20"
+                      leftIcon={<AlertCircle className="w-3.5 h-3.5" />}
+                      onClick={() => setShowIncidentModal(true)}
+                    >
+                      Registrar Incidente
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      responsive={false}
+                      className="whitespace-nowrap"
+                      leftIcon={<FilePlus className="w-3.5 h-3.5" />}
+                      onClick={() => setShowIndicacionModal(true)}
+                    >
+                      Anotar Indicación
+                    </Button>
+
+                    {/* Acciones terciarias: discretas, con iconos pequeños */}
+                    <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700/70 hidden lg:block" />
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      responsive={false}
+                      className="whitespace-nowrap"
+                      leftIcon={<Download className="w-4 h-4" />}
+                      onClick={handleExportDashboard}
+                      disabled={exporting}
+                    >
+                      {exporting ? "..." : "Reporte PDF"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      responsive={false}
+                      className="whitespace-nowrap"
+                      leftIcon={<FileText className="w-4 h-4" />}
+                      onClick={() => setShowSoapModal(true)}
+                    >
+                      Nota SOAP
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      responsive={false}
+                      className="whitespace-nowrap"
+                      leftIcon={<TrendingUp className="w-4 h-4" />}
+                      onClick={() => navigate("historial")}
+                    >
+                      Historial
+                    </Button>
+                  </div>
+
+                  {/* ==== MÓVIL: 2 acciones principales + menú "Más" ==== */}
+                  <div className="flex lg:hidden items-center gap-2 flex-wrap">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      responsive={false}
+                      className="whitespace-nowrap flex-1 min-w-0"
+                      leftIcon={<AlertCircle className="w-3.5 h-3.5" />}
+                      onClick={() => setShowIncidentModal(true)}
+                    >
+                      Registrar Incidente
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      responsive={false}
+                      className="whitespace-nowrap flex-1 min-w-0"
+                      leftIcon={<FilePlus className="w-3.5 h-3.5" />}
+                      onClick={() => setShowIndicacionModal(true)}
+                    >
+                      Anotar Indicación
+                    </Button>
+
+                    <div className="relative" ref={moreActionsRef}>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        responsive={false}
+                        className="whitespace-nowrap"
+                        leftIcon={<MoreHorizontal className="w-4 h-4" />}
+                        onClick={() => setShowMoreActions((prev) => !prev)}
+                        aria-expanded={showMoreActions}
+                        aria-haspopup="menu"
+                      >
+                        Más
+                      </Button>
+
+                      {showMoreActions && (
+                        <div
+                          role="menu"
+                          className="absolute right-0 mt-2 w-52 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl z-50 p-1.5 animate-in slide-in-from-top-2 fade-in duration-150"
+                        >
+                          {[
+                            {
+                              icon: <Download className="w-4 h-4" />,
+                              label: exporting ? "Generando..." : "Reporte PDF",
+                              onClick: handleExportDashboard,
+                              disabled: exporting,
+                            },
+                            {
+                              icon: <FileText className="w-4 h-4" />,
+                              label: "Nota SOAP",
+                              onClick: () => setShowSoapModal(true),
+                            },
+                            {
+                              icon: <TrendingUp className="w-4 h-4" />,
+                              label: "Historial",
+                              onClick: () => navigate("historial"),
+                            },
+                          ].map((item, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              role="menuitem"
+                              disabled={item.disabled}
+                              onClick={() => {
+                                setShowMoreActions(false);
+                                item.onClick();
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                            >
+                              <span className="text-slate-400 dark:text-slate-500">
+                                {item.icon}
+                              </span>
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -680,74 +827,183 @@ export default function SpecialistDashboard() {
 
                 {/* ==== VISTA DE PACIENTE SELECCIONADO ==== */}
                 {activeChild && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in slide-in-from-bottom-5 duration-300 delay-150">
-                      <PatientPeiGoals
-                        peiGoals={peiGoals}
-                        incrementPeiTrial={handleIncrementPeiTrial}
-                        onCreateGoal={handleCreatePeiGoal}
-                        activeChild={activeChild}
-                      />
-                      <PatientSensoryChart
-                        sensoryData={sensoryData}
-                        isDark={isDark}
-                      />
-                    </div>
-
-                    <PatientBehaviorChart
-                      behaviorHistory={behaviorHistory}
-                      isDark={isDark}
-                    />
-
-                    {crisisAlerts.length > 0 && (
-                      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800/60">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <HeartPulse className="w-4 h-4 text-red-500" />
-                            Crisis Recientes
+                  <div className="space-y-6 animate-in slide-in-from-bottom-5 duration-300 delay-150">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                      {/* Resumen del Día (Representante) */}
+                      <Card className="sm:col-span-2 xl:col-span-2 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Sun className="w-4 h-4 text-amber-500" />
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Resumen del Día
                           </h3>
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            onClick={() => navigate("historial")}
-                          >
-                            Ver todo
-                          </Button>
                         </div>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {crisisAlerts.slice(0, 3).map((al) => (
-                            <div
-                              key={al.id_alert}
-                              className="p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
+                        {dailySummary ? (
+                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">
+                              Sueño:
+                            </span>{" "}
+                            {dailySummary.sueno}
+                            <br />
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">
+                              Ánimo:
+                            </span>{" "}
+                            {dailySummary.animo}
+                            <br />
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">
+                              Apetito:
+                            </span>{" "}
+                            {dailySummary.apetito}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-400 dark:text-slate-500">
+                            No hay datos registrados del representante hoy.
+                          </p>
+                        )}
+                      </Card>
+
+                      {/* Detonantes Sensoriales */}
+                      <Card className="xl:col-span-2 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Waves className="w-4 h-4 text-indigo-500" />
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Detonantes Sensoriales
+                          </h3>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {sensoryTriggers.map((tag, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/40"
                             >
-                              <div className="flex justify-between items-center text-xs">
-                                <span className="font-medium text-slate-700 dark:text-slate-300">
-                                  {new Date(al.fec_hora).toLocaleTimeString(
-                                    "es-ES",
-                                    { hour: "2-digit", minute: "2-digit" },
-                                  )}
-                                </span>
-                                <span
-                                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                    al.est_dete === "SOBRECARGA"
-                                      ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
-                                      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                  }`}
-                                >
-                                  {al.est_dete === "SOBRECARGA"
-                                    ? "Crisis"
-                                    : "Precrisis"}
-                                </span>
-                              </div>
-                              <div className="flex gap-3 text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                                <span>BPM: {al.bpm_max}</span>
-                                <span>Estrés: {al.stress_index}%</span>
-                              </div>
-                            </div>
+                              {tag}
+                            </span>
                           ))}
                         </div>
-                      </div>
-                    )}
+                      </Card>
+
+                      {/* Alertas Recientes (Históricas) */}
+                      <Card className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Bell className="w-4 h-4 text-amber-500" />
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Alertas Recientes
+                          </h3>
+                        </div>
+                        {recentAlerts.length === 0 ? (
+                          <p className="text-xs text-slate-400 dark:text-slate-500">
+                            Sin alertas recientes.
+                          </p>
+                        ) : (
+                          <ul className="space-y-1.5">
+                            {recentAlerts.map((a, i) => (
+                              <li
+                                key={i}
+                                className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+                              >
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
+                                  {a.est_dete || "Crisis"}
+                                </span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
+                                  {timeAgo(a.fec_hora)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </Card>
+
+                      {/* Notas SOAP / Indicaciones Recientes */}
+                      <Card className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="w-4 h-4 text-sky-500" />
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Notas SOAP
+                          </h3>
+                        </div>
+                        {recentNotes.length === 0 ? (
+                          <p className="text-xs text-slate-400 dark:text-slate-500">
+                            Sin notas registradas aún.
+                          </p>
+                        ) : (
+                          <ul className="space-y-1.5">
+                            {recentNotes.map((n, i) => (
+                              <li
+                                key={i}
+                                className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+                              >
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
+                                  {n.title}
+                                </span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
+                                  {n.date}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </Card>
+
+                      {/* Progreso de Metas PEI */}
+                      <Card className="xl:col-span-2 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Target className="w-4 h-4 text-indigo-500 shrink-0" />
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                              Progreso de Metas PEI
+                            </h3>
+                          </div>
+                          <Button
+                            variant={currentPeiGoal ? "outline" : "primary"}
+                            size="xs"
+                            responsive={false}
+                            className="whitespace-nowrap shrink-0"
+                            leftIcon={<Plus className="w-3.5 h-3.5" />}
+                            onClick={() => setShowNewGoal(true)}
+                          >
+                            {currentPeiGoal
+                              ? "Nueva Meta"
+                              : "Crear primera meta"}
+                          </Button>
+                        </div>
+                        {!currentPeiGoal ? (
+                          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                            No hay metas PEI registradas. Crea la primera meta
+                            de trabajo para empezar a dar seguimiento.
+                          </p>
+                        ) : (
+                          <div className="mt-3">
+                            <div className="flex justify-between items-center mb-1.5">
+                              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate min-w-0">
+                                {currentPeiGoal.goal}
+                              </p>
+                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 ml-3">
+                                {Math.round(currentPeiGoal.progress)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                              <div
+                                className={`h-2.5 rounded-full transition-all duration-700 ${
+                                  currentPeiGoal.progress >= 100
+                                    ? "bg-emerald-500"
+                                    : currentPeiGoal.progress >= 70
+                                      ? "bg-emerald-400"
+                                      : currentPeiGoal.progress >= 40
+                                        ? "bg-amber-400"
+                                        : "bg-rose-400"
+                                }`}
+                                style={{
+                                  width: `${currentPeiGoal.progress}%`,
+                                }}
+                              />
+                            </div>
+                            <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
+                              {currentPeiGoal.trials} /{" "}
+                              {currentPeiGoal.totalTrials} ensayos registrados
+                            </p>
+                          </div>
+                        )}
+                      </Card>
+                    </div>
                   </div>
                 )}
               </>
@@ -784,16 +1040,18 @@ export default function SpecialistDashboard() {
         onSave={handleSoapSave}
       />
 
+      <NewPeiGoalModal
+        showModal={showNewGoal}
+        setShowModal={setShowNewGoal}
+        activeChild={activeChild}
+        onSave={handleCreatePeiGoal}
+      />
+
       <AlertRulesConfig
         showModal={showAlertRules}
         setShowModal={setShowAlertRules}
         config={specialistConfig}
         onSave={updateSpecialistConfig}
-      />
-
-      <UserPreferencesModal
-        open={showSettings}
-        onClose={() => setShowSettings(false)}
       />
     </div>
   );

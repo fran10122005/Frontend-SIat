@@ -54,7 +54,7 @@ const Button = forwardRef(
         ref={ref}
         type={type}
         disabled={props.disabled || isLoading}
-        className={`${baseStyles} ${sizeStyles[size]} ${widthStyles} min-h-[38px] ${variantStyles[variant]} ${className}`}
+        className={`${baseStyles} ${sizeStyles[size]} ${widthStyles} min-h-[32px] ${variantStyles[variant]} ${className}`}
         {...props}
       >
         {isLoading ? (

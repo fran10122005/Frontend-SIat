@@ -4,6 +4,7 @@ import Auth from "./components/auth/Auth";
 import SplashScreen from "./components/shared/SplashScreen";
 import api from "./api/axios";
 import { disconnectSocket } from "./hooks/socket";
+import useReportScheduler from "./hooks/useReportScheduler";
 import StudentRecord from "./pages/StudentRecord";
 import MainDashboard from "./pages/MainDashboard";
 import Routines from "./pages/Routines";
@@ -43,6 +44,11 @@ export default function App() {
 
   const [splashDone, setSplashDone] = useState(false);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
+
+  // Scheduler en el frontend para reportes programados del panel admin.
+  // Lee la configuración guardada (localStorage.reportSchedule) y dispara
+  // el envío (POST /admin/reportes/enviar-ahora) a la hora/frecuencia configurada.
+  useReportScheduler();
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +116,15 @@ export default function App() {
     ];
     if (publicViews.includes(currentView)) return currentView;
 
-    const role = userRole || "GUEST";
+    const rawRole = userRole || "GUEST";
+    const role =
+      rawRole === "ROL_ADM"
+        ? "ADMIN_INSTITUCION"
+        : rawRole === "ROL_ESP"
+          ? "ESPECIALISTA"
+          : rawRole === "ROL_REP"
+            ? "REPRESENTANTE"
+            : rawRole;
 
     // Matriz estricta de permisos por rol
     const rolePermissions = {
@@ -184,7 +198,7 @@ export default function App() {
     if (safeView === "admin") return <AdminDashboard onNavigate={navigate} />;
 
     if (safeView === "dashboard") {
-      if (userRole === "ESPECIALISTA")
+      if (userRole === "ESPECIALISTA" || userRole === "ROL_ESP")
         return <SpecialistDashboard onNavigate={navigate} />;
       return <MainDashboard onNavigate={navigate} />;
     }

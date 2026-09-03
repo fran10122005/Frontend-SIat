@@ -110,26 +110,39 @@ export const GlobalProvider = ({ children }) => {
   };
 
   // UI Preferences: accent color, font size, density
-  const [uiPrefs, setUiPrefs] = useState(() => {
+  // Las preferencias están delimitadas POR PERFIL (rol), de modo que un
+  // especialista, representante o administrador tienen sus propias
+  // configuraciones sin afectarse entre sí.
+  const roleToKey = (role) => {
+    if (role === "ROL_ADM") return "admin";
+    if (role === "ROL_ESP") return "especialista";
+    if (role === "ROL_REP") return "representante";
+    return "guest";
+  };
+
+  const uiPrefsKey = `siat_ui_prefs_${roleToKey(userRole)}`;
+
+  const defaultUiPrefs = {
+    accentColor: "blue",
+    fontSize: "normal",
+    density: "normal",
+    theme: "system",
+  };
+
+  const readUiPrefs = (key) => {
     try {
-      const saved = localStorage.getItem("siat_ui_prefs");
+      const saved = localStorage.getItem(key);
       return saved
-        ? JSON.parse(saved)
-        : {
-            accentColor: "blue",
-            fontSize: "normal",
-            density: "normal",
-            theme: "system",
-          };
+        ? { ...defaultUiPrefs, ...JSON.parse(saved) }
+        : { ...defaultUiPrefs };
     } catch {
-      return {
-        accentColor: "blue",
-        fontSize: "normal",
-        density: "normal",
-        theme: "system",
-      };
+      return { ...defaultUiPrefs };
     }
-  });
+  };
+
+  const [uiPrefs, setUiPrefs] = useState(() =>
+    readUiPrefs(`siat_ui_prefs_${roleToKey(userRole)}`),
+  );
 
   const ACCENT_COLORS = {
     blue: { primary: "#2563eb", ring: "#3b82f6", css: "accent-blue" },
@@ -159,7 +172,7 @@ export const GlobalProvider = ({ children }) => {
   const updateUiPrefs = (newPrefs) => {
     setUiPrefs((prev) => {
       const merged = { ...prev, ...newPrefs };
-      localStorage.setItem("siat_ui_prefs", JSON.stringify(merged));
+      localStorage.setItem(uiPrefsKey, JSON.stringify(merged));
       applyUiPrefs(merged);
       // Also handle theme change
       if (newPrefs.theme !== undefined) {
@@ -169,20 +182,22 @@ export const GlobalProvider = ({ children }) => {
     });
   };
 
-  // Apply prefs on mount
+  // Aplica las preferencias de UI al montar (color, tamaño, densidad, tema)
   useEffect(() => {
     applyUiPrefs(uiPrefs);
-    // Restore theme
-    const savedTheme = localStorage.getItem("siat_theme");
-    if (savedTheme === "light") {
-      document.documentElement.classList.remove("dark");
-      setIsDark(false);
-    } else if (savedTheme === "dark") {
-      document.documentElement.classList.add("dark");
-      setIsDark(true);
-    }
+    toggleTheme(uiPrefs.theme || "system");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Cuando cambia el rol (login/logout/cambio de perfil), se recargan y
+  // aplican las preferencias de ESE perfil, sin afectar a otros roles.
+  useEffect(() => {
+    const prefs = readUiPrefs(uiPrefsKey);
+    setUiPrefs(prefs);
+    applyUiPrefs(prefs);
+    toggleTheme(prefs.theme || "system");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userRole]);
 
   const [specialistConfig, setSpecialistConfig] = useState(() => {
     try {

@@ -1,6 +1,4 @@
-﻿import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import logoPath from "../assets/Logo.png";
+﻿import { renderManualPDF } from "./pdfManualRenderer";
 
 export const seccionesManual = [
   {
@@ -93,6 +91,61 @@ export const seccionesManual = [
           "Carga Clínica y Pacientes: Gráfico de área con la evolución de admisiones e ingresos.",
           "Productividad Terapéutica: Gráfico de barras con horas de terapia impartidas mensualmente.",
         ],
+      },
+    ],
+  },
+  {
+    id: "reportes",
+    icono: "reportes",
+    titulo: "Reportes Automáticos",
+    descripcion: "Programación del envío periódico de reportes por correo",
+    contenido: [
+      {
+        tipo: "texto",
+        valor:
+          "Desde el panel principal puede acceder al 'Programador de Reportes Ejecutivos', que le permite configurar el envío automático y periódico de reportes por correo electrónico.",
+      },
+      { tipo: "subtitulo", valor: "Configuración del envío automático" },
+      {
+        tipo: "tabla",
+        encabezados: ["Campo", "Descripción"],
+        filas: [
+          [
+            "Activar envío automático",
+            "Habilita o deshabilita el envío periódico del reporte",
+          ],
+          [
+            "Frecuencia",
+            "Diario, Semanal (con día preferido) o Mensual (día 1 del mes)",
+          ],
+          ["Hora de envío", "Hora del día (HH:MM) en que se genera el reporte"],
+          ["Correo destinatario", "Dirección de correo principal del reporte"],
+          [
+            "Correos adicionales",
+            "Lista de correos secundarios que también reciben el reporte",
+          ],
+          ["Asunto", "Línea de asunto personalizada del correo"],
+          [
+            "Módulos",
+            "Selección de los módulos de datos que se incluyen en el reporte",
+          ],
+        ],
+      },
+      { tipo: "subtitulo", valor: "Uso" },
+      {
+        tipo: "pasos",
+        items: [
+          'Abra el "Programador de Reportes Ejecutivos" desde el panel principal.',
+          "Active el envío automático y defina frecuencia, hora y destinatarios.",
+          'Presione "Guardar" para persistir la configuración.',
+          'Use "Enviar Prueba Ahora" para generar un envío inmediato y verificar que los correos se reciben correctamente.',
+        ],
+      },
+      {
+        tipo: "nota",
+        variante: "info",
+        valor:
+          "El envío programado se ejecuta mientras el panel de administración esté abierto en el navegador. Cierre sesión o apague el equipo solo si no desea recibir reportes automáticos.",
       },
     ],
   },
@@ -552,268 +605,10 @@ export const seccionesManual = [
     ],
   },
 ];
-
 export async function exportManualPDF() {
-  const doc = new jsPDF("p", "mm", "a4");
-  const pageW = 210;
-  const pageH = 297;
-  const margin = 12;
-  const contentW = pageW - margin * 2;
-  const maxY = 275;
-  const headerH = 14;
-  const footerH = 8;
-  const lineH = 4;
-
-  let logoData = null;
-  try {
-    const img = new Image();
-    img.src = logoPath;
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    logoData = canvas.toDataURL("image/png");
-  } catch (e) {
-    console.warn("Logo no disponible para PDF:", e);
-  }
-
-  const secciones = seccionesManual;
-
-  const addHeader = (doc, pageNum, totalPages, sectionTitle) => {
-    if (logoData) {
-      doc.addImage(logoData, "PNG", pageW - margin - 22, 4, 18, 18);
-    }
-    doc.setFontSize(6);
-    doc.setTextColor(160, 160, 160);
-    doc.text(`SIAT — Manual de Usuario v1.0 | ${sectionTitle}`, margin, 10);
-    doc.text(`${pageNum} / ${totalPages}`, pageW - margin, 10, {
-      align: "right",
-    });
-    doc.setDrawColor(220, 220, 220);
-    doc.line(margin, 12, pageW - margin, 12);
-  };
-
-  const addFooter = (doc, y) => {
-    doc.setDrawColor(220, 220, 220);
-    doc.line(margin, y, pageW - margin, y);
-  };
-
-  const checkPage = (needed) => {
-    if (yy + needed > maxY) {
-      addFooter(doc, yy + 2);
-      doc.addPage();
-      pageNum++;
-      addHeader(doc, pageNum, totalPages, sectionTitle);
-      yy = headerH + 4;
-    }
-  };
-
-  // ---- PORTADA ----
-  doc.setFillColor(1, 28, 63);
-  doc.rect(0, 0, pageW, pageH, "F");
-  doc.setTextColor(255, 255, 255);
-  if (logoData) {
-    doc.addImage(logoData, "PNG", pageW / 2 - 20, 50, 40, 40);
-  }
-  doc.setFontSize(26);
-  doc.text("Manual de Usuario", pageW / 2, 110, { align: "center" });
-  doc.setFontSize(16);
-  doc.text("Módulo de Administrador", pageW / 2, 120, { align: "center" });
-  doc.setFontSize(11);
-  doc.text(
-    "SIAT — Sistema Integrado de Asistencia Terapéutica",
-    pageW / 2,
-    135,
-    { align: "center" },
+  await renderManualPDF(
+    seccionesManual,
+    "Administrador",
+    "manual_usuario_admin_siat.pdf",
   );
-  doc.setFontSize(9);
-  doc.text(
-    `Versión 1.0 — ${new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })}`,
-    pageW / 2,
-    145,
-    { align: "center" },
-  );
-  doc.text("Funauta — Fundación de Apoyo al Autista", pageW / 2, 160, {
-    align: "center",
-  });
-
-  // ---- ÍNDICE ----
-  doc.addPage();
-  doc.setTextColor(1, 28, 63);
-  doc.setFontSize(14);
-  doc.text("Índice de Contenidos", margin, 20);
-  doc.setDrawColor(1, 28, 63);
-  doc.setLineWidth(0.3);
-  doc.line(margin, 23, pageW - margin, 23);
-  let y = 30;
-  doc.setTextColor(60, 60, 60);
-  doc.setFontSize(9);
-  secciones.forEach((sec, i) => {
-    if (y > 265) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.text(
-      `${String(i + 1).padStart(2, "0")}   ${sec.titulo}`,
-      margin + 2,
-      y,
-    );
-    doc.setFontSize(7);
-    doc.setTextColor(140, 140, 140);
-    doc.text(sec.descripcion, margin + 14, y + 3.5);
-    doc.setTextColor(60, 60, 60);
-    doc.setFontSize(9);
-    y += 8;
-  });
-
-  // ---- CONTENIDO ----
-  const totalPages = secciones.length + 1;
-  let pageNum = 2;
-  let sectionTitle = secciones[0].titulo;
-  doc.addPage();
-  pageNum++;
-  addHeader(doc, pageNum, totalPages, sectionTitle);
-  let yy = headerH + 4;
-
-  secciones.forEach((sec, idx) => {
-    // Section title
-    const estTitleLines = 6;
-    checkPage(estTitleLines + 3);
-
-    doc.setFillColor(1, 28, 63);
-    doc.rect(margin, yy - 1.5, contentW, 5.5, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.text(sec.titulo, margin + 2, yy + 2.5);
-    doc.setTextColor(60, 60, 60);
-    sectionTitle = sec.titulo;
-    yy += 7.5;
-
-    sec.contenido.forEach((bloque) => {
-      checkPage(0);
-
-      switch (bloque.tipo) {
-        case "texto":
-          doc.setFontSize(8);
-          const txtLines = doc.splitTextToSize(bloque.valor, contentW);
-          checkPage(txtLines.length * lineH + 2);
-          doc.text(txtLines, margin, yy);
-          yy += txtLines.length * lineH + 1.5;
-          break;
-
-        case "subtitulo":
-          checkPage(6);
-          doc.setFontSize(9);
-          doc.setTextColor(1, 60, 100);
-          doc.text(bloque.valor, margin, yy);
-          yy += 5;
-          doc.setTextColor(60, 60, 60);
-          break;
-
-        case "lista":
-          doc.setFontSize(8);
-          bloque.items.forEach((item) => {
-            const iLines = doc.splitTextToSize(`• ${item}`, contentW - 4);
-            checkPage(iLines.length * lineH + 1);
-            doc.text(iLines, margin + 4, yy);
-            yy += iLines.length * lineH + 0.5;
-          });
-          yy += 1.5;
-          break;
-
-        case "pasos":
-          doc.setFontSize(8);
-          bloque.items.forEach((item, i) => {
-            const sLines = doc.splitTextToSize(
-              `${i + 1}. ${item}`,
-              contentW - 4,
-            );
-            checkPage(sLines.length * lineH + 1);
-            doc.text(sLines, margin + 4, yy);
-            yy += sLines.length * lineH + 0.5;
-          });
-          yy += 1.5;
-          break;
-
-        case "tabla":
-          if (bloque.filas.length > 0) {
-            try {
-              const colCount = bloque.encabezados.length;
-              const colW = contentW / colCount;
-              autoTable(doc, {
-                head: [bloque.encabezados],
-                body: bloque.filas,
-                startY: Math.min(yy, maxY - 15),
-                margin: { left: margin, right: margin },
-                styles: { fontSize: 7, cellPadding: 1.5 },
-                headStyles: {
-                  fillColor: [1, 60, 100],
-                  textColor: [255, 255, 255],
-                  fontSize: 7,
-                  fontStyle: "bold",
-                },
-                columnStyles: Object.fromEntries(
-                  bloque.encabezados.map((_, i) => [i, { cellWidth: colW }]),
-                ),
-                tableLineColor: [220, 220, 220],
-                tableLineWidth: 0.1,
-                didDrawPage: (data) => {
-                  pageNum++;
-                  addHeader(doc, pageNum, totalPages, sectionTitle);
-                  yy = headerH + 4;
-                },
-              });
-              yy = doc.lastAutoTable.finalY + 4;
-            } catch (e) {
-              yy += 3;
-            }
-          }
-          break;
-
-        case "nota": {
-          doc.setFontSize(7.5);
-          doc.setTextColor(90, 90, 90);
-          const nIcon =
-            bloque.variante === "warning"
-              ? "⚠ "
-              : bloque.variante === "success"
-                ? "✓ "
-                : bloque.variante === "danger"
-                  ? "✗ "
-                  : "ℹ ";
-          const nLines = doc.splitTextToSize(
-            nIcon + bloque.valor,
-            contentW - 8,
-          );
-          const noteH = nLines.length * lineH + 4;
-          checkPage(noteH + 3);
-          const colorMap = {
-            info: [230, 240, 255],
-            warning: [255, 245, 220],
-            success: [225, 245, 225],
-            danger: [255, 225, 225],
-          };
-          const bg = colorMap[bloque.variante] || [230, 240, 255];
-          doc.setFillColor(bg[0], bg[1], bg[2]);
-          doc.roundedRect(margin, yy - 1, contentW, noteH, 1, 1, "F");
-          doc.setDrawColor(180, 180, 180);
-          doc.roundedRect(margin, yy - 1, contentW, noteH, 1, 1, "S");
-          doc.text(nLines, margin + 4, yy + 2);
-          yy += noteH + 3;
-          doc.setTextColor(60, 60, 60);
-          break;
-        }
-      }
-    });
-
-    yy += 2;
-  });
-
-  addFooter(doc, yy + 2);
-  doc.save("manual_usuario_admin_siat.pdf");
 }
