@@ -1,30 +1,33 @@
-import { useState, useEffect, useCallback } from 'react'
-import api from '../api/axios'
+import { useState, useEffect, useCallback } from "react";
+import api from "../api/axios";
+import { useGlobalContext } from "../context/GlobalState";
 
 export function useClinicalData() {
-  const [alertsList, setAlertsList] = useState([])
-  const [chartDataList, setChartDataList] = useState([])
-  const [loadingClinical, setLoadingClinical] = useState(false)
+  const { selectedChildId } = useGlobalContext();
+  const [alertsList, setAlertsList] = useState([]);
+  const [chartDataList, setChartDataList] = useState([]);
+  const [loadingClinical, setLoadingClinical] = useState(false);
 
   const fetchClinicalData = useCallback(async () => {
     try {
-      setLoadingClinical(true)
+      setLoadingClinical(true);
+      const query = selectedChildId ? `?nin_codi=${selectedChildId}` : "";
       const [alertsRes, chartRes] = await Promise.all([
-        api.get('/reportes/alertas-representante'),
-        api.get('/reportes/evolucion-representante')
-      ])
-      setAlertsList(alertsRes.data.data || [])
-      setChartDataList(chartRes.data.data || [])
+        api.get(`/reportes/alertas-representante${query}`),
+        api.get(`/reportes/evolucion-representante${query}`),
+      ]);
+      setAlertsList(alertsRes.data.data || []);
+      setChartDataList(chartRes.data.data || []);
     } catch (err) {
-      console.error('Error al cargar datos clínicos:', err)
+      console.error("Error al cargar datos clínicos:", err);
     } finally {
-      setLoadingClinical(false)
+      setLoadingClinical(false);
     }
-  }, [])
+  }, [selectedChildId]);
 
   useEffect(() => {
-    fetchClinicalData()
-  }, [fetchClinicalData])
+    fetchClinicalData();
+  }, [fetchClinicalData]);
 
-  return { alertsList, chartDataList, loadingClinical, fetchClinicalData }
+  return { alertsList, chartDataList, loadingClinical, fetchClinicalData };
 }

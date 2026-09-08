@@ -172,14 +172,14 @@ export default function DiarioHogar() {
       const endpoint =
         userRole === "ESPECIALISTA" && selectedChildId
           ? `/ninos/${selectedChildId}/bitacora`
-          : "/ninos/bitacora";
+          : selectedChildId
+            ? `/ninos/bitacora?nin_codi=${selectedChildId}`
+            : "/ninos/bitacora";
       const res = await api.get(endpoint);
-      setBitacorasList(
-        res.data.data?.length > 0 ? res.data.data : mockBitacoras,
-      );
+      setBitacorasList(res.data.data || []);
     } catch (err) {
       console.error(err);
-      setBitacorasList(mockBitacoras);
+      setBitacorasList([]);
     } finally {
       setLoadingBitacoras(false);
     }
@@ -189,6 +189,7 @@ export default function DiarioHogar() {
     e.preventDefault();
     try {
       const payload = {
+        nin_codi: selectedChildId,
         date: reportDate,
         mood,
         crisisCount: Number(crisisCount),

@@ -24,12 +24,14 @@ import {
   CheckCircle,
   Moon,
   Sun,
+  Watch,
 } from "lucide-react";
 import { getSocket } from "../hooks/socket";
 import { useTelemetry } from "../hooks/useTelemetry";
 import Topbar from "../components/layout/Topbar";
 import PageTitle from "../components/ui/PageTitle";
 import api from "../api/axios";
+import SmartwatchConnectWidget from "../components/shared/SmartwatchConnectWidget";
 
 export default function HardwareInventory() {
   const {
@@ -49,12 +51,6 @@ export default function HardwareInventory() {
   const [isDark, setIsDark] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [showModal, setShowModal] = useState(false);
-
-  const [showNewSensorModal, setShowNewSensorModal] = useState(false);
-  const [newSensorForm, setNewSensorForm] = useState({
-    name: "",
-    type: "Pulsera Biométrica MAX30102",
-  });
 
   // Calibrador en Vivo States (Specialist)
   const [calibStep, setCalibStep] = useState("idle"); // 'idle', 'measuring', 'completed'
@@ -169,11 +165,13 @@ export default function HardwareInventory() {
     setIsDark(!isDark);
   };
 
-  const openCalibration = (device) => {
-    setSelectedDevice(device);
+  const openCalibration = (device = null) => {
+    setSelectedDevice(
+      device || hardware[0] || { id_hardw: "BLE-001", name: "Smartwatch BLE" },
+    );
     setCalibStep("idle");
     setCalibCountdown(15);
-    setCalibBpmFeed(72);
+    setCalibBpmFeed(currentBpm || 72);
     setShowModal(true);
   };
 
@@ -284,6 +282,9 @@ export default function HardwareInventory() {
                     </button>
                   </div>
                 </div>
+
+                {/* Smartwatch WebBluetooth BLE Integration Widget */}
+                <SmartwatchConnectWidget />
 
                 {/* Grid layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -535,135 +536,143 @@ export default function HardwareInventory() {
                   </div>
 
                   <button
-                    data-tour="hw-new"
-                    onClick={() => setShowNewSensorModal(true)}
+                    data-tour="hw-calibrate-header"
+                    onClick={() => openCalibration()}
                     className="flex items-center justify-center gap-2 px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg shadow-sm transition-colors text-sm w-full md:w-auto"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    Nuevo Sensor
+                    <ShieldCheck className="w-4 h-4" />
+                    Calibrar Línea Base (15s)
                   </button>
                 </div>
+
+                {/* Smartwatch WebBluetooth BLE Integration Widget */}
+                <SmartwatchConnectWidget />
 
                 {/* Grid de Dispositivos */}
                 <div
                   data-tour="hw-grid"
                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
                 >
-                  {hardware.map((device) => {
-                    const hasError =
-                      device.est_disp === "Offline" ||
-                      device.battery < 20 ||
-                      device.signal < 30;
-
-                    return (
-                      <div
-                        key={device.id_hardw}
-                        data-tour="hw-card"
-                        className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/60 flex flex-col transition-all hover:shadow-md hover:border-blue-200 dark:hover:border-blue-900 group"
-                      >
-                        {/* Card Header */}
-                        <div className="p-5 flex justify-between items-start border-b border-slate-100 dark:border-slate-700">
-                          <div className="w-12 h-12 bg-slate-50 dark:bg-slate-900 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700 group-hover:scale-105 transition-transform">
-                            {device.type?.includes("Pulso") ||
-                            device.name?.includes("Pulso") ? (
-                              <Heart className="w-6 h-6 text-rose-500 animate-pulse" />
-                            ) : device.type?.includes("Aceler") ||
-                              device.name?.includes("Aceler") ? (
-                              <Activity className="w-6 h-6 text-indigo-500" />
-                            ) : (
-                              <Cpu className="w-6 h-6 text-emerald-500" />
-                            )}
-                          </div>
-
-                          <span
-                            className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                              device.est_disp === "Online"
-                                ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400"
-                                : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400"
-                            }`}
-                          >
-                            {device.est_disp === "Online"
-                              ? "● Online"
-                              : "○ Offline"}
-                          </span>
-                        </div>
-
-                        {/* Card Body */}
-                        <div className="p-5 flex-1">
-                          <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-1 text-sm">
-                            {device.name || device.type}
-                          </h3>
-                          <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mb-5 bg-slate-100 dark:bg-slate-700/50 inline-block px-2 py-0.5 rounded">
-                            ID: {device.id_hardw}
-                          </p>
-
-                          <div className="space-y-4">
-                            {/* Batería */}
-                            <div>
-                              <div className="flex justify-between text-xs mb-1.5">
-                                <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                  <Battery className="w-3.5 h-3.5" />
-                                  Batería
-                                </span>
-                                <span className="font-bold text-slate-800 dark:text-slate-200">
-                                  {device.battery}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className={`h-2 rounded-full transition-all duration-500 ${device.battery > 50 ? "bg-green-500" : device.battery > 20 ? "bg-amber-500" : "bg-red-500"}`}
-                                  style={{ width: `${device.battery}%` }}
-                                ></div>
-                              </div>
-                            </div>
-
-                            {/* Señal */}
-                            <div>
-                              <div className="flex justify-between text-xs mb-1.5">
-                                <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                                  <Wifi className="w-3.5 h-3.5" />
-                                  Señal
-                                </span>
-                                <span className="font-bold text-slate-800 dark:text-slate-200">
-                                  {device.signal}%
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className={`h-2 rounded-full transition-all duration-500 ${device.signal > 70 ? "bg-blue-500" : device.signal > 30 ? "bg-amber-500" : "bg-slate-400"}`}
-                                  style={{ width: `${device.signal}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Card Footer (Action) */}
-                        <div className="p-4 border-t border-slate-150 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
-                          <button
-                            data-tour="hw-calibrate"
-                            onClick={() => openCalibration(device)}
-                            className="w-full py-2 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2"
-                          >
-                            <ShieldCheck className="w-4 h-4 text-brand-500" />
-                            Calibrar Sensor
-                          </button>
-                        </div>
+                  {hardware.length === 0 ? (
+                    <div className="col-span-full p-8 text-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/60 flex flex-col items-center justify-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <Watch className="w-6 h-6" />
                       </div>
-                    );
-                  })}
+                      <div className="max-w-md">
+                        <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+                          No hay Smartwatches vinculados
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Haz clic en "Vincular Smartwatch" arriba para conectar
+                          tu reloj por Bluetooth LE.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    hardware.map((device) => {
+                      const hasError =
+                        device.est_disp === "Offline" ||
+                        device.battery < 20 ||
+                        device.signal < 30;
+
+                      return (
+                        <div
+                          key={device.id_hardw}
+                          data-tour="hw-card"
+                          className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/60 flex flex-col transition-all hover:shadow-md hover:border-blue-200 dark:hover:border-blue-900 group"
+                        >
+                          {/* Card Header */}
+                          <div className="p-5 flex justify-between items-start border-b border-slate-100 dark:border-slate-700">
+                            <div className="w-12 h-12 bg-slate-50 dark:bg-slate-900 rounded-xl flex items-center justify-center border border-slate-200 dark:border-slate-700 group-hover:scale-105 transition-transform">
+                              {device.type?.includes("Pulso") ||
+                              device.name?.includes("Pulso") ? (
+                                <Heart className="w-6 h-6 text-rose-500 animate-pulse" />
+                              ) : device.type?.includes("Aceler") ||
+                                device.name?.includes("Aceler") ? (
+                                <Activity className="w-6 h-6 text-indigo-500" />
+                              ) : (
+                                <Cpu className="w-6 h-6 text-emerald-500" />
+                              )}
+                            </div>
+
+                            <span
+                              className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
+                                device.est_disp === "Online"
+                                  ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400"
+                                  : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400"
+                              }`}
+                            >
+                              {device.est_disp === "Online"
+                                ? "● Online"
+                                : "○ Offline"}
+                            </span>
+                          </div>
+
+                          {/* Card Body */}
+                          <div className="p-5 flex-1">
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-1 text-sm">
+                              {device.name || device.type}
+                            </h3>
+                            <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mb-5 bg-slate-100 dark:bg-slate-700/50 inline-block px-2 py-0.5 rounded">
+                              ID: {device.id_hardw}
+                            </p>
+
+                            <div className="space-y-4">
+                              {/* Batería */}
+                              <div>
+                                <div className="flex justify-between text-xs mb-1.5">
+                                  <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <Battery className="w-3.5 h-3.5" />
+                                    Batería
+                                  </span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {device.battery}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className={`h-2 rounded-full transition-all duration-500 ${device.battery > 50 ? "bg-green-500" : device.battery > 20 ? "bg-amber-500" : "bg-red-500"}`}
+                                    style={{ width: `${device.battery}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+
+                              {/* Señal */}
+                              <div>
+                                <div className="flex justify-between text-xs mb-1.5">
+                                  <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <Wifi className="w-3.5 h-3.5" />
+                                    Señal
+                                  </span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {device.signal}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className={`h-2 rounded-full transition-all duration-500 ${device.signal > 70 ? "bg-blue-500" : device.signal > 30 ? "bg-amber-500" : "bg-slate-400"}`}
+                                    style={{ width: `${device.signal}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Card Footer (Action) */}
+                          <div className="p-4 border-t border-slate-150 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                            <button
+                              data-tour="hw-calibrate"
+                              onClick={() => openCalibration(device)}
+                              className="w-full py-2 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+                            >
+                              <ShieldCheck className="w-4 h-4 text-brand-500" />
+                              Calibrar Sensor
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
@@ -681,7 +690,8 @@ export default function HardwareInventory() {
                   Calibración de Línea Base
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  MAX30102 + MPU6050 • ID: {selectedDevice.id_hardw}
+                  {selectedDevice?.name || "Smartwatch BLE"} • Paciente:{" "}
+                  {nomNino || "Paciente"}
                 </p>
               </div>
               <button
@@ -889,101 +899,6 @@ export default function HardwareInventory() {
                   </button>
                 </>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal / Dialog (New Sensor) */}
-      {showNewSensorModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-850 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 border-b border-slate-150 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
-              <h3 className="text-base font-bold text-slate-850 dark:text-white">
-                Añadir Nuevo Sensor
-              </h3>
-              <button
-                onClick={() => setShowNewSensorModal(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Nombre del Sensor
-                </label>
-                <input
-                  type="text"
-                  value={newSensorForm.name}
-                  onChange={(e) =>
-                    setNewSensorForm({ ...newSensorForm, name: e.target.value })
-                  }
-                  className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-800 dark:text-slate-200 transition-all"
-                  placeholder="Ej: Sensor Movimiento Brazo"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Tipo de Dispositivo
-                </label>
-                <select
-                  value={newSensorForm.type}
-                  onChange={(e) =>
-                    setNewSensorForm({ ...newSensorForm, type: e.target.value })
-                  }
-                  className="w-full px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-slate-800 dark:text-slate-200 transition-all"
-                >
-                  <option value="Pulsera Biométrica MAX30102">
-                    Pulsera Biométrica (Pulso/O2)
-                  </option>
-                  <option value="Acelerómetro MPU6050">
-                    Acelerómetro MPU6050 (Movimiento)
-                  </option>
-                  <option value="Sensor Temperatura MLX90614">
-                    Sensor Temperatura
-                  </option>
-                  <option value="Módulo EEG Base">Casco EEG Básico</option>
-                </select>
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-150 dark:border-slate-800/60 flex justify-end gap-3">
-              <button
-                onClick={() => setShowNewSensorModal(false)}
-                className="px-4 py-2 font-semibold text-xs text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  if (!newSensorForm.name.trim()) {
-                    showToast("⚠️ Debes ingresar un nombre para el sensor");
-                    return;
-                  }
-                  addHardware(newSensorForm);
-                  setShowNewSensorModal(false);
-                  setNewSensorForm({
-                    name: "",
-                    type: "Pulsera Biométrica MAX30102",
-                  });
-                }}
-                className="px-4 py-2 font-semibold text-xs bg-brand-500 hover:bg-blue-600 text-white rounded-lg shadow-sm transition-colors"
-              >
-                Crear Sensor
-              </button>
             </div>
           </div>
         </div>

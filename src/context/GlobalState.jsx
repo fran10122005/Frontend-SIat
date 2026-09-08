@@ -327,6 +327,23 @@ export const GlobalProvider = ({ children }) => {
     }
   };
 
+  const activeChild = useMemo(() => {
+    if (!listaNinos || listaNinos.length === 0) return null;
+    return (
+      listaNinos.find(
+        (n) => n.id_ninos === selectedChildId || n.nin_codi === selectedChildId,
+      ) || listaNinos[0]
+    );
+  }, [selectedChildId, listaNinos]);
+
+  useEffect(() => {
+    if (activeChild) {
+      if (activeChild.nom_nino && activeChild.nom_nino !== nomNino) {
+        setNomNino(activeChild.nom_nino);
+      }
+    }
+  }, [activeChild, nomNino]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const isPublic =
@@ -580,27 +597,9 @@ export const GlobalProvider = ({ children }) => {
 
   const [globalHistoricalData, setGlobalHistoricalData] = useState([]);
 
-  // Simulando Data para TR_REPOR (Indicaciones)
+  // Hardware y Wearables vinculados
   const [globalReports, setGlobalReports] = useState([]);
-
-  const [globalHardware, setGlobalHardware] = useState([
-    {
-      id_hardw: "HW-001",
-      est_disp: "Online",
-      battery: 85,
-      signal: 92,
-      type: "Pulsera Biométrica MAX30102",
-      name: "Biosensor Principal",
-    },
-    {
-      id_hardw: "HW-002",
-      est_disp: "Offline",
-      battery: 15,
-      signal: 0,
-      type: "Acelerómetro MPU6050",
-      name: "Sensor Movimiento Brazo",
-    },
-  ]);
+  const [globalHardware, setGlobalHardware] = useState([]);
 
   const addHardware = (hardwareData) => {
     const newId = `HW-${String(globalHardware.length + 1).padStart(3, "0")}`;
@@ -616,6 +615,36 @@ export const GlobalProvider = ({ children }) => {
     showToast(`✅ Sensor ${newDevice.name} añadido correctamente.`);
   };
 
+  const registerConnectedDevice = useCallback((deviceInfo) => {
+    if (!deviceInfo || !deviceInfo.name) return;
+    setGlobalHardware((prev) => {
+      const exists = prev.some((d) => d.name === deviceInfo.name);
+      if (exists) {
+        return prev.map((d) =>
+          d.name === deviceInfo.name
+            ? {
+                ...d,
+                est_disp: "Online",
+                battery: deviceInfo.batteryLevel || 85,
+                signal: 95,
+              }
+            : d,
+        );
+      }
+      return [
+        {
+          id_hardw: `BLE-${Math.floor(100 + Math.random() * 900)}`,
+          est_disp: "Online",
+          battery: deviceInfo.batteryLevel || 85,
+          signal: 95,
+          type: "Smartwatch Bluetooth BLE",
+          name: deviceInfo.name,
+        },
+        ...prev,
+      ];
+    });
+  }, []);
+
   const [globalAlertas, setGlobalAlertas] = useState([]);
 
   // Telemetría de alta resolución (segundo a segundo) durante la ventana de la crisis (5 min aprox)
@@ -624,7 +653,11 @@ export const GlobalProvider = ({ children }) => {
   // --- Datos Simulados de Análisis en Casa (Padre) ---
   const [homeHistoricalData, setHomeHistoricalData] = useState([]);
 
-  const [parentNotes, setParentNotes] = useState([]);
+  const [parentNotesMap, setParentNotesMap] = useState({});
+
+  const parentNotes = useMemo(() => {
+    return selectedChildId ? parentNotesMap[selectedChildId] || [] : [];
+  }, [parentNotesMap, selectedChildId]);
 
   const addHomeReport = (report) => {
     const [y, m, day] = (report.date || "").split("-").map(Number);
@@ -644,7 +677,15 @@ export const GlobalProvider = ({ children }) => {
 
     const summaryText = `[Sueño: ${report.sleepHours}h - ${report.sleepQuality}] [Apetito: ${report.appetite}] ${report.text}`;
 
-    setParentNotes((prev) => [{ time, bpm, dia, text: summaryText }, ...prev]);
+    if (selectedChildId) {
+      setParentNotesMap((prev) => ({
+        ...prev,
+        [selectedChildId]: [
+          { time, bpm, dia, text: summaryText },
+          ...(prev[selectedChildId] || []),
+        ],
+      }));
+    }
 
     // Calcular nueva calma según el mood reportado
     let newCalma = 70;
@@ -1058,6 +1099,7 @@ export const GlobalProvider = ({ children }) => {
         setIsSidebarOpen,
         isDark,
         toggleTheme,
+        activeChild,
         listaNinos,
         valMini,
         valMaxi,
@@ -1076,6 +1118,7 @@ export const GlobalProvider = ({ children }) => {
         evaluateAlert,
         hardware,
         addHardware,
+        registerConnectedDevice,
         reports,
         isOnline,
         setIsOnline,

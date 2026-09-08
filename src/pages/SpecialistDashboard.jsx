@@ -34,6 +34,7 @@ import LoadingState from "../components/dashboard/LoadingState";
 
 // Hooks
 import { useTelemetry } from "../hooks/useTelemetry";
+import SmartwatchConnectWidget from "../components/shared/SmartwatchConnectWidget";
 
 export default function SpecialistDashboard() {
   const {
@@ -828,6 +829,7 @@ export default function SpecialistDashboard() {
                 {/* ==== VISTA DE PACIENTE SELECCIONADO ==== */}
                 {activeChild && (
                   <div className="space-y-6 animate-in slide-in-from-bottom-5 duration-300 delay-150">
+                    <SmartwatchConnectWidget />
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                       {/* Resumen del Día (Representante) */}
                       <Card className="sm:col-span-2 xl:col-span-2 p-4">

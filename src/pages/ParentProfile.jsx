@@ -53,7 +53,10 @@ export default function ParentProfile() {
   const fetchProfile = async () => {
     try {
       setLoadingProfile(true);
-      const res = await api.get("/ninos/mi-expediente");
+      const url = selectedChildId
+        ? `/ninos/mi-expediente?nin_codi=${selectedChildId}`
+        : "/ninos/mi-expediente";
+      const res = await api.get(url);
       setChildProfile(res.data.data);
     } catch (err) {
       console.error(err);

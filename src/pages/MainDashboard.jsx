@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import Topbar from "../components/layout/Topbar";
 import { useGlobalContext } from "../context/GlobalState";
+import api from "../api/axios";
 import {
   Activity,
   Bell,
@@ -27,6 +28,7 @@ import AacBoardDrawer from "../components/dashboard/AacBoardDrawer";
 import UserPreferencesModal from "../components/shared/UserPreferencesModal";
 
 import PageTitle from "../components/ui/PageTitle";
+import SmartwatchConnectWidget from "../components/shared/SmartwatchConnectWidget";
 
 export default function MainDashboard() {
   const {
@@ -49,6 +51,44 @@ export default function MainDashboard() {
 
   const { liveBpm, liveStress, liveMov, isWebSocketActive } = useTelemetry();
   const { alertsList } = useClinicalData();
+
+  const [latestReport, setLatestReport] = useState(null);
+
+  useEffect(() => {
+    let cancel = false;
+    const fetchLatestBitacora = async () => {
+      try {
+        const endpoint =
+          userRole === "ESPECIALISTA" && selectedChildId
+            ? `/ninos/${selectedChildId}/bitacora`
+            : selectedChildId
+              ? `/ninos/bitacora?nin_codi=${selectedChildId}`
+              : "/ninos/bitacora";
+        const res = await api.get(endpoint);
+        const list = res.data.data || [];
+        if (!cancel && list.length > 0) {
+          const sorted = [...list].sort((a, b) => {
+            const da = new Date(
+              a.bit_fech || a.date || a.created_at || 0,
+            ).getTime();
+            const db = new Date(
+              b.bit_fech || b.date || b.created_at || 0,
+            ).getTime();
+            return db - da;
+          });
+          setLatestReport(sorted[0]);
+        } else if (!cancel) {
+          setLatestReport(null);
+        }
+      } catch (err) {
+        if (!cancel) setLatestReport(null);
+      }
+    };
+    fetchLatestBitacora();
+    return () => {
+      cancel = true;
+    };
+  }, [userRole, selectedChildId]);
 
   const handleExportDashboard = async () => {
     setExporting(true);
@@ -154,52 +194,8 @@ export default function MainDashboard() {
               </div>
             </div>
 
-            {/* Selector multi-hijo (solo visible cuando hay más de 1 hijo) */}
-            {listaNinos && listaNinos.length > 1 && (
-              <div className="flex flex-wrap items-center gap-2 p-3 bg-white dark:bg-[#1E293B] rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mr-1">
-                  Niño:
-                </span>
-                {listaNinos.map((child) => {
-                  const isActive = selectedChildId === child.id_ninos;
-                  const initials =
-                    `${(child.nom_nino || "")[0] || ""}${(child.ape_nino || "")[0] || ""}`.toUpperCase();
-                  return (
-                    <button
-                      key={child.id_ninos}
-                      onClick={() => {
-                        setSelectedChildId(child.id_ninos);
-                        setNomNino(child.nom_nino);
-                      }}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                        isActive
-                          ? "bg-blue-600 text-white shadow-sm shadow-blue-500/30"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      {child.nin_foto ? (
-                        <img
-                          src={child.nin_foto}
-                          alt={child.nom_nino}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span
-                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                            isActive
-                              ? "bg-white/20 text-white"
-                              : "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
-                          }`}
-                        >
-                          {initials}
-                        </span>
-                      )}
-                      {child.nom_nino}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            {/* Smartwatch Conexión Bluetooth */}
+            <SmartwatchConnectWidget />
 
             {/* Estado del niño */}
             <ChildStatusBanner
@@ -214,7 +210,7 @@ export default function MainDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 flex flex-col gap-6">
                 <DaySummary
-                  homeData={homeData}
+                  homeData={latestReport || homeData}
                   agenda={agendaHoy}
                   indicacion={weeklyGoal}
                   onNavigate={navigate}
@@ -307,34 +303,46 @@ export default function MainDashboard() {
                   </div>
                 </div>
 
-                {/* Wearable */}
+                {/* Monitoreo Biométrico */}
                 <div className="bg-white dark:bg-[#1E293B] rounded-xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60">
                   <div className="flex justify-between items-center">
                     <h3 className="text-overline text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Activity className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                      Pulsera IoT
+                      <Activity className="w-3.5 h-3.5 text-blue-500" />{" "}
+                      Smartwatch Telemetría
                     </h3>
                     <span
-                      className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${isWebSocketActive ? "bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50" : "bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50"}`}
+                      className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${
+                        isWebSocketActive
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50"
+                          : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                      }`}
                     >
-                      {isWebSocketActive ? "Conectada" : "Desconectada"}
+                      {isWebSocketActive ? "Transmitiendo" : "En Espera"}
                     </span>
                   </div>
                   <div className="mt-3 space-y-1.5 text-[11px]">
-                    <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700">
+                    <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700/60">
                       <span className="text-slate-500 dark:text-slate-400">
-                        Batería
+                        Pulsaciones Actuales
                       </span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">
-                        85%
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {liveBpm} BPM
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700/60">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Nivel de Estrés
+                      </span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {liveStress}%
                       </span>
                     </div>
                     <div className="flex justify-between py-1">
                       <span className="text-slate-500 dark:text-slate-400">
-                        Señal
+                        Transmisión Cloud
                       </span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">
-                        Excelente
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                        Socket.IO Activo
                       </span>
                     </div>
                   </div>

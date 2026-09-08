@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useGlobalContext } from "../../context/GlobalState";
 import { useTourContext } from "../../context/TourContext";
-import { Sun, Moon, Menu, HelpCircle } from "lucide-react";
+import { Sun, Moon, Menu, HelpCircle, Baby } from "lucide-react";
 import NotificationBell from "./NotificationBell";
 import PwaInstallPrompt from "../shared/PwaInstallPrompt";
 
@@ -16,6 +16,9 @@ export default function Topbar() {
     setIsSidebarOpen,
     isDark,
     toggleTheme,
+    listaNinos,
+    selectedChildId,
+    setSelectedChildId,
   } = useGlobalContext();
   const { startContextualTour } = useTourContext();
   const [fotoError, setFotoError] = useState(false);
@@ -53,15 +56,45 @@ export default function Topbar() {
           <Menu className="w-5.5 h-5.5" />
         </button>
 
-        {/* Breadcrumb izquierdo para desktop */}
-        <div className="hidden lg:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          <span>SIAT</span>
-          <span className="text-slate-300 dark:text-slate-700">/</span>
-          <span className="text-slate-600 dark:text-slate-300">
-            {userRole === "ADMIN_INSTITUCION" || userRole === "ROL_ADM"
-              ? "Gestión de Fundación"
-              : "Monitoreo Clínico"}
-          </span>
+        {/* Breadcrumb e Indicador/Selector de Niño */}
+        <div className="hidden sm:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <span>SIAT</span>
+            <span className="text-slate-300 dark:text-slate-700">/</span>
+            <span className="text-slate-600 dark:text-slate-300">
+              {userRole === "ADMIN_INSTITUCION" || userRole === "ROL_ADM"
+                ? "Gestión de Fundación"
+                : "Monitoreo Clínico"}
+            </span>
+          </div>
+
+          {listaNinos && listaNinos.length > 1 && (
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700">
+              {listaNinos.map((child) => {
+                const isActive =
+                  selectedChildId === child.id_ninos ||
+                  selectedChildId === child.nin_codi;
+                return (
+                  <button
+                    key={child.id_ninos || child.nin_codi}
+                    type="button"
+                    onClick={() =>
+                      setSelectedChildId(child.id_ninos || child.nin_codi)
+                    }
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
+                    }`}
+                    title={`Cambiar expediente a ${child.nom_nino}`}
+                  >
+                    <Baby className="w-3.5 h-3.5" />
+                    <span>{child.nom_nino}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Contenedor derecho de acciones */}

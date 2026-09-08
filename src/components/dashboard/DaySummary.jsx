@@ -31,11 +31,18 @@ export default function DaySummary({
     Neutral: "😐",
     Irritable: "😠",
     Triste: "😢",
+    Estable: "🙂",
+    "Muy Calmo": "😌",
+    "Crisis / Sobrecarga": "⚠️",
   };
-  const animo = data?.animo || "—";
-  const sueno = data?.sueno || "—";
-  const apetito = data?.apetito || "—";
-  const crisisHoy = data?.crisisCount ?? 0;
+  const animo = data?.mood || data?.bit_anim || data?.animo || "—";
+  const sueno = data?.sleepQuality
+    ? `${data.sleepQuality} (${data.sleepHours || 8}h)`
+    : data?.sleepHours
+      ? `${data.sleepHours}h`
+      : data?.sueno || data?.bit_suen || "—";
+  const apetito = data?.appetite || data?.apetito || data?.bit_apet || "—";
+  const crisisHoy = data?.crisisCount ?? data?.bit_cris ?? 0;
   const tareasCompletadas = tareas?.filter((t) => t.done).length ?? 0;
   const tareasTotal = tareas?.length ?? 0;
 

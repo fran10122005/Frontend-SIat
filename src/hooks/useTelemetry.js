@@ -93,25 +93,47 @@ export function useTelemetry(wsUrl = "https://backend-siat.onrender.com") {
       setIsWebSocketActive(false);
     });
 
-    const unsubTelemetry = subscribeToSocket("new_telemetry", (data) => {
+    const handleIncomingData = (data) => {
       setIsWebSocketActive(true);
       stopSimulation();
       setLiveBpm(data.bpm);
       setLiveStress(data.stress);
-      setLiveMov(data.mov);
+      setLiveMov(data.mov || 1.2);
 
       setTelemetryHistory((prev) => {
         const newRecord = {
-          time: data.time,
+          time:
+            data.time ||
+            new Date().toLocaleTimeString("es-ES", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
           bpm: data.bpm,
-          mov: data.mov,
+          mov: data.mov || 1.2,
           stress: data.stress,
           calma: 100 - data.stress,
           estres: data.stress,
         };
         return [...prev.slice(-9), newRecord];
       });
-    });
+    };
+
+    const unsubTelemetry = subscribeToSocket(
+      "new_telemetry",
+      handleIncomingData,
+    );
+    const unsubTelemetryData = subscribeToSocket(
+      "telemetry_data",
+      handleIncomingData,
+    );
+
+    const handleLocalEvent = (e) => {
+      if (e.detail) {
+        handleIncomingData(e.detail);
+      }
+    };
+    window.addEventListener("siat_local_telemetry", handleLocalEvent);
 
     if (getSocketConnectionState()) {
       setIsWebSocketActive(true);
@@ -121,6 +143,8 @@ export function useTelemetry(wsUrl = "https://backend-siat.onrender.com") {
       unsubConnect();
       unsubDisconnect();
       unsubTelemetry();
+      unsubTelemetryData();
+      window.removeEventListener("siat_local_telemetry", handleLocalEvent);
     };
   }, [stopSimulation]);
 

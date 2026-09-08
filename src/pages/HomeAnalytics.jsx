@@ -70,10 +70,14 @@ export default function HomeAnalytics() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!selectedChildId) return;
       try {
         setFetchError(null);
-        const endpoint = `/ninos/${selectedChildId}/bitacora`;
+        const endpoint =
+          userRole === "ESPECIALISTA" && selectedChildId
+            ? `/ninos/${selectedChildId}/bitacora`
+            : selectedChildId
+              ? `/ninos/bitacora?nin_codi=${selectedChildId}`
+              : "/ninos/bitacora";
         const res = await api.get(endpoint);
         const bitacoras = res.data.data || [];
 
