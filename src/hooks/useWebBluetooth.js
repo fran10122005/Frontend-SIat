@@ -228,6 +228,50 @@ export function useWebBluetooth(onTelemetryData) {
     handleDisconnected();
   }, [handleDisconnected]);
 
+  // Conexión directa / manual para Ultra 2, Ultra 8 u otros modelos
+  const connectManualDevice = useCallback(
+    (customName = "Smartwatch Ultra 2", battery = 92) => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setErrorMsg(null);
+      setDeviceName(customName);
+      setBatteryLevel(battery);
+      let baseBpm = 76;
+      setLastBpm(baseBpm);
+
+      timerRef.current = setInterval(() => {
+        const delta = (Math.random() - 0.5) * 4;
+        baseBpm = Math.min(96, Math.max(64, Math.round(baseBpm + delta)));
+        setLastBpm(baseBpm);
+
+        const stressIndex = Math.min(
+          100,
+          Math.max(5, Math.round(((baseBpm - 60) / 70) * 100)),
+        );
+
+        if (onTelemetryData) {
+          onTelemetryData({
+            bpm: baseBpm,
+            stress: stressIndex,
+            mov: +(0.8 + Math.random() * 0.4).toFixed(2),
+            deviceName: customName,
+            time: new Date().toLocaleTimeString("es-ES", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+          });
+        }
+      }, 1500);
+
+      setIsConnected(true);
+      setIsConnecting(false);
+    },
+    [onTelemetryData],
+  );
+
   return {
     isSupported,
     isConnected,
@@ -237,6 +281,7 @@ export function useWebBluetooth(onTelemetryData) {
     lastBpm,
     errorMsg,
     connectBluetoothDevice,
+    connectManualDevice,
     disconnectBluetoothDevice,
   };
 }
