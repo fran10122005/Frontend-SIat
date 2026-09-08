@@ -4,7 +4,6 @@ import {
   subscribeToSocket,
   getSocketConnectionState,
 } from "./socket";
-import { generateInitialData } from "../utils/dashboardMocks";
 
 export function useTelemetry(wsUrl = "https://backend-siat.onrender.com") {
   const [liveBpm, setLiveBpm] = useState(74);
@@ -50,7 +49,7 @@ export function useTelemetry(wsUrl = "https://backend-siat.onrender.com") {
       setLiveMov(newMov);
 
       setTelemetryHistory((prev) => {
-        const history = prev.length > 0 ? prev : generateInitialData();
+        const history = prev.length > 0 ? prev : [];
         const now = new Date();
         const newRecord = {
           time: now.toLocaleTimeString("es-ES", {
@@ -80,7 +79,7 @@ export function useTelemetry(wsUrl = "https://backend-siat.onrender.com") {
   }, [simulationMode]);
 
   useEffect(() => {
-    setTelemetryHistory(generateInitialData());
+    setTelemetryHistory([]);
 
     getSocket();
 
@@ -102,7 +101,6 @@ export function useTelemetry(wsUrl = "https://backend-siat.onrender.com") {
       setLiveMov(data.mov);
 
       setTelemetryHistory((prev) => {
-        const history = prev.length > 0 ? prev : generateInitialData();
         const newRecord = {
           time: data.time,
           bpm: data.bpm,
@@ -111,7 +109,7 @@ export function useTelemetry(wsUrl = "https://backend-siat.onrender.com") {
           calma: 100 - data.stress,
           estres: data.stress,
         };
-        return [...history.slice(1), newRecord];
+        return [...prev.slice(-9), newRecord];
       });
     });
 

@@ -12,19 +12,61 @@ import {
 
 export default function PwaInstallPrompt({ variant = "topbar" }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const isStandaloneDisplay =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: fullscreen)").matches ||
+      window.matchMedia("(display-mode: minimal-ui)").matches ||
+      !!window.navigator.standalone ||
+      (typeof document !== "undefined" &&
+        document.referrer.includes("android-app://"));
+    const isInstalledStorage =
+      localStorage.getItem("siat_pwa_installed") === "true";
+    return isStandaloneDisplay || isInstalledStorage;
+  });
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    // Detectar si la app ya está instalada (standalone)
-    const standaloneCheck =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      window.navigator.standalone ||
-      document.referrer.includes("android-app://");
+    async function checkInstallation() {
+      // 1. Verificar si corre en modo ventana propia (standalone / fullscreen / minimal-ui)
+      const isStandaloneMode =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.matchMedia("(display-mode: fullscreen)").matches ||
+        window.matchMedia("(display-mode: minimal-ui)").matches ||
+        window.navigator.standalone ||
+        document.referrer.includes("android-app://");
 
-    setIsStandalone(!!standaloneCheck);
+      if (isStandaloneMode) {
+        setIsStandalone(true);
+        localStorage.setItem("siat_pwa_installed", "true");
+        return;
+      }
+
+      // 2. Verificar marca persistente en localStorage de instalación previa
+      if (localStorage.getItem("siat_pwa_installed") === "true") {
+        setIsStandalone(true);
+        return;
+      }
+
+      // 3. API nativa del navegador para consultar si la App está instalada en el SO
+      if ("getInstalledRelatedApps" in navigator) {
+        try {
+          const relatedApps = await navigator.getInstalledRelatedApps();
+          if (relatedApps && relatedApps.length > 0) {
+            setIsStandalone(true);
+            localStorage.setItem("siat_pwa_installed", "true");
+            return;
+          }
+        } catch (err) {
+          // Ignorar si el navegador restringe el permiso
+        }
+      }
+    }
+
+    checkInstallation();
 
     // Detectar si es dispositivo iOS (iPhone / iPad)
     const userAgent = window.navigator.userAgent.toLowerCase();
@@ -38,13 +80,30 @@ export default function PwaInstallPrompt({ variant = "topbar" }) {
 
     const handleAppInstalled = () => {
       setIsStandalone(true);
+      localStorage.setItem("siat_pwa_installed", "true");
       setDeferredPrompt(null);
     };
+
+    // Listener para cambios de modo de pantalla en tiempo real
+    const mediaQuery = window.matchMedia("(display-mode: standalone)");
+    const handleMediaChange = (e) => {
+      if (e.matches) {
+        setIsStandalone(true);
+        localStorage.setItem("siat_pwa_installed", "true");
+      }
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleMediaChange);
+    }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener("change", handleMediaChange);
+      }
       window.removeEventListener(
         "beforeinstallprompt",
         handleBeforeInstallPrompt,
@@ -59,6 +118,7 @@ export default function PwaInstallPrompt({ variant = "topbar" }) {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") {
         setIsStandalone(true);
+        localStorage.setItem("siat_pwa_installed", "true");
       }
       setDeferredPrompt(null);
     } else {
@@ -67,7 +127,7 @@ export default function PwaInstallPrompt({ variant = "topbar" }) {
     }
   };
 
-  // Si ya está instalada como app, no mostrar nada
+  // Si ya está instalada como app o el usuario indicó que ya la tiene instalada, no mostrar absolutamente nada
   if (isStandalone) return null;
 
   return (
@@ -192,7 +252,17 @@ export default function PwaInstallPrompt({ variant = "topbar" }) {
               </div>
             )}
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  localStorage.setItem("siat_pwa_installed", "true");
+                  setIsStandalone(true);
+                  setShowInstructionsModal(false);
+                }}
+                className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline"
+              >
+                Ya la tengo instalada
+              </button>
               <button
                 onClick={() => setShowInstructionsModal(false)}
                 className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-md transition-colors flex items-center gap-1.5"
