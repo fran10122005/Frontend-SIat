@@ -295,21 +295,6 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
             className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={exportPDF}
-            className="px-3 py-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
-          >
-            <FileText className="w-3.5 h-3.5" /> Exportar PDF
-          </button>
-          <button
-            onClick={exportExcel}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 transition-colors flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" /> Exportar Excel
-          </button>
-        </div>
       </FilterBar>
 
       {/* Main Table */}
@@ -317,13 +302,33 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
         data-tour="admin-hc-table"
         className="bg-white dark:bg-[#1E293B] rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 overflow-hidden"
       >
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-base font-bold text-slate-900 dark:text-white">
             Registro Clínico e Incidentes
           </h2>
-          <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full">
-            {filtered.length} registros
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full whitespace-nowrap">
+              {filtered.length} registros
+            </span>
+            <button
+              type="button"
+              onClick={exportPDF}
+              aria-label="Exportar a PDF"
+              title="Exportar a PDF"
+              className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
+            >
+              <FileText className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={exportExcel}
+              aria-label="Exportar a Excel"
+              title="Exportar a Excel"
+              className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {loading ? (

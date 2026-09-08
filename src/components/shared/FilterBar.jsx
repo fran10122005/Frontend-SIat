@@ -75,8 +75,10 @@ export default function FilterBar({
       </div>
 
       {open && (
-        <div className="flex flex-row flex-wrap gap-3 w-full justify-end">
-          {children}
+        <div className="w-full pt-3 mt-3 border-t border-slate-200 dark:border-slate-800/60 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-end">
+            {children}
+          </div>
         </div>
       )}
 

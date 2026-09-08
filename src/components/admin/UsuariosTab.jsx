@@ -8,6 +8,8 @@ import {
   ChevronDown,
   Ban,
   CheckCircle2,
+  FileText,
+  Download,
 } from "lucide-react";
 import FilterBar from "../shared/FilterBar";
 import StatusBadge from "../shared/StatusBadge";
@@ -314,18 +316,24 @@ export default function UsuariosTab({
               {filteredUsers.length}{" "}
               {filteredUsers.length === 1 ? "Usuario" : "Usuarios"}
             </span>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={exportUsuariosToPDF}
-                className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 rounded-lg text-xs font-semibold transition-colors"
+                aria-label="Exportar a PDF"
+                title="Exportar a PDF"
+                className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
               >
-                PDF
+                <FileText className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={exportUsuariosToExcel}
-                className="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg text-xs font-semibold transition-colors"
+                aria-label="Exportar a Excel"
+                title="Exportar a Excel"
+                className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
               >
-                Excel
+                <Download className="w-4 h-4" />
               </button>
             </div>
           </div>

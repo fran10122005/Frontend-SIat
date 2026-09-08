@@ -11,7 +11,13 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { TrendingUp, Download, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  TrendingUp,
+  Download,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import { exportHistoryToPDF } from "../utils/pdfExporter";
 import Pagination from "../components/shared/Pagination";
@@ -159,14 +165,15 @@ export default function HistoryProgress() {
 
               {!isRepresentante && (
                 <div className="flex flex-wrap gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={<Download className="w-4 h-4" />}
+                  <button
+                    type="button"
                     onClick={handleExportPDF}
+                    aria-label="Exportar a PDF"
+                    title="Exportar a PDF"
+                    className="p-2.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors flex items-center justify-center min-w-[38px] min-h-[38px]"
                   >
-                    Exportar PDF
-                  </Button>
+                    <FileText className="w-4 h-4" />
+                  </button>
                 </div>
               )}
             </div>

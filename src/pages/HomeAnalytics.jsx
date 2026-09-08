@@ -300,7 +300,7 @@ export default function HomeAnalytics() {
                   onClick={exportarReporteSemanal}
                   aria-label="Exportar reporte semanal en PDF"
                   title="Exportar reporte semanal (PDF)"
-                  className="shrink-0 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="shrink-0 p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                 >
                   <FileText className="w-4 h-4" />
                 </button>

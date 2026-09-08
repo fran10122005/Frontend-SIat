@@ -329,6 +329,10 @@ export default function RepresentantesTab({
   const { expandedId, toggle } = useExpandableRows();
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("TODOS");
+  const [filterRelacion, setFilterRelacion] = useState("TODOS");
+  const [filterPacientes, setFilterPacientes] = useState("TODOS");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(0);
   const [resettingId, setResettingId] = useState(null);
   const [previewRep, setPreviewRep] = useState(null);
@@ -367,15 +371,52 @@ export default function RepresentantesTab({
 
   const filtered = useMemo(() => {
     return representantes.filter((r) => {
-      const nombre =
-        `${r.rep_nomb || ""} ${r.rep_apel || ""} ${r.usu_crro || ""}`.toLowerCase();
       const q = search.toLowerCase();
+      const ninosStr = (r.ninos || [])
+        .map((n) => `${n.nin_nomb || ""} ${n.nin_apel || ""}`)
+        .join(" ")
+        .toLowerCase();
+      const nombre =
+        `${r.rep_nomb || ""} ${r.rep_apel || ""} ${r.usu_crro || ""} ${r.rep_telf || ""} ${r.rep_cedu || ""} ${ninosStr}`.toLowerCase();
+
       if (search && !nombre.includes(q)) return false;
       if (filterEstado === "ACTIVO" && !r.usu_estd) return false;
       if (filterEstado === "INACTIVO" && r.usu_estd) return false;
+
+      // Filtro por relación / parentesco
+      if (filterRelacion !== "TODOS") {
+        const rel = (r.rep_rela || "").toLowerCase();
+        const targetRel = filterRelacion.toLowerCase();
+        if (!rel.includes(targetRel)) return false;
+      }
+
+      // Filtro por pacientes asignados
+      const count = (r.ninos || []).length;
+      if (filterPacientes === "CON_PACIENTE" && count === 0) return false;
+      if (filterPacientes === "SIN_PACIENTE" && count > 0) return false;
+      if (filterPacientes === "MULTIPLES" && count < 2) return false;
+
+      // Filtro por rango de fechas de ingreso
+      if (dateFrom || dateTo) {
+        const repDate = r.usu_ingr || r.rep_ingr || r.created_at;
+        if (repDate) {
+          const d = new Date(repDate);
+          if (dateFrom && d < new Date(dateFrom)) return false;
+          if (dateTo && d > new Date(dateTo + "T23:59:59")) return false;
+        }
+      }
+
       return true;
     });
-  }, [representantes, search, filterEstado]);
+  }, [
+    representantes,
+    search,
+    filterEstado,
+    filterRelacion,
+    filterPacientes,
+    dateFrom,
+    dateTo,
+  ]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -383,15 +424,56 @@ export default function RepresentantesTab({
   const clearFilters = () => {
     setSearch("");
     setFilterEstado("TODOS");
+    setFilterRelacion("TODOS");
+    setFilterPacientes("TODOS");
+    setDateFrom("");
+    setDateTo("");
     setPage(0);
   };
 
   const filterChips = [
     filterEstado !== "TODOS" && {
       key: "estado",
-      label: filterEstado === "ACTIVO" ? "Activos" : "Inactivos",
+      label: filterEstado === "ACTIVO" ? "Estado: Activo" : "Estado: Inactivo",
       onRemove: () => {
         setFilterEstado("TODOS");
+        setPage(0);
+      },
+    },
+    filterRelacion !== "TODOS" && {
+      key: "relacion",
+      label: `Parentesco: ${filterRelacion}`,
+      onRemove: () => {
+        setFilterRelacion("TODOS");
+        setPage(0);
+      },
+    },
+    filterPacientes !== "TODOS" && {
+      key: "pacientes",
+      label:
+        filterPacientes === "CON_PACIENTE"
+          ? "Con Pacientes"
+          : filterPacientes === "SIN_PACIENTE"
+            ? "Sin Pacientes"
+            : "Múltiples Pacientes (≥2)",
+      onRemove: () => {
+        setFilterPacientes("TODOS");
+        setPage(0);
+      },
+    },
+    dateFrom && {
+      key: "dateFrom",
+      label: `Desde: ${dateFrom}`,
+      onRemove: () => {
+        setDateFrom("");
+        setPage(0);
+      },
+    },
+    dateTo && {
+      key: "dateTo",
+      label: `Hasta: ${dateTo}`,
+      onRemove: () => {
+        setDateTo("");
         setPage(0);
       },
     },
@@ -618,23 +700,98 @@ export default function RepresentantesTab({
           setSearch(v);
           setPage(0);
         }}
-        searchPlaceholder="Buscar por nombre o correo..."
-        activeCount={(search ? 1 : 0) + (filterEstado !== "TODOS" ? 1 : 0)}
+        searchPlaceholder="Buscar por nombre, correo, cédula o paciente..."
+        activeCount={filterChips.length + (search ? 1 : 0)}
         onClearAll={clearFilters}
         chips={filterChips}
       >
-        <select
-          value={filterEstado}
-          onChange={(e) => {
-            setFilterEstado(e.target.value);
-            setPage(0);
-          }}
-          className="w-full sm:w-auto px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-        >
-          <option value="TODOS">Todos los estados</option>
-          <option value="ACTIVO">Activo</option>
-          <option value="INACTIVO">Inactivo</option>
-        </select>
+        <div>
+          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+            Estado
+          </label>
+          <select
+            value={filterEstado}
+            onChange={(e) => {
+              setFilterEstado(e.target.value);
+              setPage(0);
+            }}
+            className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
+          >
+            <option value="TODOS">Todos los estados</option>
+            <option value="ACTIVO">Activo</option>
+            <option value="INACTIVO">Inactivo</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+            Parentesco
+          </label>
+          <select
+            value={filterRelacion}
+            onChange={(e) => {
+              setFilterRelacion(e.target.value);
+              setPage(0);
+            }}
+            className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
+          >
+            <option value="TODOS">Todos los parentescos</option>
+            <option value="Madre">Madre</option>
+            <option value="Padre">Padre</option>
+            <option value="Tutor">Tutor / Legal</option>
+            <option value="Abuelo">Abuelo / Abuela</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+            Pacientes Asignados
+          </label>
+          <select
+            value={filterPacientes}
+            onChange={(e) => {
+              setFilterPacientes(e.target.value);
+              setPage(0);
+            }}
+            className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
+          >
+            <option value="TODOS">Cualquier cantidad</option>
+            <option value="CON_PACIENTE">Con Pacientes (≥1)</option>
+            <option value="SIN_PACIENTE">Sin Pacientes (0)</option>
+            <option value="MULTIPLES">Múltiples Pacientes (≥2)</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+            Fecha Registro (Desde)
+          </label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setPage(0);
+            }}
+            className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+            Fecha Registro (Hasta)
+          </label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setPage(0);
+            }}
+            className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+          />
+        </div>
       </FilterBar>
 
       <div
@@ -654,7 +811,7 @@ export default function RepresentantesTab({
               onClick={exportPDF}
               aria-label="Exportar a PDF"
               title="Exportar a PDF"
-              className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
             >
               <FileText className="w-4 h-4" />
             </button>
@@ -663,7 +820,7 @@ export default function RepresentantesTab({
               onClick={exportExcel}
               aria-label="Exportar a Excel"
               title="Exportar a Excel"
-              className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
             >
               <Download className="w-4 h-4" />
             </button>

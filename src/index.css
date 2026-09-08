@@ -247,15 +247,15 @@ h1, h2, h3, h4, h5, h6 {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Dark mode: deep navy glassmorphism for ALL card surfaces */
-.dark .bg-white,
+/* Dark mode: deep navy glassmorphism for card surfaces */
+.dark .bg-white:not(button):not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]),
 .dark .bg-white\/85,
 .dark .bg-white\/95 {
   background-color: rgba(15, 23, 42, 0.75) !important;
   backdrop-filter: blur(16px) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35) !important;
-  color: #F1F5F9 !important;
+  color: #F1F5F9;
 }
 
 .dark .bg-\[\#1E293B\],
@@ -264,47 +264,8 @@ h1, h2, h3, h4, h5, h6 {
 .dark .bg-slate-850 {
   background-color: rgba(15, 23, 42, 0.65) !important;
   backdrop-filter: blur(16px) !important;
-  border-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
-}
-
-/* Texto general en tarjetas oscuras */
-.dark .bg-slate-800 *:not(button):not(span[class*="bg-"]),
-.dark .bg-\[\#1E293B\] *:not(button):not(span[class*="bg-"]) {
-  color: #E2E8F0;
-}
-
-/* Ensure slate text colors are visible in dark mode */
-.dark .text-slate-700 {
-  color: #CBD5E1 !important;
-}
-
-.dark .text-slate-600 {
-  color: #94A3B8 !important;
-}
-
-.dark .text-slate-500 {
-  color: #94A3B8 !important;
-}
-
-.dark .text-slate-800 {
-  color: #E2E8F0 !important;
-}
-
-.dark .text-slate-900 {
-  color: #F1F5F9 !important;
-}
-
-.dark .text-gray-700 {
-  color: #CBD5E1 !important;
-}
-
-.dark .text-gray-600 {
-  color: #94A3B8 !important;
-}
-
-.dark .text-gray-900 {
-  color: #F1F5F9 !important;
 }
 
 /* Global soften borders for Dark Mode */
@@ -312,7 +273,7 @@ h1, h2, h3, h4, h5, h6 {
 .dark .border-slate-800,
 .dark .border-slate-700\/60,
 .dark .border-gray-200 {
-  border-color: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Fondo del área de contenido principal en oscuro */
@@ -425,6 +386,10 @@ input[type="text"],
 input[type="number"],
 input[type="password"],
 input[type="email"],
+input[type="date"],
+input[type="time"],
+input[type="search"],
+input[type="tel"],
 select,
 textarea {
   border: 1px solid #E2E8F0 !important;
@@ -432,19 +397,34 @@ textarea {
   color: #1E293B !important;
   border-radius: 0.625rem !important;
   padding: 0.5rem 0.75rem;
+  height: 2.5rem;
   transition: all 0.2s ease !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+textarea {
+  height: auto !important;
 }
 
 .dark input[type="text"],
 .dark input[type="number"],
 .dark input[type="password"],
 .dark input[type="email"],
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="search"],
+.dark input[type="tel"],
 .dark select,
 .dark textarea {
   border: 1px solid #334155 !important;
   background-color: #0F172A !important;
   color: #F8FAFC !important;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.2);
+  cursor: pointer;
 }
 
 input:focus,
@@ -1176,7 +1156,7 @@ html.dark body {
 }
 
 /* 1. Card & Container Backgrounds */
-html.dark .bg-white {
+html.dark .bg-white:not(button):not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]) {
   background-color: #0F172A !important;
   color: #F8FAFC;
 }
@@ -1194,25 +1174,54 @@ html.dark .bg-gray-100 {
 }
 
 /* 2. Text Legibility & Contrast */
-html.dark .text-slate-900,
-html.dark .text-slate-800,
-html.dark .text-slate-700,
-html.dark .text-gray-900,
-html.dark .text-gray-800,
-html.dark .text-gray-700 {
-  color: #F8FAFC !important;
+html.dark .text-slate-900:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
+html.dark .text-slate-800:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
+html.dark .text-slate-700:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
+html.dark .text-gray-900:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
+html.dark .text-gray-800:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
+html.dark .text-gray-700:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]) {
+  color: #F8FAFC;
 }
 
-html.dark .text-slate-600,
-html.dark .text-slate-500,
-html.dark .text-gray-600,
-html.dark .text-gray-500 {
-  color: #CBD5E1 !important;
+html.dark .text-slate-600:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]),
+html.dark .text-slate-500:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]),
+html.dark .text-gray-600:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]),
+html.dark .text-gray-500:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]) {
+  color: #CBD5E1;
 }
 
 html.dark .text-slate-400,
 html.dark .text-gray-400 {
-  color: #94A3B8 !important;
+  color: #94A3B8;
+}
+
+/* 2b. Status Badges Translucency in Dark Mode */
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+  color: #34D399 !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+  color: #FBBF24 !important;
+}
+
+html.dark .bg-rose-50,
+html.dark .bg-rose-100,
+html.dark .bg-red-50,
+html.dark .bg-red-100 {
+  background-color: rgba(244, 63, 94, 0.18) !important;
+  color: #FB7185 !important;
+}
+
+html.dark .bg-blue-50,
+html.dark .bg-blue-100,
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-100 {
+  background-color: rgba(59, 130, 246, 0.18) !important;
+  color: #60A5FA !important;
 }
 
 /* 3. Borders & Dividers */

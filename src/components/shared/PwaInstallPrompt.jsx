@@ -112,13 +112,18 @@ export default function PwaInstallPrompt({ variant = "topbar" }) {
     };
   }, []);
 
+  const markAsInstalled = () => {
+    setIsStandalone(true);
+    localStorage.setItem("siat_pwa_installed", "true");
+    localStorage.setItem("siat_pwa_dismissed", "true");
+  };
+
   const handleInstallClick = async () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") {
-        setIsStandalone(true);
-        localStorage.setItem("siat_pwa_installed", "true");
+        markAsInstalled();
       }
       setDeferredPrompt(null);
     } else {
@@ -127,8 +132,16 @@ export default function PwaInstallPrompt({ variant = "topbar" }) {
     }
   };
 
-  // Si ya está instalada como app o el usuario indicó que ya la tiene instalada, no mostrar absolutamente nada
-  if (isStandalone) return null;
+  const isInstalledOrDismissed =
+    isStandalone ||
+    localStorage.getItem("siat_pwa_installed") === "true" ||
+    localStorage.getItem("siat_pwa_dismissed") === "true";
+
+  // Si ya está instalada como app o el usuario la marcó como instalada/descartada, no mostrar absolutamente nada
+  if (isInstalledOrDismissed) return null;
+
+  // En la barra superior (topbar): no mostrar el botón si no hay un prompt de instalación pendiente y no es iOS
+  if (variant === "topbar" && !deferredPrompt && !isIOS) return null;
 
   return (
     <>
@@ -255,16 +268,18 @@ export default function PwaInstallPrompt({ variant = "topbar" }) {
             <div className="mt-6 flex items-center justify-between gap-2">
               <button
                 onClick={() => {
-                  localStorage.setItem("siat_pwa_installed", "true");
-                  setIsStandalone(true);
+                  markAsInstalled();
                   setShowInstructionsModal(false);
                 }}
                 className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline"
               >
-                Ya la tengo instalada
+                Ya la tengo instalada / No volver a mostrar
               </button>
               <button
-                onClick={() => setShowInstructionsModal(false)}
+                onClick={() => {
+                  markAsInstalled();
+                  setShowInstructionsModal(false);
+                }}
                 className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-md transition-colors flex items-center gap-1.5"
               >
                 <CheckCircle className="w-4 h-4" /> Entendido

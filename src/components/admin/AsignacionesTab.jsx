@@ -9,6 +9,8 @@ import {
   User,
   Stethoscope,
   CalendarDays,
+  FileText,
+  Download,
 } from "lucide-react";
 import StatusBadge from "../shared/StatusBadge";
 import FilterBar from "../shared/FilterBar";
@@ -275,16 +277,22 @@ export default function AsignacionesTab({
                 Asignar
               </button>
               <button
+                type="button"
                 onClick={exportAsignacionesToPDF}
-                className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 rounded-lg text-xs font-semibold transition-colors"
+                aria-label="Exportar a PDF"
+                title="Exportar a PDF"
+                className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
               >
-                PDF
+                <FileText className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={exportAsignacionesToExcel}
-                className="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg text-xs font-semibold transition-colors"
+                aria-label="Exportar a Excel"
+                title="Exportar a Excel"
+                className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
               >
-                Excel
+                <Download className="w-4 h-4" />
               </button>
             </div>
           </div>
