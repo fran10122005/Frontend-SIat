@@ -53,34 +53,42 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    let attempts = 0;
-    const MAX_ATTEMPTS = 10;
-    const INTERVAL = 5000;
 
-    async function pollHealth() {
-      while (!cancelled && attempts < MAX_ATTEMPTS) {
-        attempts++;
-        try {
-          await api.get("/health", { timeout: 5000 });
-          if (!cancelled) {
-            setTimeout(() => setSplashDone(true), 1500);
-          }
-          return;
-        } catch {
-          if (!cancelled && attempts < MAX_ATTEMPTS) {
-            await new Promise((r) => setTimeout(r, INTERVAL));
-          }
+    // Si el navegador no tiene conexión a Internet, cargar inmediatamente la app en modo local
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setIsOnline(false);
+      setSplashDone(true);
+      return;
+    }
+
+    async function checkHealth() {
+      try {
+        await api.get("/health", { timeout: 3000 });
+        if (!cancelled) {
+          setIsOnline(true);
+          setTimeout(() => setSplashDone(true), 600);
         }
-      }
-      if (!cancelled) {
-        setSplashDone(true);
+      } catch (err) {
+        if (!cancelled) {
+          // Si el backend no responde o estamos offline, continuar a la app en modo offline
+          setIsOnline(false);
+          setSplashDone(true);
+        }
       }
     }
 
-    pollHealth();
+    checkHealth();
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
       cancelled = true;
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
