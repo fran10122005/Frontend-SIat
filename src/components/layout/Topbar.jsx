@@ -68,33 +68,35 @@ export default function Topbar() {
             </span>
           </div>
 
-          {listaNinos && listaNinos.length > 1 && (
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700">
-              {listaNinos.map((child) => {
-                const isActive =
-                  selectedChildId === child.id_ninos ||
-                  selectedChildId === child.nin_codi;
-                return (
-                  <button
-                    key={child.id_ninos || child.nin_codi}
-                    type="button"
-                    onClick={() =>
-                      setSelectedChildId(child.id_ninos || child.nin_codi)
-                    }
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                      isActive
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
-                    }`}
-                    title={`Cambiar expediente a ${child.nom_nino}`}
-                  >
-                    <Baby className="w-3.5 h-3.5" />
-                    <span>{child.nom_nino}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {(userRole === "REPRESENTANTE" || userRole === "ROL_REP") &&
+            listaNinos &&
+            listaNinos.length > 1 && (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700">
+                {listaNinos.map((child) => {
+                  const isActive =
+                    selectedChildId === child.id_ninos ||
+                    selectedChildId === child.nin_codi;
+                  return (
+                    <button
+                      key={child.id_ninos || child.nin_codi}
+                      type="button"
+                      onClick={() =>
+                        setSelectedChildId(child.id_ninos || child.nin_codi)
+                      }
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                        isActive
+                          ? "bg-blue-600 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
+                      }`}
+                      title={`Cambiar expediente a ${child.nom_nino}`}
+                    >
+                      <Baby className="w-3.5 h-3.5" />
+                      <span>{child.nom_nino}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
         </div>
 
         {/* Contenedor derecho de acciones */}
