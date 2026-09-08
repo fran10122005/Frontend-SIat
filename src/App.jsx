@@ -23,6 +23,7 @@ import HomeAnalytics from "./pages/HomeAnalytics";
 import ResetPassword from "./components/auth/ResetPassword";
 import RegisterRepre from "./components/auth/RegisterRepre";
 import UserProfile from "./pages/UserProfile";
+import PwaInstallPrompt from "@/components/shared/PwaInstallPrompt";
 import "./App.css";
 
 export default function App() {
@@ -252,6 +253,7 @@ export default function App() {
         </div>
       )}
       {renderPage()}
+      <PwaInstallPrompt variant="banner" />
 
       {/* Auto Logout Modal */}
       {showSessionExpired && (

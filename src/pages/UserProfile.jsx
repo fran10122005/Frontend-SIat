@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import Sidebar from "../components/layout/Sidebar";
-import Topbar from "../components/layout/Topbar";
-import AdminSidebar from "../components/layout/AdminSidebar";
-import { useGlobalContext } from "../context/GlobalState";
-import api from "../api/axios";
+import Sidebar from "@/components/layout/Sidebar";
+import Topbar from "@/components/layout/Topbar";
+import AdminSidebar from "@/components/layout/AdminSidebar";
+import { useGlobalContext } from "@/context/GlobalState";
+import api from "@/api/axios";
 import { jsPDF } from "jspdf";
 import {
   UserCircle,
@@ -40,17 +40,17 @@ import {
   Palette,
   Settings2,
 } from "lucide-react";
-import Button from "../components/ui/Button";
-import LoadingState from "../components/dashboard/LoadingState";
-import ConfirmDialog from "../components/shared/ConfirmDialog";
-import EmptyState from "../components/shared/EmptyState";
+import Button from "@/components/ui/Button";
+import LoadingState from "@/components/dashboard/LoadingState";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import EmptyState from "@/components/shared/EmptyState";
 import {
   registerFingerprint,
   listPasskeys,
   deletePasskey,
-} from "../api/passkey";
-import { getErrorMessage } from "../utils/errorHandler";
-import FotoUpload from "../components/shared/FotoUpload";
+} from "@/api/passkey";
+import { getErrorMessage } from "@/utils/errorHandler";
+import FotoUpload from "@/components/shared/FotoUpload";
 
 const TEXTO_CONSENTIMIENTO = `Al aceptar este documento, usted, en su condición de representante legal, autoriza de forma expresa, libre e inequívoca al Sistema Inteligente de Asistencia Terapéutica (SIAT) y a la institución vinculada a:
 

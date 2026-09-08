@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import logoPath from "../assets/Logo.png";
-import siatLogoPath from "../../siat_tech_variation_2_1782859644790-removebg-preview.png";
+import logoPath from "@/assets/Logo.png";
+import siatLogoPath from "@/assets/logo-pdf.png";
 
 let logoData = null;
 let logoPromise = null;

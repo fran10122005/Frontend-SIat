@@ -3,6 +3,7 @@ import { useGlobalContext } from "../../context/GlobalState";
 import { useTourContext } from "../../context/TourContext";
 import { Sun, Moon, Menu, HelpCircle } from "lucide-react";
 import NotificationBell from "./NotificationBell";
+import PwaInstallPrompt from "../shared/PwaInstallPrompt";
 
 export default function Topbar() {
   const {
@@ -64,7 +65,8 @@ export default function Topbar() {
         </div>
 
         {/* Contenedor derecho de acciones */}
-        <div className="flex items-center gap-4 ml-auto">
+        <div className="flex items-center gap-3 ml-auto">
+          <PwaInstallPrompt variant="topbar" />
           <NotificationBell />
           <button
             onClick={handleStartTour}

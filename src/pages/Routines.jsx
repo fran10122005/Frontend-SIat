@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import Sidebar from "../components/layout/Sidebar";
-import { useGlobalContext } from "../context/GlobalState";
+import Sidebar from "@/components/layout/Sidebar";
+import { useGlobalContext } from "@/context/GlobalState";
 import {
   Play,
   Pause,
@@ -28,14 +28,14 @@ import {
   uploadToCloudinary,
   isCloudinaryReady,
   FOLDERS,
-} from "../config/cloudinary";
+} from "@/config/cloudinary";
 
-import Topbar from "../components/layout/Topbar";
-import api from "../api/axios";
-import Button from "../components/ui/Button";
-import Fab from "../components/ui/Fab";
-import FilterBar from "../components/shared/FilterBar";
-import TherapySessionPlayer from "../components/shared/TherapySessionPlayer";
+import Topbar from "@/components/layout/Topbar";
+import api from "@/api/axios";
+import Button from "@/components/ui/Button";
+import Fab from "@/components/ui/Fab";
+import FilterBar from "@/components/shared/FilterBar";
+import TherapySessionPlayer from "@/components/shared/TherapySessionPlayer";
 
 const EMPTY_FORM = {
   title: "",

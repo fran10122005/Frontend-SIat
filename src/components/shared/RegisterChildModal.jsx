@@ -1266,7 +1266,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                     type="tel"
                     value={form.rep_telf}
                     onChange={(e) => set("rep_telf", e.target.value)}
-                    placeholder="Ej. +58 424 1234567"
+                    placeholder="Ej. 0412 1234567 o +58 412 1234567"
                     disabled={!!repExistente}
                     className={`border-slate-200 dark:border-slate-700 focus:ring-emerald-500 ${repExistente ? "opacity-70" : ""}`}
                   />
