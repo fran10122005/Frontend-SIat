@@ -13,6 +13,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      devOptions: {
+        enabled: true
+      },
       includeAssets: ['Logo.png', 'favicon.ico', 'robots.txt'],
       manifest: {
         name: 'SIAT — Fundación de Atención Terapéutica',
