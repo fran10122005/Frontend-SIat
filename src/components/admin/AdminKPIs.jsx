@@ -17,8 +17,8 @@ const kpiConfig = [
     iconColor: "text-blue-600 dark:text-blue-400",
     textColor: "text-slate-900 dark:text-white",
     suffix: "",
-    trend: "+12%",
-    trendDir: "up",
+    trend: null,
+    trendDir: null,
   },
   {
     key: "totalEspecialistas",
@@ -29,8 +29,8 @@ const kpiConfig = [
     iconColor: "text-emerald-600 dark:text-emerald-400",
     textColor: "text-slate-900 dark:text-white",
     suffix: "",
-    trend: "+2",
-    trendDir: "up",
+    trend: null,
+    trendDir: null,
   },
   {
     key: "asignacionesActivas",
@@ -41,8 +41,8 @@ const kpiConfig = [
     iconColor: "text-purple-600 dark:text-purple-400",
     textColor: "text-slate-900 dark:text-white",
     suffix: "",
-    trend: "85%",
-    trendDir: "up",
+    trend: null,
+    trendDir: null,
   },
   {
     key: "totalAlertas",

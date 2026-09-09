@@ -184,47 +184,22 @@ export default function HomeAnalytics() {
     setIsDark(!isDark);
   };
 
-  // Mock data dinámica con fechas reales de los últimos 7 días
-  const mockHistoricalData = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const diaSemana = d.toLocaleDateString("es-ES", { weekday: "short" });
-    const diaFormato = d.toLocaleDateString("es-ES", {
-      day: "numeric",
-      month: "short",
-    });
-    const dia = `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)} ${diaFormato}`;
-    const calma = [65, 72, 58, 80, 45, 70, 85][i];
-    return { dia, rawDate: d.getTime(), calma, sobrecarga: 100 - calma };
-  });
-  const mockBpmData = [
-    { hora: "08:00", bpm: 72 },
-    { hora: "10:00", bpm: 85 },
-    { hora: "12:00", bpm: 78 },
-    { hora: "14:00", bpm: 95 },
-    { hora: "16:00", bpm: 68 },
-    { hora: "18:00", bpm: 82 },
-    { hora: "20:00", bpm: 74 },
-  ];
-
-  // Fusionar datos reales con mock para cubrir siempre los últimos 7 días
-  const mergedHistoricalData = mockHistoricalData.map((mockDay) => {
-    const realDay = homeHistoricalData.find(
-      (d) => d.rawDate === mockDay.rawDate,
-    );
-    return realDay || mockDay;
-  });
-  const effectiveHomeData = mergedHistoricalData;
-  const avgCalma = Math.round(
-    effectiveHomeData.reduce((s, d) => s + d.calma, 0) /
-      effectiveHomeData.length,
-  );
-  const worstDay = [...effectiveHomeData].sort(
-    (a, b) => a.calma - b.calma,
-  )[0] || { dia: "-", calma: 0, sobrecarga: 0 };
-  const bestDay = [...effectiveHomeData].sort(
-    (a, b) => b.calma - a.calma,
-  )[0] || { dia: "-", calma: 0 };
+  const effectiveHomeData = homeHistoricalData || [];
+  const avgCalma =
+    effectiveHomeData.length > 0
+      ? Math.round(
+          effectiveHomeData.reduce((s, d) => s + (d.calma || 0), 0) /
+            effectiveHomeData.length,
+        )
+      : 0;
+  const worstDay =
+    effectiveHomeData.length > 0
+      ? [...effectiveHomeData].sort((a, b) => a.calma - b.calma)[0]
+      : { dia: "-", calma: 0, sobrecarga: 0 };
+  const bestDay =
+    effectiveHomeData.length > 0
+      ? [...effectiveHomeData].sort((a, b) => b.calma - a.calma)[0]
+      : { dia: "-", calma: 0 };
   const dayNotes = parentNotes
     .filter((n) => n.dia === selectedDay)
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -235,7 +210,7 @@ export default function HomeAnalytics() {
     .map((n) => ({ hora: n.time, bpm: n.bpm }));
 
   const displayHistoricalData = effectiveHomeData;
-  const displayBpmData = bpmChartData.length > 0 ? bpmChartData : mockBpmData;
+  const displayBpmData = bpmChartData;
 
   const exportarReporteSemanal = async () => {
     try {
@@ -400,88 +375,104 @@ export default function HomeAnalytics() {
                   </div>
                 </div>
                 <div className="flex-1 w-full min-h-0">
-                  <ResponsiveContainer
-                    width="100%"
-                    height="100%"
-                    minWidth={0}
-                    minHeight={0}
-                  >
-                    <BarChart
-                      data={displayHistoricalData}
-                      margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                  {displayHistoricalData && displayHistoricalData.length > 0 ? (
+                    <ResponsiveContainer
+                      width="100%"
+                      height="100%"
+                      minWidth={0}
+                      minHeight={0}
                     >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke={isDark ? "#334155" : "#E2E8F0"}
-                      />
-                      <XAxis
-                        dataKey="dia"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: isDark ? "#94A3B8" : "#64748B",
-                          fontSize: 12,
-                        }}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: isDark ? "#94A3B8" : "#64748B",
-                          fontSize: 12,
-                        }}
-                        tickFormatter={(v) => `${v}%`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
-                          backgroundColor: isDark ? "#0F172A" : "#fff",
-                          color: isDark ? "#f8fafc" : "#0f172a",
-                          fontSize: "12px",
-                        }}
-                        formatter={(value, name) => [
-                          `${value}%`,
-                          name === "calma" ? "Calma" : "Sobrecarga",
-                        ]}
-                      />
-                      <Bar
-                        dataKey="calma"
-                        fill="#3B82F6"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={35}
+                      <BarChart
+                        data={displayHistoricalData}
+                        margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
                       >
-                        {displayHistoricalData.map((entry, i) => (
-                          <Cell
-                            key={i}
-                            fill={
-                              entry.dia === selectedDay ? "#1D4ED8" : "#3B82F6"
-                            }
-                            onClick={() => setSelectedDay(entry.dia)}
-                            cursor="pointer"
-                          />
-                        ))}
-                      </Bar>
-                      <Bar
-                        dataKey="sobrecarga"
-                        fill="#F87171"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={35}
-                      >
-                        {displayHistoricalData.map((entry, i) => (
-                          <Cell
-                            key={i}
-                            fill={
-                              entry.dia === selectedDay ? "#DC2626" : "#F87171"
-                            }
-                            onClick={() => setSelectedDay(entry.dia)}
-                            cursor="pointer"
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke={isDark ? "#334155" : "#E2E8F0"}
+                        />
+                        <XAxis
+                          dataKey="dia"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: isDark ? "#94A3B8" : "#64748B",
+                            fontSize: 12,
+                          }}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: isDark ? "#94A3B8" : "#64748B",
+                            fontSize: 12,
+                          }}
+                          tickFormatter={(v) => `${v}%`}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: "8px",
+                            border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
+                            backgroundColor: isDark ? "#0F172A" : "#fff",
+                            color: isDark ? "#f8fafc" : "#0f172a",
+                            fontSize: "12px",
+                          }}
+                          formatter={(value, name) => [
+                            `${value}%`,
+                            name === "calma" ? "Calma" : "Sobrecarga",
+                          ]}
+                        />
+                        <Bar
+                          dataKey="calma"
+                          fill="#3B82F6"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={35}
+                        >
+                          {displayHistoricalData.map((entry, i) => (
+                            <Cell
+                              key={i}
+                              fill={
+                                entry.dia === selectedDay
+                                  ? "#1D4ED8"
+                                  : "#3B82F6"
+                              }
+                              onClick={() => setSelectedDay(entry.dia)}
+                              cursor="pointer"
+                            />
+                          ))}
+                        </Bar>
+                        <Bar
+                          dataKey="sobrecarga"
+                          fill="#F87171"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={35}
+                        >
+                          {displayHistoricalData.map((entry, i) => (
+                            <Cell
+                              key={i}
+                              fill={
+                                entry.dia === selectedDay
+                                  ? "#DC2626"
+                                  : "#F87171"
+                              }
+                              onClick={() => setSelectedDay(entry.dia)}
+                              cursor="pointer"
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-12">
+                      <p className="text-sm font-semibold">
+                        Sin registros diarios esta semana
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Los registros del diario del hogar completados por los
+                        padres aparecerán aquí.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -492,87 +483,99 @@ export default function HomeAnalytics() {
               >
                 <div className="mb-4">
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">
-                    Frecuencia Cardíaca — {selectedDay}
+                    Frecuencia Cardíaca — {selectedDay || "Día seleccionado"}
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
                     Distribución de BPM durante el día seleccionado en casa
                   </p>
                 </div>
                 <div className="flex-1 w-full min-h-0">
-                  <ResponsiveContainer
-                    width="100%"
-                    height="100%"
-                    minWidth={0}
-                    minHeight={0}
-                  >
-                    <AreaChart
-                      data={displayBpmData}
-                      margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                  {displayBpmData && displayBpmData.length > 0 ? (
+                    <ResponsiveContainer
+                      width="100%"
+                      height="100%"
+                      minWidth={0}
+                      minHeight={0}
                     >
-                      <defs>
-                        <linearGradient
-                          id="bpmGrad"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#6366F1"
-                            stopOpacity={0.4}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#6366F1"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke={isDark ? "#334155" : "#E2E8F0"}
-                      />
-                      <XAxis
-                        dataKey="hora"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: isDark ? "#94A3B8" : "#64748B",
-                          fontSize: 11,
-                        }}
-                      />
-                      <YAxis
-                        domain={["auto", "auto"]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: isDark ? "#94A3B8" : "#64748B",
-                          fontSize: 11,
-                        }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
-                          backgroundColor: isDark ? "#0F172A" : "#fff",
-                          color: isDark ? "#f8fafc" : "#0f172a",
-                          fontSize: "12px",
-                        }}
-                        formatter={(v) => [`${v} bpm`, "Frec. Cardíaca"]}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="bpm"
-                        stroke="#6366F1"
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#bpmGrad)"
-                        name="BPM"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                      <AreaChart
+                        data={displayBpmData}
+                        margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="bpmGrad"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#6366F1"
+                              stopOpacity={0.4}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#6366F1"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke={isDark ? "#334155" : "#E2E8F0"}
+                        />
+                        <XAxis
+                          dataKey="hora"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: isDark ? "#94A3B8" : "#64748B",
+                            fontSize: 11,
+                          }}
+                        />
+                        <YAxis
+                          domain={["auto", "auto"]}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: isDark ? "#94A3B8" : "#64748B",
+                            fontSize: 11,
+                          }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: "8px",
+                            border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
+                            backgroundColor: isDark ? "#0F172A" : "#fff",
+                            color: isDark ? "#f8fafc" : "#0f172a",
+                            fontSize: "12px",
+                          }}
+                          formatter={(v) => [`${v} bpm`, "Frec. Cardíaca"]}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="bpm"
+                          stroke="#6366F1"
+                          strokeWidth={3}
+                          fillOpacity={1}
+                          fill="url(#bpmGrad)"
+                          name="BPM"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-12">
+                      <p className="text-sm font-semibold">
+                        Sin lecturas de frecuencia cardíaca para este día
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Los datos de ritmo cardíaco registrados en el diario del
+                        hogar se graficarán aquí.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

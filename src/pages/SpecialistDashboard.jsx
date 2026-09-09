@@ -87,15 +87,26 @@ export default function SpecialistDashboard() {
     return listaNinos.find((n) => n.id_ninos === selectedChildId) || null;
   }, [listaNinos, selectedChildId]);
 
-  // ==== MOCK DATA: GLOBAL ====
-  const globalStats = useMemo(
-    () => ({
-      pacientesActivos: listaNinos.length || 0,
-      alertasPendientes: 0,
-      porcentajeCumplimiento: 0,
-    }),
-    [listaNinos.length],
-  );
+  // ==== ESTADÍSTICAS GLOBALES DINÁMICAS ====
+  const globalStats = useMemo(() => {
+    const activeCount = listaNinos?.length || 0;
+    const pendingAlerts = (clinicalAlerts || []).filter(
+      (a) => !a.resuelta,
+    ).length;
+    let avgProgress = 0;
+    if (globalPeiGoals && globalPeiGoals.length > 0) {
+      const sum = globalPeiGoals.reduce(
+        (acc, g) => acc + (Number(g.met_prog) || 0),
+        0,
+      );
+      avgProgress = Math.round(sum / globalPeiGoals.length);
+    }
+    return {
+      pacientesActivos: activeCount,
+      alertasPendientes: pendingAlerts,
+      porcentajeCumplimiento: avgProgress,
+    };
+  }, [listaNinos, clinicalAlerts, globalPeiGoals]);
 
   // Telemetry for testing
   const { isWebSocketActive } = useTelemetry();
@@ -181,58 +192,6 @@ export default function SpecialistDashboard() {
     return isQuietHours ? [] : filtered;
   }, [crisisAlerts, specialistConfig, isQuietHours]);
 
-  const mockAlerts = [
-    {
-      fec_hora: new Date(Date.now() - 86400000),
-      est_dete: "Berrinche",
-      bpm_max: 130,
-      mov_max: 8,
-      stress_index: 85,
-    },
-    {
-      fec_hora: new Date(Date.now() - 172800000),
-      est_dete: "Estereotipia",
-      bpm_max: 100,
-      mov_max: 6,
-      stress_index: 45,
-    },
-    {
-      fec_hora: new Date(Date.now() - 259200000),
-      est_dete: "Agresión",
-      bpm_max: 120,
-      mov_max: 9,
-      stress_index: 78,
-    },
-    {
-      fec_hora: new Date(Date.now() - 345600000),
-      est_dete: "Estereotipia",
-      bpm_max: 95,
-      mov_max: 5,
-      stress_index: 40,
-    },
-    {
-      fec_hora: new Date(Date.now() - 432000000),
-      est_dete: "Berrinche",
-      bpm_max: 125,
-      mov_max: 7,
-      stress_index: 72,
-    },
-    {
-      fec_hora: new Date(Date.now() - 518400000),
-      est_dete: "Ansiedad",
-      bpm_max: 110,
-      mov_max: 3,
-      stress_index: 60,
-    },
-    {
-      fec_hora: new Date(Date.now() - 604800000),
-      est_dete: "Estereotipia",
-      bpm_max: 92,
-      mov_max: 4,
-      stress_index: 35,
-    },
-  ];
-
   // ==== DATOS DEL PACIENTE (MEMOIZADOS) ====
 
   const peiGoals = useMemo(() => {
@@ -251,7 +210,7 @@ export default function SpecialistDashboard() {
   }, [globalPeiGoals]);
 
   const alertsSource = useMemo(() => {
-    const base = clinicalAlerts.length > 0 ? clinicalAlerts : mockAlerts;
+    const base = clinicalAlerts || [];
     if (specialistConfig.alertTypes?.length > 0) {
       return isQuietHours
         ? []
@@ -260,13 +219,7 @@ export default function SpecialistDashboard() {
           : base;
     }
     return isQuietHours ? [] : base;
-  }, [
-    clinicalAlerts,
-    mockAlerts,
-    specialistConfig,
-    isQuietHours,
-    filteredAlerts,
-  ]);
+  }, [clinicalAlerts, specialistConfig, isQuietHours, filteredAlerts]);
 
   // Análisis Sensorial (PieChart) - Optimizado
   const sensoryData = useMemo(() => {
@@ -361,7 +314,7 @@ export default function SpecialistDashboard() {
         .sort((a, b) => count[b] - count[a])
         .slice(0, 4);
     }
-    return ["Ruidos fuertes", "Luces", "Transición"];
+    return [];
   }, [alertsSource, activeChild]);
 
   // Resumen del día (datos del representante)
@@ -872,14 +825,20 @@ export default function SpecialistDashboard() {
                           </h3>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {sensoryTriggers.map((tag, i) => (
-                            <span
-                              key={i}
-                              className="inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/40"
-                            >
-                              {tag}
-                            </span>
-                          ))}
+                          {sensoryTriggers.length > 0 ? (
+                            sensoryTriggers.map((tag, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/40"
+                              >
+                                {tag}
+                              </span>
+                            ))
+                          ) : (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                              No hay detonantes sensoriales registrados
+                            </p>
+                          )}
                         </div>
                       </Card>
 

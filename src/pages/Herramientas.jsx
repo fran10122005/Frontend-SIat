@@ -450,6 +450,12 @@ export default function Herramientas() {
       : timerProgress < 80
         ? "bg-amber-500"
         : "bg-rose-500";
+  const timerStrokeColor =
+    timerProgress < 50
+      ? "text-emerald-500 dark:text-emerald-400"
+      : timerProgress < 80
+        ? "text-amber-500 dark:text-amber-400"
+        : "text-rose-500 dark:text-rose-400";
 
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60);
@@ -763,7 +769,7 @@ export default function Herramientas() {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-4">
                 <div
                   data-tour="ht-aac"
-                  className="bg-white/85 dark:bg-[#1E293B]/85 backdrop-blur-md rounded-2xl p-4 border border-blue-500/15 dark:border-blue-500/15 shadow-sm"
+                  className="bg-white/85 dark:bg-[#1E293B]/85 backdrop-blur-md rounded-2xl p-4 border border-blue-500/15 dark:border-blue-500/20 shadow-sm"
                 >
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <div className="flex-1 min-h-[60px] bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 p-3 flex flex-wrap gap-2 items-center">
@@ -791,7 +797,7 @@ export default function Herramientas() {
                         data-tour="ht-aac-speak"
                         onClick={speakSentence}
                         disabled={sentence.length === 0}
-                        className="flex-1 sm:flex-none h-[60px] px-6 bg-brand-500 hover:bg-brand-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold text-sm rounded-xl shadow-md shadow-brand-500/15 transition-transform hover:-translate-y-0.5 active:translate-y-0 flex flex-col items-center justify-center gap-0.5"
+                        className="flex-1 sm:flex-none h-[60px] px-6 bg-brand-500 hover:bg-brand-600 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed text-white font-extrabold text-sm rounded-xl shadow-md shadow-brand-500/15 transition-transform hover:-translate-y-0.5 active:translate-y-0 flex flex-col items-center justify-center gap-0.5"
                       >
                         <Volume2 className="w-5 h-5" /> Hablar
                       </button>
@@ -799,7 +805,7 @@ export default function Herramientas() {
                         data-tour="ht-aac-clear"
                         onClick={clearSentence}
                         disabled={sentence.length === 0}
-                        className="flex-1 sm:flex-none h-[60px] px-4 bg-rose-50 dark:bg-rose-900/20 text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-900/40 font-bold rounded-xl border border-rose-200 dark:border-rose-800 transition-colors flex flex-col items-center justify-center gap-0.5 disabled:opacity-50"
+                        className="flex-1 sm:flex-none h-[60px] px-4 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 font-bold rounded-xl border border-rose-200 dark:border-rose-800/60 transition-colors flex flex-col items-center justify-center gap-0.5 disabled:opacity-50"
                       >
                         <Trash2 className="w-4 h-4" /> Borrar
                       </button>
@@ -807,27 +813,30 @@ export default function Herramientas() {
                   </div>
                 </div>
 
-                <FilterBar
-                  embedded
-                  searchDataTour="ht-aac-search"
-                  searchValue={searchQuery}
-                  onSearch={setSearchQuery}
-                  searchPlaceholder="Buscar pictograma..."
-                  activeCount={searchQuery ? 1 : 0}
-                  onClearAll={() => setSearchQuery("")}
-                  chips={[]}
-                  className="flex-1"
-                />
-                <button
-                  data-tour="ht-aac-create"
-                  onClick={() => setShowAddPicForm(!showAddPicForm)}
-                  className="px-3 py-2 bg-brand-500/10 text-brand-500 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-brand-500/20 dark:hover:bg-blue-900/50 border border-brand-500/20 dark:border-blue-800/50 text-xs font-semibold rounded-xl flex items-center gap-1 transition-colors shadow-sm whitespace-nowrap"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Crear Pictograma
-                </button>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <FilterBar
+                    embedded
+                    searchDataTour="ht-aac-search"
+                    searchValue={searchQuery}
+                    onSearch={setSearchQuery}
+                    searchPlaceholder="Buscar pictograma..."
+                    activeCount={searchQuery ? 1 : 0}
+                    onClearAll={() => setSearchQuery("")}
+                    chips={[]}
+                    className="flex-1"
+                  />
+                  <button
+                    data-tour="ht-aac-create"
+                    onClick={() => setShowAddPicForm(!showAddPicForm)}
+                    className="px-3 py-2 bg-blue-500/10 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-500/20 dark:hover:bg-blue-900/50 border border-blue-500/20 dark:border-blue-800/50 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition-colors shadow-sm whitespace-nowrap"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Crear Pictograma
+                  </button>
+                </div>
+
                 {recentPhrases.length > 0 && (
                   <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider whitespace-nowrap">
                       Recientes:
                     </span>
                     {recentPhrases.map((ph, idx) => (
@@ -857,7 +866,7 @@ export default function Herramientas() {
                         placeholder="Nombre (ej. Abrazo)"
                         value={newPicLabel}
                         onChange={(e) => setNewPicLabel(e.target.value)}
-                        className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 rounded-lg outline-none text-slate-800 dark:text-white"
+                        className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 rounded-lg outline-none text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                       />
                       <input
                         required
@@ -865,32 +874,62 @@ export default function Herramientas() {
                         placeholder="Emoji (ej. 🫂)"
                         value={newPicEmoji}
                         onChange={(e) => setNewPicEmoji(e.target.value)}
-                        className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 focus:border-brand-500 rounded-lg outline-none text-slate-800 dark:text-white"
+                        className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-brand-500 rounded-lg outline-none text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                       />
                       <select
                         value={newPicCat}
                         onChange={(e) => setNewPicCat(e.target.value)}
-                        className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 focus:border-brand-500 rounded-lg outline-none cursor-pointer text-slate-800 dark:text-white"
+                        className="px-2.5 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-brand-500 rounded-lg outline-none cursor-pointer text-slate-800 dark:text-white"
                       >
-                        <option value="needs">Necesidades</option>
-                        <option value="emotions">Emociones</option>
-                        <option value="actions">Acciones</option>
-                        <option value="sensations">Sensaciones Físicas</option>
-                        <option value="places">Lugares</option>
-                        <option value="people">Personas</option>
+                        <option
+                          value="needs"
+                          className="dark:bg-slate-900 dark:text-white"
+                        >
+                          Necesidades
+                        </option>
+                        <option
+                          value="emotions"
+                          className="dark:bg-slate-900 dark:text-white"
+                        >
+                          Emociones
+                        </option>
+                        <option
+                          value="actions"
+                          className="dark:bg-slate-900 dark:text-white"
+                        >
+                          Acciones
+                        </option>
+                        <option
+                          value="sensations"
+                          className="dark:bg-slate-900 dark:text-white"
+                        >
+                          Sensaciones Físicas
+                        </option>
+                        <option
+                          value="places"
+                          className="dark:bg-slate-900 dark:text-white"
+                        >
+                          Lugares
+                        </option>
+                        <option
+                          value="people"
+                          className="dark:bg-slate-900 dark:text-white"
+                        >
+                          Personas
+                        </option>
                       </select>
                     </div>
                     <div className="flex justify-end gap-2 pt-1">
                       <button
                         type="button"
                         onClick={() => setShowAddPicForm(false)}
-                        className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold"
+                        className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-semibold"
+                        className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"
                       >
                         Guardar
                       </button>
@@ -916,7 +955,7 @@ export default function Herramientas() {
                     return (
                       <div
                         key={cat.id}
-                        className="bg-white dark:bg-[#1E293B]/95 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col"
+                        className="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col"
                       >
                         <h3
                           className={`text-[10px] font-black uppercase tracking-widest mb-3 inline-flex px-2 py-0.5 rounded w-fit ${cat.color}`}
@@ -932,10 +971,10 @@ export default function Herramientas() {
                               <div key={i} className="relative group/item">
                                 <button
                                   onClick={() => addToSentence(item)}
-                                  className="w-full h-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-brand-500/40 dark:hover:border-blue-500/40 rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+                                  className="w-full h-full bg-slate-50/60 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-brand-500/40 dark:hover:border-blue-500/40 rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
                                 >
                                   <span className="text-3xl">{item.emoji}</span>
-                                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
                                     {item.label}
                                   </span>
                                 </button>
@@ -970,17 +1009,17 @@ export default function Herramientas() {
                   <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-12">
                     {/* Primero */}
                     <div
-                      className={`w-full md:flex-1 max-w-[260px] p-5 rounded-2xl border-2 transition-all ${ftCompleted ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20" : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"}`}
+                      className={`w-full md:flex-1 max-w-[260px] p-5 rounded-2xl border-2 transition-all ${ftCompleted ? "border-emerald-500/60 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/50"}`}
                     >
                       <div className="text-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
                           Primero
                         </span>
                         <div className="text-5xl my-3">
-                          {ftCustomTask ? "📋" : ftTask.emoji}
+                          {ftCustomTask ? "📋" : ftTask?.emoji || "📋"}
                         </div>
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                          {ftCustomTask || ftTask.label}
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                          {ftCustomTask || ftTask?.label || "Selecciona tarea"}
                         </p>
                       </div>
                     </div>
@@ -992,17 +1031,19 @@ export default function Herramientas() {
 
                     {/* Después */}
                     <div
-                      className={`w-full md:flex-1 max-w-[260px] p-5 rounded-2xl border-2 transition-all ${ftCompleted ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20" : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"}`}
+                      className={`w-full md:flex-1 max-w-[260px] p-5 rounded-2xl border-2 transition-all ${ftCompleted ? "border-amber-500/60 bg-amber-50/50 dark:bg-amber-950/20" : "border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-900/50"}`}
                     >
                       <div className="text-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
                           Después
                         </span>
                         <div className="text-5xl my-3">
-                          {ftCustomReward ? "🎁" : ftReward.emoji}
+                          {ftCustomReward ? "🎁" : ftReward?.emoji || "🎁"}
                         </div>
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                          {ftCustomReward || ftReward.label}
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                          {ftCustomReward ||
+                            ftReward?.label ||
+                            "Selecciona premio"}
                         </p>
                       </div>
                     </div>
@@ -1022,7 +1063,7 @@ export default function Herramientas() {
                     <div className="mt-6 flex flex-col items-center gap-3">
                       <div className="flex flex-wrap gap-3 justify-center">
                         <select
-                          value={ftCustomTask || ftTask.label}
+                          value={ftCustomTask || ftTask?.label || ""}
                           onChange={(e) => {
                             const found = defaultFirstTasks.find(
                               (t) => t.label === e.target.value,
@@ -1035,14 +1076,21 @@ export default function Herramientas() {
                               setFtTask(null);
                             }
                           }}
-                          className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer max-w-[200px]"
+                          className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer max-w-[200px]"
                         >
                           {defaultFirstTasks.map((t) => (
-                            <option key={t.label} value={t.label}>
+                            <option
+                              key={t.label}
+                              value={t.label}
+                              className="dark:bg-slate-800 dark:text-white"
+                            >
                               {t.emoji} {t.label}
                             </option>
                           ))}
-                          <option value="__custom__">
+                          <option
+                            value="__custom__"
+                            className="dark:bg-slate-800 dark:text-white"
+                          >
                             ✏️ Personalizado...
                           </option>
                         </select>
@@ -1052,11 +1100,11 @@ export default function Herramientas() {
                             placeholder="Escribe la tarea..."
                             value={ftCustomTask}
                             onChange={(e) => setFtCustomTask(e.target.value)}
-                            className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]"
+                            className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]"
                           />
                         )}
                         <select
-                          value={ftCustomReward || ftReward.label}
+                          value={ftCustomReward || ftReward?.label || ""}
                           onChange={(e) => {
                             const found = defaultThenRewards.find(
                               (r) => r.label === e.target.value,
@@ -1069,14 +1117,21 @@ export default function Herramientas() {
                               setFtReward(null);
                             }
                           }}
-                          className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer max-w-[200px]"
+                          className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer max-w-[200px]"
                         >
                           {defaultThenRewards.map((r) => (
-                            <option key={r.label} value={r.label}>
+                            <option
+                              key={r.label}
+                              value={r.label}
+                              className="dark:bg-slate-800 dark:text-white"
+                            >
                               {r.emoji} {r.label}
                             </option>
                           ))}
-                          <option value="__custom__">
+                          <option
+                            value="__custom__"
+                            className="dark:bg-slate-800 dark:text-white"
+                          >
                             ✏️ Personalizado...
                           </option>
                         </select>
@@ -1086,7 +1141,7 @@ export default function Herramientas() {
                             placeholder="Escribe la recompensa..."
                             value={ftCustomReward}
                             onChange={(e) => setFtCustomReward(e.target.value)}
-                            className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]"
+                            className="px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 w-[180px]"
                           />
                         )}
                       </div>
@@ -1101,9 +1156,9 @@ export default function Herramientas() {
                   )}
                 </div>
 
-                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-900/50">
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-900/40">
                   <p className="text-xs text-amber-800 dark:text-amber-300 font-medium flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
                     <span>
                       <strong className="font-black">¿Cómo usar?</strong>{" "}
                       Muestra al niño "Primero [tarea], luego [premio]". Esto
@@ -1119,17 +1174,17 @@ export default function Herramientas() {
             {activeTool === "sensory" && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-4">
                 {activeStrategy && (
-                  <div className="bg-violet-50 dark:bg-violet-900/20 rounded-2xl p-6 border border-violet-200 dark:border-violet-900/50 text-center animate-in fade-in zoom-in-95 duration-300">
+                  <div className="bg-violet-50 dark:bg-violet-950/40 rounded-2xl p-6 border border-violet-200 dark:border-violet-800/60 text-center animate-in fade-in zoom-in-95 duration-300 shadow-sm">
                     <div className="text-6xl mb-3">{activeStrategy.emoji}</div>
-                    <h3 className="text-lg font-black text-violet-800 dark:text-violet-300 mb-2">
+                    <h3 className="text-lg font-black text-violet-900 dark:text-violet-200 mb-2">
                       {activeStrategy.label}
                     </h3>
-                    <p className="text-sm text-violet-700 dark:text-violet-400 mb-4 max-w-md mx-auto">
+                    <p className="text-sm text-violet-700 dark:text-violet-300 mb-4 max-w-md mx-auto">
                       {activeStrategy.desc}
                     </p>
-                    <div className="w-full bg-violet-200 dark:bg-violet-800 rounded-full h-2 max-w-xs mx-auto mb-4 overflow-hidden">
+                    <div className="w-full bg-violet-200 dark:bg-violet-900/60 rounded-full h-2.5 max-w-xs mx-auto mb-4 overflow-hidden">
                       <div
-                        className="h-full bg-violet-500 rounded-full"
+                        className="h-full bg-violet-600 dark:bg-violet-500 rounded-full"
                         style={{
                           width: "100%",
                           animation: "shrink 30s linear forwards",
@@ -1138,7 +1193,7 @@ export default function Herramientas() {
                     </div>
                     <button
                       onClick={stopSensoryStrategy}
-                      className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg transition-colors"
+                      className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
                     >
                       Terminar
                     </button>
@@ -1152,10 +1207,10 @@ export default function Herramientas() {
                     <button
                       key={strategy.id}
                       onClick={() => startSensoryStrategy(strategy)}
-                      className={`bg-white dark:bg-[#1E293B] border-2 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 text-center ${activeStrategy?.id === strategy.id ? "border-violet-500 ring-2 ring-violet-500/30" : "border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700"}`}
+                      className={`bg-white dark:bg-[#1E293B] border-2 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 text-center ${activeStrategy?.id === strategy.id ? "border-violet-500 ring-2 ring-violet-500/30 dark:bg-violet-950/20" : "border-slate-200 dark:border-slate-700/80 hover:border-violet-300 dark:hover:border-violet-600"}`}
                     >
                       <span className="text-4xl">{strategy.emoji}</span>
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
                         {strategy.label}
                       </span>
                     </button>
@@ -1188,15 +1243,12 @@ export default function Herramientas() {
                         cy="60"
                         r="54"
                         fill="none"
+                        stroke="currentColor"
                         strokeWidth="8"
-                        className={timerColor}
+                        className={`${timerStrokeColor} transition-all duration-500`}
                         strokeLinecap="round"
                         strokeDasharray={`${2 * Math.PI * 54}`}
                         strokeDashoffset={`${2 * Math.PI * 54 * (1 - timerProgress / 100)}`}
-                        style={{
-                          transition:
-                            "stroke-dashoffset 0.5s ease, stroke 0.5s ease",
-                        }}
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -1205,7 +1257,7 @@ export default function Herramientas() {
                           ? formatTime(remainingSeconds)
                           : `${timerMinutes}:${timerSeconds.toString().padStart(2, "0")}`}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-1">
                         min:seg
                       </span>
                     </div>
@@ -1220,7 +1272,7 @@ export default function Herramientas() {
                           setTimerMinutes((prev) => Math.max(0, prev - 1))
                         }
                         disabled={timerRunning}
-                        className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 border border-slate-200 dark:border-slate-700"
+                        className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 border border-slate-200 dark:border-slate-700 transition-colors"
                       >
                         -
                       </button>
@@ -1233,7 +1285,7 @@ export default function Herramientas() {
                           !timerRunning && setTimerMinutes((prev) => prev + 1)
                         }
                         disabled={timerRunning}
-                        className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 border border-slate-200 dark:border-slate-700"
+                        className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 border border-slate-200 dark:border-slate-700 transition-colors"
                       >
                         +
                       </button>
@@ -1261,7 +1313,7 @@ export default function Herramientas() {
                           </button>
                           <button
                             onClick={resetTimer}
-                            className="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold text-sm rounded-xl transition-all flex items-center gap-2"
+                            className="px-5 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-bold text-sm rounded-xl transition-all flex items-center gap-2"
                           >
                             <RefreshCw className="w-4 h-4" /> Reiniciar
                           </button>
@@ -1292,8 +1344,8 @@ export default function Herramientas() {
                 data-tour="ht-econ-panel"
                 className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-4"
               >
-                <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-900/50">
-                  <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-900/40">
+                  <ShieldCheck className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
                   <p className="text-xs text-blue-800 dark:text-blue-300 font-medium">
                     <strong className="font-black">
                       Protección Clínica Activa:
@@ -1316,11 +1368,11 @@ export default function Herramientas() {
                         key={i}
                         className="flex-1 flex flex-col items-center gap-1"
                       >
-                        <span className="text-[10px] font-bold text-slate-400">
+                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">
                           {day.count}
                         </span>
                         <div
-                          className="w-full bg-slate-100 dark:bg-slate-800 rounded-t-md relative"
+                          className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-t-md relative"
                           style={{ height: "60px" }}
                         >
                           <div
@@ -1330,7 +1382,7 @@ export default function Herramientas() {
                             }}
                           ></div>
                         </div>
-                        <span className="text-[9px] font-bold text-slate-500 uppercase">
+                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">
                           {day.label}
                         </span>
                       </div>
@@ -1351,7 +1403,7 @@ export default function Herramientas() {
                       <h2 className="text-5xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
                         {balance}
                       </h2>
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1 mb-4">
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1 mb-4">
                         Estrellas Acumuladas
                       </p>
                       <button
@@ -1386,7 +1438,7 @@ export default function Herramientas() {
                                   {h.title}
                                 </span>
                               </div>
-                              <span className="text-[9px] text-slate-400 font-mono">
+                              <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">
                                 {h.date}
                               </span>
                             </div>
@@ -1424,7 +1476,7 @@ export default function Herramientas() {
                       {showAddTaskForm && (
                         <form
                           onSubmit={handleAddTask}
-                          className="bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800 mb-3 space-y-2.5 animate-in slide-in-from-top-2"
+                          className="bg-slate-50 dark:bg-slate-900/90 p-3 rounded-lg border border-slate-200 dark:border-slate-700/80 mb-3 space-y-2.5 animate-in slide-in-from-top-2"
                         >
                           <input
                             required
@@ -1432,7 +1484,7 @@ export default function Herramientas() {
                             placeholder="Título..."
                             value={newTaskTitle}
                             onChange={(e) => setNewTaskTitle(e.target.value)}
-                            className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white"
+                            className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                           />
                           <div className="grid grid-cols-2 gap-2">
                             <input
@@ -1440,7 +1492,7 @@ export default function Herramientas() {
                               min="1"
                               value={newTaskReward}
                               onChange={(e) => setNewTaskReward(e.target.value)}
-                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-white"
+                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                               placeholder="Estrellas"
                             />
                             <input
@@ -1448,20 +1500,20 @@ export default function Herramientas() {
                               placeholder="Emoji"
                               value={newTaskEmoji}
                               onChange={(e) => setNewTaskEmoji(e.target.value)}
-                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-white"
+                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                             />
                           </div>
                           <div className="flex justify-end gap-2 pt-1">
                             <button
                               type="button"
                               onClick={() => setShowAddTaskForm(false)}
-                              className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px] font-bold"
+                              className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-[10px] font-bold transition-colors"
                             >
                               Cancelar
                             </button>
                             <button
                               type="submit"
-                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold"
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold transition-colors"
                             >
                               Añadir
                             </button>
@@ -1483,18 +1535,18 @@ export default function Herramientas() {
                               />
                               <span className="text-lg">{t.emoji}</span>
                               <span
-                                className={`text-[11px] font-bold transition-all ${t.completed ? "line-through text-slate-400 dark:text-slate-600" : "text-slate-800 dark:text-slate-200"}`}
+                                className={`text-[11px] font-bold transition-all ${t.completed ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-800 dark:text-slate-200"}`}
                               >
                                 {t.title}
                               </span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[9px] font-black text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                              <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/60 whitespace-nowrap">
                                 +{t.reward} ⭐
                               </span>
                               <button
                                 onClick={() => handleDeleteTask(t.id)}
-                                className="w-5 h-5 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover/task:opacity-100 transition-opacity text-xs"
+                                className="w-5 h-5 bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-full flex items-center justify-center opacity-0 group-hover/task:opacity-100 transition-opacity text-xs"
                               >
                                 &times;
                               </button>
@@ -1526,7 +1578,7 @@ export default function Herramientas() {
                       {showAddRewardForm && (
                         <form
                           onSubmit={handleAddReward}
-                          className="bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800 mb-3 space-y-2.5 animate-in slide-in-from-top-2"
+                          className="bg-slate-50 dark:bg-slate-900/90 p-3 rounded-lg border border-slate-200 dark:border-slate-700/80 mb-3 space-y-2.5 animate-in slide-in-from-top-2"
                         >
                           <input
                             required
@@ -1534,7 +1586,7 @@ export default function Herramientas() {
                             placeholder="Recompensa..."
                             value={newRewardTitle}
                             onChange={(e) => setNewRewardTitle(e.target.value)}
-                            className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white"
+                            className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                           />
                           <div className="grid grid-cols-2 gap-2">
                             <input
@@ -1542,7 +1594,7 @@ export default function Herramientas() {
                               min="1"
                               value={newRewardCost}
                               onChange={(e) => setNewRewardCost(e.target.value)}
-                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-white"
+                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                               placeholder="Costo"
                             />
                             <input
@@ -1552,20 +1604,20 @@ export default function Herramientas() {
                               onChange={(e) =>
                                 setNewRewardEmoji(e.target.value)
                               }
-                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-white"
+                              className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                             />
                           </div>
                           <div className="flex justify-end gap-2 pt-1">
                             <button
                               type="button"
                               onClick={() => setShowAddRewardForm(false)}
-                              className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-[10px] font-bold"
+                              className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-[10px] font-bold transition-colors"
                             >
                               Cancelar
                             </button>
                             <button
                               type="submit"
-                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold"
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold transition-colors"
                             >
                               Añadir
                             </button>
@@ -1576,7 +1628,7 @@ export default function Herramientas() {
                         {rewards.map((r) => (
                           <div
                             key={r.id || r.title}
-                            className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-blue-400 dark:hover:border-blue-600 transition-colors group/reward"
+                            className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-blue-400 dark:hover:border-blue-500/50 transition-colors group/reward"
                           >
                             <div className="flex items-center gap-2.5">
                               <div className="w-8 h-8 bg-white dark:bg-slate-800 rounded-lg shadow-sm flex items-center justify-center text-lg border border-slate-100 dark:border-slate-700">
@@ -1586,27 +1638,27 @@ export default function Herramientas() {
                                 <h4 className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">
                                   {r.title}
                                 </h4>
-                                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">
+                                <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                                   {r.type || "Especialista"}
                                 </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <span className="font-black text-amber-500 flex items-center gap-0.5 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800 text-[10px]">
+                              <span className="font-black text-amber-600 dark:text-amber-400 flex items-center gap-0.5 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/60 text-[10px]">
                                 {r.cost}{" "}
                                 <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
                               </span>
                               <button
                                 onClick={() => redeemReward(r)}
                                 disabled={balance < r.cost}
-                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white font-bold text-[9px] rounded-lg transition-all"
+                                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 text-white font-bold text-[9px] rounded-lg transition-all shadow-sm"
                               >
                                 Canjear
                               </button>
                               {r.type === "Personalizado" && (
                                 <button
                                   onClick={() => handleDeleteReward(r.id)}
-                                  className="w-5 h-5 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover/reward:opacity-100 transition-opacity text-xs"
+                                  className="w-5 h-5 bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 rounded-full flex items-center justify-center opacity-0 group-hover/reward:opacity-100 transition-opacity text-xs"
                                 >
                                   &times;
                                 </button>

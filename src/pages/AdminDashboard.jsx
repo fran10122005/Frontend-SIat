@@ -164,15 +164,6 @@ function AdminDashboard({ onNavigate }) {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
 
-  const mockUptimeData = [
-    { name: "00:00", uptime: 99.9, latencia: 45 },
-    { name: "04:00", uptime: 99.9, latencia: 42 },
-    { name: "08:00", uptime: 100, latencia: 60 },
-    { name: "12:00", uptime: 100, latencia: 85 },
-    { name: "16:00", uptime: 99.9, latencia: 55 },
-    { name: "20:00", uptime: 100, latencia: 40 },
-  ];
-
   window.__navigate = onNavigate;
 
   const mountedRef = useRef(true);
@@ -1086,10 +1077,7 @@ function AdminDashboard({ onNavigate }) {
             {/* INFRAESTRUCTURA TAB */}
             {activeTab === "infraestructura" && (
               <div data-tour="admin-infraestructura">
-                <InfraestructuraTab
-                  isDark={isDark}
-                  mockUptimeData={mockUptimeData}
-                />
+                <InfraestructuraTab isDark={isDark} />
               </div>
             )}
           </div>

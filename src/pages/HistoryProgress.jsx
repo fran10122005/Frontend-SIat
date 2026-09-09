@@ -106,35 +106,29 @@ export default function HistoryProgress() {
     setExpandedRows(new Set());
   }, [dateRange, searchNotes, filterEfectividad]);
 
-  const mockChartData = [
-    { fec_repo: "01/07/2026", pro_calm: 72, tot_sesi: 3, fue_efec: true },
-    { fec_repo: "02/07/2026", pro_calm: 68, tot_sesi: 4, fue_efec: true },
-    { fec_repo: "03/07/2026", pro_calm: 82, tot_sesi: 3, fue_efec: true },
-    { fec_repo: "04/07/2026", pro_calm: 55, tot_sesi: 2, fue_efec: false },
-    { fec_repo: "05/07/2026", pro_calm: 78, tot_sesi: 4, fue_efec: true },
-    { fec_repo: "06/07/2026", pro_calm: 90, tot_sesi: 3, fue_efec: true },
-    { fec_repo: "07/07/2026", pro_calm: 85, tot_sesi: 4, fue_efec: true },
-  ];
-
-  const isEmptyData = !historicalData || historicalData.length === 0;
-
   const kpis = useMemo(() => {
-    const data = isEmptyData ? mockChartData : filteredData || [];
-    if (data.length === 0)
+    if (!filteredData || filteredData.length === 0) {
       return { avgCalm: 0, totalSessions: 0, effectivePercentage: 0 };
-    const totalSessions = data.reduce(
+    }
+    const totalSessions = filteredData.reduce(
       (acc, curr) => acc + (curr.tot_sesi || 0),
       0,
     );
-    const avgCalm = Math.round(
-      data.reduce((acc, curr) => acc + (curr.pro_calm || 0), 0) / data.length,
-    );
-    const effectiveAlerts = data.filter((d) => d.fue_efec).length;
-    const effectivePercentage = Math.round(
-      (effectiveAlerts / data.length) * 100,
-    );
+    const validCalm = filteredData.filter((d) => d.pro_calm != null);
+    const avgCalm =
+      validCalm.length > 0
+        ? Math.round(
+            validCalm.reduce((acc, curr) => acc + curr.pro_calm, 0) /
+              validCalm.length,
+          )
+        : 0;
+    const effectiveAlerts = filteredData.filter((d) => d.fue_efec).length;
+    const effectivePercentage =
+      filteredData.length > 0
+        ? Math.round((effectiveAlerts / filteredData.length) * 100)
+        : 0;
     return { avgCalm, totalSessions, effectivePercentage };
-  }, [filteredData, isEmptyData]);
+  }, [filteredData]);
 
   const handleExportPDF = () => {
     exportHistoryToPDF(filteredData || []);
@@ -209,8 +203,10 @@ export default function HistoryProgress() {
                     <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
                       {kpis.avgCalm}%
                     </span>
-                    <span className="text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded border border-green-100 dark:border-green-800/50">
-                      +5% vs sem. pasada
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {filteredData?.length > 0
+                        ? "en período activo"
+                        : "sin registros"}
                     </span>
                   </div>
                 </div>
@@ -272,7 +268,7 @@ export default function HistoryProgress() {
                       {kpis.effectivePercentage}%
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      éxito rutinas
+                      efectividad
                     </span>
                   </div>
                 </div>
@@ -288,63 +284,74 @@ export default function HistoryProgress() {
                   Evolución del Tiempo en Calma (pro_calm)
                 </h3>
                 <div className="flex-1 w-full min-h-0">
-                  <ResponsiveContainer
-                    width="100%"
-                    height="100%"
-                    minWidth={0}
-                    minHeight={0}
-                  >
-                    <BarChart
-                      data={isEmptyData ? mockChartData : filteredData || []}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  {filteredData && filteredData.length > 0 ? (
+                    <ResponsiveContainer
+                      width="100%"
+                      height="100%"
+                      minWidth={0}
+                      minHeight={0}
                     >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#E5E7EB"
-                      />
-                      <XAxis
-                        dataKey="fec_repo"
-                        tick={{ fontSize: 12 }}
-                        tickMargin={10}
-                        stroke="#9CA3AF"
-                      />
-                      <YAxis
-                        domain={[0, 100]}
-                        tick={{ fontSize: 12 }}
-                        stroke="#9CA3AF"
-                        tickFormatter={(val) => `${val}%`}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "rgba(0,0,0,0.05)" }}
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: "none",
-                          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                        }}
-                        formatter={(value) => [
-                          `${value}% en calma`,
-                          "Tiempo Promedio",
-                        ]}
-                        labelFormatter={(label) => `Fecha: ${label}`}
-                      />
-                      <Bar
-                        dataKey="pro_calm"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={50}
-                        animationDuration={1000}
+                      <BarChart
+                        data={filteredData}
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                       >
-                        {(isEmptyData ? mockChartData : filteredData || []).map(
-                          (entry, index) => (
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="#E5E7EB"
+                        />
+                        <XAxis
+                          dataKey="fec_repo"
+                          tick={{ fontSize: 12 }}
+                          tickMargin={10}
+                          stroke="#9CA3AF"
+                        />
+                        <YAxis
+                          domain={[0, 100]}
+                          tick={{ fontSize: 12 }}
+                          stroke="#9CA3AF"
+                          tickFormatter={(val) => `${val}%`}
+                        />
+                        <Tooltip
+                          cursor={{ fill: "rgba(0,0,0,0.05)" }}
+                          contentStyle={{
+                            borderRadius: "8px",
+                            border: "none",
+                            boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                          }}
+                          formatter={(value) => [
+                            `${value}% en calma`,
+                            "Tiempo Promedio",
+                          ]}
+                          labelFormatter={(label) => `Fecha: ${label}`}
+                        />
+                        <Bar
+                          dataKey="pro_calm"
+                          radius={[4, 4, 0, 0]}
+                          maxBarSize={50}
+                          animationDuration={1000}
+                        >
+                          {filteredData.map((entry, index) => (
                             <Cell
                               key={`cell-${index}`}
                               fill={entry.pro_calm > 75 ? "#034EA1" : "#94A3B8"}
                             />
-                          ),
-                        )}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-12">
+                      <TrendingUp className="w-12 h-12 mb-3 opacity-30 stroke-1" />
+                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                        Sin registros históricos disponibles
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm text-center">
+                        Las sesiones registradas por el especialista o el
+                        seguimiento fisiológico real aparecerán reflejados aquí.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

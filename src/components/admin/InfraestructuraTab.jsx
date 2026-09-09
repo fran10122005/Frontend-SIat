@@ -20,7 +20,7 @@ const defaultHealth = {
   latencyHistory: [],
 };
 
-export default function InfraestructuraTab({ isDark, mockUptimeData }) {
+export default function InfraestructuraTab({ isDark }) {
   const { showToast } = useGlobalContext();
   const [health, setHealth] = useState(defaultHealth);
   const [loading, setLoading] = useState(true);
@@ -43,8 +43,7 @@ export default function InfraestructuraTab({ isDark, mockUptimeData }) {
     };
   }, []);
 
-  const chartData =
-    health.latencyHistory?.length > 0 ? health.latencyHistory : mockUptimeData;
+  const chartData = health.latencyHistory || [];
 
   const exportarReporteTecnico = async () => {
     try {
@@ -68,72 +67,77 @@ export default function InfraestructuraTab({ isDark, mockUptimeData }) {
         className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4"
       >
         <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="p-2.5 sm:p-3 shrink-0 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-            <Server className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+            <Server className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-              API Core
-            </p>
-            <p className="truncate text-xl font-bold text-slate-900 dark:text-white">
-              {loading ? "..." : health.api?.status || "Operativo"}
-            </p>
-            <p className="text-xs text-slate-400">
-              {health.api?.uptime || "99.9%"} uptime
-            </p>
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 block truncate">
+              Servidor API
+            </span>
+            <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white block truncate">
+              {health.api?.status || "Operativo"}
+            </span>
+            <span className="text-[10px] sm:text-xs text-emerald-500 font-medium block truncate">
+              Uptime: {health.api?.uptime || "—"}
+            </span>
           </div>
         </div>
+
         <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="p-2.5 sm:p-3 shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+            <Database className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 block truncate">
               Base de Datos
-            </p>
-            <p className="truncate text-xl font-bold text-slate-900 dark:text-white">
-              {loading ? "..." : health.db?.status || "Conectada"}
-            </p>
-            <p className="text-xs text-slate-400">
-              {health.db?.latency || "12ms"} latencia
-            </p>
+            </span>
+            <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white block truncate">
+              {health.db?.status || "Conectada"}
+            </span>
+            <span className="text-[10px] sm:text-xs text-slate-500 font-medium block truncate">
+              Latencia: {health.db?.latency || "—"}
+            </span>
           </div>
         </div>
+
         <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="p-2.5 sm:p-3 shrink-0 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-            <Wifi className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+            <Wifi className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-              WebSocket
-            </p>
-            <p className="truncate text-xl font-bold text-slate-900 dark:text-white">
-              {loading ? "..." : health.ws?.status || "Activo"}
-            </p>
-            <p className="text-xs text-slate-400">
-              {health.ws?.clients || 0} clientes
-            </p>
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 block truncate">
+              WebSocket Server
+            </span>
+            <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white block truncate">
+              {health.ws?.status || "Activo"}
+            </span>
+            <span className="text-[10px] sm:text-xs text-slate-500 font-medium block truncate">
+              {health.ws?.clients || 0} clientes conectados
+            </span>
           </div>
         </div>
+
         <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="p-2.5 sm:p-3 shrink-0 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-            <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+            <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-              Versión
-            </p>
-            <p className="truncate text-xl font-bold text-slate-900 dark:text-white">
-              {loading ? "..." : health.version || "2.1.0"}
-            </p>
-            <p className="text-xs text-slate-400">SIAT Platform</p>
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400 block truncate">
+              Versión SIAT
+            </span>
+            <span className="text-base sm:text-lg font-bold text-slate-800 dark:text-white block truncate">
+              v{health.version || "2.1.0"}
+            </span>
+            <span className="text-[10px] sm:text-xs text-slate-500 font-medium block truncate">
+              Producción Estable
+            </span>
           </div>
         </div>
       </div>
 
       <div
         data-tour="admin-infra-chart"
-        className="bg-white dark:bg-[#1E293B] rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm h-[300px] lg:h-[400px]"
+        className="bg-white dark:bg-[#1E293B] rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm min-h-[300px] flex flex-col justify-between"
       >
         <div className="mb-4 sm:mb-6 flex justify-between items-start gap-2">
           <div className="min-w-0">
@@ -148,9 +152,6 @@ export default function InfraestructuraTab({ isDark, mockUptimeData }) {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="hidden sm:inline text-[11px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2.5 py-1 rounded-full">
-              {chartData.length} puntos
-            </span>
             <button
               type="button"
               onClick={exportarReporteTecnico}
@@ -162,56 +163,71 @@ export default function InfraestructuraTab({ isDark, mockUptimeData }) {
             </button>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height="85%">
-          <LineChart
-            data={chartData}
-            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-              stroke={isDark ? "#334155" : "#E2E8F0"}
-            />
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: isDark ? "#94A3B8" : "#64748B", fontSize: 12 }}
-              dy={10}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: isDark ? "#94A3B8" : "#64748B", fontSize: 12 }}
-            />
-            <Tooltip
-              contentStyle={{
-                borderRadius: "8px",
-                border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
-                backgroundColor: isDark ? "#0F172A" : "#fff",
-                color: isDark ? "#f8fafc" : "#0f172a",
-                fontSize: "12px",
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="latencia"
-              stroke="#8B5CF6"
-              strokeWidth={3}
-              dot={{ r: 4, fill: "#8B5CF6" }}
-              name="Latencia (ms)"
-            />
-            <Line
-              type="monotone"
-              dataKey="uptime"
-              stroke="#10B981"
-              strokeWidth={1.5}
-              dot={false}
-              strokeDasharray="4 4"
-              name="Uptime (%)"
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {chartData.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+            <Clock className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+              Sin registros de latencia acumulados
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              Las métricas de latencia se registrarán automáticamente a medida
+              que los sensores transmitan telemetría.
+            </p>
+          </div>
+        ) : (
+          <div className="h-[240px] lg:h-[320px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={chartData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke={isDark ? "#334155" : "#E2E8F0"}
+                />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: isDark ? "#94A3B8" : "#64748B", fontSize: 12 }}
+                  dy={10}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: isDark ? "#94A3B8" : "#64748B", fontSize: 12 }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
+                    backgroundColor: isDark ? "#0F172A" : "#fff",
+                    color: isDark ? "#f8fafc" : "#0f172a",
+                    fontSize: "12px",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="latencia"
+                  stroke="#8B5CF6"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: "#8B5CF6" }}
+                  name="Latencia (ms)"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="uptime"
+                  stroke="#10B981"
+                  strokeWidth={1.5}
+                  dot={false}
+                  strokeDasharray="4 4"
+                  name="Uptime (%)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );

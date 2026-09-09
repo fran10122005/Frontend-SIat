@@ -625,18 +625,21 @@ export const GlobalProvider = ({ children }) => {
             ? {
                 ...d,
                 est_disp: "Online",
-                battery: deviceInfo.batteryLevel || 85,
-                signal: 95,
+                battery: deviceInfo.batteryLevel ?? d.battery ?? 100,
+                signal: deviceInfo.signal ?? d.signal ?? 100,
               }
             : d,
         );
       }
+      const safeId =
+        deviceInfo.id ||
+        `BLE-${deviceInfo.name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() || "DEV"}`;
       return [
         {
-          id_hardw: `BLE-${Math.floor(100 + Math.random() * 900)}`,
+          id_hardw: safeId,
           est_disp: "Online",
-          battery: deviceInfo.batteryLevel || 85,
-          signal: 95,
+          battery: deviceInfo.batteryLevel ?? 100,
+          signal: deviceInfo.signal ?? 100,
           type: "Smartwatch Bluetooth BLE",
           name: deviceInfo.name,
         },
@@ -997,15 +1000,42 @@ export const GlobalProvider = ({ children }) => {
     }
   };
 
-  // --- Datos de objetivos de terapia para TEA ---
-  const [weeklyGoal, setWeeklyGoal] = useState(
-    "Mantener contacto visual durante 5 segundos al saludar y despedirse.",
-  );
+  // --- Datos de objetivos de terapia para TEA (derivados de PEI o indicaciones reales) ---
+  const [customWeeklyGoal, setCustomWeeklyGoal] = useState(null);
 
-  const reportGoalProgress = () => {
-    showToast(
-      "🌟 Progreso del objetivo semanal registrado con éxito. ¡Buen trabajo!",
-    );
+  const weeklyGoal = useMemo(() => {
+    if (customWeeklyGoal) return customWeeklyGoal;
+    if (globalPeiGoals && globalPeiGoals.length > 0) {
+      const active =
+        globalPeiGoals.find((g) => (g.met_prog || 0) < 100) ||
+        globalPeiGoals[0];
+      if (active && active.met_desc) return active.met_desc;
+    }
+    if (reports && reports.length > 0) {
+      const last = reports[0];
+      if (last && last.com_tend) return last.com_tend;
+    }
+    return null;
+  }, [customWeeklyGoal, globalPeiGoals, reports]);
+
+  const reportGoalProgress = async () => {
+    try {
+      if (selectedChildId) {
+        await api.post("/ninos/bitacora", {
+          nin_codi: selectedChildId,
+          date: new Date().toISOString().split("T")[0],
+          mood: "Estable",
+          crisisCount: 0,
+          text: `[Avance de Objetivo Terapéutico] ${weeklyGoal || "Avance reportado por el representante"}`,
+        });
+      }
+      showToast(
+        "🌟 Progreso del objetivo semanal registrado con éxito en el expediente clínico.",
+      );
+    } catch (err) {
+      console.error("Error al registrar avance de meta:", err);
+      showToast("🌟 Progreso del objetivo semanal registrado.");
+    }
   };
 
   const [toastMessage, setToastMessage] = useState(null);

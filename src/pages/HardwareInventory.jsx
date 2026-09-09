@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import {
@@ -27,7 +27,7 @@ import {
   Watch,
 } from "lucide-react";
 import { getSocket } from "../hooks/socket";
-import { useTelemetry } from "../hooks/useTelemetry";
+import { useSmartwatch } from "../context/SmartwatchContext";
 import Topbar from "../components/layout/Topbar";
 import PageTitle from "../components/ui/PageTitle";
 import api from "../api/axios";
@@ -48,25 +48,30 @@ export default function HardwareInventory() {
     calculateStressIndex,
   } = useGlobalContext();
 
+  const {
+    isConnected,
+    deviceName,
+    batteryLevel,
+    liveBpm,
+    liveStress,
+    liveMov,
+    sensorStatus,
+    telemetryHistory,
+    isWebSocketActive,
+  } = useSmartwatch();
+
   const [isDark, setIsDark] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
   // Calibrador en Vivo States (Specialist)
-  const [calibStep, setCalibStep] = useState("idle"); // 'idle', 'measuring', 'completed'
+  const [calibStep, setCalibStep] = useState("idle"); // 'idle', 'measuring', 'completed', 'error'
   const [calibCountdown, setCalibCountdown] = useState(15);
-  const [calibBpmFeed, setCalibBpmFeed] = useState(72);
-  const [calibAvgBpm, setCalibAvgBpm] = useState(75);
-  const [calibMin, setCalibMin] = useState(67);
-  const [calibMax, setCalibMax] = useState(108);
-
-  // Use global telemetry hook instead of duplicating state
-  const {
-    telemetryHistory,
-    isWebSocketActive,
-    simulationMode,
-    setSimulationMode,
-  } = useTelemetry();
+  const [calibBpmFeed, setCalibBpmFeed] = useState(null);
+  const [calibAvgBpm, setCalibAvgBpm] = useState(null);
+  const [calibMin, setCalibMin] = useState(null);
+  const [calibMax, setCalibMax] = useState(null);
+  const samplesRef = useRef([]);
 
   // Effect to load theme
   useEffect(() => {
@@ -75,86 +80,35 @@ export default function HardwareInventory() {
     }
   }, []);
 
-  const handleSimulationToggle = (estado) => {
-    if (isWebSocketActive) {
-      api
-        .post("/monitoreo/simular-estado", { estado })
-        .then(() => {
-          showToast(
-            estado === "CRISIS"
-              ? "🚨 Simulación de crisis activada en el backend."
-              : "🟢 Simulación de calma activada en el backend.",
-          );
-        })
-        .catch((err) => {
-          console.error(err);
-          showToast(
-            "❌ Error al cambiar el estado del simulador en el backend.",
-          );
-        });
-    } else {
-      if (simulationMode === estado) {
-        setSimulationMode(null);
-        showToast("⏹️ Simulación desactivada");
-      } else {
-        setSimulationMode(estado);
-        showToast(
-          estado === "CRISIS"
-            ? "🚨 Simulación de crisis continua"
-            : "🟢 Simulación de calma continua",
-        );
-      }
-    }
-  };
-
-  const isSimulatingCrisis = simulationMode === "CRISIS";
-  const isSimulatingCalma = simulationMode === "CALMA";
-
-  // Teclas de Simulación del Frontend [S] y [C]
-  useEffect(() => {
-    if (userRole === "ESPECIALISTA") return;
-
-    const handleKeyDown = (e) => {
-      if (
-        document.activeElement.tagName === "INPUT" ||
-        document.activeElement.tagName === "TEXTAREA"
-      ) {
-        return;
-      }
-
-      const key = e.key.toLowerCase();
-      if (key === "s") {
-        handleSimulationToggle("CRISIS");
-      } else if (key === "c") {
-        handleSimulationToggle("CALMA");
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isWebSocketActive, simulationMode, userRole]);
-
-  // Specialist Calibration Timer Effect
+  // Specialist Calibration Timer Effect (100% Real Sensor Samples)
   useEffect(() => {
     let timer;
     if (calibStep === "measuring" && calibCountdown > 0) {
       timer = setTimeout(() => {
         setCalibCountdown((prev) => prev - 1);
-        setCalibBpmFeed(Math.floor(Math.random() * (79 - 71 + 1) + 71));
+        if (liveBpm && liveBpm >= 40 && liveBpm <= 220) {
+          samplesRef.current.push(liveBpm);
+          setCalibBpmFeed(liveBpm);
+        } else {
+          setCalibBpmFeed(null);
+        }
       }, 1000);
     } else if (calibStep === "measuring" && calibCountdown === 0) {
-      const avg = 74;
-      const minVal = Math.round(avg * 0.9);
-      const maxVal = Math.round(avg * 1.45);
-      setCalibAvgBpm(avg);
-      setCalibMin(minVal);
-      setCalibMax(maxVal);
-      setCalibStep("completed");
+      if (samplesRef.current.length >= 3) {
+        const sum = samplesRef.current.reduce((a, b) => a + b, 0);
+        const avg = Math.round(sum / samplesRef.current.length);
+        const minVal = Math.round(avg * 0.9);
+        const maxVal = Math.round(avg * 1.45);
+        setCalibAvgBpm(avg);
+        setCalibMin(minVal);
+        setCalibMax(maxVal);
+        setCalibStep("completed");
+      } else {
+        setCalibStep("error");
+      }
     }
     return () => clearTimeout(timer);
-  }, [calibStep, calibCountdown]);
+  }, [calibStep, calibCountdown, liveBpm]);
 
   const toggleTheme = () => {
     if (isDark) {
@@ -166,29 +120,37 @@ export default function HardwareInventory() {
   };
 
   const openCalibration = (device = null) => {
-    setSelectedDevice(
-      device || hardware[0] || { id_hardw: "BLE-001", name: "Smartwatch BLE" },
-    );
+    if (!isConnected) {
+      showToast(
+        "⚠️ Debe vincular un smartwatch o sensor por Bluetooth antes de calibrar.",
+      );
+      return;
+    }
+    const dev = device ||
+      hardware.find((h) => h.est_disp === "Online") ||
+      hardware[0] || {
+        id_hardw: "BLE-ACTIVE",
+        name: deviceName || "Smartwatch BLE",
+      };
+    setSelectedDevice(dev);
     setCalibStep("idle");
     setCalibCountdown(15);
-    setCalibBpmFeed(currentBpm || 72);
+    setCalibBpmFeed(liveBpm || null);
+    samplesRef.current = [];
     setShowModal(true);
   };
 
   // Representative calculations for display
-  const lastReading = telemetryHistory[telemetryHistory.length - 1] || {
-    bpm: 72,
-    mov: 1.2,
-    stress: 15,
-  };
-  const currentBpm = lastReading.bpm;
-  const currentMov = lastReading.mov;
-  const currentStress = lastReading.stress;
+  const currentBpm = isConnected && liveBpm !== null ? liveBpm : "--";
+  const currentMov = isConnected && liveMov !== null ? liveMov : "--";
+  const currentStress = isConnected && liveStress !== null ? liveStress : 0;
 
   const getMovLabel = (g) => {
-    if (g < 1.2) return "Reposo / Calma";
-    if (g < 2.5) return "Movimiento Normal";
-    if (g < 5.0) return "Juego / Activo";
+    const num = Number(g);
+    if (isNaN(num) || g === "--") return "Sin lectura";
+    if (num < 1.2) return "Reposo / Calma";
+    if (num < 2.5) return "Movimiento Normal";
+    if (num < 5.0) return "Juego / Activo";
     return "Movimientos Estereotípicos (Stim)";
   };
 
@@ -245,41 +207,28 @@ export default function HardwareInventory() {
                           ? "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
                           : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
                       }`}
-                    ></span>
+                    >
+                      <span
+                        className={`w-2 h-2 rounded-full ${isWebSocketActive ? "bg-blue-500 animate-pulse" : "bg-amber-500"}`}
+                      />
+                      {isWebSocketActive
+                        ? "WebSocket Activo"
+                        : "Reconectando WS"}
+                    </span>
                     <span
                       className={`px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 ${
-                        isOnline
+                        isConnected || isOnline
                           ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
                           : "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400"
                       }`}
                     >
                       <span
-                        className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+                        className={`w-2 h-2 rounded-full ${isConnected || isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
                       />
-                      {isOnline ? "Pulsera En Línea" : "Pulsera Desconectada"}
+                      {isConnected || isOnline
+                        ? "Pulsera En Línea"
+                        : "Pulsera Desconectada"}
                     </span>
-                    <button
-                      onClick={() => handleSimulationToggle("CRISIS")}
-                      className={`px-4 py-1.5 font-semibold rounded-full shadow-sm transition-all flex items-center gap-2 text-xs ${
-                        isSimulatingCrisis
-                          ? "bg-rose-600 ring-2 ring-rose-300 text-white"
-                          : "bg-rose-500 hover:bg-rose-600 text-white"
-                      }`}
-                    >
-                      <Activity className="w-3.5 h-3.5" />{" "}
-                      {isSimulatingCrisis ? "Detener Crisis" : "Crisis"}
-                    </button>
-                    <button
-                      onClick={() => handleSimulationToggle("CALMA")}
-                      className={`px-4 py-1.5 font-semibold rounded-full shadow-sm transition-all flex items-center gap-2 text-xs ${
-                        isSimulatingCalma
-                          ? "bg-emerald-600 ring-2 ring-emerald-300 text-white"
-                          : "bg-emerald-500 hover:bg-emerald-600 text-white"
-                      }`}
-                    >
-                      <Activity className="w-3.5 h-3.5" />{" "}
-                      {isSimulatingCalma ? "Detener Calma" : "Calma"}
-                    </button>
                   </div>
                 </div>
 
@@ -499,7 +448,11 @@ export default function HardwareInventory() {
                               Batería LiPo
                             </span>
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                              85% (Autonomía de 12h)
+                              {isConnected && batteryLevel != null
+                                ? `${batteryLevel}%`
+                                : isConnected
+                                  ? "En línea"
+                                  : "Desconectado"}
                             </span>
                           </div>
                         </div>
@@ -511,7 +464,9 @@ export default function HardwareInventory() {
                               Antena Bluetooth
                             </span>
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                              92% (Excelente)
+                              {isConnected
+                                ? `${deviceName || "Smartwatch BLE"} (Conectado)`
+                                : "Desconectado"}
                             </span>
                           </div>
                         </div>
@@ -760,16 +715,22 @@ export default function HardwareInventory() {
                   <div className="relative flex justify-center items-center">
                     <span className="animate-ping absolute inline-flex h-16 w-16 rounded-full bg-rose-400 opacity-20"></span>
                     <div className="w-16 h-16 rounded-full bg-rose-500 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-rose-500/30 z-10 animate-pulse">
-                      {calibBpmFeed}
+                      {calibBpmFeed !== null ? calibBpmFeed : "--"}
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                      Leyendo sensor fisiológico...
+                      {calibBpmFeed !== null
+                        ? "Capturando pulso real del sensor..."
+                        : "Esperando contacto del sensor con la piel..."}
                     </div>
                     <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                      Tiempo restante:{" "}
+                      Muestras válidas:{" "}
+                      <span className="font-bold text-slate-700 dark:text-slate-200">
+                        {samplesRef.current.length}
+                      </span>{" "}
+                      • Tiempo restante:{" "}
                       <span className="font-black text-slate-800 dark:text-white font-mono text-sm">
                         {calibCountdown}s
                       </span>
@@ -786,6 +747,24 @@ export default function HardwareInventory() {
                 </div>
               )}
 
+              {calibStep === "error" && (
+                <div className="space-y-4 text-center py-4">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      Sin Señal Fisiológica Suficiente
+                    </h4>
+                    <p className="text-xs text-rose-600 dark:text-rose-400 max-w-xs mx-auto">
+                      No se detectaron pulsaciones reales durante los 15
+                      segundos. Asegúrese de que el sensor óptico del reloj esté
+                      en contacto directo con la muñeca y vuelva a intentarlo.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {calibStep === "completed" && (
                 <div className="space-y-5">
                   <div className="bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/50 p-4 rounded-xl flex items-start gap-3">
@@ -794,17 +773,17 @@ export default function HardwareInventory() {
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wide">
-                        Calibración Exitosa
+                        Calibración Fisiológica Completada
                       </h4>
                       <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1 leading-relaxed">
-                        Se ha procesado la telemetría en reposo. El algoritmo
-                        determinó los siguientes valores óptimos para este niño:
+                        Se procesaron las muestras reales del sensor óptico.
+                        Valores fisiológicos determinados:
                       </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-150 dark:border-slate-805 text-center">
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-150 dark:border-slate-800 text-center">
                       <span className="text-[10px] text-slate-400 font-bold block uppercase">
                         Reposo Basal
                       </span>
@@ -815,7 +794,7 @@ export default function HardwareInventory() {
                         </span>
                       </span>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-150 dark:border-slate-805 text-center">
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-150 dark:border-slate-800 text-center">
                       <span className="text-[10px] text-slate-400 font-bold block uppercase">
                         Min (90%)
                       </span>
@@ -826,7 +805,7 @@ export default function HardwareInventory() {
                         </span>
                       </span>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-150 dark:border-slate-805 text-center">
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-slate-150 dark:border-slate-800 text-center">
                       <span className="text-[10px] text-slate-400 font-bold block uppercase">
                         Max (145%)
                       </span>
@@ -840,7 +819,7 @@ export default function HardwareInventory() {
                   </div>
                   <p className="text-[10px] text-slate-400 leading-normal">
                     * Nota: Si el ritmo cardíaco del niño supera los {calibMax}{" "}
-                    BPM en reposo sin registrar aceleración en el MPU6050, se
+                    BPM en reposo sin registrar aceleración en el sensor, se
                     disparará una alerta predictiva en el hogar.
                   </p>
                 </div>
@@ -858,6 +837,7 @@ export default function HardwareInventory() {
                   </button>
                   <button
                     onClick={() => {
+                      samplesRef.current = [];
                       setCalibCountdown(15);
                       setCalibStep("measuring");
                     }}
@@ -877,10 +857,32 @@ export default function HardwareInventory() {
                 </button>
               )}
 
+              {calibStep === "error" && (
+                <>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 font-semibold text-xs text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    onClick={() => {
+                      samplesRef.current = [];
+                      setCalibCountdown(15);
+                      setCalibStep("measuring");
+                    }}
+                    className="px-4 py-2 font-semibold text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors"
+                  >
+                    Reintentar Calibración
+                  </button>
+                </>
+              )}
+
               {calibStep === "completed" && (
                 <>
                   <button
                     onClick={() => {
+                      samplesRef.current = [];
                       setCalibStep("idle");
                       setCalibCountdown(15);
                     }}

@@ -222,10 +222,14 @@ export default function MainDashboard() {
                     Foco Clínico de la Semana
                   </span>
                   <h4 className="text-base md:text-lg font-bold text-slate-800 dark:text-white tracking-tight mt-3">
-                    "{weeklyGoal}"
+                    {weeklyGoal
+                      ? `"${weeklyGoal}"`
+                      : "Sin indicaciones asignadas para esta semana"}
                   </h4>
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                    Establecido por tu especialista
+                    {weeklyGoal
+                      ? "Establecido por tu especialista"
+                      : "El terapeuta asignará las metas prioritarias para el niño"}
                   </p>
                   <button
                     onClick={() => navigate("agenda")}
@@ -326,7 +330,9 @@ export default function MainDashboard() {
                         Pulsaciones Actuales
                       </span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">
-                        {liveBpm} BPM
+                        {liveBpm !== null && liveBpm !== undefined
+                          ? `${liveBpm} BPM`
+                          : "-- BPM"}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700/60">
@@ -334,15 +340,25 @@ export default function MainDashboard() {
                         Nivel de Estrés
                       </span>
                       <span className="font-bold text-slate-800 dark:text-slate-200">
-                        {liveStress}%
+                        {liveStress !== null && liveStress !== undefined
+                          ? `${liveStress}%`
+                          : "--%"}
                       </span>
                     </div>
                     <div className="flex justify-between py-1">
                       <span className="text-slate-500 dark:text-slate-400">
                         Transmisión Cloud
                       </span>
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                        Socket.IO Activo
+                      <span
+                        className={`font-semibold ${
+                          isWebSocketActive
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-slate-400 dark:text-slate-500"
+                        }`}
+                      >
+                        {isWebSocketActive
+                          ? "Socket.IO Transmitiendo"
+                          : "Socket.IO En Espera"}
                       </span>
                     </div>
                   </div>
