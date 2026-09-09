@@ -26,6 +26,7 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     isConnected,
     isConnecting,
     connectionStage,
+    sensorStatus,
     deviceName,
     batteryLevel,
     lastBpm,
@@ -185,34 +186,50 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
         )}
 
         {isConnected && (
-          <div className="mt-3.5 pt-3.5 border-t border-slate-200/70 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
-            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
-              <Heart
-                className={`w-4 h-4 ${lastBpm ? "text-rose-500 animate-pulse" : "text-slate-400"}`}
-              />
-              <span>
-                Sensor Óptico:{" "}
-                {lastBpm ? (
-                  <strong className="text-rose-600 dark:text-rose-400 text-sm">
-                    {lastBpm} BPM
-                  </strong>
-                ) : (
-                  <span className="text-slate-400 font-normal">
-                    Detectando pulso...
-                  </span>
-                )}
-              </span>
+          <div className="mt-3.5 pt-3.5 border-t border-slate-200/70 dark:border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
+              <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
+                <Heart
+                  className={`w-4 h-4 ${lastBpm ? "text-rose-500 animate-pulse" : "text-amber-500 animate-spin"}`}
+                />
+                <span>
+                  Sensor Óptico:{" "}
+                  {lastBpm ? (
+                    <strong className="text-rose-600 dark:text-rose-400 text-sm">
+                      {lastBpm} BPM
+                    </strong>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">
+                      {sensorStatus === "waiting_skin"
+                        ? "Esperando pulso en la muñeca..."
+                        : "Detectando señal biométrica..."}
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer text-slate-600 dark:text-slate-300 font-semibold select-none">
+                <input
+                  type="checkbox"
+                  checked={streamToCloud}
+                  onChange={(e) => setStreamToCloud(e.target.checked)}
+                  className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                />
+                <span>Sincronizar telemetría a la nube</span>
+              </label>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer text-slate-600 dark:text-slate-300 font-semibold select-none">
-              <input
-                type="checkbox"
-                checked={streamToCloud}
-                onChange={(e) => setStreamToCloud(e.target.checked)}
-                className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-              />
-              <span>Sincronizar telemetría a la nube en tiempo real</span>
-            </label>
+            {!lastBpm && (
+              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <span>
+                  <strong>Tip de activación:</strong> Coloca el reloj firmemente
+                  en la muñeca. Si la luz verde trasera aún no enciende, abre la
+                  opción de <em>"Ritmo Cardíaco"</em> o <em>"Ejercicio"</em> en
+                  la pantalla del reloj.
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

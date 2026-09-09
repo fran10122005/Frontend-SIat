@@ -29,22 +29,36 @@ const STORAGE_KEY_CONNECTED = "siat_smartwatch_connected";
 const STORAGE_KEY_BATTERY = "siat_smartwatch_battery";
 const STORAGE_KEY_STREAM = "siat_smartwatch_stream";
 
-// UUIDs de servicios BLE conocidos (Estándar, Fitpro, Wearfit Pro, Nordic UART)
+// UUIDs de servicios BLE conocidos (Estándar SIG, IDO / VeryFit IDW13, Fitpro, Wearfit, Da Fit, Nordic UART, etc.)
 const KNOWN_SERVICES = [
   "heart_rate",
   "battery_service",
   "device_information",
-  "0000180d-0000-1000-8000-00805f9b34fb", // Heart Rate SIG
-  "0000180f-0000-1000-8000-00805f9b34fb", // Battery Service
+  "0000180d-0000-1000-8000-00805f9b34fb", // Heart Rate SIG standard
+  "0000180f-0000-1000-8000-00805f9b34fb", // Battery Service SIG
+  "0000180a-0000-1000-8000-00805f9b34fb", // Device Information SIG
+  "00001800-0000-1000-8000-00805f9b34fb", // Generic Access
+  "00001801-0000-1000-8000-00805f9b34fb", // Generic Attribute
+  // IDO / VeryFit (IDW13, ID205, etc.) & Linwear
+  "00000a00-0000-1000-8000-00805f9b34fb",
+  "0000ea80-0000-1000-8000-00805f9b34fb",
+  "0000feea-0000-1000-8000-00805f9b34fb",
+  "0000fee7-0000-1000-8000-00805f9b34fb", // Wearfit / Telink / IDO
+  "0000ae00-0000-1000-8000-00805f9b34fb",
+  "0000af00-0000-1000-8000-00805f9b34fb",
   "0000fff0-0000-1000-8000-00805f9b34fb", // Fitpro / HryFine
-  "0000fee7-0000-1000-8000-00805f9b34fb", // Wearfit / Telink
+  "0000fff1-0000-1000-8000-00805f9b34fb",
+  "0000fff2-0000-1000-8000-00805f9b34fb",
+  "0000ff00-0000-1000-8000-00805f9b34fb",
   "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART (Da Fit / Wearfit)
 ];
 
-// Comandos de activación para encender el sensor óptico PPG (LED verde)
+// Comandos de activación para encender el sensor óptico PPG (LED verde) en múltiples chipsets
 const ACTIVATION_COMMANDS = [
   new Uint8Array([0xcd, 0x00, 0x01, 0x01]), // Fitpro HR start
   new Uint8Array([0xab, 0x00, 0x04, 0xff, 0x31, 0x09, 0x01]), // Wearfit HR start
+  new Uint8Array([0xd0, 0x01, 0x01]), // IDO / VeryFit (IDW13) continuous HR
+  new Uint8Array([0x05, 0x01, 0x01]), // IDO HR trigger
   new Uint8Array([0x01, 0x00, 0x01]), // Generic UART start
 ];
 
@@ -200,7 +214,7 @@ export function SmartwatchProvider({ children }) {
     writeCharRef.current = null;
   }, []);
 
-  // Parser Universal para paquetes de bytes BLE (GATT estándar, Fitpro, Wearfit Pro)
+  // Parser Universal para paquetes de bytes BLE (GATT estándar, IDW13, Fitpro, Wearfit Pro)
   const handleBleRawData = useCallback(
     (event) => {
       const dataView = event.target.value;
@@ -221,21 +235,15 @@ export function SmartwatchProvider({ children }) {
         // Ignorar si no es estructura estándar
       }
 
-      // 2. Caso Fitpro / HryFine / Wearfit Pro (Tramas con cabeceras 0xCD, 0xAB o paquetes de telemetría)
-      if (!parsedBpm || parsedBpm < 30 || parsedBpm > 240) {
+      // 2. Caso Propietario IDO / VeryFit / Fitpro / Wearfit / Da Fit
+      if (!parsedBpm || parsedBpm < 35 || parsedBpm > 240) {
         const bytes = new Uint8Array(dataView.buffer);
         // Buscar un byte en rango fisiológico válido (40 - 220 BPM)
         for (let i = 0; i < bytes.length; i++) {
           const b = bytes[i];
-          if (b >= 45 && b <= 210) {
-            // Comprobación de cabecera o posición
-            if (
-              i >= 1 &&
-              (bytes[0] === 0xcd || bytes[0] === 0xab || bytes[0] === 0xff)
-            ) {
-              parsedBpm = b;
-              break;
-            }
+          if (b >= 40 && b <= 215) {
+            parsedBpm = b;
+            break;
           }
         }
       }
