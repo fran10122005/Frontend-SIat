@@ -11,6 +11,12 @@ import api from "../api/axios";
 import useIdleTimer from "../hooks/useIdleTimer";
 import { toastError } from "../utils/errorHandler";
 import { disconnectSocket } from "../hooks/socket";
+import {
+  getSavedSelectedChild,
+  saveSelectedChild,
+  clearAuthSession,
+  setupAuthSync,
+} from "../utils/authStorage";
 
 const GlobalContext = createContext();
 
@@ -67,7 +73,13 @@ export const GlobalProvider = ({ children }) => {
     const path = window.location.pathname;
     return pathToView[path] || localStorage.getItem("currentView") || "login";
   });
-  const [nomNino, setNomNino] = useState(null);
+
+  const savedChildInit = getSavedSelectedChild();
+  const [nomNino, setNomNino] = useState(() => savedChildInit.name || null);
+  const [selectedChildId, setSelectedChildId] = useState(
+    () => savedChildInit.id || null,
+  );
+
   const [userRole, setUserRole] = useState(
     () => localStorage.getItem("userRole") || "ESPECIALISTA",
   );
@@ -259,6 +271,13 @@ export const GlobalProvider = ({ children }) => {
     localStorage.setItem("userName", userName);
   }, [userName]);
 
+  // Persistir la selección de niño siempre que cambie
+  useEffect(() => {
+    if (selectedChildId) {
+      saveSelectedChild(selectedChildId, nomNino);
+    }
+  }, [selectedChildId, nomNino]);
+
   // Idle session timeout (default: 15 min)
   const IDLE_TIMEOUT = Number(import.meta.env.VITE_IDLE_TIMEOUT) || 900;
   const publicViews = [
@@ -274,10 +293,7 @@ export const GlobalProvider = ({ children }) => {
 
   const handleIdleTimeout = useCallback(() => {
     disconnectSocket();
-    localStorage.removeItem("token");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("currentView");
+    clearAuthSession();
     setCurrentView("login");
     routerNavigate("/login", { replace: true });
     showToast("⏱️ Sesión cerrada por inactividad");
@@ -285,7 +301,19 @@ export const GlobalProvider = ({ children }) => {
 
   useIdleTimer(IDLE_TIMEOUT, handleIdleTimeout, idleActive);
 
-  const [selectedChildId, setSelectedChildId] = useState(null);
+  // Sincronización multi-pestaña de inicio y cierre de sesión
+  useEffect(() => {
+    const unsubscribe = setupAuthSync({
+      onLogout: () => {
+        disconnectSocket();
+        setCurrentView("login");
+        routerNavigate("/login", { replace: true });
+        showToast("ℹ️ Sesión cerrada desde otra pestaña.");
+      },
+    });
+    return unsubscribe;
+  }, [routerNavigate]);
+
   const [isOnline, setIsOnline] = useState(true);
   const [showEmergencyGuard, setShowEmergencyGuard] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
@@ -314,9 +342,26 @@ export const GlobalProvider = ({ children }) => {
           nin_diag: n.nin_diag || "",
         }));
         setListaNinos(mapped);
-        if (!selectedChildId && userRole !== "ESPECIALISTA") {
+
+        // Si ya hay un niño seleccionado (o recuperado de localStorage al recargar)
+        const currentTargetId = selectedChildId || getSavedSelectedChild().id;
+        const matched = mapped.find(
+          (n) =>
+            n.id_ninos === currentTargetId || n.nin_codi === currentTargetId,
+        );
+
+        if (matched) {
+          if (selectedChildId !== matched.id_ninos) {
+            setSelectedChildId(matched.id_ninos);
+          }
+          if (nomNino !== matched.nom_nino) {
+            setNomNino(matched.nom_nino);
+          }
+          saveSelectedChild(matched.id_ninos, matched.nom_nino);
+        } else if (!selectedChildId && userRole !== "ESPECIALISTA") {
           setSelectedChildId(mapped[0].id_ninos);
           setNomNino(mapped[0].nom_nino);
+          saveSelectedChild(mapped[0].id_ninos, mapped[0].nom_nino);
         }
       } else {
         setListaNinos([]);
@@ -731,8 +776,36 @@ export const GlobalProvider = ({ children }) => {
   const fetchHistorialCompleto = async (childId) => {
     if (!childId) return;
     try {
-      const res = await api.get(`/reportes/historial-completo/${childId}`);
-      const { reportes, sesiones } = res.data.data;
+      let resData = null;
+      try {
+        const res = await api.get(`/reportes/historial-completo/${childId}`);
+        resData = res.data?.data;
+      } catch (errHist) {
+        console.warn("historial-completo endpoint fallback:", errHist.message);
+        try {
+          const indRes = await api.get(`/especialista/indicaciones/${childId}`);
+          if (indRes.data?.data) {
+            const mappedIndicaciones = indRes.data.data.map((ind) => ({
+              fec_repo: ind.ind_crea,
+              pro_calm: 100,
+              tot_sesi: 0,
+              fue_efec: !ind.ind_leid,
+              com_tend: ind.ind_desc || "",
+              id_rutin: null,
+            }));
+            setClinicalReports(mappedIndicaciones);
+          }
+        } catch (indErr) {
+          console.warn(
+            "No se pudieron cargar indicaciones por fallback:",
+            indErr,
+          );
+        }
+        return;
+      }
+
+      if (!resData) return;
+      const { reportes, sesiones } = resData;
 
       // Map reportes (Indicaciones)
       if (reportes && reportes.length > 0) {
@@ -820,7 +893,7 @@ export const GlobalProvider = ({ children }) => {
     if (!childId) return;
     try {
       const res = await api.get(`/metas/${childId}`);
-      setGlobalPeiGoals(res.data.data);
+      setGlobalPeiGoals(res.data.data || []);
     } catch (err) {
       console.error("Error fetching PEI goals:", err);
     }
@@ -828,10 +901,19 @@ export const GlobalProvider = ({ children }) => {
 
   const crearPeiGoal = async (childId, goalData) => {
     try {
-      await api.post("/metas", {
+      const payload = {
         nin_codi: childId,
-        ...goalData,
-      });
+        met_desc: goalData.goal,
+        met_categ: goalData.category || "General",
+        met_ttria: parseInt(goalData.totalTrials) || 20,
+        met_line: parseFloat(goalData.baseline) || 0,
+        met_crit: goalData.criterio || null,
+        met_obse: goalData.observaciones || null,
+        met_fini: goalData.fechaInicio || new Date(),
+        met_ffin: goalData.fechaFin || null,
+      };
+
+      await api.post("/metas", payload);
       await fetchPeiGoals(childId);
     } catch (err) {
       console.error("Error creating PEI goal:", err);
@@ -851,11 +933,46 @@ export const GlobalProvider = ({ children }) => {
 
   const crearIndicacion = async (childId, data) => {
     try {
-      await api.post("/especialista/indicaciones", {
+      const desc = (data.ind_desc || data.com_tend || "").trim();
+      const payload = {
         nin_codi: childId,
+        id_ninos: childId,
+        ind_tipo: data.ind_tipo || "Terapéutica",
+        ind_area: data.ind_area || "General",
+        ind_frec: data.ind_frec || "Diaria",
+        ind_dura: data.ind_dura || "1 mes",
+        ind_prio: data.ind_prio || "Media",
+        ind_vige: data.ind_vige || new Date().toISOString().split("T")[0],
+        ind_desc: desc,
+        com_tend: desc,
         ...data,
-      });
-      await fetchHistorialCompleto(childId);
+      };
+
+      try {
+        await api.post("/especialista/indicaciones", payload);
+      } catch (postErr) {
+        if (
+          postErr.response?.status === 404 ||
+          postErr.response?.status === 400
+        ) {
+          try {
+            await api.post("/reportes/indicacion", {
+              nin_codi: childId,
+              com_tend: desc,
+            });
+          } catch (repErr) {
+            throw postErr;
+          }
+        } else {
+          throw postErr;
+        }
+      }
+
+      try {
+        await fetchHistorialCompleto(childId);
+      } catch (fetchErr) {
+        console.warn("No se pudo refrescar historial completo:", fetchErr);
+      }
     } catch (err) {
       console.error("Error creating indicacion:", err);
       throw err;

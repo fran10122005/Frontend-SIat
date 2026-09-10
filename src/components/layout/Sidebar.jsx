@@ -36,7 +36,7 @@ export default function Sidebar() {
 
   const specialistItems = [
     { id: "dashboard", icon: LayoutDashboard, label: "Panel del Paciente" },
-    { id: "patients", icon: Users, label: "Gestión de Pacientes" },
+    { id: "patients", icon: Users, label: "Selección de Pacientes" },
     { id: "student", icon: UserCircle, label: "Ficha del Paciente" },
     { id: "historial", icon: TrendingUp, label: "Historial de Evolución" },
     { id: "home_analytics", icon: LineChart, label: "Análisis en Casa" },
@@ -121,6 +121,7 @@ export default function Sidebar() {
                   "historial",
                   "home_analytics",
                   "inventario",
+                  "student",
                 ].includes(item.id)) ||
               (userRole !== "ESPECIALISTA" &&
                 item.requiresChild &&

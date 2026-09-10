@@ -46,6 +46,7 @@ export default function HardwareInventory() {
     showToast,
     isOnline,
     calculateStressIndex,
+    isDark,
   } = useGlobalContext();
 
   const {
@@ -60,7 +61,6 @@ export default function HardwareInventory() {
     isWebSocketActive,
   } = useSmartwatch();
 
-  const [isDark, setIsDark] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -72,13 +72,6 @@ export default function HardwareInventory() {
   const [calibMin, setCalibMin] = useState(null);
   const [calibMax, setCalibMax] = useState(null);
   const samplesRef = useRef([]);
-
-  // Effect to load theme
-  useEffect(() => {
-    if (document.documentElement.classList.contains("dark")) {
-      setIsDark(true);
-    }
-  }, []);
 
   // Specialist Calibration Timer Effect (100% Real Sensor Samples)
   useEffect(() => {
@@ -109,15 +102,6 @@ export default function HardwareInventory() {
     }
     return () => clearTimeout(timer);
   }, [calibStep, calibCountdown, liveBpm]);
-
-  const toggleTheme = () => {
-    if (isDark) {
-      document.documentElement.classList.remove("dark");
-    } else {
-      document.documentElement.classList.add("dark");
-    }
-    setIsDark(!isDark);
-  };
 
   const openCalibration = (device = null) => {
     if (!isConnected) {

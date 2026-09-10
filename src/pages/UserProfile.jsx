@@ -979,7 +979,11 @@ export default function UserProfile({ initialTab }) {
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
-    doc.text("SIAT · Sistema Integrado de Asistencia Terapéutica", margin, y);
+    doc.text(
+      "SIAT · Sistema Inteligente de Acompañamiento Terapéutico",
+      margin,
+      y,
+    );
     y += 22;
     doc.setFontSize(12);
     doc.text("Consentimiento Informado Legal — Versión 1.0", margin, y);

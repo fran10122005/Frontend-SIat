@@ -1,32 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   Target,
   X,
-  ChevronRight,
-  ChevronLeft,
   Sparkles,
   Check,
+  Calendar,
+  Hash,
+  Percent,
+  FileText,
+  Clock,
+  Layers,
 } from "lucide-react";
 import Button from "../ui/Button";
 
 const CATEGORIAS = [
-  "Comunicación",
-  "Lenguaje",
-  "Socialización",
-  "Conducta",
-  "Sensorial",
-  "Motricidad Fina",
-  "Motricidad Gruesa",
-  "Autonomía",
-  "Atención",
-  "Regulación Emocional",
-  "Cognición",
-  "Juego",
+  { label: "Comunicación", emoji: "💬" },
+  { label: "Lenguaje", emoji: "🗣️" },
+  { label: "Socialización", emoji: "🤝" },
+  { label: "Conducta", emoji: "🧩" },
+  { label: "Sensorial", emoji: "👁️" },
+  { label: "Motricidad Fina", emoji: "✍️" },
+  { label: "Motricidad Gruesa", emoji: "🏃" },
+  { label: "Autonomía", emoji: "👕" },
+  { label: "Atención", emoji: "🎯" },
+  { label: "Regulación Emocional", emoji: "💛" },
+  { label: "Cognición", emoji: "🧠" },
+  { label: "Juego", emoji: "🎲" },
 ];
 
 const inputClass =
-  "w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm leading-relaxed focus:outline-none focus:border-blue-500 focus:ring-0 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors duration-150";
+  "w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-xl text-sm leading-relaxed focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all duration-150 shadow-xs";
+
+const getTodayStr = () => new Date().toISOString().split("T")[0];
+
+const addMonthsToDate = (startDateStr, months) => {
+  const base = startDateStr ? new Date(startDateStr) : new Date();
+  if (isNaN(base.getTime())) return "";
+  base.setMonth(base.getMonth() + months);
+  return base.toISOString().split("T")[0];
+};
+
+const INITIAL_FORM = {
+  met_categ: "",
+  met_desc: "",
+  met_ttria: 20,
+  met_line: "",
+  met_crit: "",
+  met_fini: getTodayStr(),
+  met_ffin: "",
+  met_obse: "",
+};
 
 export default function NewPeiGoalModal({
   showModal,
@@ -34,301 +58,356 @@ export default function NewPeiGoalModal({
   activeChild,
   onSave,
 }) {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState({
-    met_categ: "",
-    met_desc: "",
-    met_ttria: 20,
-    met_line: "",
-    met_crit: "",
-    met_fini: "",
-    met_ffin: "",
-    met_obse: "",
-  });
+  const [form, setForm] = useState(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
+
+  // Garantizar reinicio limpio cada vez que se abre el modal
+  useEffect(() => {
+    if (showModal) {
+      setLoading(false);
+      setForm({
+        ...INITIAL_FORM,
+        met_fini: getTodayStr(),
+      });
+    }
+  }, [showModal]);
 
   if (!showModal) return null;
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
+  const applyDurationMonths = (months) => {
+    const ffin = addMonthsToDate(form.met_fini || getTodayStr(), months);
+    setForm((p) => ({ ...p, met_ffin: ffin }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.met_desc.trim()) return;
+
     setLoading(true);
     try {
       await onSave({
         met_desc: form.met_desc.trim(),
         met_ttria: parseInt(form.met_ttria, 10) || 20,
-        met_categ: form.met_categ || null,
-        met_line: form.met_line ? parseFloat(form.met_line) : null,
-        met_crit: form.met_crit.trim() || null,
+        met_categ: form.met_categ || "General",
+        met_area: form.met_categ || "General",
+        met_line:
+          form.met_line !== "" && !isNaN(Number(form.met_line))
+            ? parseFloat(form.met_line)
+            : null,
+        met_crit: (form.met_crit || "").trim() || null,
         met_fini: form.met_fini || null,
         met_ffin: form.met_ffin || null,
-        met_obse: form.met_obse.trim() || null,
+        met_obse: (form.met_obse || "").trim() || null,
       });
       setShowModal(false);
-      setStep(1);
-      setForm({
-        met_categ: "",
-        met_desc: "",
-        met_ttria: 20,
-        met_line: "",
-        met_crit: "",
-        met_fini: "",
-        met_ffin: "",
-        met_obse: "",
-      });
-    } catch {
+      setForm({ ...INITIAL_FORM, met_fini: getTodayStr() });
+    } catch (err) {
+      console.error("Error al guardar meta PEI:", err);
+    } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
     setShowModal(false);
-    setStep(1);
+    setLoading(false);
+    setForm({ ...INITIAL_FORM, met_fini: getTodayStr() });
   };
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={handleClose}
     >
       <div
-        className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-[#151D2A] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl md:max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[92vh] sm:max-h-[88vh] flex flex-col animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
-          <div className="flex justify-between items-center">
+        <div className="px-5 py-4 sm:px-6 sm:py-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shrink-0 relative">
+          <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-xl">
-                <Target className="w-5 h-5" />
+              <div className="p-2.5 bg-white/15 backdrop-blur-md rounded-xl border border-white/20 shadow-inner">
+                <Target className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold">Nueva Meta PEI</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold tracking-tight">
+                    Nueva Meta PEI
+                  </h3>
+                  <span className="text-[11px] font-semibold bg-white/20 px-2 py-0.5 rounded-full">
+                    Plan Terapéutico
+                  </span>
+                </div>
                 {activeChild && (
-                  <p className="text-blue-100 text-sm mt-0.5">
-                    {activeChild.nom_nino} {activeChild.ape_nino}
+                  <p className="text-blue-100 text-xs sm:text-sm font-medium mt-0.5">
+                    Paciente:{" "}
+                    <span className="text-white font-semibold">
+                      {activeChild.nom_nino} {activeChild.ape_nino}
+                    </span>
                   </p>
                 )}
               </div>
             </div>
             <button
+              type="button"
               onClick={handleClose}
-              className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              className="text-white/70 hover:text-white p-1.5 rounded-xl hover:bg-white/15 transition-all"
+              aria-label="Cerrar modal"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          {/* Progress */}
-          <div className="flex items-center gap-2 mt-4">
-            <div
-              className={`flex-1 h-1.5 rounded-full transition-colors ${step >= 1 ? "bg-white" : "bg-white/30"}`}
-            />
-            <div
-              className={`flex-1 h-1.5 rounded-full transition-colors ${step >= 2 ? "bg-white" : "bg-white/30"}`}
-            />
-          </div>
-          <div className="flex justify-between mt-1.5">
-            <span className="text-[10px] text-blue-200 font-medium">
-              Describe la meta
-            </span>
-            <span className="text-[10px] text-blue-200 font-medium">
-              Detalles
-            </span>
-          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            {/* PASO 1 */}
-            {step === 1 && (
-              <div className="space-y-5 animate-in fade-in duration-150">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2.5">
-                    Categoría
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {CATEGORIAS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() =>
-                          setForm((p) => ({
-                            ...p,
-                            met_categ: p.met_categ === c ? "" : c,
-                          }))
-                        }
-                        className={`px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all text-left ${
-                          form.met_categ === c
-                            ? "bg-blue-600 border-blue-600 text-white"
-                            : "border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-blue-400 dark:hover:border-blue-500 bg-white dark:bg-slate-800"
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+        {/* Form Body con todos los campos organizados */}
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto flex flex-col justify-between"
+        >
+          <div className="p-4 sm:p-6 space-y-5">
+            {/* 1. Categoría */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-blue-500" />
+                  Área o Categoría
+                </label>
+                {form.met_categ && (
+                  <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
+                    {form.met_categ}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {CATEGORIAS.map((c) => {
+                  const isSelected = form.met_categ === c.label;
+                  return (
+                    <button
+                      key={c.label}
+                      type="button"
+                      onClick={() =>
+                        setForm((p) => ({
+                          ...p,
+                          met_categ: isSelected ? "" : c.label,
+                        }))
+                      }
+                      className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all text-left flex items-center gap-2 ${
+                        isSelected
+                          ? "bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-500/25 scale-[1.02]"
+                          : "border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-500 bg-slate-50/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      <span className="text-sm">{c.emoji}</span>
+                      <span className="truncate">{c.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Meta SMART *
-                  </label>
-                  <textarea
-                    required
-                    value={form.met_desc}
-                    onChange={set("met_desc")}
-                    rows={4}
-                    placeholder="Ej. Mantendrá contacto visual 5 segundos en 3 de 4 intentos durante la sesión de terapia..."
-                    className={`${inputClass} resize-none`}
-                  />
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 ml-1">
-                    Objetivo específico, observable y medible.
-                  </p>
+            {/* 2. Meta SMART */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-blue-500" />
+                  Descripción del Objetivo SMART *
+                </label>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                  {form.met_desc.length} caracteres
+                </span>
+              </div>
+              <textarea
+                required
+                value={form.met_desc}
+                onChange={set("met_desc")}
+                rows={3}
+                placeholder="Describe el objetivo clínico específico, observable y medible..."
+                className={`${inputClass} resize-none min-h-[90px]`}
+              />
+            </div>
+
+            {/* 3. Parámetros Clínicos (Ensayos + Línea Base) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between mb-2">
+                  <span className="flex items-center gap-1.5">
+                    <Hash className="w-3.5 h-3.5 text-blue-500" />
+                    Ensayos Objetivo
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.met_ttria}
+                  onChange={set("met_ttria")}
+                  className={`${inputClass} text-center font-bold text-base py-2`}
+                />
+                <div className="flex gap-1.5 mt-2">
+                  {[10, 20, 30, 50].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, met_ttria: t }))}
+                      className={`flex-1 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                        form.met_ttria === t
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-blue-400"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
 
-            {/* PASO 2 */}
-            {step === 2 && (
-              <div className="space-y-5 animate-in fade-in duration-150">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Ensayos objetivo
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={form.met_ttria}
-                      onChange={set("met_ttria")}
-                      className={`${inputClass} text-center font-semibold`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Línea base %
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={form.met_line}
-                      onChange={set("met_line")}
-                      placeholder="0"
-                      className={`${inputClass} text-center font-semibold`}
-                    />
-                  </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between mb-2">
+                  <span className="flex items-center gap-1.5">
+                    <Percent className="w-3.5 h-3.5 text-blue-500" />
+                    Línea Base Inicial (%)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form.met_line}
+                  onChange={set("met_line")}
+                  placeholder="0"
+                  className={`${inputClass} text-center font-bold text-base py-2`}
+                />
+                <div className="flex gap-1.5 mt-2">
+                  {[0, 10, 25, 50].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, met_line: pct }))}
+                      className={`flex-1 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                        Number(form.met_line) === pct
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-blue-400"
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
                 </div>
+              </div>
+            </div>
 
+            {/* 4. Criterio de Logro */}
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Criterio de Logro
+              </label>
+              <textarea
+                value={form.met_crit}
+                onChange={set("met_crit")}
+                rows={2}
+                placeholder="Ej. 80% de aciertos en 3 sesiones consecutivas sin apoyo físico..."
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+
+            {/* 5. Fechas con Atajos */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                  Vigencia y Plazos
+                </span>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-slate-400" />
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                    Atajos:
+                  </span>
+                  {[
+                    { label: "+1M", m: 1 },
+                    { label: "+3M", m: 3 },
+                    { label: "+6M", m: 6 },
+                  ].map((shortcut) => (
+                    <button
+                      key={shortcut.label}
+                      type="button"
+                      onClick={() => applyDurationMonths(shortcut.m)}
+                      className="px-2 py-0.5 bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 dark:text-slate-300 hover:text-blue-600 text-[10px] font-bold rounded-md border border-slate-200 dark:border-slate-700 transition-colors"
+                    >
+                      {shortcut.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Criterio de logro
+                  <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                    Fecha de Inicio
                   </label>
-                  <textarea
-                    value={form.met_crit}
-                    onChange={set("met_crit")}
-                    rows={2}
-                    placeholder="Cuándo se considerará lograda..."
-                    className={`${inputClass} resize-none`}
+                  <input
+                    type="date"
+                    value={form.met_fini}
+                    onChange={set("met_fini")}
+                    className={inputClass}
                   />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Fecha inicio
-                    </label>
-                    <input
-                      type="date"
-                      value={form.met_fini}
-                      onChange={set("met_fini")}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Fecha límite
-                    </label>
-                    <input
-                      type="date"
-                      value={form.met_ffin}
-                      onChange={set("met_ffin")}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                    Observaciones
+                  <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                    Fecha Límite
                   </label>
-                  <textarea
-                    value={form.met_obse}
-                    onChange={set("met_obse")}
-                    rows={2}
-                    placeholder="Notas adicionales..."
-                    className={`${inputClass} resize-none`}
+                  <input
+                    type="date"
+                    value={form.met_ffin}
+                    onChange={set("met_ffin")}
+                    className={inputClass}
                   />
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* 6. Observaciones */}
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Observaciones y Adaptaciones
+              </label>
+              <textarea
+                value={form.met_obse}
+                onChange={set("met_obse")}
+                rows={2}
+                placeholder="Notas adicionales sobre apoyos o adaptaciones..."
+                className={`${inputClass} resize-none`}
+              />
+            </div>
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700/50 flex justify-between items-center shrink-0">
-            <div>
-              {step === 2 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  leftIcon={<ChevronLeft className="w-4 h-4" />}
-                  onClick={() => setStep(1)}
-                >
-                  Atrás
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleClose}
-              >
-                Cancelar
-              </Button>
-              {step === 1 ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setStep(2)}
-                  disabled={!form.met_desc.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl shadow-sm shadow-blue-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Siguiente
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
+          <div className="px-4 py-3 sm:px-6 sm:py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 flex justify-end items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+              className="text-slate-500 dark:text-slate-400"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={loading || !form.met_desc.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow-md shadow-blue-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-h-[40px]"
+            >
+              {loading ? (
+                "Guardando..."
               ) : (
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={loading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl shadow-sm shadow-blue-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                >
-                  {loading ? (
-                    "Guardando..."
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Crear Meta
-                    </>
-                  )}
-                </Button>
+                <>
+                  <Check className="w-4 h-4" />
+                  Guardar Meta PEI
+                </>
               )}
-            </div>
+            </Button>
           </div>
         </form>
       </div>

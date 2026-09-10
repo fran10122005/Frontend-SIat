@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import funautaLogo from "../../assets/Logo.png";
 import { useGlobalContext } from "../../context/GlobalState";
 import api from "../../api/axios";
 import { loginWithFingerprint } from "../../api/passkey";
 import { getErrorMessage } from "../../utils/errorHandler";
+import { setAuthSession } from "../../utils/authStorage";
 import FormAlert from "../shared/FormAlert";
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_SEC = 60;
 
 function Login({ onNavigate }) {
   const [email, setEmail] = useState("");
@@ -13,11 +17,48 @@ function Login({ onNavigate }) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isFp, setIsFp] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    const saved = sessionStorage.getItem("siat_login_failed_attempts");
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [lockoutSeconds, setLockoutSeconds] = useState(() => {
+    const lockoutUntil = sessionStorage.getItem("siat_login_lockout_until");
+    if (lockoutUntil) {
+      const remaining = Math.ceil(
+        (parseInt(lockoutUntil, 10) - Date.now()) / 1000,
+      );
+      return remaining > 0 ? remaining : 0;
+    }
+    return 0;
+  });
 
   const { setUserRole, setUserName } = useGlobalContext();
 
+  // Handle countdown for lockout
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSeconds((prev) => {
+        if (prev <= 1) {
+          sessionStorage.removeItem("siat_login_lockout_until");
+          sessionStorage.removeItem("siat_login_failed_attempts");
+          setFailedAttempts(0);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutSeconds]);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (lockoutSeconds > 0) {
+      setError(
+        `Acceso bloqueado temporalmente. Espera ${lockoutSeconds} segundos para reintentar.`,
+      );
+      return;
+    }
     setError("");
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -38,20 +79,49 @@ function Login({ onNavigate }) {
         usu_clve: password,
       });
 
+      // Reset failed attempts on success
+      sessionStorage.removeItem("siat_login_failed_attempts");
+      sessionStorage.removeItem("siat_login_lockout_until");
+      setFailedAttempts(0);
+
       const { token, user } = res.data.data;
       finalizeSession(user, token);
     } catch (err) {
       console.error(err);
-      setError(getErrorMessage(err, "Error al conectar con el servidor."));
+      const newAttempts = failedAttempts + 1;
+      setFailedAttempts(newAttempts);
+      sessionStorage.setItem(
+        "siat_login_failed_attempts",
+        newAttempts.toString(),
+      );
+
+      if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+        const lockoutUntilTime = Date.now() + LOCKOUT_DURATION_SEC * 1000;
+        sessionStorage.setItem(
+          "siat_login_lockout_until",
+          lockoutUntilTime.toString(),
+        );
+        setLockoutSeconds(LOCKOUT_DURATION_SEC);
+        setError(
+          `Demasiados intentos fallidos (${newAttempts}/${MAX_FAILED_ATTEMPTS}). Acceso bloqueado por ${LOCKOUT_DURATION_SEC} segundos por seguridad.`,
+        );
+      } else {
+        const baseMsg = getErrorMessage(err, "Credenciales incorrectas.");
+        const remaining = MAX_FAILED_ATTEMPTS - newAttempts;
+        setError(
+          `${baseMsg} (Intento ${newAttempts}/${MAX_FAILED_ATTEMPTS} - ${remaining} intento${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""} antes del bloqueo temporal)`,
+        );
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const finalizeSession = (user, token) => {
-    localStorage.setItem("token", token);
+    setAuthSession({ token, user });
 
-    setUserName(user.nombre || "Usuario");
+    const displayName = user.nombre || user.usu_nomb || "Usuario";
+    setUserName(displayName);
 
     if (user.rol_codi === "ROL_REP") {
       setUserRole("REPRESENTANTE");
@@ -238,7 +308,7 @@ function Login({ onNavigate }) {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || lockoutSeconds > 0}
             className="w-full min-h-[48px] bg-gradient-to-r from-brand-500 to-blue-600 hover:from-brand-600 hover:to-blue-700 text-white font-semibold py-3.5 sm:py-3 px-4 rounded-xl shadow-lg shadow-brand-500/25 dark:shadow-none transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 auth-rise auth-d3 text-base sm:text-sm"
           >
             {isLoading ? (
@@ -261,6 +331,8 @@ function Login({ onNavigate }) {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
+            ) : lockoutSeconds > 0 ? (
+              `Bloqueado (${lockoutSeconds}s)`
             ) : (
               "Iniciar Sesión"
             )}

@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # SERVICIO FRONTEND (React PWA + Nginx)
+  # ==========================================
+  frontend:
+    container_name: siat-frontend-pwa
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: siat-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    networks:
+      - siat-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+        reservations:
+          cpus: '0.10'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================
+  # SERVICIO BACKEND (Node.js Express + Socket.IO + Prisma)
+  # ==========================================
+  backend:
+    container_name: siat-backend
+    build:
+      context: ../Backend SIAT
+      dockerfile: Dockerfile
+    image: siat-backend:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../Backend SIAT/.env
+    networks:
+      - siat-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.20'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ==========================================
+# RED PRIVADA INTERNA
+# ==========================================
+networks:
+  siat-network:
+    driver: bridge
+    name: siat-network

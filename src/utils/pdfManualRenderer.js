@@ -265,7 +265,7 @@ export async function renderManualPDF(secciones, modulo, filename) {
   doc.setFontSize(10.5);
   doc.setTextColor(255, 255, 255);
   doc.text(
-    "SIAT — Sistema Integrado de Asistencia Terapéutica",
+    "SIAT — Sistema Inteligente de Acompañamiento Terapéutico",
     pageW / 2,
     150,
     { align: "center" },

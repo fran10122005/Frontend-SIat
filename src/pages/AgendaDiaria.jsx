@@ -21,12 +21,39 @@ import {
   Trash2,
   ListTodo,
   Award,
+  Pencil,
+  X,
+  Sparkles,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 
 import PageTitle from "../components/ui/PageTitle";
 import TherapySessionPlayer from "../components/shared/TherapySessionPlayer";
+
+const TASK_CATEGORIES = [
+  { id: "food", label: "Alimentación", icon: Award, defaultTime: "08:00" },
+  { id: "wash", label: "Higiene / Baño", icon: Smile, defaultTime: "08:30" },
+  {
+    id: "study",
+    label: "Escuela / Tarea",
+    icon: FileText,
+    defaultTime: "10:00",
+  },
+  {
+    id: "puzzle",
+    label: "Terapia / Rutina",
+    icon: Activity,
+    defaultTime: "15:00",
+  },
+  {
+    id: "cleanup",
+    label: "Orden en Casa",
+    icon: ShieldCheck,
+    defaultTime: "17:00",
+  },
+  { id: "moon", label: "Descanso / Noche", icon: Moon, defaultTime: "20:00" },
+];
 
 export default function AgendaDiaria() {
   const {
@@ -41,19 +68,142 @@ export default function AgendaDiaria() {
   } = useGlobalContext();
   const [goalProgressReported, setGoalProgressReported] = useState(false);
 
-  // 1. Visual Agenda State — inicializada desde almacenamiento local o vacía
+  // 1. Visual Agenda State — inicializada desde almacenamiento local por niño y fecha
   const today = new Date().toLocaleDateString("es-ES");
+  const agendaStorageKey = `agenda_${selectedChildId || "default"}_${today}`;
+
   const [agenda, setAgenda] = useState(() => {
-    const saved = localStorage.getItem(`agenda_${today}`);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Error parsing saved agenda:", e);
-      }
+    try {
+      const saved = localStorage.getItem(agendaStorageKey);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Error parsing saved agenda:", e);
     }
-    return [];
+    return [
+      {
+        id: "default-1",
+        task: "Cepillado de dientes matutino",
+        time: "08:00 AM",
+        done: false,
+        icon: "wash",
+      },
+      {
+        id: "default-2",
+        task: "Desayuno estructurado",
+        time: "08:30 AM",
+        done: false,
+        icon: "food",
+      },
+      {
+        id: "default-3",
+        task: "Rutina sensorial o juego guiado",
+        time: "03:00 PM",
+        done: false,
+        icon: "puzzle",
+      },
+    ];
   });
+
+  // Recargar agenda cuando cambia el niño seleccionado
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(agendaStorageKey);
+      if (saved) {
+        setAgenda(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error("Error reloading agenda for child:", e);
+    }
+  }, [agendaStorageKey]);
+
+  // Persistir agenda en localStorage al cambiar
+  useEffect(() => {
+    try {
+      localStorage.setItem(agendaStorageKey, JSON.stringify(agenda));
+    } catch (e) {
+      console.error("Error saving agenda:", e);
+    }
+  }, [agenda, agendaStorageKey]);
+
+  // Modal de Tarea Personalizada (Crear / Editar)
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskModalMode, setTaskModalMode] = useState("create"); // 'create' | 'edit'
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [taskForm, setTaskForm] = useState({
+    title: "",
+    time: "",
+    icon: "food",
+  });
+
+  const handleOpenCreateTask = () => {
+    const defaultTime = new Date().toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    setTaskModalMode("create");
+    setEditingTaskId(null);
+    setTaskForm({
+      title: "",
+      time: defaultTime,
+      icon: "food",
+    });
+    setShowTaskModal(true);
+  };
+
+  const handleOpenEditTask = (taskItem, e) => {
+    if (e) e.stopPropagation();
+    setTaskModalMode("edit");
+    setEditingTaskId(taskItem.id);
+    setTaskForm({
+      title: taskItem.task,
+      time: taskItem.time,
+      icon: taskItem.icon || "food",
+    });
+    setShowTaskModal(true);
+  };
+
+  const handleSaveTask = (e) => {
+    e.preventDefault();
+    const title = (taskForm.title || "").trim();
+    if (!title) {
+      showToast("⚠️ Ingresa el nombre de la tarea.");
+      return;
+    }
+
+    if (taskModalMode === "create") {
+      const newTask = {
+        id: `custom_${Date.now()}`,
+        task: title,
+        time: taskForm.time || "09:00 AM",
+        done: false,
+        icon: taskForm.icon || "food",
+      };
+      setAgenda((prev) => [...prev, newTask]);
+      showToast(`✅ Tarea "${title}" añadida a la agenda.`);
+    } else {
+      setAgenda((prev) =>
+        prev.map((item) =>
+          item.id === editingTaskId
+            ? {
+                ...item,
+                task: title,
+                time: taskForm.time || item.time,
+                icon: taskForm.icon || item.icon,
+              }
+            : item,
+        ),
+      );
+      showToast(`✏️ Tarea "${title}" actualizada.`);
+    }
+
+    setShowTaskModal(false);
+  };
+
+  const handleDeleteTask = (id, e) => {
+    if (e) e.stopPropagation();
+    setAgenda((prev) => prev.filter((item) => item.id !== id));
+    showToast("🗑️ Tarea eliminada de la agenda.");
+  };
 
   // 3. Active Session Player States
   const [activeSession, setActiveSession] = useState(null);
@@ -104,7 +254,7 @@ export default function AgendaDiaria() {
         if (t.id === id) {
           const nextDone = !t.done;
           if (nextDone) {
-            showToast(`✨ Actividad "${t.task}" completada. ¡Buen progreso!`);
+            showToast(`✨ Tarea "${t.task}" completada.`);
           }
           return { ...t, done: nextDone };
         }
@@ -374,14 +524,22 @@ export default function AgendaDiaria() {
                       className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[250px] md:min-h-[350px]"
                     >
                       <div className="mb-4">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center gap-2">
                           <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
                             <ListTodo className="w-4 h-4 text-blue-500" />
                             Agenda Visual de Hoy
                           </h3>
-                          <span className="text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-full">
-                            {progressPercent}% listo
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={handleOpenCreateTask}
+                              className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Nueva Tarea
+                            </button>
+                            <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-1 rounded-lg">
+                              {progressPercent}%
+                            </span>
+                          </div>
                         </div>
                         {/* Progress bar */}
                         <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
@@ -392,7 +550,7 @@ export default function AgendaDiaria() {
                         </div>
                       </div>
 
-                      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar max-h-[350px]">
+                      <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 no-scrollbar max-h-[380px]">
                         {agenda.length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-10 text-center text-slate-400 dark:text-slate-500">
                             <ListTodo className="w-8 h-8 mb-2 opacity-30 stroke-1" />
@@ -401,8 +559,15 @@ export default function AgendaDiaria() {
                             </p>
                             <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-[200px]">
                               Usa el botón "+ Nueva Tarea" para planificar las
-                              actividades del día.
+                              actividades y rutinas del día.
                             </p>
+                            <button
+                              onClick={handleOpenCreateTask}
+                              className="mt-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Agregar Primera
+                              Tarea
+                            </button>
                           </div>
                         ) : (
                           agenda.map((task) => (
@@ -410,13 +575,13 @@ export default function AgendaDiaria() {
                               key={task.id}
                               data-tour="ag-task"
                               onClick={() => toggleAgendaTask(task.id)}
-                              className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:border-blue-400/50 hover:bg-blue-50/10 ${
+                              className={`group flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all duration-200 hover:border-blue-400/50 hover:bg-blue-50/10 ${
                                 task.done
                                   ? "border-emerald-100 dark:border-emerald-900/20 bg-emerald-50/20 dark:bg-emerald-900/10"
                                   : "border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/20"
                               }`}
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <div
                                   className={`p-2 rounded-lg shrink-0 ${
                                     task.done
@@ -438,9 +603,9 @@ export default function AgendaDiaria() {
                                     <Moon className="w-4 h-4" />
                                   )}
                                 </div>
-                                <div className="flex flex-col">
+                                <div className="flex flex-col min-w-0 pr-2">
                                   <span
-                                    className={`text-xs font-semibold tracking-wide transition-all ${
+                                    className={`text-xs font-semibold tracking-wide transition-all truncate ${
                                       task.done
                                         ? "line-through text-slate-400 dark:text-slate-500"
                                         : "text-slate-700 dark:text-slate-300"
@@ -453,16 +618,37 @@ export default function AgendaDiaria() {
                                   </span>
                                 </div>
                               </div>
-                              <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                  task.done
-                                    ? "border-emerald-500 bg-emerald-500 text-white"
-                                    : "border-slate-300 dark:border-slate-700 bg-transparent"
-                                }`}
-                              >
-                                {task.done && (
-                                  <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
-                                )}
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {/* Botones de edición rápida */}
+                                <button
+                                  type="button"
+                                  title="Editar tarea"
+                                  onClick={(e) => handleOpenEditTask(task, e)}
+                                  className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Eliminar tarea"
+                                  onClick={(e) => handleDeleteTask(task.id, e)}
+                                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+
+                                <div
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                    task.done
+                                      ? "border-emerald-500 bg-emerald-500 text-white"
+                                      : "border-slate-300 dark:border-slate-700 bg-transparent"
+                                  }`}
+                                >
+                                  {task.done && (
+                                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
+                                  )}
+                                </div>
                               </div>
                             </div>
                           ))
@@ -784,6 +970,133 @@ export default function AgendaDiaria() {
                       <Plus className="w-4 h-4" /> Guardar Terapia
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal de Tarea Personalizada para la Agenda Visual */}
+            {showTaskModal && (
+              <div
+                className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+                onClick={() => setShowTaskModal(false)}
+              >
+                <div
+                  className="bg-white dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="px-5 py-4 bg-blue-600 text-white flex justify-between items-center">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 bg-white/20 rounded-lg">
+                        <ListTodo className="w-4 h-4" />
+                      </div>
+                      <h3 className="text-sm font-bold">
+                        {taskModalMode === "create"
+                          ? "Nueva Tarea para la Agenda"
+                          : "Editar Tarea de la Agenda"}
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setShowTaskModal(false)}
+                      className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveTask} className="p-5 space-y-4">
+                    {/* Nombre de la tarea */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                        Nombre de la Tarea o Actividad
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        placeholder="Ej. Tomar medicamento, Tarea de matemáticas, Merienda..."
+                        value={taskForm.title}
+                        onChange={(e) =>
+                          setTaskForm((prev) => ({
+                            ...prev,
+                            title: e.target.value,
+                          }))
+                        }
+                        className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors"
+                      />
+                    </div>
+
+                    {/* Hora programada */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                        Hora Sugerida
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej. 08:30 AM o 15:00"
+                        value={taskForm.time}
+                        onChange={(e) =>
+                          setTaskForm((prev) => ({
+                            ...prev,
+                            time: e.target.value,
+                          }))
+                        }
+                        className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors"
+                      />
+                    </div>
+
+                    {/* Categoría / Icono */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                        Categoría
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {TASK_CATEGORIES.map((cat) => {
+                          const IconComp = cat.icon;
+                          const isSelected = taskForm.icon === cat.id;
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() =>
+                                setTaskForm((prev) => ({
+                                  ...prev,
+                                  icon: cat.id,
+                                }))
+                              }
+                              className={`p-2 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all ${
+                                isSelected
+                                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm"
+                                  : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 bg-slate-50/50 dark:bg-slate-800/50"
+                              }`}
+                            >
+                              <IconComp className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate">{cat.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Botones */}
+                    <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-700/50">
+                      <button
+                        type="button"
+                        onClick={() => setShowTaskModal(false)}
+                        className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        {taskModalMode === "create"
+                          ? "Agregar a la Agenda"
+                          : "Guardar Cambios"}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             )}

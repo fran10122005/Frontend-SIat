@@ -14,9 +14,12 @@ import {
   Target,
   Plus,
   MoreHorizontal,
+  Sliders,
+  X,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
+import { toastError } from "../utils/errorHandler";
 import Footer from "../components/layout/Footer";
 import { exportDashboardReport } from "../utils/pdfExporter";
 import Button from "../components/ui/Button";
@@ -28,7 +31,6 @@ import SpecialistGlobalView from "../components/specialist/SpecialistGlobalView"
 import NewPeiGoalModal from "../components/specialist/NewPeiGoalModal";
 import IncidentModal from "../components/specialist/IncidentModal";
 import IndicacionModal from "../components/specialist/IndicacionModal";
-import SoapNoteModal from "../components/specialist/SoapNoteModal";
 import AlertRulesConfig from "../components/specialist/AlertRulesConfig";
 import LoadingState from "../components/dashboard/LoadingState";
 
@@ -47,6 +49,7 @@ export default function SpecialistDashboard() {
     clinicalAlerts = [],
     globalPeiGoals = [],
     crearPeiGoal,
+    incrementPeiTrial,
     crisisAlerts = [],
     isDark,
     userRole,
@@ -63,11 +66,36 @@ export default function SpecialistDashboard() {
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showIndicacionModal, setShowIndicacionModal] = useState(false);
   const [indicacionText, setIndicacionText] = useState({});
-  const [showSoapModal, setShowSoapModal] = useState(false);
   const [showAlertRules, setShowAlertRules] = useState(false);
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
   const moreActionsRef = useRef(null);
+
+  // Incidentes conductuales state
+  const [incidentes, setIncidentes] = useState([]);
+  const [selectedIncidente, setSelectedIncidente] = useState(null);
+
+  const fetchIncidentes = useCallback(async (childId) => {
+    if (!childId) {
+      setIncidentes([]);
+      return;
+    }
+    try {
+      const res = await api.get(`/especialista/incidentes/${childId}`);
+      setIncidentes(res.data?.data || []);
+    } catch (err) {
+      console.warn("No se pudieron cargar incidentes:", err);
+      setIncidentes([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedChildId) {
+      fetchIncidentes(selectedChildId);
+    } else {
+      setIncidentes([]);
+    }
+  }, [selectedChildId, fetchIncidentes]);
 
   // Form States
   const [incidentData, setIncidentData] = useState({
@@ -126,17 +154,13 @@ export default function SpecialistDashboard() {
     };
   }, [selectedChildId]);
 
-  // FASE 5.1: Keyboard shortcuts
+  // Shortcuts de teclado
   const handleKeyDown = useCallback((e) => {
     if (e.altKey && !e.ctrlKey && !e.metaKey) {
       switch (e.key.toLowerCase()) {
         case "i":
           e.preventDefault();
           setShowIncidentModal(true);
-          break;
-        case "s":
-          e.preventDefault();
-          setShowSoapModal(true);
           break;
         case "d":
           e.preventDefault();
@@ -406,27 +430,39 @@ export default function SpecialistDashboard() {
         inc_obse: "",
       });
       showToast("🚨 Incidente conductual registrado y tabulado.");
+      await fetchIncidentes(activeChild.id_ninos);
     } catch (err) {
-      showToast("❌ Error al registrar el incidente.");
+      console.error("Error al registrar incidente:", err);
+      toastError(err, showToast, "Error al registrar el incidente conductual.");
     }
   };
 
   const handleIndicacionSubmit = async (e) => {
     e.preventDefault();
     const ind_desc = (indicacionText.ind_desc || "").trim();
-    if (!ind_desc || !indicacionText.ind_tipo) {
-      showToast("⚠️ Completa el tipo y la descripción de la indicación.");
+    if (!ind_desc) {
+      showToast(
+        "⚠️ Por favor escribe la instrucción o texto de la indicación.",
+      );
+      return;
+    }
+    const targetChildId =
+      selectedChildId || activeChild?.id_ninos || activeChild?.nin_codi;
+    if (!targetChildId) {
+      showToast("⚠️ Debes seleccionar un paciente primero.");
       return;
     }
     try {
-      await crearIndicacion(selectedChildId, {
-        ind_tipo: indicacionText.ind_tipo,
+      await crearIndicacion(targetChildId, {
+        ind_tipo: indicacionText.ind_tipo || "Terapéutica",
         ind_area: indicacionText.ind_area || "General",
-        ind_frec: indicacionText.ind_frec || "Solo en sesión",
-        ind_dura: indicacionText.ind_dura || null,
+        ind_frec: indicacionText.ind_frec || "Diaria",
+        ind_dura: indicacionText.ind_dura || "1 mes",
         ind_prio: indicacionText.ind_prio || "Media",
-        ind_vige: indicacionText.ind_vige || null,
+        ind_vige:
+          indicacionText.ind_vige || new Date().toISOString().split("T")[0],
         ind_desc,
+        com_tend: ind_desc,
       });
       setShowIndicacionModal(false);
       setIndicacionText({});
@@ -434,30 +470,43 @@ export default function SpecialistDashboard() {
         "✅ Indicación clínica guardada y compartida con el representante.",
       );
     } catch (error) {
-      showToast("❌ Error al guardar la indicación.");
-    }
-  };
-
-  const handleSoapSave = async (soapData) => {
-    try {
-      await api.post("/especialista/soap", {
-        nin_codi: selectedChildId,
-        ...soapData,
-      });
-      showToast("📋 Nota clínica SOAP guardada en el expediente.");
-    } catch (err) {
-      showToast("❌ Error al guardar la nota SOAP.");
-      throw err;
+      console.error("Error al guardar indicación:", error);
+      toastError(error, showToast, "Error al guardar la indicación clínica.");
     }
   };
 
   const handleCreatePeiGoal = async (goalData) => {
+    if (!selectedChildId) {
+      showToast(
+        "⚠️ Debes seleccionar un paciente antes de registrar una meta.",
+      );
+      throw new Error("No hay paciente seleccionado");
+    }
     try {
       await crearPeiGoal(selectedChildId, goalData);
       showToast("🎯 Meta PEI creada correctamente.");
     } catch (err) {
-      showToast("❌ Error al crear la meta PEI.");
+      console.error("Error al crear la meta PEI:", err);
+      toastError(err, showToast, "Error al crear la meta PEI.");
       throw err;
+    }
+  };
+
+  const handleIncrementPeiTrial = async (goalId) => {
+    const targetChildId =
+      selectedChildId || activeChild?.id_ninos || activeChild?.nin_codi;
+    try {
+      if (incrementPeiTrial) {
+        await incrementPeiTrial(goalId, targetChildId);
+        showToast("✅ Ensayo registrado (+1) en la meta PEI");
+      }
+    } catch (err) {
+      console.error("Error al registrar ensayo:", err);
+      toastError(
+        err,
+        showToast,
+        "Error al actualizar progreso de la meta PEI.",
+      );
     }
   };
 
@@ -547,21 +596,21 @@ export default function SpecialistDashboard() {
                       size="xs"
                       responsive={false}
                       className="whitespace-nowrap"
-                      leftIcon={<Download className="w-4 h-4" />}
-                      onClick={handleExportDashboard}
-                      disabled={exporting}
+                      leftIcon={<Sliders className="w-3.5 h-3.5" />}
+                      onClick={() => setShowAlertRules(true)}
                     >
-                      {exporting ? "..." : "Reporte PDF"}
+                      Reglas Alerta
                     </Button>
                     <Button
                       variant="ghost"
                       size="xs"
                       responsive={false}
                       className="whitespace-nowrap"
-                      leftIcon={<FileText className="w-4 h-4" />}
-                      onClick={() => setShowSoapModal(true)}
+                      leftIcon={<Download className="w-4 h-4" />}
+                      onClick={handleExportDashboard}
+                      disabled={exporting}
                     >
-                      Nota SOAP
+                      {exporting ? "..." : "Reporte PDF"}
                     </Button>
                     <Button
                       variant="ghost"
@@ -619,15 +668,15 @@ export default function SpecialistDashboard() {
                         >
                           {[
                             {
+                              icon: <Sliders className="w-4 h-4" />,
+                              label: "Reglas de Alerta",
+                              onClick: () => setShowAlertRules(true),
+                            },
+                            {
                               icon: <Download className="w-4 h-4" />,
                               label: exporting ? "Generando..." : "Reporte PDF",
                               onClick: handleExportDashboard,
                               disabled: exporting,
-                            },
-                            {
-                              icon: <FileText className="w-4 h-4" />,
-                              label: "Nota SOAP",
-                              onClick: () => setShowSoapModal(true),
                             },
                             {
                               icon: <TrendingUp className="w-4 h-4" />,
@@ -755,26 +804,6 @@ export default function SpecialistDashboard() {
                           setShowIndicacionModal(true);
                         },
                       },
-                      {
-                        id: "soap",
-                        icon: FileText,
-                        label: "Nota SOAP",
-                        description: "Registro de sesión clínica",
-                        onClick: () => {
-                          if (!listaNinos.length) {
-                            showToast("⚠️ No tienes pacientes asignados.");
-                            return;
-                          }
-                          if (!selectedChildId) {
-                            showToast(
-                              "👆 Selecciona un paciente para continuar",
-                            );
-                            navigate("patients");
-                            return;
-                          }
-                          setShowSoapModal(true);
-                        },
-                      },
                     ]}
                   />
                 )}
@@ -873,17 +902,17 @@ export default function SpecialistDashboard() {
                         )}
                       </Card>
 
-                      {/* Notas SOAP / Indicaciones Recientes */}
+                      {/* Indicaciones Clínicas Recientes */}
                       <Card className="p-4">
                         <div className="flex items-center gap-2 mb-3">
                           <FileText className="w-4 h-4 text-sky-500" />
                           <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                            Notas SOAP
+                            Indicaciones Clínicas
                           </h3>
                         </div>
                         {recentNotes.length === 0 ? (
                           <p className="text-xs text-slate-400 dark:text-slate-500">
-                            Sin notas registradas aún.
+                            Sin indicaciones registradas aún.
                           </p>
                         ) : (
                           <ul className="space-y-1.5">
@@ -904,63 +933,185 @@ export default function SpecialistDashboard() {
                         )}
                       </Card>
 
-                      {/* Progreso de Metas PEI */}
+                      {/* Incidentes Conductuales Recientes (Modelo ABC) */}
+                      <Card className="p-4">
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                              Incidentes Conductuales
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {incidentes.length > 0 && (
+                              <span className="text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800/40">
+                                {incidentes.length}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setShowIncidentModal(true)}
+                              className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 font-semibold inline-flex items-center gap-1 hover:underline"
+                              title="Registrar nuevo incidente"
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Registrar
+                            </button>
+                          </div>
+                        </div>
+                        {incidentes.length === 0 ? (
+                          <p className="text-xs text-slate-400 dark:text-slate-500">
+                            Sin incidentes conductuales registrados.
+                          </p>
+                        ) : (
+                          <ul className="space-y-2 max-h-[175px] overflow-y-auto pr-1">
+                            {incidentes.slice(0, 5).map((inc, i) => (
+                              <li
+                                key={inc.inc_codi || i}
+                                onClick={() => setSelectedIncidente(inc)}
+                                className="p-2 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all hover:shadow-xs group"
+                              >
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                    {inc.inc_tipo}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                                      inc.inc_seve === "Severa" ||
+                                      inc.inc_seve === "Grave"
+                                        ? "bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400"
+                                        : inc.inc_seve === "Moderada"
+                                          ? "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
+                                          : "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400"
+                                    }`}
+                                  >
+                                    {inc.inc_seve}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                                  <span
+                                    className="truncate max-w-[130px]"
+                                    title={inc.inc_deto}
+                                  >
+                                    Detonante: {inc.inc_deto}
+                                  </span>
+                                  <span className="shrink-0">
+                                    {timeAgo(inc.inc_time)}
+                                  </span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </Card>
+
+                      {/* Progreso de Metas PEI (Lista completa de metas del paciente) */}
                       <Card className="xl:col-span-2 p-4">
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center justify-between gap-3 mb-3">
                           <div className="flex items-center gap-2 min-w-0">
                             <Target className="w-4 h-4 text-indigo-500 shrink-0" />
                             <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                              Progreso de Metas PEI
+                              Metas PEI del Paciente
                             </h3>
+                            {peiGoals.length > 0 && (
+                              <span className="text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800/40">
+                                {peiGoals.length}{" "}
+                                {peiGoals.length === 1 ? "meta" : "metas"}
+                              </span>
+                            )}
                           </div>
                           <Button
-                            variant={currentPeiGoal ? "outline" : "primary"}
+                            variant={
+                              peiGoals.length > 0 ? "outline" : "primary"
+                            }
                             size="xs"
                             responsive={false}
                             className="whitespace-nowrap shrink-0"
                             leftIcon={<Plus className="w-3.5 h-3.5" />}
                             onClick={() => setShowNewGoal(true)}
                           >
-                            {currentPeiGoal
+                            {peiGoals.length > 0
                               ? "Nueva Meta"
                               : "Crear primera meta"}
                           </Button>
                         </div>
-                        {!currentPeiGoal ? (
-                          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-                            No hay metas PEI registradas. Crea la primera meta
-                            de trabajo para empezar a dar seguimiento.
+
+                        {peiGoals.length === 0 ? (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed py-2">
+                            No hay metas PEI registradas para este paciente.
+                            Crea la primera meta de trabajo para empezar a dar
+                            seguimiento.
                           </p>
                         ) : (
-                          <div className="mt-3">
-                            <div className="flex justify-between items-center mb-1.5">
-                              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate min-w-0">
-                                {currentPeiGoal.goal}
-                              </p>
-                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0 ml-3">
-                                {Math.round(currentPeiGoal.progress)}%
-                              </span>
-                            </div>
-                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
-                              <div
-                                className={`h-2.5 rounded-full transition-all duration-700 ${
-                                  currentPeiGoal.progress >= 100
-                                    ? "bg-emerald-500"
-                                    : currentPeiGoal.progress >= 70
-                                      ? "bg-emerald-400"
-                                      : currentPeiGoal.progress >= 40
-                                        ? "bg-amber-400"
-                                        : "bg-rose-400"
-                                }`}
-                                style={{
-                                  width: `${currentPeiGoal.progress}%`,
-                                }}
-                              />
-                            </div>
-                            <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">
-                              {currentPeiGoal.trials} /{" "}
-                              {currentPeiGoal.totalTrials} ensayos registrados
-                            </p>
+                          <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+                            {peiGoals.map((g) => {
+                              const pct = Math.min(
+                                Math.round(g.progress || 0),
+                                100,
+                              );
+                              return (
+                                <div
+                                  key={g.id}
+                                  className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60"
+                                >
+                                  <div className="flex justify-between items-start gap-2 mb-1.5">
+                                    <div className="min-w-0 flex-1">
+                                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block mb-0.5">
+                                        {g.category}
+                                      </span>
+                                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 line-clamp-2">
+                                        {g.goal}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                        {pct}%
+                                      </span>
+                                      <button
+                                        type="button"
+                                        disabled={pct >= 100}
+                                        onClick={() =>
+                                          handleIncrementPeiTrial(g.id)
+                                        }
+                                        className="p-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Registrar ensayo logrado (+1)"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                                    <div
+                                      className={`h-2 rounded-full transition-all duration-500 ${
+                                        pct >= 100
+                                          ? "bg-emerald-500"
+                                          : pct >= 70
+                                            ? "bg-emerald-400"
+                                            : pct >= 40
+                                              ? "bg-amber-400"
+                                              : "bg-rose-400"
+                                      }`}
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+
+                                  <div className="flex justify-between items-center mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                                    <span>
+                                      {g.trials || 0} / {g.totalTrials || 20}{" "}
+                                      ensayos
+                                    </span>
+                                    {g.criterio && (
+                                      <span
+                                        className="truncate max-w-[180px] hidden sm:inline"
+                                        title={g.criterio}
+                                      >
+                                        {g.criterio}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </Card>
@@ -994,13 +1145,6 @@ export default function SpecialistDashboard() {
         activeChild={activeChild}
       />
 
-      <SoapNoteModal
-        showSoapModal={showSoapModal}
-        setShowSoapModal={setShowSoapModal}
-        activeChild={activeChild}
-        onSave={handleSoapSave}
-      />
-
       <NewPeiGoalModal
         showModal={showNewGoal}
         setShowModal={setShowNewGoal}
@@ -1014,6 +1158,155 @@ export default function SpecialistDashboard() {
         config={specialistConfig}
         onSave={updateSpecialistConfig}
       />
+
+      {/* Modal Detalle de Incidente Conductual */}
+      {selectedIncidente && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 bg-rose-600 text-white flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-xl">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Detalle del Incidente</h3>
+                  <p className="text-rose-100 text-xs">
+                    {new Date(selectedIncidente.inc_time).toLocaleString(
+                      "es-ES",
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedIncidente(null)}
+                className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 text-sm text-slate-700 dark:text-slate-300">
+              {/* Badges de resumen */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                    Tipo
+                  </span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {selectedIncidente.inc_tipo}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                    Severidad
+                  </span>
+                  <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                    {selectedIncidente.inc_seve}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                    Duración
+                  </span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {selectedIncidente.inc_dura}
+                  </span>
+                </div>
+              </div>
+
+              {/* Modelo A-B-C */}
+              <div className="space-y-3 pt-2">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    A — Antecedente / Detonante
+                  </h4>
+                  <p className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs leading-relaxed">
+                    {selectedIncidente.inc_deto}
+                  </p>
+                </div>
+
+                {selectedIncidente.inc_ruti && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Rutina o Actividad Afectada
+                    </h4>
+                    <p className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs leading-relaxed">
+                      {selectedIncidente.inc_ruti}
+                    </p>
+                  </div>
+                )}
+
+                {selectedIncidente.inc_conse && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      C — Consecuencia / Conducta Observada
+                    </h4>
+                    <p className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs leading-relaxed">
+                      {selectedIncidente.inc_conse}
+                    </p>
+                  </div>
+                )}
+
+                {selectedIncidente.inc_inter && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Intervención Terapéutica Aplicada
+                    </h4>
+                    <p className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs leading-relaxed">
+                      {selectedIncidente.inc_inter}
+                    </p>
+                  </div>
+                )}
+
+                {selectedIncidente.inc_resu && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Resultado Observado
+                    </h4>
+                    <p className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs leading-relaxed">
+                      {selectedIncidente.inc_resu}
+                    </p>
+                  </div>
+                )}
+
+                {selectedIncidente.inc_obse && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                      Observaciones Clínicas
+                    </h4>
+                    <p className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs leading-relaxed">
+                      {selectedIncidente.inc_obse}
+                    </p>
+                  </div>
+                )}
+
+                {selectedIncidente.tm_espec && (
+                  <div className="pt-2 text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-800 flex justify-between">
+                    <span>Registrado por:</span>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">
+                      {selectedIncidente.tm_espec.esp_nomb}{" "}
+                      {selectedIncidente.tm_espec.esp_apel}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700/50 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedIncidente(null)}
+              >
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

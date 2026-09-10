@@ -1,5 +1,10 @@
 import axios from "axios";
 import { getErrorMessage } from "../utils/errorHandler";
+import {
+  getAuthToken,
+  clearAuthSession,
+  isTokenExpired,
+} from "../utils/authStorage";
 
 const rawBase =
   import.meta.env.VITE_API_URL || "https://backend-siat.onrender.com/api";
@@ -13,24 +18,45 @@ const api = axios.create({
   timeout: 45000,
 });
 
-function clearAuth() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("userRole");
-  localStorage.removeItem("userName");
-  localStorage.removeItem("currentView");
+function showGlobalToast(message) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("global-toast", { detail: { message } }),
+    );
+  }
 }
 
-function showGlobalToast(message) {
-  window.dispatchEvent(
-    new CustomEvent("global-toast", { detail: { message } }),
-  );
+// Extrae el tiempo de espera en segundos del encabezado Retry-After si existe
+function parseRetryAfter(headers) {
+  if (!headers) return null;
+  const retryVal = headers["retry-after"] || headers["Retry-After"];
+  if (!retryVal) return null;
+
+  const numeric = Number(retryVal);
+  if (!isNaN(numeric) && numeric > 0) {
+    return numeric;
+  }
+
+  const dateMs = Date.parse(retryVal);
+  if (!isNaN(dateMs)) {
+    const diffSec = Math.ceil((dateMs - Date.now()) / 1000);
+    return diffSec > 0 ? diffSec : 1;
+  }
+
+  return null;
 }
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = getAuthToken();
     if (token) {
+      // Verificación proactiva de token: si ya expiró, no enviamos la petición con credencial caduca
+      const isAuthEndpoint = /\/auth\//.test(config.url || "");
+      if (!isAuthEndpoint && isTokenExpired(token, 0)) {
+        console.warn(
+          "Token JWT expirado en cliente antes de enviar la petición.",
+        );
+      }
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -53,14 +79,28 @@ api.interceptors.response.use(
   async (error) => {
     const config = error.config || {};
     const isNetworkError = !error.response;
+    const status = error.response?.status;
 
     // Mensaje amigable resuelto una sola vez; los componentes pueden leerlo
     // desde err.userMessage para no volver a calcular el texto.
     error.userMessage = getErrorMessage(error);
 
+    // Manejo específico de HTTP 429 (Rate Limit / Demasiadas solicitudes)
+    if (status === 429) {
+      const retrySeconds = parseRetryAfter(error.response?.headers);
+      const limitMessage = retrySeconds
+        ? `⏳ Demasiados intentos. Por favor espera ${Math.ceil(retrySeconds / 60)} min antes de reintentar.`
+        : "⏳ Demasiados intentos. Por motivos de seguridad, espera 15 minutos antes de reintentar.";
+
+      error.userMessage = limitMessage;
+      showGlobalToast(limitMessage);
+      // No reintentar automáticamente en caso de 429 para no saturar al servidor
+      return Promise.reject(error);
+    }
+
     // Reintento con backoff para errores de red y 5xx transitorios (ej. Render "dormido")
     if (
-      (isNetworkError || retriableStatus(error.response?.status)) &&
+      (isNetworkError || retriableStatus(status)) &&
       (config._retry || 0) < MAX_RETRIES
     ) {
       config._retry = (config._retry || 0) + 1;
@@ -75,24 +115,27 @@ api.interceptors.response.use(
 
     // Un 401 del login significa "credenciales inválidas", no sesión expirada.
     // No redirigir ni tocar el estado: el componente Login muestra el error.
-    if (error.response?.status === 401 && !isAuthEndpoint && !isRedirecting) {
+    if (status === 401 && !isAuthEndpoint && !isRedirecting) {
       isRedirecting = true;
-      clearAuth();
+      clearAuthSession();
       showGlobalToast("⏱️ Sesión expirada. Redirigiendo al inicio...");
       setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
+        }
+      }, 1800);
       return Promise.reject(error);
     }
+
     // Solo notificamos aquí errores de nivel de aplicación (no validaciones
     // de formulario, que cada vista maneja con su propio contexto).
-    if (error.response?.status === 403) {
+    if (status === 403) {
       showGlobalToast(
         "⛔ Acceso denegado. No tienes permisos para esta acción.",
       );
       console.warn("Acceso denegado por RBAC");
     }
-    if (error.response?.status >= 500) {
+    if (status >= 500) {
       showGlobalToast(`⚠️ ${error.userMessage}`);
     }
     if (!error.response && !error.code?.startsWith("ERR_CANCELED")) {

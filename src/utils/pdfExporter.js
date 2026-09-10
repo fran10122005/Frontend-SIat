@@ -81,7 +81,7 @@ const addFooter = (doc, y) => {
   doc.setTextColor(180, 180, 180);
   doc.text(new Date().toLocaleDateString("es-ES"), 12, y + 3);
   doc.text(
-    "SIAT — Sistema Integrado de Asistencia Terapéutica",
+    "SIAT — Sistema Inteligente de Acompañamiento Terapéutico",
     doc.internal.pageSize.width / 2,
     y + 3,
     { align: "center" },
@@ -311,7 +311,7 @@ export const exportDashboardReport = async ({
     doc.setFontSize(10);
     doc.setTextColor(1, 28, 63);
     doc.text(
-      "SIAT — Sistema Integrado de Asistencia Terapéutica",
+      "SIAT — Sistema Inteligente de Acompañamiento Terapéutico",
       margin + 20,
       12,
     );
@@ -671,7 +671,11 @@ export const exportHomeWeeklyToPDF = async ({
   const drawHeader = () => {
     doc.setFontSize(10);
     doc.setTextColor(1, 28, 63);
-    doc.text("SIAT — Sistema Integrado de Asistencia Terapéutica", margin, 12);
+    doc.text(
+      "SIAT — Sistema Inteligente de Acompañamiento Terapéutico",
+      margin,
+      12,
+    );
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
     doc.text(

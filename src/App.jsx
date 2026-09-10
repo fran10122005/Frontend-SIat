@@ -24,6 +24,7 @@ import ResetPassword from "./components/auth/ResetPassword";
 import RegisterRepre from "./components/auth/RegisterRepre";
 import UserProfile from "./pages/UserProfile";
 import PwaInstallPrompt from "@/components/shared/PwaInstallPrompt";
+import PwaUpdatePrompt from "@/components/shared/PwaUpdatePrompt";
 import "./App.css";
 
 export default function App() {
@@ -257,11 +258,12 @@ export default function App() {
               d="M3 3l18 18"
             />
           </svg>
-          Modo Local: Guardando datos en Edge
+          Sin conexión: Las acciones de escritura están deshabilitadas
         </div>
       )}
       {renderPage()}
       <PwaInstallPrompt variant="banner" />
+      <PwaUpdatePrompt />
 
       {/* Auto Logout Modal */}
       {showSessionExpired && (

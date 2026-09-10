@@ -59,9 +59,15 @@ function InlineField({ label, value }) {
 import PageTitle from "../components/ui/PageTitle";
 
 export default function HomeAnalytics() {
-  const { selectedChildId, navigate, userName, userRole, showToast, nomNino } =
-    useGlobalContext();
-  const [isDark, setIsDark] = useState(false);
+  const {
+    selectedChildId,
+    navigate,
+    userName,
+    userRole,
+    showToast,
+    nomNino,
+    isDark,
+  } = useGlobalContext();
   const [selectedDay, setSelectedDay] = useState("Vie");
   const [homeHistoricalData, setHomeHistoricalData] = useState([]);
   const [parentNotes, setParentNotes] = useState([]);
@@ -178,11 +184,6 @@ export default function HomeAnalytics() {
     };
     fetchData();
   }, [selectedChildId]);
-
-  const toggleTheme = () => {
-    document.documentElement.classList.toggle("dark");
-    setIsDark(!isDark);
-  };
 
   const effectiveHomeData = homeHistoricalData || [];
   const avgCalma =

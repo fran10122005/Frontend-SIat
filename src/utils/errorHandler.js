@@ -9,7 +9,7 @@ export const FALLBACK_BY_STATUS = {
   404: "El recurso solicitado no se encontró.",
   409: "El registro ya existe o está en conflicto con la información actual.",
   422: "Los datos enviados no son válidos. Revisa los campos e inténtalo nuevamente.",
-  429: "Demasiadas solicitudes. Espera unos segundos e inténtalo nuevamente.",
+  429: "Demasiados intentos. Por motivos de seguridad, espera 15 minutos antes de reintentar.",
 };
 
 export const NETWORK_FALLBACK =

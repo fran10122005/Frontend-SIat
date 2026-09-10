@@ -1,53 +1,30 @@
-import { FilePlus, X } from "lucide-react";
+import { FilePlus, X, Sparkles } from "lucide-react";
 import Button from "../ui/Button";
 
 const TIPOS = [
-  {
-    value: "Terapéutica",
-    desc: "Actividades y ejercicios de intervención directa.",
-  },
-  {
-    value: "Conductual",
-    desc: "Estrategias de manejo y modificación de conducta.",
-  },
-  { value: "Médica", desc: "Recomendaciones clínicas y seguimiento de salud." },
-  { value: "Académica", desc: "Ajustes y apoyos para el ámbito escolar." },
-  { value: "Familiar", desc: "Pautas para el hogar y rutinas en casa." },
-];
-
-const AREAS = [
-  "Comunicación",
-  "Lenguaje",
-  "Socialización",
-  "Conducta",
-  "Sensorial",
-  "Motricidad Fina",
-  "Motricidad Gruesa",
-  "Autonomía / Vida Diaria",
-  "Atención y Concentración",
-  "Regulación Emocional",
-  "Cognición",
-  "Juego",
-];
-
-const FRECUENCIAS = [
-  "Diaria",
-  "3 veces por semana",
-  "2 veces por semana",
-  "Semanal",
-  "Quincenal",
-  "Mensual",
-  "Solo en sesión",
+  { value: "Terapéutica", label: "🩺 Terapéutica" },
+  { value: "Conductual", label: "🧠 Conductual" },
+  { value: "Médica", label: "💊 Médica" },
+  { value: "Familiar", label: "🏠 Familiar" },
 ];
 
 const PRIORIDADES = [
-  { value: "Alta", color: "bg-rose-600 border-rose-600 text-white" },
-  { value: "Media", color: "bg-amber-500 border-amber-500 text-white" },
-  { value: "Baja", color: "bg-emerald-500 border-emerald-500 text-white" },
+  {
+    value: "Baja",
+    label: "Baja",
+    color: "bg-emerald-600 text-white border-emerald-600",
+  },
+  {
+    value: "Media",
+    label: "Media",
+    color: "bg-amber-500 text-white border-amber-500",
+  },
+  {
+    value: "Alta",
+    label: "Alta",
+    color: "bg-rose-600 text-white border-rose-600",
+  },
 ];
-
-const inputClass =
-  "w-full px-4 py-2.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer";
 
 export default function IndicacionModal({
   showIndicacionModal,
@@ -61,42 +38,41 @@ export default function IndicacionModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-5 bg-blue-600 text-white shrink-0">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-xl">
-                <FilePlus className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">Nueva Indicación Clínica</h3>
-                {activeChild && (
-                  <p className="text-blue-100 text-sm mt-0.5">
-                    {activeChild.nom_nino} {activeChild.ape_nino}
-                  </p>
-                )}
-              </div>
+        <div className="px-6 py-4 bg-blue-600 text-white flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-xl">
+              <FilePlus className="w-5 h-5" />
             </div>
-            <button
-              onClick={() => setShowIndicacionModal(false)}
-              className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <h3 className="text-base font-bold">Nueva Indicación</h3>
+              {activeChild && (
+                <p className="text-blue-100 text-xs">
+                  Para: {activeChild.nom_nino} {activeChild.ape_nino}
+                </p>
+              )}
+            </div>
           </div>
+          <button
+            onClick={() => setShowIndicacionModal(false)}
+            className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
+        {/* Form */}
         <form
           onSubmit={handleIndicacionSubmit}
-          className="p-6 space-y-5 overflow-y-auto flex-1"
+          className="p-6 space-y-4 overflow-y-auto flex-1"
         >
-          {/* Tipo */}
+          {/* Tipo de Indicación */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Tipo de Indicación
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {TIPOS.map((t) => (
                 <button
                   key={t.value}
@@ -107,109 +83,21 @@ export default function IndicacionModal({
                       ind_tipo: t.value,
                     }))
                   }
-                  className={`text-left p-3 rounded-xl border-2 transition-all ${(indicacionText.ind_tipo || "") === t.value ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-slate-200 dark:border-slate-600 hover:border-blue-300 bg-white dark:bg-slate-800"}`}
+                  className={`py-2 px-3 rounded-xl border-2 text-xs font-bold text-center transition-all ${
+                    (indicacionText.ind_tipo || "Terapéutica") === t.value
+                      ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500 font-bold shadow-sm"
+                      : "border-slate-200 dark:border-slate-700 hover:border-blue-300 text-slate-600 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-800/50"
+                  }`}
                 >
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                    {t.value}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {t.desc}
-                  </p>
+                  {t.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Área + Frecuencia */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                Área de Intervención
-              </label>
-              <select
-                value={indicacionText.ind_area || ""}
-                onChange={(e) =>
-                  setIndicacionText((prev) => ({
-                    ...prev,
-                    ind_area: e.target.value,
-                  }))
-                }
-                required
-                className={inputClass}
-              >
-                <option value="">Selecciona el área...</option>
-                {AREAS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                Frecuencia Recomendada
-              </label>
-              <select
-                value={indicacionText.ind_frec || ""}
-                onChange={(e) =>
-                  setIndicacionText((prev) => ({
-                    ...prev,
-                    ind_frec: e.target.value,
-                  }))
-                }
-                required
-                className={inputClass}
-              >
-                <option value="">Selecciona frecuencia...</option>
-                {FRECUENCIAS.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Duración + Vigencia */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                Duración Estimada
-              </label>
-              <input
-                type="text"
-                value={indicacionText.ind_dura || ""}
-                onChange={(e) =>
-                  setIndicacionText((prev) => ({
-                    ...prev,
-                    ind_dura: e.target.value,
-                  }))
-                }
-                placeholder="Ej. 15 min por sesión"
-                className={`${inputClass} cursor-text`}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                Vigencia (Opcional)
-              </label>
-              <input
-                type="date"
-                value={indicacionText.ind_vige || ""}
-                onChange={(e) =>
-                  setIndicacionText((prev) => ({
-                    ...prev,
-                    ind_vige: e.target.value,
-                  }))
-                }
-                className={inputClass}
-              />
-            </div>
-          </div>
-
           {/* Prioridad */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Prioridad
             </label>
             <div className="flex gap-2">
@@ -223,20 +111,27 @@ export default function IndicacionModal({
                       ind_prio: p.value,
                     }))
                   }
-                  className={`flex-1 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${(indicacionText.ind_prio || "") === p.value ? p.color : "border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800"}`}
+                  className={`flex-1 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                    (indicacionText.ind_prio || "Media") === p.value
+                      ? p.color
+                      : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800"
+                  }`}
                 >
-                  {p.value}
+                  {p.label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Descripción */}
+          {/* Instrucciones principales */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-              Instrucciones y Recomendaciones
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+              Instrucción o Tarea para el Representante
             </label>
             <textarea
+              required
+              rows={4}
               value={indicacionText.ind_desc || ""}
               onChange={(e) =>
                 setIndicacionText((prev) => ({
@@ -244,13 +139,61 @@ export default function IndicacionModal({
                   ind_desc: e.target.value,
                 }))
               }
-              placeholder="Describa la indicación, pasos a seguir, materiales y criterios de éxito..."
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-blue-500 min-h-[110px] resize-none text-slate-800 dark:text-slate-200 transition-colors"
-              required
+              placeholder="Escribe claramente la indicación, pasos o ejercicios que el representante debe realizar en casa con el niño..."
+              className="w-full p-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 resize-none transition-colors"
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700/50">
+          {/* Detalles opcionales rápidos */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                Frecuencia (opcional)
+              </label>
+              <select
+                value={indicacionText.ind_frec || "Diaria"}
+                onChange={(e) =>
+                  setIndicacionText((prev) => ({
+                    ...prev,
+                    ind_frec: e.target.value,
+                  }))
+                }
+                className="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-blue-500 text-slate-700 dark:text-slate-300"
+              >
+                <option value="Diaria">Diaria</option>
+                <option value="2 veces por semana">2 veces por semana</option>
+                <option value="3 veces por semana">3 veces por semana</option>
+                <option value="Semanal">Semanal</option>
+                <option value="Solo en sesión">Solo en sesión</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                Área (opcional)
+              </label>
+              <select
+                value={indicacionText.ind_area || "General"}
+                onChange={(e) =>
+                  setIndicacionText((prev) => ({
+                    ...prev,
+                    ind_area: e.target.value,
+                  }))
+                }
+                className="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-blue-500 text-slate-700 dark:text-slate-300"
+              >
+                <option value="General">General</option>
+                <option value="Comunicación">Comunicación</option>
+                <option value="Conducta">Conducta</option>
+                <option value="Sensorial">Sensorial</option>
+                <option value="Autonomía">Autonomía / Vida Diaria</option>
+                <option value="Regulación Emocional">
+                  Regulación Emocional
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-700/50">
             <Button
               type="button"
               variant="ghost"
