@@ -77,3 +77,10 @@ export function speak(text, { rate = 0.9, pitch = 1.0 } = {}) {
 
   window.speechSynthesis.speak(utterance);
 }
+
+// Cancela inmediatamente cualquier síntesis de voz en curso.
+export function stopSpeech() {
+  if (isSpeechAvailable()) {
+    window.speechSynthesis.cancel();
+  }
+}
