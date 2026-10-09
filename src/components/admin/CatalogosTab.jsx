@@ -140,15 +140,18 @@ export default function CatalogosTab({
   const logoUrl = inst.ins_logo || inst.ins_foto || "";
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-12">
+    <div
+      className="space-y-6 animate-in fade-in duration-300 pb-12"
+      data-tour="admin-cat-institution"
+    >
       {/* CABECERA INTEGRADA SOBRIA CON LOGO E INFORMACIÓN INSTITUCIONAL */}
-      <div className="bg-[#0F172A] dark:bg-[#0F172A] text-white rounded-2xl p-6 border border-slate-800 shadow-lg relative overflow-hidden">
+      <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm relative overflow-hidden">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           {/* Logo y Nombre */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4 sm:gap-5 min-w-0">
             {/* Logo de la Fundación */}
             <div className="relative group shrink-0">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-slate-800/90 border border-slate-700/80 p-1.5 shadow-md flex items-center justify-center overflow-hidden transition-all group-hover:border-blue-500">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 p-1.5 shadow-xs flex items-center justify-center overflow-hidden transition-all group-hover:border-blue-500">
                 {logoUrl ? (
                   <img
                     src={logoUrl}
@@ -156,9 +159,9 @@ export default function CatalogosTab({
                     className="w-full h-full object-contain rounded-xl"
                   />
                 ) : (
-                  <div className="text-center">
-                    <Building2 className="w-8 h-8 text-blue-400 mx-auto mb-0.5 opacity-80" />
-                    <span className="text-[9px] font-bold uppercase text-slate-400 block">
+                  <div className="text-center text-slate-400 dark:text-slate-500">
+                    <Building2 className="w-7 h-7 text-blue-600 dark:text-blue-400 mx-auto mb-0.5 opacity-90" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider block">
                       Sin Logo
                     </span>
                   </div>
@@ -178,7 +181,7 @@ export default function CatalogosTab({
                 disabled={uploadingLogo}
                 onClick={() => fileInputRef.current?.click()}
                 title={logoUrl ? "Cambiar Logo" : "Subir Logo"}
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md transition-transform hover:scale-110"
               >
                 {uploadingLogo ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -189,21 +192,21 @@ export default function CatalogosTab({
             </div>
 
             {/* Títulos y RIF */}
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight truncate">
                   {inst.ins_nomb || "Fundación SIAT"}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-blue-300 border border-slate-700">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                   {inst.ins_codi || "RIF N/A"}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-1 font-medium">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
                 Panel de Administración Institucional · Identidad y
                 Configuración
               </p>
               <div className="flex items-center gap-3 mt-2">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   Sistema 100% Operativo
                 </span>
@@ -211,7 +214,7 @@ export default function CatalogosTab({
                   <button
                     type="button"
                     onClick={handleRemoveLogo}
-                    className="text-[11px] font-medium text-slate-400 hover:text-rose-400 transition-colors underline"
+                    className="text-[11px] font-medium text-slate-400 hover:text-rose-500 transition-colors underline"
                   >
                     Eliminar logo
                   </button>
@@ -220,13 +223,14 @@ export default function CatalogosTab({
             </div>
           </div>
 
-          {/* Botón de Guardado Primario */}
+          {/* Botón de Guardado Superior */}
           <div className="shrink-0 w-full md:w-auto">
             <button
               type="button"
+              data-tour="admin-cat-save"
               onClick={handleUpdateInstitucion}
               disabled={loading}
-              className="w-full md:w-auto px-7 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+              className="w-full md:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -242,15 +246,15 @@ export default function CatalogosTab({
         </div>
       </div>
 
-      {/* PESTAÑAS NAVEGABLES SOBRIAS */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto">
+      {/* PESTAÑAS NAVEGABLES SEGMENTADAS */}
+      <div className="flex gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveSubTab("info")}
-          className={`flex items-center gap-2 px-5 py-3 font-bold text-sm border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
             activeSubTab === "info"
-              ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-900/10 rounded-t-xl"
-              : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+              ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
           }`}
         >
           <Building2 className="w-4 h-4" /> Información General y Contacto
@@ -259,10 +263,10 @@ export default function CatalogosTab({
         <button
           type="button"
           onClick={() => setActiveSubTab("clinica")}
-          className={`flex items-center gap-2 px-5 py-3 font-bold text-sm border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
             activeSubTab === "clinica"
-              ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-900/10 rounded-t-xl"
-              : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+              ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
           }`}
         >
           <Clock className="w-4 h-4" /> Configuración Clínica & Operativa
@@ -271,13 +275,13 @@ export default function CatalogosTab({
         <button
           type="button"
           onClick={() => setActiveSubTab("equipo")}
-          className={`flex items-center gap-2 px-5 py-3 font-bold text-sm border-b-2 transition-all whitespace-nowrap ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs transition-all whitespace-nowrap ${
             activeSubTab === "equipo"
-              ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-900/10 rounded-t-xl"
-              : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+              ? "bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
           }`}
         >
-          <Users className="w-4 h-4" /> Usuarios y Equipo Institucional
+          <Users className="w-4 h-4" /> Directorio Institucional
         </button>
       </div>
 
@@ -290,20 +294,29 @@ export default function CatalogosTab({
       >
         {/* PESTAÑA 1: INFORMACIÓN GENERAL */}
         {activeSubTab === "info" && (
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-8 animate-in fade-in duration-200">
-            {/* SECCIÓN: IDENTIFICACIÓN LEGAL */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Identificación Legal y Fiscal
-                </h3>
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* SECCIÓN 1: IDENTIFICACIÓN LEGAL */}
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                    <Building2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Identificación Legal y Fiscal
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Datos oficiales de registro de la personería jurídica
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                    RIF / Código Fiscal
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    RIF / Código Fiscal <span className="text-rose-500">*</span>
                   </label>
                   <input
                     required
@@ -311,67 +324,78 @@ export default function CatalogosTab({
                     maxLength={15}
                     value={inst.ins_codi || ""}
                     onChange={(e) => updateField("ins_codi", e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                     placeholder="J-50000000-0"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                    Nombre Oficial de la Fundación
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Nombre Oficial de la Fundación{" "}
+                    <span className="text-rose-500">*</span>
                   </label>
                   <input
                     required
                     type="text"
                     value={inst.ins_nomb || ""}
                     onChange={(e) => updateField("ins_nomb", e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    placeholder="Ej: Fundación SIAT para el Neurodesarrollo"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    placeholder="Ej: Fundación Una Luz Para el Autismo"
                   />
                 </div>
 
                 <div className="md:col-span-3">
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Representante Legal / Contacto Principal
                   </label>
                   <input
                     type="text"
                     value={inst.ins_pers || ""}
                     onChange={(e) => updateField("ins_pers", e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    placeholder="Nombre completo del director o responsable institucional"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    placeholder="Nombre completo del director(a) o responsable institucional"
                   />
                 </div>
               </div>
             </div>
 
-            {/* SECCIÓN: CONTACTO Y UBICACIÓN */}
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Contacto Institucional y Ubicación
-                </h3>
+            {/* SECCIÓN 2: CONTACTO Y SEDE */}
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Contacto Institucional y Sede
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Canales de atención a pacientes, familias y público
+                      general
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-slate-400" /> Teléfono
-                    Principal
+                    Principal <span className="text-rose-500">*</span>
                   </label>
                   <input
                     required
                     type="text"
                     value={inst.ins_telf || ""}
                     onChange={(e) => updateField("ins_telf", e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                     placeholder="+58 212-0000000"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-slate-400" /> Correo
                     Electrónico
                   </label>
@@ -379,13 +403,13 @@ export default function CatalogosTab({
                     type="email"
                     value={inst.ins_emai || ""}
                     onChange={(e) => updateField("ins_emai", e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    placeholder="admin@fundacion.org"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    placeholder="contacto@fundacion.org"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-slate-400" /> Sitio Web
                     Institucional
                   </label>
@@ -393,22 +417,22 @@ export default function CatalogosTab({
                     type="text"
                     value={inst.ins_web || ""}
                     onChange={(e) => updateField("ins_web", e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                     placeholder="https://fundacion.org"
                   />
                 </div>
 
                 <div className="md:col-span-3">
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider flex items-center gap-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-slate-400" /> Dirección
-                    Física Completa
+                    Física Completa <span className="text-rose-500">*</span>
                   </label>
                   <input
                     required
                     type="text"
                     value={inst.ins_dire || ""}
                     onChange={(e) => updateField("ins_dire", e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                     placeholder="Calle, Edificio, Sector, Ciudad, Estado"
                   />
                 </div>
@@ -419,19 +443,29 @@ export default function CatalogosTab({
 
         {/* PESTAÑA 2: CONFIGURACIÓN CLÍNICA & OPERATIVA */}
         {activeSubTab === "clinica" && (
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-8 animate-in fade-in duration-200">
+          <div className="space-y-6 animate-in fade-in duration-200">
             {/* HORARIOS DE ATENCIÓN */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Horarios de Atención y Servicio
-                </h3>
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Horarios de Atención y Servicio
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Disponibilidad horaria para asignación de citas y turnos
+                      terapéuticos
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Jornada Semanal (Lunes - Viernes)
                   </label>
                   <input
@@ -440,12 +474,12 @@ export default function CatalogosTab({
                     onChange={(e) =>
                       setSchedule({ ...schedule, weekday: e.target.value })
                     }
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Jornada Sábados
                   </label>
                   <input
@@ -454,12 +488,12 @@ export default function CatalogosTab({
                     onChange={(e) =>
                       setSchedule({ ...schedule, saturday: e.target.value })
                     }
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Atención de Emergencias / Guardias
                   </label>
                   <input
@@ -468,37 +502,48 @@ export default function CatalogosTab({
                     onChange={(e) =>
                       setSchedule({ ...schedule, emergency: e.target.value })
                     }
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                 </div>
               </div>
             </div>
 
             {/* MODALIDADES Y ESPECIALIDADES */}
-            <div className="space-y-4 pt-2">
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Stethoscope className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Modalidades y Especialidades Atendidas
-                  </h3>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                    <Stethoscope className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Modalidades y Especialidades Atendidas
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Áreas terapéuticas acreditadas para asignación en los
+                      planes clínicos
+                    </p>
+                  </div>
                 </div>
-                <span className="text-xs font-semibold text-slate-400">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                   {modalities.length} activas
                 </span>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {modalities.map((mod) => (
                   <button
                     type="button"
                     key={mod}
                     onClick={() => handleToggleModality(mod)}
-                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition-all"
+                    title="Clic para remover especialidad"
                   >
-                    <Tag className="w-3.5 h-3.5" />
+                    <Tag className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
                     {mod}
-                    <span className="text-xs">×</span>
+                    <span className="text-sm leading-none ml-1 text-slate-400 hover:text-rose-600">
+                      ×
+                    </span>
                   </button>
                 ))}
               </div>
@@ -512,43 +557,51 @@ export default function CatalogosTab({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleAddModality(e);
                   }}
-                  className="flex-1 max-w-md rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="flex-1 max-w-md rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                 />
                 <button
                   type="button"
                   onClick={handleAddModality}
-                  className="px-4 py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
                 >
-                  <Plus className="w-4 h-4 inline mr-1" /> Añadir
+                  <Plus className="w-3.5 h-3.5" /> Añadir
                 </button>
               </div>
             </div>
 
             {/* PROTOCOLO Y DESCARGO CLINICO */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Nota Protocolar en Informes Exportados (PDF)
-                </h3>
+            <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-3">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Nota Protocolar en Informes Exportados (PDF)
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Leyenda legal o aviso de confidencialidad que se imprime al
+                    pie de página
+                  </p>
+                </div>
               </div>
 
               <textarea
                 rows="3"
                 value={protocolNotes}
                 onChange={(e) => setProtocolNotes(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 p-3.5 text-xs font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
                 placeholder="Texto legal o de confidencialidad que aparecerá al pie de los reportes en PDF..."
               />
             </div>
           </div>
         )}
 
-        {/* PESTAÑA 3: USUARIOS Y EQUIPO (DIRECTORIO INTEGRADO) */}
+        {/* PESTAÑA 3: USUARIOS Y EQUIPO */}
         {activeSubTab === "equipo" && (
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-4 animate-in fade-in duration-200">
             <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Directorio y Accesos Directos de Personal
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -557,11 +610,11 @@ export default function CatalogosTab({
               </p>
             </div>
 
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {/* FILA ESPECIALISTAS */}
-              <div className="py-4 flex items-center justify-between gap-4">
+              <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
                     <Stethoscope className="w-5 h-5" />
                   </div>
                   <div>
@@ -578,7 +631,7 @@ export default function CatalogosTab({
                 <button
                   type="button"
                   onClick={() => onNavigateTab?.("especialistas")}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 self-start sm:self-auto shrink-0"
                 >
                   Gestionar Especialistas{" "}
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -586,9 +639,9 @@ export default function CatalogosTab({
               </div>
 
               {/* FILA REPRESENTANTES */}
-              <div className="py-4 flex items-center justify-between gap-4">
+              <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold shrink-0">
                     <UserCheck className="w-5 h-5" />
                   </div>
                   <div>
@@ -605,7 +658,7 @@ export default function CatalogosTab({
                 <button
                   type="button"
                   onClick={() => onNavigateTab?.("representantes")}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 self-start sm:self-auto shrink-0"
                 >
                   Gestionar Representantes{" "}
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -613,9 +666,9 @@ export default function CatalogosTab({
               </div>
 
               {/* FILA ASIGNACIONES */}
-              <div className="py-4 flex items-center justify-between gap-4">
+              <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <div>
@@ -631,16 +684,16 @@ export default function CatalogosTab({
                 <button
                   type="button"
                   onClick={() => onNavigateTab?.("asignaciones")}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 self-start sm:self-auto shrink-0"
                 >
                   Ver Asignaciones <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
 
               {/* FILA CUENTAS Y PERMISOS */}
-              <div className="py-4 flex items-center justify-between gap-4">
+              <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold shrink-0">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
@@ -656,7 +709,7 @@ export default function CatalogosTab({
                 <button
                   type="button"
                   onClick={() => onNavigateTab?.("usuarios")}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-700 hover:text-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-700 hover:text-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 self-start sm:self-auto shrink-0"
                 >
                   Administrar Cuentas <ChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -665,16 +718,16 @@ export default function CatalogosTab({
           </div>
         )}
 
-        {/* BOTONERA DE GUARDADO INFERIOR FLOTANTE */}
-        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
+        {/* BOTONERA DE GUARDADO INFERIOR */}
+        <div className="mt-8 pt-5 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             Los cambios guardados se reflejarán de inmediato en la plataforma e
             informes PDF.
           </p>
           <button
             type="submit"
             disabled={loading}
-            className="w-full sm:w-auto ml-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+            className="w-full sm:w-auto px-7 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 shrink-0"
           >
             {loading ? (
               <>
@@ -683,7 +736,7 @@ export default function CatalogosTab({
               </>
             ) : (
               <>
-                <Save className="w-4 h-4" /> Guardar Configuración Institucional
+                <Save className="w-4 h-4" /> Guardar Configuración
               </>
             )}
           </button>

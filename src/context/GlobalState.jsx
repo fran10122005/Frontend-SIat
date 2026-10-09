@@ -1321,10 +1321,10 @@ export const GlobalProvider = ({ children }) => {
       {children}
       {/* Toast Notification simulando Shadcn */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-white dark:bg-slate-800 border-l-4 border-brand-500 p-4 rounded-lg shadow-xl z-[300] animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed top-5 right-5 max-w-md bg-white dark:bg-slate-800 border-l-4 border-brand-500 p-4 rounded-xl shadow-2xl z-[300] animate-in slide-in-from-top-4 fade-in duration-300">
           <div className="flex items-center gap-3">
             <svg
-              className="w-5 h-5 text-brand-500"
+              className="w-5 h-5 text-brand-500 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

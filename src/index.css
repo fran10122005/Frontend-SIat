@@ -238,17 +238,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* 3. Global Modern Glassmorphism Cards & Lists */
-/* Light mode: subtle frosted glass */
-:not(.dark) .bg-white {
-  background-color: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(12px) !important;
-  border-color: rgba(3, 78, 161, 0.08) !important;
-  box-shadow: 0 4px 20px -2px rgba(3, 78, 161, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02) !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* Light mode: subtle frosted glass (only when html does not have .dark) */
+html:not(.dark) .bg-white {
+  background-color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  border-color: rgba(3, 78, 161, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(3, 78, 161, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Dark mode: deep navy glassmorphism for card surfaces */
-.dark .bg-white:not(button):not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]),
+.dark .bg-white:not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]),
 .dark .bg-white\/85,
 .dark .bg-white\/95 {
   background-color: rgba(15, 23, 42, 0.75) !important;
@@ -258,11 +258,16 @@ h1, h2, h3, h4, h5, h6 {
   color: #F1F5F9;
 }
 
+.dark .dark\:bg-\[\#1E293B\],
+.dark .dark\:bg-\[\#1e293b\],
+.dark .dark\:bg-slate-800,
+.dark .dark\:bg-slate-800\/90,
 .dark .bg-\[\#1E293B\],
+.dark .bg-\[\#1e293b\],
 .dark .bg-slate-900,
 .dark .bg-slate-800,
 .dark .bg-slate-850 {
-  background-color: rgba(15, 23, 42, 0.65) !important;
+  background-color: rgba(15, 23, 42, 0.75) !important;
   backdrop-filter: blur(16px) !important;
   border-color: rgba(255, 255, 255, 0.07) !important;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;

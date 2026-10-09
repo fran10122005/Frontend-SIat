@@ -1,4 +1,4 @@
-﻿import { renderManualPDF } from "./pdfManualRenderer";
+import { renderManualPDF } from "./pdfManualRenderer";
 
 export const seccionesManual = [
   {
@@ -586,10 +586,6 @@ export const seccionesManual = [
           ],
           ["JWT", "JSON Web Token — mecanismo de autenticación seguro"],
           ["PEI", "Plan de Educación Individualizada"],
-          [
-            "SOAP",
-            "Nota clínica estructurada: Subjetivo, Objetivo, Evaluación, Plan",
-          ],
           [
             "BPM",
             "Latidos por minuto (Beats Per Minute) — frecuencia cardíaca",

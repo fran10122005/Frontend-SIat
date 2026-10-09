@@ -368,22 +368,30 @@ export default function TherapySessionPlayer({
           ) : (
             /* Modo reproductor */
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto px-6 sm:px-10 py-4 flex flex-col items-center justify-between">
+              <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-8 py-5 flex flex-col items-center gap-5">
                 {/* Indicadores del paso */}
                 {currentStepInfo && (
-                  <div className="w-full max-w-xl shrink-0">
-                    <div className="flex items-center justify-between gap-3 mb-1.5">
-                      <span className="text-[11px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                  <div className="w-full max-w-xl shrink-0 space-y-1.5 pb-1">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
                         Paso {currentStep + 1} de {sessionSteps.length}
+                      </span>
+                      <span className="tabular-nums font-mono text-[11px]">
+                        {Math.round(
+                          ((currentStepInfo.elapsedInStep || 0) /
+                            (currentStepInfo.stepDuration || 1)) *
+                            100,
+                        )}
+                        %
                       </span>
                     </div>
                     <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-blue-500 transition-all duration-500"
+                        className="h-full bg-blue-500 rounded-full transition-all duration-300"
                         style={{
                           width: `${
-                            (currentStepInfo.elapsedInStep /
-                              currentStepInfo.stepDuration) *
+                            ((currentStepInfo.elapsedInStep || 0) /
+                              (currentStepInfo.stepDuration || 1)) *
                             100
                           }%`,
                         }}
@@ -393,11 +401,11 @@ export default function TherapySessionPlayer({
                 )}
 
                 {/* Cronómetro circular + instrucción */}
-                <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center py-2 w-full my-auto">
-                  <div className="relative w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 shrink-0">
+                <div className="w-full max-w-xl flex flex-col items-center text-center gap-4 py-1">
+                  <div className="relative w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 shrink-0">
                     <svg
                       viewBox="0 0 100 100"
-                      className="w-full h-full -rotate-90"
+                      className="w-full h-full -rotate-90 drop-shadow-sm"
                     >
                       <circle
                         cx="50"
@@ -449,7 +457,7 @@ export default function TherapySessionPlayer({
                     </div>
                   </div>
 
-                  <p className="mt-4 sm:mt-5 text-base sm:text-lg md:text-xl font-bold text-slate-700 dark:text-slate-200 leading-relaxed max-w-lg">
+                  <p className="text-base sm:text-lg md:text-xl font-bold text-slate-800 dark:text-slate-100 leading-relaxed max-w-lg">
                     {sessionSteps.length > 0
                       ? sessionSteps[
                           Math.min(currentStep, sessionSteps.length - 1)
@@ -459,7 +467,7 @@ export default function TherapySessionPlayer({
 
                   {/* Materiales */}
                   {activeSession.materials && (
-                    <div className="flex flex-wrap justify-center gap-1.5 mt-3 max-w-lg">
+                    <div className="flex flex-wrap justify-center gap-1.5 max-w-lg">
                       {String(activeSession.materials)
                         .split(",")
                         .map(
@@ -479,20 +487,20 @@ export default function TherapySessionPlayer({
 
                   {/* Multimedia */}
                   {activeSession.media && (
-                    <div className="w-full max-w-sm rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 mt-3 max-h-40 sm:max-h-48">
+                    <div className="w-full max-w-md rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 max-h-44 sm:max-h-52 bg-slate-900/5 dark:bg-black/30 shadow-inner">
                       {isVideoUrl(activeSession.media) ? (
                         <video
                           key={activeSession.ses_codi}
                           src={activeSession.media}
                           controls
                           playsInline
-                          className="w-full h-full max-h-40 sm:max-h-48 bg-black object-contain"
+                          className="w-full h-full max-h-44 sm:max-h-52 bg-black object-contain"
                         />
                       ) : (
                         <img
                           src={activeSession.media}
                           alt={activeSession.title}
-                          className="w-full h-full max-h-40 sm:max-h-48 object-cover"
+                          className="w-full h-full max-h-44 sm:max-h-52 object-cover mx-auto"
                         />
                       )}
                     </div>
@@ -501,12 +509,12 @@ export default function TherapySessionPlayer({
               </div>
 
               {/* Controles de navegación */}
-              <div className="shrink-0 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 backdrop-blur px-4 sm:px-8 py-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-2">
+              <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 backdrop-blur px-5 sm:px-8 py-3.5 flex items-center justify-between gap-3 z-10">
                 <button
                   type="button"
                   onClick={goPrevStep}
                   disabled={currentStep === 0}
-                  className="min-h-[44px] px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  className="min-h-[42px] px-5 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                 >
                   ← Anterior
                 </button>
@@ -515,7 +523,7 @@ export default function TherapySessionPlayer({
                   <button
                     type="button"
                     onClick={endSession}
-                    className="min-h-[44px] px-6 py-2.5 text-sm font-bold rounded-xl bg-brand-700 hover:bg-brand-800 text-white border border-brand-800/40 shadow-sm transition-colors flex items-center gap-2 active:scale-[0.98]"
+                    className="min-h-[42px] px-6 py-2 text-sm font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 active:scale-[0.98] shrink-0"
                   >
                     Finalizar sesión
                     <CheckCircle2 className="w-4 h-4" />
@@ -524,7 +532,7 @@ export default function TherapySessionPlayer({
                   <button
                     type="button"
                     onClick={goNextStep}
-                    className="min-h-[44px] px-6 py-2.5 text-sm font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors flex items-center gap-2 active:scale-[0.98]"
+                    className="min-h-[42px] px-6 py-2 text-sm font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 transition-all flex items-center gap-2 active:scale-[0.98] shrink-0"
                   >
                     Siguiente paso →
                   </button>

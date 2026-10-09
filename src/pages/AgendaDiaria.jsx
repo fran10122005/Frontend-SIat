@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
+import { useSmartwatch } from "../context/SmartwatchContext";
 
 import PageTitle from "../components/ui/PageTitle";
 import TherapySessionPlayer from "../components/shared/TherapySessionPlayer";
@@ -55,6 +56,49 @@ const TASK_CATEGORIES = [
   { id: "moon", label: "Descanso / Noche", icon: Moon, defaultTime: "20:00" },
 ];
 
+const parseTimeToSeconds = (raw = "") => {
+  const t = String(raw || "")
+    .trim()
+    .toLowerCase();
+  const m = t.match(/(\d+)\s*min/);
+  if (m) return parseInt(m[1], 10) * 60;
+  const s = t.match(/(\d+)\s*seg/);
+  if (s) return parseInt(s[1], 10);
+  const h = t.match(/(\d+)\s*h/);
+  if (h) return parseInt(h[1], 10) * 3600;
+  const num = t.match(/(\d+)/);
+  return num ? parseInt(num[1], 10) * 60 : 60;
+};
+
+const parseSteps = (inst = "") =>
+  String(inst || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = line.match(/^\d+[.)]\s*(.*?)\s*\(([^)]+)\)\s*$/);
+      const loose = !match ? line.match(/^(?:\d+[.)]|[-•*])\s*(.*)$/) : null;
+      const text = (match ? match[1] : loose ? loose[1] : line).trim();
+      return {
+        text,
+        time: parseTimeToSeconds(match ? match[2] : ""),
+      };
+    })
+    .filter((s) => s.text);
+
+const getEffectiveSteps = (routine) => {
+  if (!routine) return [];
+  const parsed = parseSteps(routine.inst);
+  if (parsed.length > 0) return parsed;
+  const fallback =
+    (routine.description || "").trim() ||
+    (routine.inst || "").trim() ||
+    routine.title ||
+    "Realiza la actividad acompañando al niño.";
+  const minutes = Math.max(parseInt(routine.act_time, 10) || 5, 1);
+  return [{ text: fallback, time: minutes * 60 }];
+};
+
 export default function AgendaDiaria() {
   const {
     nomNino,
@@ -63,10 +107,14 @@ export default function AgendaDiaria() {
     reportGoalProgress,
     showToast,
     selectedChildId,
+    activeChild,
+    listaNinos = [],
     routines,
     createRoutine,
   } = useGlobalContext();
+  const { setActiveSessionId } = useSmartwatch();
   const [goalProgressReported, setGoalProgressReported] = useState(false);
+  const [previewRoutine, setPreviewRoutine] = useState(null);
 
   // 1. Visual Agenda State — inicializada desde almacenamiento local por niño y fecha
   const today = new Date().toLocaleDateString("es-ES");
@@ -270,11 +318,22 @@ export default function AgendaDiaria() {
 
   // Active Session Handlers
   const startSession = async (routine) => {
+    const targetChildId =
+      selectedChildId ||
+      activeChild?.nin_codi ||
+      activeChild?.id_ninos ||
+      listaNinos?.[0]?.nin_codi ||
+      listaNinos?.[0]?.id_ninos;
+
+    if (!targetChildId) {
+      showToast("⚠️ Selecciona o registra un paciente primero.");
+      return;
+    }
+
     try {
       const res = await api.post("/sesiones/iniciar", {
-        nin_codi: selectedChildId || "NIN_1",
+        nin_codi: targetChildId,
         act_codi: routine.id,
-        dis_codi: "D001",
       });
       const sesion = res.data.data;
 
@@ -282,6 +341,9 @@ export default function AgendaDiaria() {
         ...routine,
         ses_codi: sesion.ses_codi,
       });
+      if (sesion?.ses_codi) {
+        setActiveSessionId(sesion.ses_codi);
+      }
       setSessionTime(0);
       setIsFinishing(false);
       setCooperation(0);
@@ -362,6 +424,7 @@ export default function AgendaDiaria() {
     });
 
     setActiveSession(null);
+    setActiveSessionId(null);
     setIsFinishing(false);
   };
 
@@ -677,7 +740,8 @@ export default function AgendaDiaria() {
                       {routines.map((routine) => (
                         <div
                           key={routine.id}
-                          className="group bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 flex flex-col justify-between"
+                          onClick={() => setPreviewRoutine(routine)}
+                          className="group bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer"
                         >
                           <div>
                             <div className="flex justify-between items-center mb-4">
@@ -700,7 +764,11 @@ export default function AgendaDiaria() {
                           <div className="mt-5 flex gap-2">
                             <button
                               data-tour="ag-live"
-                              onClick={() => startSession(routine)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startSession(routine);
+                              }}
                               className="flex-1 py-2.5 bg-slate-900 dark:bg-slate-700 hover:bg-blue-600 dark:hover:bg-blue-600 text-white font-bold rounded-xl text-xs shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                               <Play className="w-3.5 h-3.5 fill-current" />{" "}
@@ -708,7 +776,10 @@ export default function AgendaDiaria() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => addToAgenda(routine)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addToAgenda(routine);
+                              }}
                               className="px-3 py-2.5 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold rounded-xl text-xs transition-all border border-blue-200 dark:border-blue-800/40 cursor-pointer"
                               title="Programar esta terapia en la agenda de hoy"
                             >
@@ -718,6 +789,125 @@ export default function AgendaDiaria() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Vista previa de pasos antes de iniciar la sesión */}
+            {previewRoutine && (
+              <div
+                className="fixed inset-0 z-[125] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+                onClick={() => setPreviewRoutine(null)}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-lg bg-white dark:bg-[#0F172A] rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800"
+                >
+                  <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
+                        Vista previa de la actividad
+                      </span>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white truncate">
+                        {previewRoutine.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                        {previewRoutine.category} •{" "}
+                        {previewRoutine.difficulty || "Baja"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setPreviewRoutine(null)}
+                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 shrink-0"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4">
+                    {previewRoutine.description && (
+                      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {previewRoutine.description}
+                      </p>
+                    )}
+
+                    {previewRoutine.materials && (
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                          Materiales necesarios
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {String(previewRoutine.materials)
+                            .split(",")
+                            .map(
+                              (m, i) =>
+                                m.trim() && (
+                                  <span
+                                    key={i}
+                                    className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                                  >
+                                    {m.trim()}
+                                  </span>
+                                ),
+                            )}
+                        </div>
+                      </div>
+                    )}
+
+                    <ol className="space-y-2">
+                      {getEffectiveSteps(previewRoutine).map((s, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40"
+                        >
+                          <span className="shrink-0 w-6 h-6 rounded-full bg-brand-500 text-white text-[11px] font-black flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 leading-snug">
+                            {s.text}
+                          </span>
+                          <span className="shrink-0 text-xs font-black text-slate-400 tabular-nums flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            {formatTime(s.time)}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 pt-1">
+                      <span>
+                        {getEffectiveSteps(previewRoutine).length} pasos
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" /> Duración estimada:{" "}
+                        {formatTime(
+                          getEffectiveSteps(previewRoutine).reduce(
+                            (a, s) => a + Math.max(s.time, 1),
+                            0,
+                          ),
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex gap-3 shrink-0">
+                    <button
+                      onClick={() => setPreviewRoutine(null)}
+                      className="flex-1 min-h-[44px] py-2.5 rounded-xl border border-gray-300 dark:border-slate-600 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => {
+                        const r = previewRoutine;
+                        setPreviewRoutine(null);
+                        startSession(r);
+                      }}
+                      className="flex-1 min-h-[44px] py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-blue-600 hover:from-brand-600 hover:to-blue-700 text-white text-sm font-bold shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                    >
+                      <Play className="w-4 h-4 fill-current" /> Iniciar Sesión
+                    </button>
                   </div>
                 </div>
               </div>

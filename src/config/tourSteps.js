@@ -79,7 +79,7 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-patients",
     popover: {
-      title: "Gestión de Pacientes",
+      title: "Selección de Pacientes",
       description:
         "Directorio de todos los niños bajo tu supervisión. Aquí se hace la admisión clínica y la invitación LOPNNA al representante.",
       side: "right",

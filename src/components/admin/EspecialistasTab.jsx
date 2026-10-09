@@ -25,6 +25,7 @@ import {
   Award,
   FileText,
   Download,
+  UserRound,
 } from "lucide-react";
 import {
   uploadToCloudinary,
@@ -892,24 +893,129 @@ export default function EspecialistasTab({
             </form>
           </AdminModal>
 
-          {/* Directorio de Especialistas */}
+          {/* Barra de filtros */}
+          <FilterBar
+            searchValue={searchEsp}
+            onSearch={(v) => {
+              setSearchEsp(v);
+              setPageEsp(0);
+            }}
+            searchPlaceholder="Buscar por nombre, correo o documento..."
+            activeCount={
+              (searchEsp ? 1 : 0) +
+              (filterEspecialidad !== "TODAS" ? 1 : 0) +
+              (filterEstado !== "TODOS" ? 1 : 0) +
+              (filterGenero !== "TODOS" ? 1 : 0) +
+              (dateFrom ? 1 : 0) +
+              (dateTo ? 1 : 0)
+            }
+            onClearAll={clearEspFilters}
+            chips={espFilterChips}
+            className="mb-4"
+          >
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                Especialidad
+              </label>
+              <select
+                value={filterEspecialidad}
+                onChange={(e) => {
+                  setFilterEspecialidad(e.target.value);
+                  setPageEsp(0);
+                }}
+                className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
+              >
+                <option value="TODAS">Todas las especialidades</option>
+                {catalogos.especialidades
+                  .filter((es) => es.esc_estd !== false)
+                  .map((es) => (
+                    <option key={es.esc_codi} value={es.esc_codi}>
+                      {es.esc_nomb}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                Estado
+              </label>
+              <select
+                value={filterEstado}
+                onChange={(e) => {
+                  setFilterEstado(e.target.value);
+                  setPageEsp(0);
+                }}
+                className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
+              >
+                <option value="TODOS">Todos los estados</option>
+                <option value="ACTIVO">Activo</option>
+                <option value="INACTIVO">Inactivo</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                Género
+              </label>
+              <select
+                value={filterGenero}
+                onChange={(e) => {
+                  setFilterGenero(e.target.value);
+                  setPageEsp(0);
+                }}
+                className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
+              >
+                <option value="TODOS">Todos los géneros</option>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                Fecha Registro (Desde)
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setPageEsp(0);
+                }}
+                className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                Fecha Registro (Hasta)
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setPageEsp(0);
+                }}
+                className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+              />
+            </div>
+          </FilterBar>
+
+          {/* Tabla de Nómina Médica / Especialistas */}
           <div
             data-tour="admin-esp-directory"
-            className="bg-white dark:bg-[#1E293B] p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60"
+            className="bg-white dark:bg-[#1E293B] rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 overflow-hidden"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
                 Nómina Médica / Especialistas
               </h2>
-              <div className="flex gap-2">
-                <button
-                  data-tour="admin-esp-register-btn"
-                  onClick={() => setShowRegistro(true)}
-                  className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
-                >
-                  <Plus className="w-4 h-4" />
-                  Nuevo Especialista
-                </button>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full whitespace-nowrap">
+                  {filteredEspecialistas.length} registros
+                </span>
                 <button
                   type="button"
                   onClick={exportEspecialistasToPDF}
@@ -928,127 +1034,42 @@ export default function EspecialistasTab({
                 >
                   <Download className="w-4 h-4" />
                 </button>
+                <button
+                  data-tour="admin-esp-register-btn"
+                  onClick={() => setShowRegistro(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nuevo Especialista
+                </button>
               </div>
             </div>
 
-            {/* Filtros */}
-            <FilterBar
-              embedded
-              searchValue={searchEsp}
-              onSearch={setSearchEsp}
-              searchPlaceholder="Buscar por nombre o correo..."
-              activeCount={
-                (searchEsp ? 1 : 0) +
-                (filterEspecialidad !== "TODAS" ? 1 : 0) +
-                (filterEstado !== "TODOS" ? 1 : 0) +
-                (filterGenero !== "TODOS" ? 1 : 0) +
-                (dateFrom ? 1 : 0) +
-                (dateTo ? 1 : 0)
-              }
-              onClearAll={clearEspFilters}
-              chips={espFilterChips}
-            >
-              <div>
-                <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Especialidad
-                </label>
-                <select
-                  value={filterEspecialidad}
-                  onChange={(e) => setFilterEspecialidad(e.target.value)}
-                  className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
-                >
-                  <option value="TODAS">Todas las especialidades</option>
-                  {catalogos.especialidades
-                    .filter((es) => es.esc_estd !== false)
-                    .map((es) => (
-                      <option key={es.esc_codi} value={es.esc_codi}>
-                        {es.esc_nomb}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Estado
-                </label>
-                <select
-                  value={filterEstado}
-                  onChange={(e) => setFilterEstado(e.target.value)}
-                  className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
-                >
-                  <option value="TODOS">Todos los estados</option>
-                  <option value="ACTIVO">Activo</option>
-                  <option value="INACTIVO">Inactivo</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Género
-                </label>
-                <select
-                  value={filterGenero}
-                  onChange={(e) => setFilterGenero(e.target.value)}
-                  className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
-                >
-                  <option value="TODOS">Todos los géneros</option>
-                  <option value="M">Masculino</option>
-                  <option value="F">Femenino</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Fecha Registro (Desde)
-                </label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Fecha Registro (Hasta)
-                </label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
-                />
-              </div>
-            </FilterBar>
-
-            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-              <table className="w-full text-left text-sm responsive-table">
-                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse responsive-table">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="py-3 px-4 font-semibold uppercase">
-                      Profesional Clínico
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase">
-                      Especialidad
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase">
-                      Estado
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase text-right">
-                      Acciones
-                    </th>
+                    <th className="px-6 py-3">Profesional Clínico</th>
+                    <th className="px-6 py-3">Especialidad</th>
+                    <th className="px-6 py-3 text-center">Estado</th>
+                    <th className="px-6 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                   {pagedEspecialistas.length === 0 ? (
                     <tr>
                       <td
                         colSpan="4"
-                        className="py-8 text-center text-slate-500"
+                        className="p-12 text-center text-slate-500"
                       >
-                        No se encontraron especialistas.
+                        <UserRound className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+                        <p className="font-semibold text-slate-700 dark:text-slate-300">
+                          No se encontraron especialistas
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          No hay especialistas registrados o no coinciden con
+                          los criterios de búsqueda.
+                        </p>
                       </td>
                     </tr>
                   ) : (
@@ -1056,158 +1077,161 @@ export default function EspecialistasTab({
                       <tr
                         key={esp.esp_codi}
                         onClick={() => setPreviewEsp(esp)}
-                        className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group ${expandedId === esp.esp_codi ? "mobile-expanded" : ""}`}
+                        className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${expandedId === esp.esp_codi ? "mobile-expanded" : ""}`}
                       >
-                        <>
-                          <td
-                            className="py-4 px-4 mobile-summary"
-                            data-label="Profesional"
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 shadow-sm">
-                                {esp.esp_foto ? (
-                                  <img
-                                    src={esp.esp_foto}
-                                    alt={`Foto de ${esp.esp_nomb} ${esp.esp_apel}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold text-sm">
-                                    {esp.esp_nomb.charAt(0)}
-                                    {esp.esp_apel.charAt(0)}
-                                  </div>
-                                )}
+                        <td
+                          className="px-6 py-4 mobile-summary"
+                          data-label="Profesional"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {esp.esp_foto ? (
+                              <img
+                                src={esp.esp_foto}
+                                alt={`Foto de ${esp.esp_nomb} ${esp.esp_apel}`}
+                                className="w-9 h-9 rounded-full object-cover border-2 border-blue-200 dark:border-blue-800 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-400 font-bold shrink-0 text-sm">
+                                {esp.esp_nomb?.charAt(0) || "?"}
+                                {esp.esp_apel?.charAt(0) || ""}
                               </div>
-                              <div className="min-w-0">
-                                <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                                  {esp.esp_gner === "M" ? "Dr." : "Dra."}{" "}
-                                  {esp.esp_nomb} {esp.esp_apel}
-                                </div>
-                                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                  {esp.tm_usuar?.usu_crro}
-                                </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-900 dark:text-white truncate">
+                                {esp.esp_gner === "M" ? "Dr." : "Dra."}{" "}
+                                {esp.esp_nomb} {esp.esp_apel}
+                              </div>
+                              <div className="text-xs text-slate-400 font-mono truncate">
+                                {esp.tm_usuar?.usu_crro}
                               </div>
                             </div>
-                            <span className="mobile-summary-status">
-                              <StatusBadge active={esp.tm_usuar?.usu_estd} />
-                            </span>
-                            <button
-                              type="button"
-                              className="mobile-expand-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggle(esp.esp_codi);
-                              }}
-                              aria-label={
-                                expandedId === esp.esp_codi
-                                  ? "Ver menos"
-                                  : "Ver más"
-                              }
-                            >
-                              <ChevronDown className="w-4 h-4" />
-                            </button>
-                          </td>
-                          <td
-                            className="py-4 px-4 mobile-detail"
-                            data-label="Especialidad"
+                          </div>
+                          <span className="mobile-summary-status">
+                            <StatusBadge active={esp.tm_usuar?.usu_estd} />
+                          </span>
+                          <button
+                            type="button"
+                            className="mobile-expand-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggle(esp.esp_codi);
+                            }}
+                            aria-label={
+                              expandedId === esp.esp_codi
+                                ? "Ver menos"
+                                : "Ver más"
+                            }
                           >
-                            <div className="min-w-0">
-                              <div className="text-sm text-slate-700 dark:text-slate-300 font-medium">
-                                {esp.tm_especi?.esc_nomb}
-                              </div>
-                              <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                <Users className="w-3.5 h-3.5" />
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                        </td>
+                        <td
+                          className="px-6 py-4 mobile-detail"
+                          data-label="Especialidad"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                              {esp.tm_especi?.esc_nomb || "Sin especialidad"}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              <Users className="w-3.5 h-3.5" />
+                              <span>
                                 {(() => {
                                   const n = esp._count?.tc_asign ?? 0;
                                   return `${n} paciente${n === 1 ? "" : "s"} asignado${n === 1 ? "" : "s"}`;
                                 })()}
-                              </div>
+                              </span>
                             </div>
-                          </td>
-                          <td
-                            className="py-4 px-4 mobile-detail"
-                            data-label="Estado"
-                          >
-                            <StatusBadge active={esp.tm_usuar?.usu_estd} />
-                          </td>
-                          <td
-                            className="py-4 px-4 text-right mobile-detail"
-                            data-label="Acciones"
-                          >
-                            <div className="flex justify-end gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingEsp({
-                                    esp_codi: esp.esp_codi,
-                                    esp_nomb: esp.esp_nomb,
-                                    esp_apel: esp.esp_apel,
-                                    usu_crro: esp.tm_usuar?.usu_crro || "",
-                                    esp_gner: esp.esp_gner || "M",
-                                    esp_telf: esp.esp_telf || "",
-                                    esp_licencia: esp.esp_licencia || "",
-                                    esp_foto: esp.esp_foto || "",
-                                    esc_codi: esp.tm_especi?.esc_codi || "",
-                                  });
-                                  setShowEditEsp(true);
-                                }}
-                                className="action-icon-btn text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                                title="Editar"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleResetPassword(
-                                    esp.esp_codi,
-                                    esp.tm_usuar?.usu_crro || "",
-                                  );
-                                }}
-                                className="action-icon-btn text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30"
-                                title="Resetear contraseña"
-                              >
-                                <KeyRound className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleActivo(
-                                    esp.esp_codi,
-                                    esp.tm_usuar?.usu_estd,
-                                  );
-                                }}
-                                title={
-                                  esp.tm_usuar?.usu_estd
-                                    ? "Desactivar"
-                                    : "Activar"
-                                }
-                                className={
-                                  esp.tm_usuar?.usu_estd
-                                    ? "action-icon-btn text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30"
-                                    : "action-icon-btn text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
-                                }
-                              >
-                                {esp.tm_usuar?.usu_estd ? (
-                                  <Ban className="w-4 h-4" />
-                                ) : (
-                                  <CheckCircle2 className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-                        </>
+                          </div>
+                        </td>
+                        <td
+                          className="px-6 py-4 text-center mobile-detail"
+                          data-label="Estado"
+                        >
+                          <StatusBadge active={esp.tm_usuar?.usu_estd} />
+                        </td>
+                        <td
+                          className="px-6 py-4 text-right mobile-detail"
+                          data-label="Acciones"
+                        >
+                          <div className="flex items-center justify-end gap-1 sm:gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingEsp({
+                                  esp_codi: esp.esp_codi,
+                                  esp_nomb: esp.esp_nomb,
+                                  esp_apel: esp.esp_apel,
+                                  usu_crro: esp.tm_usuar?.usu_crro || "",
+                                  esp_gner: esp.esp_gner || "M",
+                                  esp_telf: esp.esp_telf || "",
+                                  esp_licencia: esp.esp_licencia || "",
+                                  esp_foto: esp.esp_foto || "",
+                                  esc_codi: esp.tm_especi?.esc_codi || "",
+                                });
+                                setShowEditEsp(true);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleResetPassword(
+                                  esp.esp_codi,
+                                  esp.tm_usuar?.usu_crro || "",
+                                );
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
+                              title="Resetear contraseña"
+                            >
+                              <KeyRound className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleActivo(
+                                  esp.esp_codi,
+                                  esp.tm_usuar?.usu_estd,
+                                );
+                              }}
+                              title={
+                                esp.tm_usuar?.usu_estd
+                                  ? "Desactivar"
+                                  : "Activar"
+                              }
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                esp.tm_usuar?.usu_estd
+                                  ? "text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                                  : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                              }`}
+                            >
+                              {esp.tm_usuar?.usu_estd ? (
+                                <Ban className="w-4 h-4" />
+                              ) : (
+                                <CheckCircle2 className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
             </div>
-            <Pagination
-              currentPage={pageEsp}
-              totalPages={totalEspPages}
-              onPageChange={setPageEsp}
-            />
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/60">
+              <Pagination
+                currentPage={pageEsp}
+                totalPages={totalEspPages}
+                onPageChange={setPageEsp}
+              />
+            </div>
           </div>
 
           {/* Vista previa del especialista — Ficha Integral */}
@@ -1525,188 +1549,208 @@ export default function EspecialistasTab({
             </form>
           </AdminModal>
 
-          <div
-            data-tour="admin-esp-catalog"
-            className="bg-white dark:bg-[#1E293B] p-6 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm"
+          {/* Barra de Filtros Especialidades */}
+          <FilterBar
+            searchValue={searchEspCat}
+            onSearch={(v) => {
+              setSearchEspCat(v);
+              setPageEspCat(0);
+            }}
+            searchPlaceholder="Buscar especialidad..."
+            activeCount={
+              (searchEspCat ? 1 : 0) + (filterEspCatEstado !== "TODOS" ? 1 : 0)
+            }
+            onClearAll={clearEspCatFilters}
+            chips={espCatFilterChips}
+            className="mb-4"
           >
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Especialidades Médicas
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                  Catálogo oficial de la institución para el alta de
-                  especialistas y la gestión clínica.
-                </p>
-              </div>
-              <button
-                data-tour="admin-esp-cat-btn"
-                onClick={() => setShowCatRegistro(true)}
-                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                Añadir Especialidad
-              </button>
-            </div>
-
-            <FilterBar
-              embedded
-              searchValue={searchEspCat}
-              onSearch={setSearchEspCat}
-              searchPlaceholder="Buscar especialidad..."
-              activeCount={
-                (searchEspCat ? 1 : 0) +
-                (filterEspCatEstado !== "TODOS" ? 1 : 0)
-              }
-              onClearAll={clearEspCatFilters}
-              chips={espCatFilterChips}
-            >
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
+                Estado
+              </label>
               <select
                 value={filterEspCatEstado}
-                onChange={(e) => setFilterEspCatEstado(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                onChange={(e) => {
+                  setFilterEspCatEstado(e.target.value);
+                  setPageEspCat(0);
+                }}
+                className="w-full h-10 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-slate-700 dark:text-slate-200"
               >
                 <option value="TODOS">Todos los estados</option>
                 <option value="ACTIVA">Activa</option>
                 <option value="INACTIVA">Inactivo</option>
               </select>
-            </FilterBar>
+            </div>
+          </FilterBar>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-              <table className="w-full text-left text-sm responsive-table">
-                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+          {/* Tabla de Especialidades */}
+          <div
+            data-tour="admin-esp-catalog"
+            className="bg-white dark:bg-[#1E293B] rounded-xl shadow-sm border border-slate-200 dark:border-slate-800/60 overflow-hidden"
+          >
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Especialidades Médicas
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Catálogo institucional para asignación clínica
+                </p>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full whitespace-nowrap">
+                  {filteredEspecialidades.length} registros
+                </span>
+                <button
+                  data-tour="admin-esp-cat-btn"
+                  onClick={() => setShowCatRegistro(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                >
+                  <Plus className="w-4 h-4" />
+                  Añadir Especialidad
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse responsive-table">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="py-3 px-4 font-semibold uppercase">
-                      Especialidad
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase">
-                      Descripción Técnica
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase">
-                      Estado
-                    </th>
-                    <th className="py-3 px-4 font-semibold uppercase text-right">
-                      Acciones
-                    </th>
+                    <th className="px-6 py-3">Especialidad</th>
+                    <th className="px-6 py-3">Descripción Técnica</th>
+                    <th className="px-6 py-3 text-center">Estado</th>
+                    <th className="px-6 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                   {filteredEspecialidades.length === 0 ? (
                     <tr>
                       <td
                         colSpan="4"
-                        className="py-8 text-center text-slate-500 dark:text-slate-400"
+                        className="p-12 text-center text-slate-500"
                       >
-                        No se encontraron especialidades con los filtros
-                        aplicados.
+                        <Stethoscope className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+                        <p className="font-semibold text-slate-700 dark:text-slate-300">
+                          No se encontraron especialidades
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          No hay especialidades registradas o no coinciden con
+                          los filtros aplicados.
+                        </p>
                       </td>
                     </tr>
                   ) : (
                     pagedEspecialidades.map((esc) => (
                       <tr
                         key={esc.esc_codi}
-                        className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 group ${expandedId === esc.esc_codi ? "mobile-expanded" : ""}`}
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${expandedId === esc.esc_codi ? "mobile-expanded" : ""}`}
                       >
-                        <>
-                          <td
-                            className="py-4 px-4 mobile-summary"
-                            data-label="Especialidad"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="font-bold text-slate-900 dark:text-white truncate">
-                                {esc.esc_nomb}
-                              </div>
-                              <div className="text-xs text-slate-500 font-mono">
-                                ID: {esc.esc_codi}
-                              </div>
+                        <td
+                          className="px-6 py-4 mobile-summary"
+                          data-label="Especialidad"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-slate-900 dark:text-white truncate">
+                              {esc.esc_nomb}
                             </div>
-                            <span className="mobile-summary-status">
-                              <StatusBadge
-                                active={esc.esc_estd !== false}
-                                activeLabel="Activa"
-                                inactiveLabel="Inactivo"
-                              />
-                            </span>
-                            <button
-                              type="button"
-                              className="mobile-expand-btn"
-                              onClick={() => toggle(esc.esc_codi)}
-                              aria-label={
-                                expandedId === esc.esc_codi
-                                  ? "Ver menos"
-                                  : "Ver más"
-                              }
-                            >
-                              <ChevronDown className="w-4 h-4" />
-                            </button>
-                          </td>
-                          <td
-                            className="py-4 px-4 text-slate-600 dark:text-slate-400 mobile-detail"
-                            data-label="Descripción"
-                          >
-                            <div className="line-clamp-2 max-w-md">
-                              {esc.esc_desc || "-"}
+                            <div className="text-xs text-slate-400 font-mono">
+                              ID: {esc.esc_codi}
                             </div>
-                          </td>
-                          <td
-                            className="py-4 px-4 mobile-detail"
-                            data-label="Estado"
-                          >
+                          </div>
+                          <span className="mobile-summary-status">
                             <StatusBadge
                               active={esc.esc_estd !== false}
                               activeLabel="Activa"
                               inactiveLabel="Inactivo"
                             />
-                          </td>
-                          <td
-                            className="py-4 px-4 text-right mobile-detail"
-                            data-label="Acciones"
+                          </span>
+                          <button
+                            type="button"
+                            className="mobile-expand-btn"
+                            onClick={() => toggle(esc.esc_codi)}
+                            aria-label={
+                              expandedId === esc.esc_codi
+                                ? "Ver menos"
+                                : "Ver más"
+                            }
                           >
-                            <div className="flex justify-end gap-2">
-                              <button
-                                onClick={() => {
-                                  setEditingEspCat(esc);
-                                  setShowEditEspCat(true);
-                                }}
-                                className="action-icon-btn text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                                title="Editar"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleToggleEspecialidad(
-                                    esc.esc_codi,
-                                    esc.esc_estd,
-                                  )
-                                }
-                                title={
-                                  esc.esc_estd !== false
-                                    ? "Archivar"
-                                    : "Restaurar"
-                                }
-                                className={`action-icon-btn text-slate-500 ${esc.esc_estd !== false ? "hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" : "hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"}`}
-                              >
-                                {esc.esc_estd !== false ? (
-                                  <Archive className="w-4 h-4" />
-                                ) : (
-                                  <RotateCcw className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-                        </>
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                        </td>
+                        <td
+                          className="px-6 py-4 text-slate-600 dark:text-slate-400 mobile-detail"
+                          data-label="Descripción"
+                        >
+                          <div className="line-clamp-2 max-w-md text-sm">
+                            {esc.esc_desc || "-"}
+                          </div>
+                        </td>
+                        <td
+                          className="px-6 py-4 text-center mobile-detail"
+                          data-label="Estado"
+                        >
+                          <StatusBadge
+                            active={esc.esc_estd !== false}
+                            activeLabel="Activa"
+                            inactiveLabel="Inactivo"
+                          />
+                        </td>
+                        <td
+                          className="px-6 py-4 text-right mobile-detail"
+                          data-label="Acciones"
+                        >
+                          <div className="flex items-center justify-end gap-1 sm:gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingEspCat(esc);
+                                setShowEditEspCat(true);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleToggleEspecialidad(
+                                  esc.esc_codi,
+                                  esc.esc_estd,
+                                )
+                              }
+                              title={
+                                esc.esc_estd !== false
+                                  ? "Archivar"
+                                  : "Restaurar"
+                              }
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                esc.esc_estd !== false
+                                  ? "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                  : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                              }`}
+                            >
+                              {esc.esc_estd !== false ? (
+                                <Archive className="w-4 h-4" />
+                              ) : (
+                                <RotateCcw className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
             </div>
-            <Pagination
-              currentPage={pageEspCat}
-              totalPages={totalEspCatPages}
-              onPageChange={setPageEspCat}
-            />
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/60">
+              <Pagination
+                currentPage={pageEspCat}
+                totalPages={totalEspCatPages}
+                onPageChange={setPageEspCat}
+              />
+            </div>
           </div>
         </>
       )}

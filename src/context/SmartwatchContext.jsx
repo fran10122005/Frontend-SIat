@@ -11,6 +11,7 @@ import {
   subscribeToSocket,
   getSocketConnectionState,
 } from "../hooks/socket";
+import { getSavedSelectedChild } from "../utils/authStorage";
 
 const SmartwatchContext = createContext();
 
@@ -98,12 +99,19 @@ export function SmartwatchProvider({ children }) {
   const [isWebSocketActive, setIsWebSocketActive] = useState(false);
   const [simulationMode, setSimulationModeState] = useState(null);
   const [sensorStatus, setSensorStatus] = useState("idle"); // 'idle', 'waiting_skin', 'streaming'
+  const [activeSessionId, setActiveSessionIdState] = useState(null);
 
   const deviceRef = useRef(null);
   const notifyCharRef = useRef(null);
   const writeCharRef = useRef(null);
   const pingTimerRef = useRef(null);
   const lastProcessedTimeRef = useRef(0);
+  const activeSessionIdRef = useRef(null);
+
+  const setActiveSessionId = useCallback((id) => {
+    setActiveSessionIdState(id);
+    activeSessionIdRef.current = id;
+  }, []);
 
   // Comprobar soporte para WebBluetooth API
   useEffect(() => {
@@ -178,7 +186,10 @@ export function SmartwatchProvider({ children }) {
         try {
           const socket = getSocket();
           if (socket && socket.connected) {
+            const savedChild = getSavedSelectedChild();
             socket.emit("telemetry_data", {
+              nin_codi: data.nin_codi || savedChild?.id || null,
+              ses_codi: data.ses_codi || activeSessionIdRef.current || null,
               bpm,
               stress,
               mov,
@@ -482,6 +493,8 @@ export function SmartwatchProvider({ children }) {
     sensorStatus,
     telemetryHistory,
     isWebSocketActive,
+    activeSessionId,
+    setActiveSessionId,
     simulationMode,
     streamToCloud,
     errorMsg,

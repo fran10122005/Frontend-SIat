@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Clock, X, Save } from "lucide-react";
+import { Bell, Clock, X, Save, Zap, RotateCcw, Activity } from "lucide-react";
 import Button from "../ui/Button";
 
 const DEFAULT_RULES = {
@@ -18,14 +18,42 @@ export default function AlertRulesConfig({
   showModal,
   setShowModal,
   config,
+  valMini = 60,
+  valMaxi = 120,
+  activeChild,
   onSave,
+  onRecalibrate,
 }) {
-  const [rules, setRules] = useState({ ...DEFAULT_RULES, ...config });
+  const [rules, setRules] = useState({
+    ...DEFAULT_RULES,
+    bpmHigh: config?.bpmHigh ?? valMaxi,
+    bpmLow: config?.bpmLow ?? valMini,
+    ...config,
+  });
+
+  useEffect(() => {
+    if (showModal) {
+      setRules((prev) => ({
+        ...DEFAULT_RULES,
+        ...config,
+        bpmHigh: config?.bpmHigh ?? valMaxi,
+        bpmLow: config?.bpmLow ?? valMini,
+      }));
+    }
+  }, [showModal, valMini, valMaxi, config]);
 
   const set = (key) => (e) => {
     const val =
       e.target.type === "checkbox" ? e.target.checked : e.target.value;
     setRules((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const handleResetToCalibrated = () => {
+    setRules((prev) => ({
+      ...prev,
+      bpmLow: valMini,
+      bpmHigh: valMaxi,
+    }));
   };
 
   const toggleAlertType = (type) => {
@@ -71,14 +99,74 @@ export default function AlertRulesConfig({
         </div>
 
         <div className="p-6 overflow-y-auto flex-1 space-y-5">
+          {/* Banner de Calibración Fisiológica Real */}
+          <div className="p-4 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800/60 flex items-start gap-3.5">
+            <div className="p-2.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl shrink-0 mt-0.5">
+              <Activity className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="space-y-1.5 text-xs flex-1">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                  Línea Base del Smartwatch
+                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-full">
+                    Sincronizado
+                  </span>
+                </span>
+                {onRecalibrate && (
+                  <button
+                    type="button"
+                    onClick={onRecalibrate}
+                    className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1 transition-colors"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Repetir prueba 15s
+                  </button>
+                )}
+              </div>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                Los umbrales BPM se calculan automáticamente durante la prueba
+                de pulso en reposo al vincular el sensor de{" "}
+                <strong className="text-slate-800 dark:text-white font-semibold">
+                  {activeChild?.nombre || "este paciente"}
+                </strong>{" "}
+                (Rango fisiológico:{" "}
+                <span className="font-bold text-blue-600 dark:text-blue-400">
+                  {valMini} - {valMaxi} BPM
+                </span>
+                ).
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                El motor de telemetría IoT emite alertas de sobrecarga o
+                bradicardia comparando las lecturas en vivo contra esta firma
+                basal.
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Umbrales biométricos
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                Umbrales biométricos
+              </p>
+              {(Number(rules.bpmLow) !== Number(valMini) ||
+                Number(rules.bpmHigh) !== Number(valMaxi)) && (
+                <button
+                  type="button"
+                  onClick={handleResetToCalibrated}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Restablecer a calibración ({valMini} - {valMaxi} BPM)
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                  BPM máximo
+                  BPM máximo{" "}
+                  <span className="text-[10px] text-blue-500 font-normal">
+                    (Sobrecarga/Taquicardia)
+                  </span>
                 </label>
                 <input
                   type="number"
@@ -89,7 +177,10 @@ export default function AlertRulesConfig({
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                  BPM mínimo
+                  BPM mínimo{" "}
+                  <span className="text-[10px] text-blue-500 font-normal">
+                    (Bradicardia/Desconexión)
+                  </span>
                 </label>
                 <input
                   type="number"
@@ -121,6 +212,11 @@ export default function AlertRulesConfig({
                 />
               </div>
             </div>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+              * Ajuste estos valores manualmente solo en caso de indicación
+              clínica específica (ej. medicación psicoactiva o afecciones
+              cardiovasculares conocidas).
+            </p>
           </div>
 
           <div className="space-y-3">

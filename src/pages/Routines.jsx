@@ -36,6 +36,7 @@ import Button from "@/components/ui/Button";
 import Fab from "@/components/ui/Fab";
 import FilterBar from "@/components/shared/FilterBar";
 import TherapySessionPlayer from "@/components/shared/TherapySessionPlayer";
+import { useSmartwatch } from "@/context/SmartwatchContext";
 
 const EMPTY_FORM = {
   title: "",
@@ -125,9 +126,13 @@ export default function Routines() {
     updateCategory,
     deleteCategory,
     selectedChildId,
+    activeChild,
+    listaNinos = [],
     globalPeiGoals = [],
     crearPeiGoal,
   } = useGlobalContext();
+
+  const { setActiveSessionId } = useSmartwatch();
 
   // Session State
   const [activeSession, setActiveSession] = useState(null);
@@ -453,11 +458,22 @@ export default function Routines() {
   };
 
   const startSession = async (routine) => {
+    const targetChildId =
+      selectedChildId ||
+      activeChild?.nin_codi ||
+      activeChild?.id_ninos ||
+      listaNinos?.[0]?.nin_codi ||
+      listaNinos?.[0]?.id_ninos;
+
+    if (!targetChildId) {
+      showToast("⚠️ Selecciona un paciente para iniciar la terapia.");
+      return;
+    }
+
     try {
       const res = await api.post("/sesiones/iniciar", {
-        nin_codi: selectedChildId || "NIN_1",
+        nin_codi: targetChildId,
         act_codi: routine.id,
-        dis_codi: "D001",
       });
       const sesion = res.data.data;
 
@@ -465,6 +481,9 @@ export default function Routines() {
         ...routine,
         ses_codi: sesion.ses_codi,
       });
+      if (sesion?.ses_codi) {
+        setActiveSessionId(sesion.ses_codi);
+      }
       setSessionTime(0);
       setCurrentStep(0);
       setStepElapsed(0);
@@ -521,6 +540,7 @@ export default function Routines() {
       );
     }
     setActiveSession(null);
+    setActiveSessionId(null);
   };
 
   return (

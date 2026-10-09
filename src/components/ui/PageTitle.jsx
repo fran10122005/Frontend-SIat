@@ -1,6 +1,6 @@
 /**
  * Título principal de página unificado.
- * Tipografía exacta del header "Gestión de Pacientes":
+ * Tipografía exacta del header "Selección de Pacientes":
  * text-lg md:text-xl · font-bold · tracking-tight · brand-700 / blue-400 (dark)
  * El icono hereda el color del texto (currentColor).
  */

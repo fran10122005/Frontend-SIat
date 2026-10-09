@@ -16,6 +16,12 @@ import {
   MoreHorizontal,
   Sliders,
   X,
+  Calendar,
+  Activity,
+  CheckCircle2,
+  Moon,
+  Utensils,
+  Watch,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
@@ -44,6 +50,9 @@ export default function SpecialistDashboard() {
     userName,
     listaNinos,
     selectedChildId,
+    valMini,
+    valMaxi,
+    updateThresholds,
     showToast,
     crearIndicacion,
     clinicalAlerts = [],
@@ -69,6 +78,7 @@ export default function SpecialistDashboard() {
   const [showAlertRules, setShowAlertRules] = useState(false);
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
+  const [sideFeedTab, setSideFeedTab] = useState("alertas");
   const moreActionsRef = useRef(null);
 
   // Incidentes conductuales state
@@ -397,6 +407,16 @@ export default function SpecialistDashboard() {
     const days = Math.round(hours / 24);
     if (days === 1) return "Hace 1 día";
     return `Hace ${days} días`;
+  };
+
+  const calculateAge = (fnac) => {
+    if (!fnac) return null;
+    const birth = new Date(fnac);
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+    return age > 0 ? `${age} años` : `${age} año`;
   };
 
   // ==== HANDLERS ====
@@ -811,310 +831,553 @@ export default function SpecialistDashboard() {
                 {/* ==== VISTA DE PACIENTE SELECCIONADO ==== */}
                 {activeChild && (
                   <div className="space-y-6 animate-in slide-in-from-bottom-5 duration-300 delay-150">
-                    <SmartwatchConnectWidget />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                      {/* Resumen del Día (Representante) */}
-                      <Card className="sm:col-span-2 xl:col-span-2 p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Sun className="w-4 h-4 text-amber-500" />
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                            Resumen del Día
-                          </h3>
-                        </div>
-                        {dailySummary ? (
-                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">
-                              Sueño:
-                            </span>{" "}
-                            {dailySummary.sueno}
-                            <br />
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">
-                              Ánimo:
-                            </span>{" "}
-                            {dailySummary.animo}
-                            <br />
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">
-                              Apetito:
-                            </span>{" "}
-                            {dailySummary.apetito}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-slate-400 dark:text-slate-500">
-                            No hay datos registrados del representante hoy.
-                          </p>
-                        )}
-                      </Card>
+                    {/* 1. HERO CARD DEL PACIENTE */}
+                    <div className="bg-white dark:bg-[#131d2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 md:p-6 shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-                      {/* Detonantes Sensoriales */}
-                      <Card className="xl:col-span-2 p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Waves className="w-4 h-4 text-indigo-500" />
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                            Detonantes Sensoriales
-                          </h3>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {sensoryTriggers.length > 0 ? (
-                            sensoryTriggers.map((tag, i) => (
-                              <span
-                                key={i}
-                                className="inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/40"
-                              >
-                                {tag}
-                              </span>
-                            ))
-                          ) : (
-                            <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-                              No hay detonantes sensoriales registrados
-                            </p>
-                          )}
-                        </div>
-                      </Card>
-
-                      {/* Alertas Recientes (Históricas) */}
-                      <Card className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Bell className="w-4 h-4 text-amber-500" />
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                            Alertas Recientes
-                          </h3>
-                        </div>
-                        {recentAlerts.length === 0 ? (
-                          <p className="text-xs text-slate-400 dark:text-slate-500">
-                            Sin alertas recientes.
-                          </p>
-                        ) : (
-                          <ul className="space-y-1.5">
-                            {recentAlerts.map((a, i) => (
-                              <li
-                                key={i}
-                                className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0"
-                              >
-                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
-                                  {a.est_dete || "Crisis"}
-                                </span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
-                                  {timeAgo(a.fec_hora)}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </Card>
-
-                      {/* Indicaciones Clínicas Recientes */}
-                      <Card className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <FileText className="w-4 h-4 text-sky-500" />
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                            Indicaciones Clínicas
-                          </h3>
-                        </div>
-                        {recentNotes.length === 0 ? (
-                          <p className="text-xs text-slate-400 dark:text-slate-500">
-                            Sin indicaciones registradas aún.
-                          </p>
-                        ) : (
-                          <ul className="space-y-1.5">
-                            {recentNotes.map((n, i) => (
-                              <li
-                                key={i}
-                                className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0"
-                              >
-                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
-                                  {n.title}
-                                </span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
-                                  {n.date}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </Card>
-
-                      {/* Incidentes Conductuales Recientes (Modelo ABC) */}
-                      <Card className="p-4">
-                        <div className="flex items-center justify-between gap-2 mb-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                              Incidentes Conductuales
-                            </h3>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {incidentes.length > 0 && (
-                              <span className="text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800/40">
-                                {incidentes.length}
-                              </span>
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
+                        {/* Datos Principales del Paciente */}
+                        <div className="flex items-center gap-4">
+                          <div className="relative shrink-0">
+                            {activeChild.nin_foto ? (
+                              <img
+                                src={activeChild.nin_foto}
+                                alt={activeChild.nom_nino}
+                                className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-blue-500/20 shadow-md"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl md:text-2xl font-black shadow-md shadow-blue-500/20 ring-2 ring-white/10">
+                                {(activeChild.nom_nino?.[0] || "P") +
+                                  (activeChild.ape_nino?.[0] || "")}
+                              </div>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => setShowIncidentModal(true)}
-                              className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 font-semibold inline-flex items-center gap-1 hover:underline"
-                              title="Registrar nuevo incidente"
-                            >
-                              <Plus className="w-3.5 h-3.5" /> Registrar
-                            </button>
+                            <span
+                              className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#131d2e]"
+                              title="Paciente en monitoreo activo"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5 min-w-0">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                                {activeChild.nom_nino} {activeChild.ape_nino}
+                              </h2>
+                              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/50">
+                                {activeChild.niv_desa ||
+                                  activeChild.nin_diag ||
+                                  "TEA en Acompañamiento"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+                              {calculateAge(activeChild.nin_fnac) && (
+                                <span className="flex items-center gap-1 font-medium">
+                                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                  {calculateAge(activeChild.nin_fnac)}
+                                </span>
+                              )}
+                              {activeChild.nin_gner && (
+                                <span className="font-medium">
+                                  • {activeChild.nin_gner}
+                                </span>
+                              )}
+                              <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                                <Activity className="w-3.5 h-3.5" />
+                                Basal: {valMini} - {valMaxi} BPM
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        {incidentes.length === 0 ? (
-                          <p className="text-xs text-slate-400 dark:text-slate-500">
-                            Sin incidentes conductuales registrados.
-                          </p>
-                        ) : (
-                          <ul className="space-y-2 max-h-[175px] overflow-y-auto pr-1">
-                            {incidentes.slice(0, 5).map((inc, i) => (
-                              <li
-                                key={inc.inc_codi || i}
-                                onClick={() => setSelectedIncidente(inc)}
-                                className="p-2 bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all hover:shadow-xs group"
-                              >
-                                <div className="flex items-center justify-between gap-2 mb-1">
-                                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                                    {inc.inc_tipo}
-                                  </span>
-                                  <span
-                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                                      inc.inc_seve === "Severa" ||
-                                      inc.inc_seve === "Grave"
-                                        ? "bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400"
-                                        : inc.inc_seve === "Moderada"
-                                          ? "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
-                                          : "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400"
-                                    }`}
-                                  >
-                                    {inc.inc_seve}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                                  <span
-                                    className="truncate max-w-[130px]"
-                                    title={inc.inc_deto}
-                                  >
-                                    Detonante: {inc.inc_deto}
-                                  </span>
-                                  <span className="shrink-0">
-                                    {timeAgo(inc.inc_time)}
-                                  </span>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </Card>
 
-                      {/* Progreso de Metas PEI (Lista completa de metas del paciente) */}
-                      <Card className="xl:col-span-2 p-4">
-                        <div className="flex items-center justify-between gap-3 mb-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Target className="w-4 h-4 text-indigo-500 shrink-0" />
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                              Metas PEI del Paciente
-                            </h3>
-                            {peiGoals.length > 0 && (
-                              <span className="text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800/40">
-                                {peiGoals.length}{" "}
-                                {peiGoals.length === 1 ? "meta" : "metas"}
-                              </span>
-                            )}
-                          </div>
+                        {/* Acciones Rápidas Unificadas */}
+                        <div className="flex items-center gap-2 flex-wrap shrink-0">
                           <Button
-                            variant={
-                              peiGoals.length > 0 ? "outline" : "primary"
-                            }
-                            size="xs"
+                            variant="primary"
+                            size="sm"
                             responsive={false}
-                            className="whitespace-nowrap shrink-0"
-                            leftIcon={<Plus className="w-3.5 h-3.5" />}
-                            onClick={() => setShowNewGoal(true)}
+                            className="shadow-sm shadow-blue-500/20"
+                            leftIcon={<AlertCircle className="w-3.5 h-3.5" />}
+                            onClick={() => setShowIncidentModal(true)}
                           >
-                            {peiGoals.length > 0
-                              ? "Nueva Meta"
-                              : "Crear primera meta"}
+                            Registrar Incidente
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            responsive={false}
+                            leftIcon={<FilePlus className="w-3.5 h-3.5" />}
+                            onClick={() => setShowIndicacionModal(true)}
+                          >
+                            Anotar Indicación
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            responsive={false}
+                            leftIcon={<Sliders className="w-3.5 h-3.5" />}
+                            onClick={() => setShowAlertRules(true)}
+                            title="Reglas y umbrales de alerta"
+                          >
+                            Reglas
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            responsive={false}
+                            leftIcon={<Download className="w-3.5 h-3.5" />}
+                            onClick={handleExportDashboard}
+                            disabled={exporting}
+                          >
+                            {exporting ? "..." : "PDF"}
                           </Button>
                         </div>
+                      </div>
+                    </div>
 
-                        {peiGoals.length === 0 ? (
-                          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed py-2">
-                            No hay metas PEI registradas para este paciente.
-                            Crea la primera meta de trabajo para empezar a dar
-                            seguimiento.
-                          </p>
-                        ) : (
-                          <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
-                            {peiGoals.map((g) => {
-                              const pct = Math.min(
-                                Math.round(g.progress || 0),
-                                100,
-                              );
-                              return (
-                                <div
-                                  key={g.id}
-                                  className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60"
-                                >
-                                  <div className="flex justify-between items-start gap-2 mb-1.5">
-                                    <div className="min-w-0 flex-1">
-                                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block mb-0.5">
-                                        {g.category}
+                    {/* 2. GRID PRINCIPAL BALANCEADO (7 cols Terapia/Conducta + 5 cols IoT/Hogar/Alertas) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                      {/* === COLUMNA IZQUIERDA (7 COLS): Terapéutica y Conductual === */}
+                      <div className="lg:col-span-7 space-y-5">
+                        {/* Metas PEI del Paciente */}
+                        <Card className="p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                                <Target className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+                                  Metas PEI del Paciente
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  Plan Educativo Individualizado y progreso de
+                                  ensayos
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {peiGoals.length > 0 && (
+                                <span className="text-xs font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800/50">
+                                  {peiGoals.length}{" "}
+                                  {peiGoals.length === 1 ? "meta" : "metas"}
+                                </span>
+                              )}
+                              <Button
+                                variant={
+                                  peiGoals.length > 0 ? "outline" : "primary"
+                                }
+                                size="xs"
+                                responsive={false}
+                                leftIcon={<Plus className="w-3.5 h-3.5" />}
+                                onClick={() => setShowNewGoal(true)}
+                              >
+                                Nueva Meta
+                              </Button>
+                            </div>
+                          </div>
+
+                          {peiGoals.length === 0 ? (
+                            <div className="p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+                              <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center">
+                                <Target className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                  Sin metas PEI registradas
+                                </p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 max-w-sm mx-auto mt-0.5">
+                                  Establece metas de autonomía, sensoriales o de
+                                  comunicación para registrar ensayos logrados.
+                                </p>
+                              </div>
+                              <Button
+                                variant="primary"
+                                size="xs"
+                                leftIcon={<Plus className="w-3.5 h-3.5" />}
+                                onClick={() => setShowNewGoal(true)}
+                              >
+                                Crear primera meta
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="space-y-3.5">
+                              {peiGoals.map((g) => {
+                                const pct = Math.min(
+                                  Math.round(g.progress || 0),
+                                  100,
+                                );
+                                return (
+                                  <div
+                                    key={g.id}
+                                    className="p-4 bg-slate-50/80 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/70 rounded-xl border border-slate-200/70 dark:border-slate-700/60 transition-colors"
+                                  >
+                                    <div className="flex justify-between items-start gap-3 mb-2">
+                                      <div className="min-w-0 flex-1">
+                                        <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block mb-1">
+                                          {g.category}
+                                        </span>
+                                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                          {g.goal}
+                                        </h4>
+                                      </div>
+                                      <div className="flex items-center gap-2.5 shrink-0">
+                                        <span className="text-sm font-black text-slate-800 dark:text-white">
+                                          {pct}%
+                                        </span>
+                                        <button
+                                          type="button"
+                                          disabled={pct >= 100}
+                                          onClick={() =>
+                                            handleIncrementPeiTrial(g.id)
+                                          }
+                                          className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95 disabled:cursor-not-allowed"
+                                          title="Registrar ensayo logrado (+1)"
+                                        >
+                                          <Plus className="w-3.5 h-3.5" />
+                                          <span className="hidden sm:inline">
+                                            +1 Ensayo
+                                          </span>
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Barra de Progreso */}
+                                    <div className="w-full bg-slate-200/80 dark:bg-slate-700/80 rounded-full h-2.5 overflow-hidden">
+                                      <div
+                                        className={`h-2.5 rounded-full transition-all duration-500 ${
+                                          pct >= 100
+                                            ? "bg-gradient-to-r from-emerald-500 to-teal-400"
+                                            : pct >= 60
+                                              ? "bg-gradient-to-r from-blue-500 to-indigo-500"
+                                              : pct >= 30
+                                                ? "bg-gradient-to-r from-amber-500 to-orange-400"
+                                                : "bg-gradient-to-r from-rose-500 to-pink-500"
+                                        }`}
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+
+                                    <div className="flex justify-between items-center mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                                      <span className="font-medium">
+                                        {g.trials || 0} de {g.totalTrials || 20}{" "}
+                                        ensayos completados
                                       </span>
-                                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 line-clamp-2">
-                                        {g.goal}
-                                      </p>
+                                      {g.fechas && (
+                                        <span className="text-slate-400 dark:text-slate-500">
+                                          {g.fechas}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </Card>
+
+                        {/* Registro de Incidentes Conductuales (Modelo ABC) */}
+                        <Card className="p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
+                                <AlertCircle className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+                                  Incidentes Conductuales (Modelo ABC)
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  Antecedente, conducta observable y
+                                  consecuencia
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {incidentes.length > 0 && (
+                                <span className="text-xs font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 px-2.5 py-1 rounded-full border border-rose-200 dark:border-rose-800/50">
+                                  {incidentes.length}{" "}
+                                  {incidentes.length === 1
+                                    ? "evento"
+                                    : "eventos"}
+                                </span>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="xs"
+                                responsive={false}
+                                leftIcon={<Plus className="w-3.5 h-3.5" />}
+                                onClick={() => setShowIncidentModal(true)}
+                              >
+                                Registrar
+                              </Button>
+                            </div>
+                          </div>
+
+                          {incidentes.length === 0 ? (
+                            <div className="p-5 text-center bg-slate-50/60 dark:bg-slate-800/30 rounded-xl border border-slate-200/60 dark:border-slate-700/40">
+                              <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
+                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Sin incidentes conductuales reportados
+                              </p>
+                              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                El paciente se mantiene en calma sin crisis
+                                recientes registradas.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5">
+                              {incidentes.slice(0, 5).map((inc, i) => (
+                                <div
+                                  key={inc.inc_codi || i}
+                                  onClick={() => setSelectedIncidente(inc)}
+                                  className="p-3.5 bg-slate-50/80 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl border border-slate-200/70 dark:border-slate-700/60 cursor-pointer transition-all hover:shadow-xs group"
+                                >
+                                  <div className="flex items-center justify-between gap-3 mb-1.5">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        {inc.inc_tipo}
+                                      </span>
+                                      {inc.inc_dura && (
+                                        <span className="text-[10px] text-slate-400 font-medium">
+                                          ({inc.inc_dura})
+                                        </span>
+                                      )}
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                                        {pct}%
-                                      </span>
-                                      <button
-                                        type="button"
-                                        disabled={pct >= 100}
-                                        onClick={() =>
-                                          handleIncrementPeiTrial(g.id)
-                                        }
-                                        className="p-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                        title="Registrar ensayo logrado (+1)"
+                                      <span
+                                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                          inc.inc_seve === "Severa" ||
+                                          inc.inc_seve === "Grave"
+                                            ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50"
+                                            : inc.inc_seve === "Moderada"
+                                              ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50"
+                                              : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50"
+                                        }`}
                                       >
-                                        <Plus className="w-3.5 h-3.5" />
-                                      </button>
+                                        {inc.inc_seve}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400">
+                                        {timeAgo(inc.inc_time)}
+                                      </span>
                                     </div>
                                   </div>
 
-                                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                                    <div
-                                      className={`h-2 rounded-full transition-all duration-500 ${
-                                        pct >= 100
-                                          ? "bg-emerald-500"
-                                          : pct >= 70
-                                            ? "bg-emerald-400"
-                                            : pct >= 40
-                                              ? "bg-amber-400"
-                                              : "bg-rose-400"
-                                      }`}
-                                      style={{ width: `${pct}%` }}
-                                    />
-                                  </div>
-
-                                  <div className="flex justify-between items-center mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
-                                    <span>
-                                      {g.trials || 0} / {g.totalTrials || 20}{" "}
-                                      ensayos
-                                    </span>
-                                    {g.criterio && (
-                                      <span
-                                        className="truncate max-w-[180px] hidden sm:inline"
-                                        title={g.criterio}
-                                      >
-                                        {g.criterio}
-                                      </span>
-                                    )}
-                                  </div>
+                                  {inc.inc_deto && (
+                                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-1">
+                                      <span className="font-medium text-slate-700 dark:text-slate-200">
+                                        Detonante (A):
+                                      </span>{" "}
+                                      {inc.inc_deto}
+                                    </p>
+                                  )}
+                                  {inc.inc_conse && (
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                                      <span className="font-medium">
+                                        Manejo (C):
+                                      </span>{" "}
+                                      {inc.inc_conse}
+                                    </p>
+                                  )}
                                 </div>
-                              );
-                            })}
+                              ))}
+                            </div>
+                          )}
+                        </Card>
+                      </div>
+
+                      {/* === COLUMNA DERECHA (5 COLS): Telemetría, Hogar y Feed de Alertas === */}
+                      <div className="lg:col-span-5 space-y-5">
+                        {/* Smartwatch / BLE Connect Widget */}
+                        <SmartwatchConnectWidget />
+
+                        {/* Detonantes Sensoriales Identificados */}
+                        <Card className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                                <Waves className="w-4 h-4" />
+                              </div>
+                              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                                Detonantes Sensoriales
+                              </h3>
+                            </div>
+                            <span className="text-[11px] text-slate-400">
+                              Patrones
+                            </span>
                           </div>
-                        )}
-                      </Card>
+                          <div className="flex flex-wrap gap-2">
+                            {sensoryTriggers.length > 0 ? (
+                              sensoryTriggers.map((tag, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/40 shadow-xs"
+                                >
+                                  ⚡ {tag}
+                                </span>
+                              ))
+                            ) : (
+                              <p className="text-xs text-slate-400 dark:text-slate-500 italic py-1">
+                                Sin detonantes sensoriales frecuentes
+                                reportados.
+                              </p>
+                            )}
+                          </div>
+                        </Card>
+
+                        {/* Resumen Diario del Hogar (Representante) */}
+                        <Card className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+                                <Sun className="w-4 h-4" />
+                              </div>
+                              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                                Bitácora del Hogar (Hoy)
+                              </h3>
+                            </div>
+                            <span className="text-[11px] text-slate-400">
+                              Reporte familiar
+                            </span>
+                          </div>
+
+                          {dailySummary ? (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/50 text-center">
+                                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 font-bold uppercase mb-0.5">
+                                    <Moon className="w-3 h-3 text-indigo-500" />{" "}
+                                    Sueño
+                                  </div>
+                                  <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                    {dailySummary.sueno}
+                                  </span>
+                                </div>
+                                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/50 text-center">
+                                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 font-bold uppercase mb-0.5">
+                                    <Sun className="w-3 h-3 text-amber-500" />{" "}
+                                    Ánimo
+                                  </div>
+                                  <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                    {dailySummary.animo}
+                                  </span>
+                                </div>
+                                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/50 text-center">
+                                  <div className="flex items-center justify-center gap-1 text-[10px] text-slate-500 font-bold uppercase mb-0.5">
+                                    <Utensils className="w-3 h-3 text-emerald-500" />{" "}
+                                    Apetito
+                                  </div>
+                                  <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                    {dailySummary.apetito}
+                                  </span>
+                                </div>
+                              </div>
+                              {dailySummary.texto && (
+                                <p className="text-xs text-slate-600 dark:text-slate-300 italic bg-amber-50/50 dark:bg-amber-950/20 p-2.5 rounded-xl border border-amber-200/40 dark:border-amber-900/30">
+                                  "{dailySummary.texto}"
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">
+                              No hay notas de bitácora registradas por el
+                              representante hoy.
+                            </p>
+                          )}
+                        </Card>
+
+                        {/* Feed Unificado: Alertas & Indicaciones Clínicas */}
+                        <Card className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                          <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                              <button
+                                type="button"
+                                onClick={() => setSideFeedTab("alertas")}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                  sideFeedTab === "alertas"
+                                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                }`}
+                              >
+                                Alertas ({recentAlerts.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSideFeedTab("indicaciones")}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                  sideFeedTab === "indicaciones"
+                                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
+                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                }`}
+                              >
+                                Indicaciones ({recentNotes.length})
+                              </button>
+                            </div>
+
+                            {sideFeedTab === "indicaciones" && (
+                              <button
+                                type="button"
+                                onClick={() => setShowIndicacionModal(true)}
+                                className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline inline-flex items-center gap-1"
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Nueva
+                              </button>
+                            )}
+                          </div>
+
+                          {sideFeedTab === "alertas" ? (
+                            recentAlerts.length === 0 ? (
+                              <div className="py-4 text-center">
+                                <Bell className="w-5 h-5 text-slate-300 dark:text-slate-600 mx-auto mb-1" />
+                                <p className="text-xs text-slate-400 dark:text-slate-500">
+                                  Sin alertas recientes del sensor
+                                </p>
+                              </div>
+                            ) : (
+                              <ul className="space-y-2">
+                                {recentAlerts.map((a, i) => (
+                                  <li
+                                    key={i}
+                                    className="flex items-center justify-between gap-3 p-2.5 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl border border-slate-200/50 dark:border-slate-700/40"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                        {a.est_dete || "Crisis Fisiológica"}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 shrink-0">
+                                      {timeAgo(a.fec_hora)}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )
+                          ) : recentNotes.length === 0 ? (
+                            <div className="py-4 text-center">
+                              <FileText className="w-5 h-5 text-slate-300 dark:text-slate-600 mx-auto mb-1" />
+                              <p className="text-xs text-slate-400 dark:text-slate-500">
+                                Sin indicaciones clínicas activas
+                              </p>
+                            </div>
+                          ) : (
+                            <ul className="space-y-2">
+                              {recentNotes.map((n, i) => (
+                                <li
+                                  key={i}
+                                  className="p-2.5 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl border border-slate-200/50 dark:border-slate-700/40"
+                                >
+                                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2">
+                                    {n.title}
+                                  </p>
+                                  <span className="text-[10px] text-slate-400 block mt-1">
+                                    {n.date}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </Card>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1156,7 +1419,19 @@ export default function SpecialistDashboard() {
         showModal={showAlertRules}
         setShowModal={setShowAlertRules}
         config={specialistConfig}
-        onSave={updateSpecialistConfig}
+        valMini={valMini}
+        valMaxi={valMaxi}
+        activeChild={activeChild}
+        onSave={(newRules) => {
+          updateSpecialistConfig(newRules);
+          if (newRules.bpmLow && newRules.bpmHigh) {
+            updateThresholds(newRules.bpmLow, newRules.bpmHigh);
+          }
+        }}
+        onRecalibrate={() => {
+          setShowAlertRules(false);
+          navigate("hardware");
+        }}
       />
 
       {/* Modal Detalle de Incidente Conductual */}

@@ -1,4 +1,4 @@
-﻿import { renderManualPDF } from "./pdfManualRenderer";
+import { renderManualPDF } from "./pdfManualRenderer";
 
 export const seccionesManualEspecialista = [
   {
@@ -10,7 +10,7 @@ export const seccionesManualEspecialista = [
       {
         tipo: "texto",
         valor:
-          "El mÃ³dulo de Especialista estÃ¡ diseÃ±ado para profesionales de la salud (terapeutas, psicÃ³logos, mÃ©dicos) que trabajan con niÃ±os con Trastorno del Espectro Autista (TEA). Desde este panel podrÃ¡ gestionar pacientes, registrar sesiones, crear metas PEI, documentar notas clÃ­nicas SOAP, monitorear la evoluciÃ³n, calibrar sensores IoT y coordinar el plan terapÃ©utico con los representantes.",
+          "El módulo de Especialista está diseñado para profesionales de la salud (terapeutas, psicólogos, médicos) que trabajan con niños con Trastorno del Espectro Autista (TEA). Desde este panel podrá gestionar pacientes, registrar sesiones, crear metas PEI, monitorear la evolución, calibrar sensores IoT y coordinar el plan terapéutico con los representantes.",
       },
       {
         tipo: "texto",
@@ -137,21 +137,20 @@ export const seccionesManualEspecialista = [
             "Alertas Recientes",
             "Ãšltimas alertas de crisis con hora y detalle.",
           ],
-          ["Notas SOAP", "Notas clÃ­nicas SOAP mÃ¡s recientes del paciente."],
           [
             "Progreso de Metas PEI",
-            "Mini-progreso de las metas terapÃ©uticas y acceso a creaciÃ³n de nuevas metas.",
+            "Mini-progreso de las metas terapéuticas y acceso a creación de nuevas metas.",
           ],
         ],
       },
       {
         tipo: "subtitulo",
-        valor: "Barra de Acciones RÃ¡pidas",
+        valor: "Barra de Acciones Rápidas",
       },
       {
         tipo: "texto",
         valor:
-          "En la cabecera del Panel del Paciente se disponen los accesos rÃ¡pidos a las acciones clÃ­nicas principales: Registrar Incidente, Anotar IndicaciÃ³n, Reporte PDF, Nota SOAP e Historial. En pantallas pequeÃ±as, las acciones se agrupan en un menÃº desplegable 'MÃ¡s'.",
+          "En la cabecera del Panel del Paciente se disponen los accesos rápidos a las acciones clínicas principales: Registrar Incidente, Anotar Indicación, Reporte PDF e Historial. En pantallas pequeñas, las acciones se agrupan en un menú desplegable 'Más'.",
       },
     ],
   },
@@ -519,54 +518,7 @@ export const seccionesManualEspecialista = [
         items: [
           'Presione "Nuevo Sensor" en la parte superior.',
           "Complete: nombre del sensor y tipo de dispositivo.",
-          "Tipos disponibles: Pulsera BiomÃ©trica MAX30102, AcelerÃ³metro MPU6050, Sensor Temperatura MLX90614, Casco EEG BÃ¡sico.",
-        ],
-      },
-    ],
-  },
-  {
-    id: "soap",
-    titulo: "Notas SOAP",
-    icono: "soap",
-    descripcion: "DocumentaciÃ³n clÃ­nica estructurada",
-    contenido: [
-      {
-        tipo: "texto",
-        valor:
-          "Formato de nota clÃ­nica SOAP (Subjetivo, Objetivo, AnÃ¡lisis, Plan) para documentar cada sesiÃ³n terapÃ©utica.",
-      },
-      {
-        tipo: "tabla",
-        encabezados: ["Campo", "DescripciÃ³n", "Ejemplo"],
-        filas: [
-          [
-            "S - Subjetivo",
-            "Reporte de padres u observaciÃ³n libre",
-            "El padre indica que el niÃ±o tuvo problemas para dormir",
-          ],
-          [
-            "O - Objetivo",
-            "MÃ©tricas y observaciones medibles",
-            "Se completaron 3 de 4 ensayos de contacto visual",
-          ],
-          [
-            "A - AnÃ¡lisis",
-            "EvaluaciÃ³n clÃ­nica del profesional",
-            "Adecuada tolerancia a estÃ­mulos tÃ¡ctiles hoy",
-          ],
-          [
-            "P - Plan",
-            "PrÃ³ximos pasos y rutinas asignadas",
-            "Asignar rutina visual de lavado de manos",
-          ],
-        ],
-      },
-      {
-        tipo: "pasos",
-        items: [
-          'Desde el panel clÃ­nico del paciente, presione "Nota SOAP".',
-          "Complete los 4 campos del formulario clÃ­nico.",
-          'Presione "Firmar y Guardar Nota" para registrar.',
+          "Tipos disponibles: Pulsera Biométrica MAX30102, Acelerómetro MPU6050, Sensor Temperatura MLX90614, Casco EEG Básico.",
         ],
       },
     ],
@@ -733,8 +685,7 @@ export const seccionesManualEspecialista = [
         encabezados: ["TÃ©rmino", "DefiniciÃ³n"],
         filas: [
           ["TEA", "Trastorno del Espectro Autista"],
-          ["PEI", "Plan de EducaciÃ³n Individualizada"],
-          ["SOAP", "Nota clÃ­nica: Subjetivo, Objetivo, AnÃ¡lisis, Plan"],
+          ["PEI", "Plan de Educación Individualizada"],
           ["ABC", "Modelo Antecedente-Conducta-Consecuencia"],
           ["BPM", "Latidos por minuto (Beats Per Minute)"],
           ["IoT", "Internet de las Cosas â€” dispositivos conectados"],
