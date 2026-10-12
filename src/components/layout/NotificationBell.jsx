@@ -128,6 +128,24 @@ export default function NotificationBell() {
       playAlertSound();
       addNotification(notif);
       showToast(`🔔 ${notif.message}`);
+
+      // Notificación nativa del navegador/sistema operativo si el usuario tiene alertas_push activadas
+      if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted"
+      ) {
+        try {
+          const raw = localStorage.getItem("siat_notif_prefs");
+          const prefs = raw ? JSON.parse(raw) : { alertas_push: true };
+          if (prefs.alertas_push !== false) {
+            new Notification("Alerta SIAT", {
+              body: notif.message,
+              icon: "/favicon.ico",
+              tag: notif.id || "siat-crisis",
+            });
+          }
+        } catch (_) {}
+      }
     },
     [addNotification, playAlertSound, showToast],
   );

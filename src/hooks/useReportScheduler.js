@@ -93,7 +93,25 @@ export default function useReportScheduler() {
   const timerRef = useRef(null);
 
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    const token = localStorage.getItem("token");
+    if (!token || role !== "ADMIN_INSTITUCION") return;
+
+    // Sincronizar desde la base de datos si no hay caché local
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      api
+        .get("/admin/reportes/programados")
+        .then((res) => {
+          if (res.data?.data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(res.data.data));
+          }
+        })
+        .catch(() => {});
+    }
+
     const tick = async () => {
+      const curRole = localStorage.getItem("userRole");
+      if (curRole !== "ADMIN_INSTITUCION") return;
       let config;
       try {
         config = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");

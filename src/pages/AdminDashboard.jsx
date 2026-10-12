@@ -164,6 +164,19 @@ function AdminDashboard({ onNavigate }) {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
 
+  const handleOpenScheduleModal = async () => {
+    setShowScheduleModal(true);
+    try {
+      const res = await api.get("/admin/reportes/programados");
+      if (res.data?.data) {
+        setScheduleConfig(res.data.data);
+        localStorage.setItem("reportSchedule", JSON.stringify(res.data.data));
+      }
+    } catch (err) {
+      console.warn("Error cargando programación de reportes:", err);
+    }
+  };
+
   window.__navigate = onNavigate;
 
   const mountedRef = useRef(true);
@@ -177,6 +190,18 @@ function AdminDashboard({ onNavigate }) {
     const tab = tabFromPath();
     setActiveTab(tab);
     fetchData(tab);
+
+    // Sincronizar programación de reportes persistida en BD
+    api
+      .get("/admin/reportes/programados")
+      .then((res) => {
+        if (res.data?.data) {
+          setScheduleConfig(res.data.data);
+          localStorage.setItem("reportSchedule", JSON.stringify(res.data.data));
+        }
+      })
+      .catch(() => {});
+
     return () => {
       mountedRef.current = false;
     };
@@ -878,7 +903,7 @@ function AdminDashboard({ onNavigate }) {
                     <FileText className="w-4 h-4" /> Exportar
                   </button>
                   <button
-                    onClick={() => setShowScheduleModal(true)}
+                    onClick={handleOpenScheduleModal}
                     className="px-4 py-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded-lg shadow-sm border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all flex items-center gap-2 text-sm shrink-0"
                   >
                     <Clock className="w-4 h-4" /> Programar
@@ -1192,6 +1217,32 @@ function AdminDashboard({ onNavigate }) {
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-blue-600"></div>
               </label>
             </div>
+
+            {scheduleConfig.last_sent && (
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-xs text-emerald-800 dark:text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>
+                  Último reporte automático ejecutado con éxito:{" "}
+                  <strong>
+                    {new Date(scheduleConfig.last_sent).toLocaleDateString(
+                      "es-VE",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      },
+                    )}{" "}
+                    {new Date(scheduleConfig.last_sent).toLocaleTimeString(
+                      "es-VE",
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )}
+                  </strong>
+                </span>
+              </div>
+            )}
 
             {/* Módulos / Contenido del Reporte */}
             <div>
