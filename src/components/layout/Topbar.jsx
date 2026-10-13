@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useGlobalContext } from "../../context/GlobalState";
 import { useTourContext } from "../../context/TourContext";
-import { Sun, Moon, Menu, HelpCircle, Baby } from "lucide-react";
+import { Sun, Moon, Menu, HelpCircle, Baby, X } from "lucide-react";
+import { saveSelectedChild } from "../../utils/authStorage";
 import NotificationBell from "./NotificationBell";
 import PwaInstallPrompt from "../shared/PwaInstallPrompt";
 
@@ -19,6 +20,8 @@ export default function Topbar() {
     listaNinos,
     selectedChildId,
     setSelectedChildId,
+    setNomNino,
+    activeChild,
   } = useGlobalContext();
   const { startContextualTour } = useTourContext();
   const [fotoError, setFotoError] = useState(false);
@@ -97,6 +100,38 @@ export default function Topbar() {
                 })}
               </div>
             )}
+
+          {(userRole === "ESPECIALISTA" || userRole === "ROL_ESP") && (
+            <div className="flex items-center gap-1.5">
+              {selectedChildId && activeChild ? (
+                <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/60 rounded-full px-3 py-1 text-xs text-blue-700 dark:text-blue-300 font-semibold shadow-2xs animate-in fade-in duration-200">
+                  <Baby className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="truncate max-w-[140px]">
+                    {activeChild.nom_nino}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedChildId(null);
+                      setNomNino(null);
+                      saveSelectedChild(null, null);
+                      if (currentView !== "dashboard")
+                        setCurrentView("dashboard");
+                    }}
+                    className="ml-0.5 p-0.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-500 hover:text-blue-800 dark:text-blue-400 dark:hover:text-white transition-colors cursor-pointer"
+                    title="Deseleccionar y volver al Dashboard Global"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-full px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Dashboard Global</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Contenedor derecho de acciones */}

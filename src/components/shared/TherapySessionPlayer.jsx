@@ -400,112 +400,233 @@ export default function TherapySessionPlayer({
                   </div>
                 )}
 
-                {/* Cronómetro circular + instrucción */}
-                <div className="w-full max-w-xl flex flex-col items-center text-center gap-4 py-1">
-                  <div className="relative w-36 h-36 sm:w-44 sm:h-44 md:w-48 md:h-48 shrink-0">
-                    <svg
-                      viewBox="0 0 100 100"
-                      className="w-full h-full -rotate-90 drop-shadow-sm"
-                    >
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        strokeWidth="7"
-                        className="stroke-slate-100 dark:stroke-slate-800"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        strokeWidth="7"
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        strokeDasharray={RING_CIRCUMFERENCE}
-                        strokeDashoffset={
-                          RING_CIRCUMFERENCE *
-                          (1 - (currentStepInfo ? currentStepInfo.progress : 0))
-                        }
-                        className={`transition-all duration-500 ${
-                          isPaused
-                            ? "text-slate-300 dark:text-slate-600"
-                            : currentStepInfo && currentStepInfo.remaining <= 10
-                              ? "text-rose-500"
-                              : "text-blue-500"
-                        }`}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span
-                        className={`text-3xl sm:text-4xl md:text-5xl font-black tabular-nums font-mono leading-none transition-colors ${
-                          isPaused
-                            ? "text-slate-400 dark:text-slate-500"
-                            : currentStepInfo && currentStepInfo.remaining <= 10
-                              ? "text-rose-500 animate-pulse"
-                              : "text-slate-800 dark:text-white"
-                        }`}
-                      >
-                        {currentStepInfo
-                          ? formatTime(currentStepInfo.remaining)
-                          : formatTime(sessionTime)}
-                      </span>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1.5">
-                        {isPaused ? "En pausa" : "Restante"}
-                      </span>
+                {/* Contenido principal: layout split optimizado para destacar la imagen y compactar el cronómetro */}
+                {activeSession.media ? (
+                  <div className="w-full max-w-2xl my-auto py-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 items-center">
+                      {/* Columna: Imagen de Apoyo Destacada */}
+                      <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900/5 dark:bg-black/30 shadow-md h-48 sm:h-64 flex items-center justify-center shrink-0">
+                        {isVideoUrl(activeSession.media) ? (
+                          <video
+                            key={activeSession.ses_codi}
+                            src={activeSession.media}
+                            controls
+                            playsInline
+                            className="w-full h-full object-contain bg-black"
+                          />
+                        ) : (
+                          <img
+                            src={activeSession.media}
+                            alt={activeSession.title}
+                            className="w-full h-full object-cover sm:object-contain bg-slate-100 dark:bg-slate-900"
+                          />
+                        )}
+                        <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-900/75 backdrop-blur-xs text-[10px] font-bold text-white uppercase tracking-wider shadow-xs">
+                          Imagen de Apoyo
+                        </span>
+                      </div>
+
+                      {/* Columna: Cronómetro compacto + Instrucción + Materiales */}
+                      <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-3">
+                        {/* Cronómetro compacto */}
+                        <div className="flex items-center gap-3.5 bg-slate-50 dark:bg-slate-800/60 p-2.5 sm:p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 w-full shadow-xs">
+                          <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0">
+                            <svg
+                              viewBox="0 0 100 100"
+                              className="w-full h-full -rotate-90 drop-shadow-xs"
+                            >
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                fill="none"
+                                strokeWidth="7"
+                                className="stroke-slate-200 dark:stroke-slate-700"
+                              />
+                              <circle
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                fill="none"
+                                strokeWidth="7"
+                                strokeLinecap="round"
+                                stroke="currentColor"
+                                strokeDasharray={RING_CIRCUMFERENCE}
+                                strokeDashoffset={
+                                  RING_CIRCUMFERENCE *
+                                  (1 -
+                                    (currentStepInfo
+                                      ? currentStepInfo.progress
+                                      : 0))
+                                }
+                                className={`transition-all duration-500 ${
+                                  isPaused
+                                    ? "text-slate-300 dark:text-slate-600"
+                                    : currentStepInfo &&
+                                        currentStepInfo.remaining <= 10
+                                      ? "text-rose-500"
+                                      : "text-blue-500"
+                                }`}
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span
+                                className={`text-base sm:text-lg font-black tabular-nums font-mono leading-none transition-colors ${
+                                  isPaused
+                                    ? "text-slate-400 dark:text-slate-500"
+                                    : currentStepInfo &&
+                                        currentStepInfo.remaining <= 10
+                                      ? "text-rose-500 animate-pulse"
+                                      : "text-slate-800 dark:text-white"
+                                }`}
+                              >
+                                {currentStepInfo
+                                  ? formatTime(currentStepInfo.remaining)
+                                  : formatTime(sessionTime)}
+                              </span>
+                              <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 mt-0.5">
+                                {isPaused ? "Pausa" : "Restante"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                              Tiempo del Paso
+                            </span>
+                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
+                              {isPaused ? "En pausa" : "En ejecución"}
+                            </span>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {currentStepInfo
+                                ? `${Math.round(currentStepInfo.progress * 100)}% transcurrido`
+                                : ""}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Instrucción del paso */}
+                        <div className="w-full">
+                          <p className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 leading-snug">
+                            {sessionSteps.length > 0
+                              ? sessionSteps[
+                                  Math.min(currentStep, sessionSteps.length - 1)
+                                ].text
+                              : "Sesión libre: solo se registra el tiempo total."}
+                          </p>
+                        </div>
+
+                        {/* Materiales */}
+                        {activeSession.materials && (
+                          <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 w-full">
+                            {String(activeSession.materials)
+                              .split(",")
+                              .map(
+                                (m, i) =>
+                                  m.trim() && (
+                                    <span
+                                      key={i}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                    >
+                                      <ListChecks className="w-3 h-3" />
+                                      {m.trim()}
+                                    </span>
+                                  ),
+                              )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  <p className="text-base sm:text-lg md:text-xl font-bold text-slate-800 dark:text-slate-100 leading-relaxed max-w-lg">
-                    {sessionSteps.length > 0
-                      ? sessionSteps[
-                          Math.min(currentStep, sessionSteps.length - 1)
-                        ].text
-                      : "Sesión libre: solo se registra el tiempo total."}
-                  </p>
-
-                  {/* Materiales */}
-                  {activeSession.materials && (
-                    <div className="flex flex-wrap justify-center gap-1.5 max-w-lg">
-                      {String(activeSession.materials)
-                        .split(",")
-                        .map(
-                          (m, i) =>
-                            m.trim() && (
-                              <span
-                                key={i}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
-                              >
-                                <ListChecks className="w-3 h-3" />
-                                {m.trim()}
-                              </span>
-                            ),
-                        )}
-                    </div>
-                  )}
-
-                  {/* Multimedia */}
-                  {activeSession.media && (
-                    <div className="w-full max-w-md rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 max-h-44 sm:max-h-52 bg-slate-900/5 dark:bg-black/30 shadow-inner">
-                      {isVideoUrl(activeSession.media) ? (
-                        <video
-                          key={activeSession.ses_codi}
-                          src={activeSession.media}
-                          controls
-                          playsInline
-                          className="w-full h-full max-h-44 sm:max-h-52 bg-black object-contain"
+                ) : (
+                  /* Modo sin imagen: cronómetro centrado pero de tamaño equilibrado */
+                  <div className="w-full max-w-xl flex flex-col items-center text-center gap-4 py-2 my-auto">
+                    <div className="relative w-28 h-28 sm:w-36 sm:h-36 shrink-0">
+                      <svg
+                        viewBox="0 0 100 100"
+                        className="w-full h-full -rotate-90 drop-shadow-sm"
+                      >
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          strokeWidth="7"
+                          className="stroke-slate-100 dark:stroke-slate-800"
                         />
-                      ) : (
-                        <img
-                          src={activeSession.media}
-                          alt={activeSession.title}
-                          className="w-full h-full max-h-44 sm:max-h-52 object-cover mx-auto"
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          strokeWidth="7"
+                          strokeLinecap="round"
+                          stroke="currentColor"
+                          strokeDasharray={RING_CIRCUMFERENCE}
+                          strokeDashoffset={
+                            RING_CIRCUMFERENCE *
+                            (1 -
+                              (currentStepInfo ? currentStepInfo.progress : 0))
+                          }
+                          className={`transition-all duration-500 ${
+                            isPaused
+                              ? "text-slate-300 dark:text-slate-600"
+                              : currentStepInfo &&
+                                  currentStepInfo.remaining <= 10
+                                ? "text-rose-500"
+                                : "text-blue-500"
+                          }`}
                         />
-                      )}
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span
+                          className={`text-2xl sm:text-3xl font-black tabular-nums font-mono leading-none transition-colors ${
+                            isPaused
+                              ? "text-slate-400 dark:text-slate-500"
+                              : currentStepInfo &&
+                                  currentStepInfo.remaining <= 10
+                                ? "text-rose-500 animate-pulse"
+                                : "text-slate-800 dark:text-white"
+                          }`}
+                        >
+                          {currentStepInfo
+                            ? formatTime(currentStepInfo.remaining)
+                            : formatTime(sessionTime)}
+                        </span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">
+                          {isPaused ? "En pausa" : "Restante"}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </div>
+
+                    <p className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100 leading-relaxed max-w-lg">
+                      {sessionSteps.length > 0
+                        ? sessionSteps[
+                            Math.min(currentStep, sessionSteps.length - 1)
+                          ].text
+                        : "Sesión libre: solo se registra el tiempo total."}
+                    </p>
+
+                    {/* Materiales */}
+                    {activeSession.materials && (
+                      <div className="flex flex-wrap justify-center gap-1.5 max-w-lg">
+                        {String(activeSession.materials)
+                          .split(",")
+                          .map(
+                            (m, i) =>
+                              m.trim() && (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                >
+                                  <ListChecks className="w-3 h-3" />
+                                  {m.trim()}
+                                </span>
+                              ),
+                          )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Controles de navegación */}

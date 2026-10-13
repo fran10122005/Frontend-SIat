@@ -121,7 +121,7 @@ api.interceptors.response.use(
       showGlobalToast("⏱️ Sesión expirada. Redirigiendo al inicio...");
       setTimeout(() => {
         if (typeof window !== "undefined") {
-          window.location.href = "/login";
+          window.location.href = "/auth/login";
         }
       }, 1800);
       return Promise.reject(error);

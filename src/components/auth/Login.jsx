@@ -4,7 +4,7 @@ import { useGlobalContext } from "../../context/GlobalState";
 import api from "../../api/axios";
 import { loginWithFingerprint } from "../../api/passkey";
 import { getErrorMessage } from "../../utils/errorHandler";
-import { setAuthSession } from "../../utils/authStorage";
+import { setAuthSession, saveSelectedChild } from "../../utils/authStorage";
 import FormAlert from "../shared/FormAlert";
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -32,7 +32,8 @@ function Login({ onNavigate }) {
     return 0;
   });
 
-  const { setUserRole, setUserName } = useGlobalContext();
+  const { setUserRole, setUserName, setSelectedChildId, setNomNino } =
+    useGlobalContext();
 
   // Handle countdown for lockout
   useEffect(() => {
@@ -128,6 +129,9 @@ function Login({ onNavigate }) {
       onNavigate("dashboard");
     } else if (user.rol_codi === "ROL_ESP") {
       setUserRole("ESPECIALISTA");
+      setSelectedChildId(null);
+      setNomNino(null);
+      saveSelectedChild(null, null);
       onNavigate("dashboard");
     } else if (user.rol_codi === "ROL_ADM") {
       setUserRole("ADMIN_INSTITUCION");

@@ -22,49 +22,117 @@ const GlobalContext = createContext();
 
 export const useGlobalContext = () => useContext(GlobalContext);
 
+// Estándar Internacional SaaS (Opción A): URLs canónicas limpias en inglés kebab-case
 const viewToPath = {
-  login: "/login",
-  register: "/register",
-  forgot: "/forgot",
-  "reset-password": "/reset-password",
-  "register-repre": "/register-repre",
-  dashboard: "/dashboard",
-  admin: "/admin",
-  student: "/student",
-  patients: "/patients",
-  rutinas: "/rutinas",
-  agenda: "/agenda",
-  herramientas: "/herramientas",
-  perfil_padre: "/perfil-padre",
-  diario_hogar: "/diario-hogar",
-  profile: "/profile",
-  settings: "/configuracion",
-  inventario: "/inventario",
-  sensores: "/sensores",
-  historial: "/historial",
-  home_analytics: "/home-analytics",
+  login: "/auth/login",
+  register: "/auth/register",
+  forgot: "/auth/forgot-password",
+  "reset-password": "/auth/reset-password",
+  "register-repre": "/auth/invite",
+  dashboard: "/specialist/overview",
+  admin: "/admin/overview",
+  student: "/specialist/patient-record",
+  patients: "/specialist/patients",
+  rutinas: "/specialist/routines",
+  agenda: "/portal/agenda",
+  herramientas: "/portal/support-tools",
+  perfil_padre: "/portal/profile",
+  diario_hogar: "/portal/daily-log",
+  profile: "/account/profile",
+  settings: "/account/preferences",
+  inventario: "/specialist/live-telemetry",
+  sensores: "/portal/live-monitoring",
+  historial: "/portal/child-progress",
+  home_analytics: "/specialist/home-analytics",
 };
 
+// Rutas administrativas canónicas internacionales
+export const adminTabPaths = {
+  dashboard: "/admin/overview",
+  especialistas: "/admin/specialists",
+  representantes: "/admin/guardians",
+  historial_clinico: "/admin/clinical-records",
+  asignaciones: "/admin/assignments",
+  catalogos: "/admin/institution",
+  usuarios: "/admin/users",
+  infraestructura: "/admin/infrastructure",
+};
+
+// Aliases heredados (Legacy URLs) para retrocompatibilidad 100%
+export const legacyAliases = {
+  "/login": "/auth/login",
+  "/register": "/auth/register",
+  "/forgot": "/auth/forgot-password",
+  "/reset-password": "/auth/reset-password",
+  "/register-repre": "/auth/invite",
+  "/admin": "/admin/overview",
+  "/admin/especialistas": "/admin/specialists",
+  "/admin/representantes": "/admin/guardians",
+  "/admin/historial-clinico": "/admin/clinical-records",
+  "/admin/asignaciones": "/admin/assignments",
+  "/admin/catalogos": "/admin/institution",
+  "/admin/usuarios": "/admin/users",
+  "/admin/infraestructura": "/admin/infrastructure",
+  "/student": "/specialist/patient-record",
+  "/patients": "/specialist/patients",
+  "/rutinas": "/specialist/routines",
+  "/agenda": "/portal/agenda",
+  "/herramientas": "/portal/support-tools",
+  "/perfil-padre": "/portal/profile",
+  "/diario-hogar": "/portal/daily-log",
+  "/profile": "/account/profile",
+  "/configuracion": "/account/preferences",
+  "/inventario": "/specialist/live-telemetry",
+  "/sensores": "/portal/live-monitoring",
+  "/historial": "/portal/child-progress",
+  "/home-analytics": "/specialist/home-analytics",
+};
+
+// Mapeo bidireccional URL -> Vista
 const pathToView = Object.fromEntries(
   Object.entries(viewToPath).map(([k, v]) => [v, k]),
 );
 
-// Rutas paginadas por pestaña del panel admin (URL con deep-linking: /admin/especialistas, etc.)
-export const adminTabPaths = {
-  dashboard: "/admin",
-  especialistas: "/admin/especialistas",
-  representantes: "/admin/representantes",
-  historial_clinico: "/admin/historial-clinico",
-  asignaciones: "/admin/asignaciones",
-  catalogos: "/admin/catalogos",
-  usuarios: "/admin/usuarios",
-  infraestructura: "/admin/infraestructura",
-};
-
-// Todas las rutas del panel admin resuelven a la vista "admin"
+// Registrar rutas de admin
 Object.values(adminTabPaths).forEach((p) => {
   pathToView[p] = "admin";
 });
+
+// Registrar aliases antiguos para que resuelvan a la misma vista
+Object.entries(legacyAliases).forEach(([legacyPath, canonicalPath]) => {
+  if (pathToView[canonicalPath]) {
+    pathToView[legacyPath] = pathToView[canonicalPath];
+  }
+});
+pathToView["/dashboard"] = "dashboard";
+pathToView["/specialist/overview"] = "dashboard";
+pathToView["/portal/overview"] = "dashboard";
+pathToView["/specialist/evolution-history"] = "historial";
+pathToView["/specialist/hardware"] = "inventario";
+pathToView["/portal/routines"] = "rutinas";
+
+// Resolver de ruta canónica según el rol del usuario
+export const getPathForView = (view, role) => {
+  if (view === "dashboard") {
+    if (role === "ADMIN_INSTITUCION" || role === "ROL_ADM")
+      return "/admin/overview";
+    if (role === "REPRESENTANTE" || role === "ROL_REP")
+      return "/portal/overview";
+    return "/specialist/overview";
+  }
+  if (view === "historial") {
+    if (role === "ESPECIALISTA" || role === "ROL_ESP")
+      return "/specialist/evolution-history";
+    return "/portal/child-progress";
+  }
+  if (view === "rutinas") {
+    if (role === "REPRESENTANTE" || role === "ROL_REP")
+      return "/portal/routines";
+    return "/specialist/routines";
+  }
+  if (view === "admin") return "/admin/overview";
+  return viewToPath[view] || "/auth/login";
+};
 
 export const GlobalProvider = ({ children }) => {
   const routerNavigate = useNavigate();
@@ -75,13 +143,13 @@ export const GlobalProvider = ({ children }) => {
   });
 
   const savedChildInit = getSavedSelectedChild();
-  const [nomNino, setNomNino] = useState(() => savedChildInit.name || null);
-  const [selectedChildId, setSelectedChildId] = useState(
-    () => savedChildInit.id || null,
+  const initialRole = localStorage.getItem("userRole") || "ESPECIALISTA";
+  const [userRole, setUserRole] = useState(initialRole);
+  const [nomNino, setNomNino] = useState(() =>
+    initialRole === "ESPECIALISTA" ? null : savedChildInit.name || null,
   );
-
-  const [userRole, setUserRole] = useState(
-    () => localStorage.getItem("userRole") || "ESPECIALISTA",
+  const [selectedChildId, setSelectedChildId] = useState(() =>
+    initialRole === "ESPECIALISTA" ? null : savedChildInit.id || null,
   );
   const [userName, setUserName] = useState(
     () => localStorage.getItem("userName") || "",
@@ -253,15 +321,25 @@ export const GlobalProvider = ({ children }) => {
   useEffect(() => {
     const path = location.pathname;
     if (path === "/") {
-      const target = viewToPath[currentView];
+      const target = getPathForView(currentView, userRole);
       if (target) routerNavigate(target, { replace: true });
+      return;
+    }
+    // Si la URL es una URL legada (ej: /admin/asignaciones, /agenda, /login),
+    // actualizar inmediatamente a su versión canónica internacional
+    if (legacyAliases[path]) {
+      const canonical = legacyAliases[path];
+      routerNavigate(
+        canonical + (location.search || "") + (location.hash || ""),
+        { replace: true },
+      );
       return;
     }
     const view = pathToView[path];
     if (view && view !== currentView) {
       setCurrentView(view);
     }
-  }, [location.pathname]);
+  }, [location.pathname, currentView, userRole, routerNavigate]);
 
   useEffect(() => {
     localStorage.setItem("userRole", userRole);
@@ -295,7 +373,7 @@ export const GlobalProvider = ({ children }) => {
     disconnectSocket();
     clearAuthSession();
     setCurrentView("login");
-    routerNavigate("/login", { replace: true });
+    routerNavigate("/auth/login", { replace: true });
     showToast("⏱️ Sesión cerrada por inactividad");
   }, [routerNavigate]);
 
@@ -307,7 +385,7 @@ export const GlobalProvider = ({ children }) => {
       onLogout: () => {
         disconnectSocket();
         setCurrentView("login");
-        routerNavigate("/login", { replace: true });
+        routerNavigate("/auth/login", { replace: true });
         showToast("ℹ️ Sesión cerrada desde otra pestaña.");
       },
     });
@@ -343,12 +421,19 @@ export const GlobalProvider = ({ children }) => {
         }));
         setListaNinos(mapped);
 
-        // Si ya hay un niño seleccionado (o recuperado de localStorage al recargar)
-        const currentTargetId = selectedChildId || getSavedSelectedChild().id;
-        const matched = mapped.find(
-          (n) =>
-            n.id_ninos === currentTargetId || n.nin_codi === currentTargetId,
-        );
+        // Si ya hay un niño seleccionado (o recuperado de localStorage para representante)
+        const currentTargetId =
+          userRole === "ESPECIALISTA"
+            ? selectedChildId
+            : selectedChildId || getSavedSelectedChild().id;
+
+        const matched = currentTargetId
+          ? mapped.find(
+              (n) =>
+                n.id_ninos === currentTargetId ||
+                n.nin_codi === currentTargetId,
+            )
+          : null;
 
         if (matched) {
           if (selectedChildId !== matched.id_ninos) {
@@ -374,20 +459,26 @@ export const GlobalProvider = ({ children }) => {
 
   const activeChild = useMemo(() => {
     if (!listaNinos || listaNinos.length === 0) return null;
-    return (
-      listaNinos.find(
-        (n) => n.id_ninos === selectedChildId || n.nin_codi === selectedChildId,
-      ) || listaNinos[0]
+    // Si el rol es especialista y no hay selectedChildId, el estado activo es null (Vista Global)
+    if (userRole === "ESPECIALISTA" && !selectedChildId) return null;
+    const found = listaNinos.find(
+      (n) => n.id_ninos === selectedChildId || n.nin_codi === selectedChildId,
     );
-  }, [selectedChildId, listaNinos]);
+    if (found) return found;
+    // Para representantes, fallback al primer niño de la lista
+    if (userRole !== "ESPECIALISTA") return listaNinos[0];
+    return null;
+  }, [selectedChildId, listaNinos, userRole]);
 
   useEffect(() => {
     if (activeChild) {
       if (activeChild.nom_nino && activeChild.nom_nino !== nomNino) {
         setNomNino(activeChild.nom_nino);
       }
+    } else if (userRole === "ESPECIALISTA" && !selectedChildId) {
+      if (nomNino) setNomNino(null);
     }
-  }, [activeChild, nomNino]);
+  }, [activeChild, nomNino, userRole, selectedChildId]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -1175,7 +1266,7 @@ export const GlobalProvider = ({ children }) => {
     }
 
     setCurrentView(view);
-    const path = viewToPath[view];
+    const path = getPathForView(view, userRole);
     if (path) routerNavigate(path);
   };
 

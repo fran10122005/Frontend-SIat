@@ -409,7 +409,7 @@ export default function EspecialistasTab({
   const quitarFotoEdit = () => setEditingEsp({ ...editingEsp, esp_foto: "" });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-3.5 sm:space-y-4 animate-in fade-in duration-300">
       {/* Sub-navegación */}
       <div
         data-tour="admin-esp-subnav"

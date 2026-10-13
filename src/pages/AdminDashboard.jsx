@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios";
-import { useGlobalContext, adminTabPaths } from "../context/GlobalState";
+import {
+  useGlobalContext,
+  adminTabPaths,
+  legacyAliases,
+} from "../context/GlobalState";
 import { useTourContext } from "../context/TourContext";
 import { toastError } from "../utils/errorHandler";
 import AdminSidebar from "../components/layout/AdminSidebar";
@@ -60,17 +64,23 @@ function AdminDashboard({ onNavigate }) {
   const routerNavigate = useNavigate();
   const location = useLocation();
 
-  // Deriva la pestaña activa desde la URL (/admin/especialistas => "especialistas")
+  // Deriva la pestaña activa desde la URL canónica (/admin/specialists => "especialistas")
   const tabFromPath = () => {
     for (const [tab, tabPath] of Object.entries(adminTabPaths)) {
       if (location.pathname === tabPath) return tab;
     }
+    const canonical = legacyAliases?.[location.pathname];
+    if (canonical) {
+      for (const [tab, tabPath] of Object.entries(adminTabPaths)) {
+        if (canonical === tabPath) return tab;
+      }
+    }
     return "dashboard";
   };
 
-  // Cambiar de pestaña navega a su URL; el efecto de abajo sincroniza estado y datos
+  // Cambiar de pestaña navega a su URL canónica internacional
   const changeTab = (tab) => {
-    routerNavigate(adminTabPaths[tab] || "/admin");
+    routerNavigate(adminTabPaths[tab] || "/admin/overview");
   };
 
   // Registra el tab activo como contexto del tour contextual, para que el
@@ -795,10 +805,10 @@ function AdminDashboard({ onNavigate }) {
         <Topbar />
 
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-8 pb-12">
-            <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div className="flex flex-col gap-2">
-                <PageTitle icon={Building2}>
+          <div className="max-w-7xl w-full mx-auto px-4 py-3 sm:px-6 sm:py-3.5 flex flex-col gap-3.5 pb-8">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-200/60 dark:border-slate-800/80">
+              <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+                <PageTitle icon={Building2} className="text-base sm:text-lg">
                   {activeTab === "dashboard" && "Panel Clínico Institucional"}
                   {activeTab === "especialistas" &&
                     "Directorio de Especialistas"}
@@ -814,13 +824,16 @@ function AdminDashboard({ onNavigate }) {
                   {activeTab === "usuarios" &&
                     "Control de Acceso y Cuentas de Usuario"}
                 </PageTitle>
+                <span className="hidden md:inline text-slate-300 dark:text-slate-700">
+                  ·
+                </span>
                 <p
                   title={
                     activeTab === "dashboard"
                       ? "Resumen de la operación clínica."
                       : undefined
                   }
-                  className="text-subtitle-muted mt-1 line-clamp-1"
+                  className="hidden md:inline text-xs text-slate-500 dark:text-slate-400 font-normal truncate"
                 >
                   {activeTab === "dashboard" &&
                     "Resumen de la operación clínica."}

@@ -22,10 +22,12 @@ import {
   Moon,
   Utensils,
   Watch,
+  LayoutDashboard,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 import { toastError } from "../utils/errorHandler";
+import { saveSelectedChild } from "../utils/authStorage";
 import Footer from "../components/layout/Footer";
 import { exportDashboardReport } from "../utils/pdfExporter";
 import Button from "../components/ui/Button";
@@ -50,6 +52,8 @@ export default function SpecialistDashboard() {
     userName,
     listaNinos,
     selectedChildId,
+    setSelectedChildId,
+    setNomNino,
     valMini,
     valMaxi,
     updateThresholds,
@@ -571,16 +575,37 @@ export default function SpecialistDashboard() {
           <div className="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 pb-12">
             {/* Header Title Area - Estilo AdminDashboard */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex flex-col gap-2 min-w-0">
-                <PageTitle icon={Users}>
-                  {activeChild
-                    ? `Panel del Paciente: ${activeChild.nom_nino} ${activeChild.ape_nino}`
-                    : `Bienvenido, ${userName || "Especialista"}`}
-                </PageTitle>
-                <p className="hidden sm:block text-subtitle-muted mt-1">
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <PageTitle icon={Users}>
+                    {activeChild
+                      ? `Panel del Paciente: ${activeChild.nom_nino} ${activeChild.ape_nino}`
+                      : `Bienvenido, ${userName || "Especialista"}`}
+                  </PageTitle>
+                  {activeChild && (
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      responsive={false}
+                      className="text-xs font-semibold hover:bg-blue-50 dark:hover:bg-slate-800"
+                      leftIcon={
+                        <LayoutDashboard className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      }
+                      onClick={() => {
+                        setSelectedChildId(null);
+                        setNomNino(null);
+                        saveSelectedChild(null, null);
+                      }}
+                      title="Regresar al Dashboard Global con métricas generales de todos los pacientes"
+                    >
+                      Ver Dashboard Global
+                    </Button>
+                  )}
+                </div>
+                <p className="hidden sm:block text-subtitle-muted mt-0.5">
                   {activeChild
                     ? "Seguimiento PEI, registro conductual y detonantes sensoriales."
-                    : "Resumen de pacientes, metas PEI y alertas."}
+                    : "Resumen de pacientes, metas PEI y alertas de todos tus pacientes."}
                 </p>
               </div>
 

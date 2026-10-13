@@ -2,6 +2,7 @@ import funautaLogo from "../../assets/Logo.png";
 import { useGlobalContext } from "../../context/GlobalState";
 import { exportManualPDFEspecialista } from "../../utils/exportManualPdfEspecialista";
 import { exportManualPDFRepresentante } from "../../utils/exportManualPdfRepresentante";
+import { saveSelectedChild } from "../../utils/authStorage";
 import {
   LayoutDashboard,
   Users,
@@ -35,7 +36,26 @@ export default function Sidebar() {
   const activeMenu = currentView;
 
   const specialistItems = [
-    { id: "dashboard", icon: LayoutDashboard, label: "Panel del Paciente" },
+    ...(selectedChildId
+      ? [
+          {
+            id: "global_dashboard",
+            icon: LayoutDashboard,
+            label: "Dashboard Global",
+          },
+          {
+            id: "dashboard",
+            icon: UserCircle,
+            label: "Panel del Paciente",
+          },
+        ]
+      : [
+          {
+            id: "dashboard",
+            icon: LayoutDashboard,
+            label: "Dashboard Global",
+          },
+        ]),
     { id: "patients", icon: Users, label: "Selección de Pacientes" },
     { id: "student", icon: UserCircle, label: "Ficha del Paciente" },
     { id: "historial", icon: TrendingUp, label: "Historial de Evolución" },
@@ -135,6 +155,14 @@ export default function Sidebar() {
                   if (isBlocked) {
                     showToast("👆 Selecciona un paciente para continuar");
                     navigate("patients");
+                    setIsSidebarOpen(false);
+                    return;
+                  }
+                  if (item.id === "global_dashboard") {
+                    setSelectedChildId(null);
+                    setNomNino(null);
+                    saveSelectedChild(null, null);
+                    navigate("dashboard");
                     setIsSidebarOpen(false);
                     return;
                   }
