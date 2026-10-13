@@ -26,6 +26,25 @@ function showGlobalToast(message) {
   }
 }
 
+let lastOnlineDispatch = 0;
+function dispatchOnlineEvent() {
+  if (typeof window !== "undefined") {
+    const now = Date.now();
+    if (now - lastOnlineDispatch > 2500) {
+      lastOnlineDispatch = now;
+      window.dispatchEvent(new CustomEvent("siat:online"));
+    }
+  }
+}
+
+function dispatchOfflineEvent(reason) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("siat:offline", { detail: { reason } }),
+    );
+  }
+}
+
 // Extrae el tiempo de espera en segundos del encabezado Retry-After si existe
 function parseRetryAfter(headers) {
   if (!headers) return null;
@@ -75,7 +94,11 @@ function sleep(ms) {
 }
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Si la petición tuvo éxito (2xx), confirmamos conectividad activa
+    dispatchOnlineEvent();
+    return response;
+  },
   async (error) => {
     const config = error.config || {};
     const isNetworkError = !error.response;
@@ -139,7 +162,14 @@ api.interceptors.response.use(
       showGlobalToast(`⚠️ ${error.userMessage}`);
     }
     if (!error.response && !error.code?.startsWith("ERR_CANCELED")) {
-      showGlobalToast(`🔌 ${error.userMessage}`);
+      const isDeviceOffline =
+        typeof navigator !== "undefined" && !navigator.onLine;
+      dispatchOfflineEvent(
+        isDeviceOffline ? "offline_network" : "offline_server",
+      );
+      if (!config._skipNetworkInterceptor) {
+        showGlobalToast(`🔌 ${error.userMessage}`);
+      }
     }
     return Promise.reject(error);
   },

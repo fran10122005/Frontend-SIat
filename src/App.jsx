@@ -25,6 +25,7 @@ import RegisterRepre from "./components/auth/RegisterRepre";
 import UserProfile from "./pages/UserProfile";
 import PwaInstallPrompt from "@/components/shared/PwaInstallPrompt";
 import PwaUpdatePrompt from "@/components/shared/PwaUpdatePrompt";
+import OfflineStatusPill from "./components/shared/OfflineStatusPill";
 import "./App.css";
 
 export default function App() {
@@ -55,7 +56,7 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
 
-    // Si el navegador no tiene conexión a Internet, cargar inmediatamente la app en modo local
+    // Si el navegador no tiene conexión física a Internet, entrar inmediatamente a modo local
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       setIsOnline(false);
       setSplashDone(true);
@@ -63,35 +64,53 @@ export default function App() {
     }
 
     async function checkHealth() {
+      // 1. Intento inicial con 8s de timeout (tolerancia a latencia y cold-start de Render)
       try {
-        await api.get("/health", { timeout: 3000 });
+        await api.get("/health", {
+          timeout: 8000,
+          _skipNetworkInterceptor: true,
+        });
         if (!cancelled) {
           setIsOnline(true);
-          setTimeout(() => setSplashDone(true), 600);
+          setTimeout(() => setSplashDone(true), 400);
+          return;
         }
-      } catch (err) {
-        if (!cancelled) {
-          // Si el backend no responde o estamos offline, continuar a la app en modo offline
-          setIsOnline(false);
-          setSplashDone(true);
+      } catch (firstErr) {
+        // 2. Si el dispositivo tiene internet pero el backend tardó, hacer 1 reintento tras 1.5s
+        if (typeof navigator !== "undefined" && navigator.onLine) {
+          try {
+            await new Promise((r) => setTimeout(r, 1500));
+            if (cancelled) return;
+            await api.get("/health", {
+              timeout: 8000,
+              _skipNetworkInterceptor: true,
+            });
+            if (!cancelled) {
+              setIsOnline(true);
+              setTimeout(() => setSplashDone(true), 400);
+              return;
+            }
+          } catch (retryErr) {
+            console.warn(
+              "Backend no respondió al arranque tras reintento, continuando en modo local/offline.",
+            );
+          }
         }
+      }
+
+      if (!cancelled) {
+        // Continuar a la app en modo local; el heartbeat en segundo plano reconectará automáticamente
+        setIsOnline(false);
+        setSplashDone(true);
       }
     }
 
     checkHealth();
 
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
     return () => {
       cancelled = true;
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [setIsOnline]);
 
   const handleLogout = () => {
     disconnectSocket();
@@ -237,30 +256,7 @@ export default function App() {
 
   return (
     <div className="app-shell relative">
-      {!isOnline && (
-        <div className="fixed top-0 left-0 right-0 bg-amber-500 text-white py-1.5 px-4 text-center text-sm font-semibold shadow-md z-[100] flex items-center justify-center gap-2 animate-in slide-in-from-top-full duration-300">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M3 3l18 18"
-            />
-          </svg>
-          Sin conexión: Las acciones de escritura están deshabilitadas
-        </div>
-      )}
+      <OfflineStatusPill />
       {renderPage()}
       <PwaInstallPrompt variant="banner" />
       <PwaUpdatePrompt />

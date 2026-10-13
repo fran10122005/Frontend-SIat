@@ -393,6 +393,101 @@ export const GlobalProvider = ({ children }) => {
   }, [routerNavigate]);
 
   const [isOnline, setIsOnline] = useState(true);
+  const [networkStatus, setNetworkStatus] = useState("online"); // 'online' | 'offline_network' | 'offline_server'
+  const [isReconnecting, setIsReconnecting] = useState(false);
+
+  const checkConnectivity = useCallback(
+    async (manual = false) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setIsOnline(false);
+        setNetworkStatus("offline_network");
+        if (manual) {
+          showToast("⚠️ Tu dispositivo no tiene conexión a Internet.");
+        }
+        return false;
+      }
+
+      if (manual) setIsReconnecting(true);
+
+      try {
+        await api.get("/health", {
+          timeout: 6000,
+          _skipNetworkInterceptor: true,
+        });
+        setIsOnline(true);
+        setNetworkStatus("online");
+        if (manual) {
+          showToast("🟢 Conexión con el servidor restablecida.");
+        }
+        return true;
+      } catch (err) {
+        const isDeviceOffline =
+          typeof navigator !== "undefined" && !navigator.onLine;
+        setIsOnline(false);
+        setNetworkStatus(
+          isDeviceOffline ? "offline_network" : "offline_server",
+        );
+        if (manual) {
+          showToast(
+            isDeviceOffline
+              ? "⚠️ Tu dispositivo no tiene conexión a Internet."
+              : "⏳ El servidor no responde o está iniciando. Reintentando...",
+          );
+        }
+        return false;
+      } finally {
+        if (manual) setIsReconnecting(false);
+      }
+    },
+    [showToast],
+  );
+
+  // Escuchar eventos globales de sincronización de red
+  useEffect(() => {
+    const handleSiatOnline = () => {
+      setIsOnline(true);
+      setNetworkStatus("online");
+    };
+
+    const handleSiatOffline = (e) => {
+      const reason = e?.detail?.reason || "offline_server";
+      setIsOnline(false);
+      setNetworkStatus(reason);
+    };
+
+    const handleNativeOnline = () => {
+      checkConnectivity(false);
+    };
+
+    const handleNativeOffline = () => {
+      setIsOnline(false);
+      setNetworkStatus("offline_network");
+    };
+
+    window.addEventListener("siat:online", handleSiatOnline);
+    window.addEventListener("siat:offline", handleSiatOffline);
+    window.addEventListener("online", handleNativeOnline);
+    window.addEventListener("offline", handleNativeOffline);
+
+    return () => {
+      window.removeEventListener("siat:online", handleSiatOnline);
+      window.removeEventListener("siat:offline", handleSiatOffline);
+      window.removeEventListener("online", handleNativeOnline);
+      window.removeEventListener("offline", handleNativeOffline);
+    };
+  }, [checkConnectivity]);
+
+  // Heartbeat de auto-recuperación: cuando está offline, sondea cada 12s para restablecer
+  useEffect(() => {
+    if (isOnline) return;
+
+    const interval = setInterval(() => {
+      checkConnectivity(false);
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [isOnline, checkConnectivity]);
+
   const [showEmergencyGuard, setShowEmergencyGuard] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [listaNinos, setListaNinos] = useState([]);
@@ -1360,6 +1455,10 @@ export const GlobalProvider = ({ children }) => {
         reports,
         isOnline,
         setIsOnline,
+        networkStatus,
+        setNetworkStatus,
+        isReconnecting,
+        checkConnectivity,
         showEmergencyGuard,
         setShowEmergencyGuard,
         pendingNavigation,
