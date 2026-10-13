@@ -32,17 +32,17 @@ export default function ConsentimientoModal({ onAccept, loading }) {
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl overflow-hidden flex flex-col max-h-[94dvh] sm:max-h-[92vh] border-t border-slate-200 dark:border-slate-700/80 sm:border animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
         {/* Header */}
-        <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-blue-600 text-white shrink-0">
-          <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/40" />
+        <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-700/60 dark:border-slate-800 shrink-0">
+          <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/30" />
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl shrink-0">
+            <div className="p-2 bg-blue-500/20 text-blue-300 rounded-xl shrink-0 border border-blue-400/20">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-lg font-bold truncate">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
                 Consentimiento Informado Legal
               </h2>
-              <p className="text-blue-100 text-sm mt-0.5 line-clamp-1">
+              <p className="text-slate-300 text-sm mt-0.5 line-clamp-1">
                 Requerido por la Ley de Infogobierno (Art. 79) y LOPNNA (Art.
                 65)
               </p>

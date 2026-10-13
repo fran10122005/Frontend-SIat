@@ -217,7 +217,7 @@ function NinoExpedientePanel({
       ) : ficha || nino ? (
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 text-xs shadow-xs">
-            <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <div className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
               Expediente Clínico y Seguimiento
             </div>
             {[
@@ -276,10 +276,10 @@ function NinoExpedientePanel({
                 key={i}
                 className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 gap-1 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors"
               >
-                <span className="text-slate-400 dark:text-slate-500 font-medium sm:w-1/3 shrink-0">
+                <span className="text-slate-600 dark:text-slate-300 font-medium sm:w-1/3 shrink-0">
                   {item.label}
                 </span>
-                <span className="text-slate-800 dark:text-slate-200 font-semibold sm:w-2/3 sm:text-right">
+                <span className="text-slate-900 dark:text-white font-semibold sm:w-2/3 sm:text-right">
                   {item.value}
                 </span>
               </div>
@@ -1261,7 +1261,7 @@ export default function RepresentantesTab({
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
                 previewTab === "rep"
                   ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-blue-400 shadow-sm font-bold"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <UserRound className="w-3.5 h-3.5" /> Ficha General
@@ -1273,7 +1273,7 @@ export default function RepresentantesTab({
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                 previewTab === "nino"
                   ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-blue-400 shadow-sm font-bold"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Baby className="w-3.5 h-3.5" />
@@ -1281,7 +1281,7 @@ export default function RepresentantesTab({
               {(previewRep.ninos?.length || (previewRep.tm_ninos ? 1 : 0)) > 1
                 ? "s"
                 : ""}
-              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold">
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-200 text-[10px] font-bold">
                 {previewRep.ninos?.length || (previewRep.tm_ninos ? 1 : 0)}
               </span>
             </button>
@@ -1312,17 +1312,17 @@ export default function RepresentantesTab({
                       </h3>
                       <StatusBadge active={previewRep.usu_estd} />
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      <span className="font-semibold text-brand-600 dark:text-blue-400 bg-brand-50 dark:bg-blue-900/30 px-2 py-0.5 rounded text-[11px] border border-brand-200/60 dark:border-blue-800/50">
+                    <div className="flex flex-wrap items-center gap-2 text-xs mt-1">
+                      <span className="font-semibold text-brand-700 dark:text-blue-300 bg-brand-50 dark:bg-blue-950/60 px-2 py-0.5 rounded text-[11px] border border-brand-200/60 dark:border-blue-800/60">
                         {previewRep.rep_rela || "Representante Legal"}
                       </span>
                       {previewRep.rep_cedu && (
-                        <span className="font-mono text-slate-600 dark:text-slate-300">
+                        <span className="font-mono text-slate-700 dark:text-slate-200 font-medium">
                           C.I. {previewRep.rep_cedu}
                         </span>
                       )}
-                      <span>·</span>
-                      <span className="font-mono text-slate-400 text-[11px]">
+                      <span className="text-slate-400">·</span>
+                      <span className="font-mono text-slate-500 dark:text-slate-300 text-[11px]">
                         ID: {previewRep.rep_codi || previewRep.usu_codi}
                       </span>
                     </div>
@@ -1330,9 +1330,9 @@ export default function RepresentantesTab({
                 </div>
 
                 {/* Accesos Directos de Contacto (en línea, sin cuadros pesados) */}
-                <div className="flex sm:flex-col items-start sm:items-end gap-1 text-xs text-slate-500 dark:text-slate-400 w-full sm:w-auto">
+                <div className="flex sm:flex-col items-start sm:items-end gap-1 text-xs text-slate-600 dark:text-slate-300 w-full sm:w-auto">
                   {previewRep.usu_crro && (
-                    <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium truncate">
+                    <span className="inline-flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-medium truncate">
                       <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="truncate">{previewRep.usu_crro}</span>
                     </span>
@@ -1340,7 +1340,7 @@ export default function RepresentantesTab({
                   {previewRep.rep_telf && (
                     <a
                       href={`tel:${previewRep.rep_telf}`}
-                      className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                      className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                     >
                       <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       {previewRep.rep_telf}
@@ -1350,56 +1350,56 @@ export default function RepresentantesTab({
               </div>
 
               {/* Ficha Estructurada de Datos (Tabla Clásica Ejecutiva en lugar de cuadros flotantes) */}
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden shadow-xs">
-                <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 overflow-hidden shadow-xs">
+                <div className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
                   Información Institucional y Acceso
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800 text-xs">
                   <div className="p-3.5 space-y-2.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400 dark:text-slate-500 font-medium">
+                      <span className="text-slate-600 dark:text-slate-300 font-medium">
                         Correo Electrónico (SIAT)
                       </span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 select-all truncate ml-2">
+                      <span className="font-semibold text-slate-900 dark:text-white select-all truncate ml-2">
                         {previewRep.usu_crro || "-"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400 dark:text-slate-500 font-medium">
+                      <span className="text-slate-600 dark:text-slate-300 font-medium">
                         Teléfono de Contacto
                       </span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      <span className="font-semibold text-slate-900 dark:text-white">
                         {previewRep.rep_telf || "-"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400 dark:text-slate-500 font-medium">
+                      <span className="text-slate-600 dark:text-slate-300 font-medium">
                         Cédula de Identidad
                       </span>
-                      <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                      <span className="font-mono font-semibold text-slate-900 dark:text-white">
                         {previewRep.rep_cedu || "-"}
                       </span>
                     </div>
                   </div>
                   <div className="p-3.5 space-y-2.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400 dark:text-slate-500 font-medium">
+                      <span className="text-slate-600 dark:text-slate-300 font-medium">
                         Parentesco Familiar
                       </span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      <span className="font-semibold text-slate-900 dark:text-white">
                         {previewRep.rep_rela || "Representante Legal"}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400 dark:text-slate-500 font-medium">
+                      <span className="text-slate-600 dark:text-slate-300 font-medium">
                         Identificador de Usuario
                       </span>
-                      <span className="font-mono text-slate-600 dark:text-slate-400">
+                      <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
                         {previewRep.rep_codi || previewRep.usu_codi}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-slate-400 dark:text-slate-500 font-medium">
+                      <span className="text-slate-600 dark:text-slate-300 font-medium">
                         Estado en Plataforma
                       </span>
                       <StatusBadge active={previewRep.usu_estd} />
@@ -1419,7 +1419,7 @@ export default function RepresentantesTab({
                   return (
                     <>
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                           <Baby className="w-4 h-4 text-brand-500" />
                           Paciente(s) Bajo Su Representación (
                           {ninosLista.length})
@@ -1433,9 +1433,9 @@ export default function RepresentantesTab({
                         </button>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 shadow-xs">
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 shadow-xs">
                         {ninosLista.length === 0 ? (
-                          <div className="p-4 text-center text-xs text-slate-400">
+                          <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
                             Sin pacientes vinculados registrados.
                           </div>
                         ) : (
@@ -1475,7 +1475,7 @@ export default function RepresentantesTab({
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-2">
+                                  <div className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 flex flex-wrap items-center gap-2">
                                     <span>
                                       {ninoItem.nin_gner === "M"
                                         ? "Masculino"
@@ -1486,7 +1486,7 @@ export default function RepresentantesTab({
                                     {ninoItem.nin_diag && (
                                       <>
                                         <span>·</span>
-                                        <span className="text-slate-600 dark:text-slate-300 font-medium truncate max-w-xs sm:max-w-md">
+                                        <span className="text-slate-700 dark:text-slate-200 font-medium truncate max-w-xs sm:max-w-md">
                                           {ninoItem.nin_diag}
                                         </span>
                                       </>
@@ -1498,7 +1498,7 @@ export default function RepresentantesTab({
                               <button
                                 type="button"
                                 onClick={() => setPreviewTab("nino")}
-                                className="self-end sm:self-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors shrink-0"
+                                className="self-end sm:self-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-800/60 transition-colors shrink-0"
                               >
                                 Ver Expediente →
                               </button>

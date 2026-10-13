@@ -718,15 +718,15 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl flex flex-col border-t border-slate-200 dark:border-slate-700/80 sm:border max-h-[95dvh] sm:max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
         {/* ── Header ── */}
-        <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-blue-600 text-white shrink-0">
-          <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/40" />
+        <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-700/60 dark:border-slate-800 shrink-0">
+          <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/30" />
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-xl">
+              <div className="p-2 bg-blue-500/20 text-blue-300 rounded-xl shrink-0 border border-blue-400/20">
                 <Baby className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold">
+                <h3 className="text-lg font-bold text-white tracking-tight">
                   Registro de Nuevo Paciente
                 </h3>
               </div>
@@ -734,7 +734,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
             <button
               onClick={onClose}
               aria-label="Cerrar"
-              className="text-white/70 hover:text-white p-2.5 -m-1 rounded-lg hover:bg-white/10 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="text-slate-300 hover:text-white p-2.5 -m-1 rounded-lg hover:bg-white/10 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               <X className="w-5 h-5" />
             </button>

@@ -484,21 +484,23 @@ export default function HistorialClinicoTab({ incidentesData = [], loading }) {
       {selectedIncident && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-5 bg-blue-600 text-white flex items-center justify-between shrink-0">
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-700/60 dark:border-slate-800 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-xl">
+                <div className="p-2 bg-blue-500/20 text-blue-300 rounded-xl shrink-0 border border-blue-400/20">
                   <Activity className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Ficha de Evento Clínico</h3>
-                  <p className="text-blue-100 text-sm mt-0.5">
+                  <h3 className="text-lg font-bold text-white tracking-tight">
+                    Ficha de Evento Clínico
+                  </h3>
+                  <p className="text-slate-300 text-sm mt-0.5">
                     {selectedIncident.id} — {selectedIncident.nin_nomb}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedIncident(null)}
-                className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                className="text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
