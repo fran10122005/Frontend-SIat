@@ -1,9 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   getErrorMessage,
   extractServerMessage,
   friendlyMessage,
   NETWORK_FALLBACK,
+  toastError,
 } from "./errorHandler";
 
 const err = (overrides = {}) => ({
@@ -107,5 +108,27 @@ describe("getErrorMessage", () => {
     expect(getErrorMessage(e, "Contexto específico")).toMatch(
       /solicitud inválida/i,
     );
+  });
+});
+
+describe("toastError — deduplicación de toasts", () => {
+  it("muestra el toast y marca _toastShown cuando no ha sido mostrado", () => {
+    const mockShowToast = vi.fn();
+    const errorObj = { message: "Network Error" };
+
+    toastError(errorObj, mockShowToast);
+
+    expect(mockShowToast).toHaveBeenCalledTimes(1);
+    expect(mockShowToast).toHaveBeenCalledWith(`❌ ${NETWORK_FALLBACK}`);
+    expect(errorObj._toastShown).toBe(true);
+  });
+
+  it("suprime el toast si _toastShown ya es true (evita duplicación con interceptor global)", () => {
+    const mockShowToast = vi.fn();
+    const errorObj = { message: "Network Error", _toastShown: true };
+
+    toastError(errorObj, mockShowToast);
+
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 });

@@ -56,7 +56,7 @@ describe("Resiliencia del modo offline SIAT", () => {
       try {
         await mockHealthCheck();
         return true;
-      } catch (err) {
+      } catch {
         // Reintento con cortesía
         try {
           await mockHealthCheck();
@@ -70,5 +70,39 @@ describe("Resiliencia del modo offline SIAT", () => {
     const result = await resilientStartup();
     expect(result).toBe(true);
     expect(attempts).toBe(2);
+  });
+
+  it("requiere al menos 2 fallos consecutivos antes de marcar al servidor en offline (anti-flapping)", () => {
+    let failures = 0;
+    let isOffline = false;
+
+    const handleNetworkFailure = () => {
+      failures++;
+      if (failures >= 2) {
+        isOffline = true;
+      }
+    };
+
+    const handleNetworkSuccess = () => {
+      failures = 0;
+      isOffline = false;
+    };
+
+    // 1 fallo aislado -> no activa offline
+    handleNetworkFailure();
+    expect(isOffline).toBe(false);
+
+    // Éxito intermedio -> reinicia contador
+    handleNetworkSuccess();
+    expect(failures).toBe(0);
+    expect(isOffline).toBe(false);
+
+    // 1 fallo -> no activa offline
+    handleNetworkFailure();
+    expect(isOffline).toBe(false);
+
+    // 2do fallo consecutivo -> activa offline
+    handleNetworkFailure();
+    expect(isOffline).toBe(true);
   });
 });

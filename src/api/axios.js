@@ -18,17 +18,36 @@ const api = axios.create({
   timeout: 45000,
 });
 
+const toastHistory = new Map();
 function showGlobalToast(message) {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(
-      new CustomEvent("global-toast", { detail: { message } }),
-    );
+  if (typeof window === "undefined" || !message) return;
+  const now = Date.now();
+  const lastTime = toastHistory.get(message) || 0;
+  if (now - lastTime < 5000) return; // Deduplicar mismo mensaje dentro de 5s
+
+  if (message.includes("No se pudo conectar") || message.includes("🔌")) {
+    const lastNet = toastHistory.get("__network_toast__") || 0;
+    if (now - lastNet < 6000) return; // Máximo 1 toast de red cada 6s
+    toastHistory.set("__network_toast__", now);
   }
+
+  toastHistory.set(message, now);
+  window.dispatchEvent(
+    new CustomEvent("global-toast", { detail: { message } }),
+  );
 }
 
+let consecutiveNetworkFailures = 0;
 let lastOnlineDispatch = 0;
+let lastOfflineDispatch = 0;
+
+export function resetNetworkFailureCount() {
+  consecutiveNetworkFailures = 0;
+}
+
 function dispatchOnlineEvent() {
   if (typeof window !== "undefined") {
+    consecutiveNetworkFailures = 0;
     const now = Date.now();
     if (now - lastOnlineDispatch > 2500) {
       lastOnlineDispatch = now;
@@ -39,9 +58,13 @@ function dispatchOnlineEvent() {
 
 function dispatchOfflineEvent(reason) {
   if (typeof window !== "undefined") {
-    window.dispatchEvent(
-      new CustomEvent("siat:offline", { detail: { reason } }),
-    );
+    const now = Date.now();
+    if (now - lastOfflineDispatch > 4000) {
+      lastOfflineDispatch = now;
+      window.dispatchEvent(
+        new CustomEvent("siat:offline", { detail: { reason } }),
+      );
+    }
   }
 }
 
@@ -117,12 +140,14 @@ api.interceptors.response.use(
 
       error.userMessage = limitMessage;
       showGlobalToast(limitMessage);
+      error._toastShown = true;
       // No reintentar automáticamente en caso de 429 para no saturar al servidor
       return Promise.reject(error);
     }
 
     // Reintento con backoff para errores de red y 5xx transitorios (ej. Render "dormido")
     if (
+      !config._skipRetry &&
       (isNetworkError || retriableStatus(status)) &&
       (config._retry || 0) < MAX_RETRIES
     ) {
@@ -142,6 +167,7 @@ api.interceptors.response.use(
       isRedirecting = true;
       clearAuthSession();
       showGlobalToast("⏱️ Sesión expirada. Redirigiendo al inicio...");
+      error._toastShown = true;
       setTimeout(() => {
         if (typeof window !== "undefined") {
           window.location.href = "/auth/login";
@@ -156,19 +182,35 @@ api.interceptors.response.use(
       showGlobalToast(
         "⛔ Acceso denegado. No tienes permisos para esta acción.",
       );
+      error._toastShown = true;
       console.warn("Acceso denegado por RBAC");
     }
     if (status >= 500) {
       showGlobalToast(`⚠️ ${error.userMessage}`);
+      error._toastShown = true;
     }
     if (!error.response && !error.code?.startsWith("ERR_CANCELED")) {
       const isDeviceOffline =
         typeof navigator !== "undefined" && !navigator.onLine;
-      dispatchOfflineEvent(
-        isDeviceOffline ? "offline_network" : "offline_server",
-      );
-      if (!config._skipNetworkInterceptor) {
-        showGlobalToast(`🔌 ${error.userMessage}`);
+
+      if (isDeviceOffline) {
+        consecutiveNetworkFailures = 0;
+        dispatchOfflineEvent("offline_network");
+        if (!config._skipNetworkInterceptor) {
+          showGlobalToast(`🔌 ${error.userMessage}`);
+          error._toastShown = true;
+        }
+      } else if (!config._skipOfflineDispatch) {
+        consecutiveNetworkFailures++;
+        // Anti-flapping: Requiere al menos 2 fallos consecutivos antes de
+        // activar el modo offline del servidor, evitando falsos positivos por latencia o micro-cortes.
+        if (consecutiveNetworkFailures >= 2) {
+          dispatchOfflineEvent("offline_server");
+          if (!config._skipNetworkInterceptor) {
+            showGlobalToast(`🔌 ${error.userMessage}`);
+            error._toastShown = true;
+          }
+        }
       }
     }
     return Promise.reject(error);

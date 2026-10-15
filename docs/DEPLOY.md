@@ -159,6 +159,42 @@ Iniciar con: `caddy run --config Caddyfile`.
 
 ---
 
+### E. Integración del Reloj y Telemetría
+
+1. **Configurar Bluetooth en el navegador**
+   - Asegurarse de que la aplicación solicite permiso usando `navigator.bluetooth.requestDevice`.
+   - Definir los UUID del servicio y característica del reloj en `src/constants/bleConstants.js`.
+
+2. **Implementar el service layer**
+   - Crear `src/services/bluetoothService.js` con funciones `connectWatch`, `disconnectWatch`, `subscribeTelemetry`.
+   - Añadir un hook `useBluetooth` para exponer la lógica a los componentes.
+
+3. **Agregar contexto global**
+   - Extender `GlobalState.jsx` o crear `WatchContext.jsx` que mantenga `isWatchConnected` y una cola de `telemetry`.
+   - Exponer funciones de conexión/desconexión y actualizar el estado al recibir datos.
+
+4. **Diseñar UI de estado**
+   - Implementar `WatchStatusPill.jsx` que muestre “Conectado/Desconectado” y la última muestra.
+   - Añadir una página `TelemetryDashboard.jsx` con gráficos en tiempo real (Recharts/Chart.js).
+
+5. **Persistencia y sincronización**
+   - Guardar lecturas en IndexedDB (`src/services/indexedDb.js`).
+   - Crear `src/services/telemetrySync.js` que envíe los datos al endpoint `/api/telemetry` y marque los registros como enviados.
+
+6. **Manejo de errores**
+   - Mostrar toast de error solo una vez mediante deduplicación.
+   - Reintentar conexión Bluetooth con back‑off exponencial.
+   - En caso de fallo del backend, reintentar envío con back‑off.
+
+7. **Pruebas**
+   - Unitarias con Vitest y mock de `navigator.bluetooth`.
+   - Integración con MSW para simular el backend.
+   - E2E con Cypress para validar UI y flujo completo.
+
+8. **Despliegue**
+   - Ejecutar pruebas `npm test` antes de `npm run build`.
+   - Verificar que el PWA solicita permiso Bluetooth en dispositivos compatibles.
+
 ### D. Estrategia de Rollback ante Fallos en Migraciones de Prisma
 
 Si un despliegue de backend falla debido a una migración SQL fallida en Neon Serverless Postgres:

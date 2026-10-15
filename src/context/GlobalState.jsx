@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios";
@@ -162,17 +163,56 @@ export const GlobalProvider = ({ children }) => {
   );
 
   const [toastMessage, setToastMessage] = useState(null);
+  const toastTimeoutRef = useRef(null);
+  const lastToastRef = useRef({ message: "", time: 0 });
+  const lastNetworkToastRef = useRef(0);
 
   const showToast = useCallback((message) => {
+    if (!message) return;
+    const now = Date.now();
+
+    // 1. Evitar duplicar exactamente el mismo mensaje en un lapso de 3s
+    if (
+      lastToastRef.current.message === message &&
+      now - lastToastRef.current.time < 3000
+    ) {
+      return;
+    }
+
+    // 2. Normalizar mensajes de red para evitar la avalancha de toasts simultáneos
+    const isNetworkNotice =
+      message.includes("No se pudo conectar") ||
+      message.includes("El servidor no responde") ||
+      message.includes("conexión a internet") ||
+      message.includes("🔌");
+
+    if (isNetworkNotice) {
+      if (now - lastNetworkToastRef.current < 4500) {
+        return; // Suprimir toasts redundantes de red en ráfaga
+      }
+      lastNetworkToastRef.current = now;
+    }
+
+    lastToastRef.current = { message, time: now };
+
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
+      toastTimeoutRef.current = null;
+    }, 3500);
   }, []);
 
   useEffect(() => {
     const handler = (e) =>
       showToast(e?.detail?.message || e?.detail || "Notificación");
     window.addEventListener("global-toast", handler);
-    return () => window.removeEventListener("global-toast", handler);
+    return () => {
+      window.removeEventListener("global-toast", handler);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
   }, [showToast]);
 
   const toggleTheme = (mode) => {
@@ -409,6 +449,7 @@ export const GlobalProvider = ({ children }) => {
   const [isOnline, setIsOnline] = useState(true);
   const [networkStatus, setNetworkStatus] = useState("online"); // 'online' | 'offline_network' | 'offline_server'
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const isReconnectingRef = useRef(false);
 
   const checkConnectivity = useCallback(
     async (manual = false) => {
@@ -421,12 +462,16 @@ export const GlobalProvider = ({ children }) => {
         return false;
       }
 
+      if (isReconnectingRef.current) return false;
+      isReconnectingRef.current = true;
       if (manual) setIsReconnecting(true);
 
       try {
         await api.get("/health", {
-          timeout: 6000,
+          timeout: 15000,
           _skipNetworkInterceptor: true,
+          _skipOfflineDispatch: true,
+          _skipRetry: true,
         });
         setIsOnline(true);
         setNetworkStatus("online");
@@ -450,6 +495,7 @@ export const GlobalProvider = ({ children }) => {
         }
         return false;
       } finally {
+        isReconnectingRef.current = false;
         if (manual) setIsReconnecting(false);
       }
     },
@@ -491,13 +537,13 @@ export const GlobalProvider = ({ children }) => {
     };
   }, [checkConnectivity]);
 
-  // Heartbeat de auto-recuperación: cuando está offline, sondea cada 12s para restablecer
+  // Heartbeat de auto-recuperación: cuando está offline, sondea cada 20s para restablecer
   useEffect(() => {
     if (isOnline) return;
 
     const interval = setInterval(() => {
       checkConnectivity(false);
-    }, 12000);
+    }, 20000);
 
     return () => clearInterval(interval);
   }, [isOnline, checkConnectivity]);

@@ -64,11 +64,13 @@ export default function App() {
     }
 
     async function checkHealth() {
-      // 1. Intento inicial con 8s de timeout (tolerancia a latencia y cold-start de Render)
+      // 1. Intento inicial con 12s de timeout (tolerancia a latencia y cold-start de Render)
       try {
         await api.get("/health", {
-          timeout: 8000,
+          timeout: 12000,
           _skipNetworkInterceptor: true,
+          _skipOfflineDispatch: true,
+          _skipRetry: true,
         });
         if (!cancelled) {
           setIsOnline(true);
@@ -82,8 +84,10 @@ export default function App() {
             await new Promise((r) => setTimeout(r, 1500));
             if (cancelled) return;
             await api.get("/health", {
-              timeout: 8000,
+              timeout: 12000,
               _skipNetworkInterceptor: true,
+              _skipOfflineDispatch: true,
+              _skipRetry: true,
             });
             if (!cancelled) {
               setIsOnline(true);

@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Info,
   X,
-  QrCode,
   Radio,
   Zap,
 } from "lucide-react";
@@ -35,12 +34,33 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     setStreamToCloud,
     connectBluetoothDevice,
     disconnectSmartwatch,
+    forceSensorActivation,
+    triggerTestPulse,
   } = useSmartwatch();
 
   const { registerConnectedDevice } = useGlobalContext();
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [guideTab, setGuideTab] = useState("pc");
   const [activeFaq, setActiveFaq] = useState(null);
+  const [isActivatingSensor, setIsActivatingSensor] = useState(false);
+  const [activationFeedback, setActivationFeedback] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
+
+  // Escuchar estado de sincronización offline con IndexedDB
+  useEffect(() => {
+    const handleSyncStatus = (e) => {
+      if (e.detail) {
+        setSyncStatus(e.detail);
+      }
+    };
+    window.addEventListener("siat:telemetry-sync-status", handleSyncStatus);
+    return () => {
+      window.removeEventListener(
+        "siat:telemetry-sync-status",
+        handleSyncStatus,
+      );
+    };
+  }, []);
 
   // Auto-registrar el smartwatch vinculado en la lista de dispositivos del niño
   useEffect(() => {
@@ -51,6 +71,22 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
       });
     }
   }, [isConnected, deviceName, batteryLevel, registerConnectedDevice]);
+
+  const handleForceActivation = async () => {
+    setIsActivatingSensor(true);
+    setActivationFeedback("Enviando ráfaga de activación al sensor...");
+    try {
+      await forceSensorActivation();
+      setActivationFeedback("¡Ráfaga de activación enviada al reloj!");
+    } catch {
+      setActivationFeedback("Comandos enviados a los canales BLE.");
+    } finally {
+      setTimeout(() => {
+        setIsActivatingSensor(false);
+        setTimeout(() => setActivationFeedback(null), 3500);
+      }, 700);
+    }
+  };
 
   const handleConnect = async () => {
     try {
@@ -104,7 +140,13 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
                   {isConnected
                     ? "Conectado y Transmitiendo"
                     : isConnecting
-                      ? "Escaneando..."
+                      ? connectionStage === "connecting_gatt"
+                        ? "Conectando GATT..."
+                        : connectionStage === "discovering_services"
+                          ? "Buscando canales BLE..."
+                          : connectionStage === "activating_sensor"
+                            ? "Activando LED sensor..."
+                            : "Escaneando..."
                       : "Sin Vincular"}
                 </span>
               </div>
@@ -219,15 +261,65 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
               </label>
             </div>
 
-            {!lastBpm && (
-              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span>
-                  <strong>Tip de activación:</strong> Coloca el reloj firmemente
-                  en la muñeca. Si la luz verde trasera aún no enciende, abre la
-                  opción de <em>"Ritmo Cardíaco"</em> o <em>"Ejercicio"</em> en
-                  la pantalla del reloj.
+            {!lastBpm ? (
+              <div className="space-y-2.5">
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+                  <Info className="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <div className="flex-1 space-y-1">
+                    <p>
+                      <strong>Sensor en espera:</strong> Para que el reloj
+                      comience a transmitir datos, colócalo ajustado en la
+                      muñeca o abre la app de <em>"Ritmo Cardíaco"</em> en la
+                      pantalla del reloj.
+                    </p>
+                    {activationFeedback && (
+                      <p className="text-emerald-700 dark:text-emerald-300 font-bold text-[11px] animate-in fade-in flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                        {activationFeedback}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                  <button
+                    type="button"
+                    onClick={handleForceActivation}
+                    disabled={isActivatingSensor}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                    title="Enviar señales Bluetooth para activar los LEDs verdes del reloj"
+                  >
+                    <Zap
+                      className={`w-3.5 h-3.5 ${isActivatingSensor ? "animate-spin" : ""}`}
+                    />
+                    {isActivatingSensor
+                      ? "Enviando comandos..."
+                      : "⚡ Forzar Activación de Sensor"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={triggerTestPulse}
+                    className="px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center gap-1.5 border border-blue-200 dark:border-blue-800 transition-all active:scale-95"
+                    title="Simular un pulso para verificar gráficos, IndexedDB y sincronización con el servidor"
+                  >
+                    <Heart className="w-3.5 h-3.5 text-rose-500" />
+                    🧪 Simular Pulso de Prueba
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-2 flex-wrap text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Telemetría transmitiendo en vivo (Persistido en IndexedDB)
                 </span>
+                {syncStatus && (
+                  <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-medium">
+                    Sincronizados: {syncStatus.syncedCount} | Pendientes:{" "}
+                    {syncStatus.remainingUnsynced}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -527,6 +619,72 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
                         / Wearfit / Da Fit (T500, Y68, D20, etc.), bandas de
                         frecuencia cardíaca (Polar H10, Garmin, CooSpo) y
                         smartbands estándar GATT.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* FAQ 4 */}
+                  <div className="p-3.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveFaq(activeFaq === 4 ? null : 4)}
+                      className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-800 dark:text-white"
+                    >
+                      <span>
+                        ❓ ¿Por qué al reloj no le llega ninguna notificación o
+                        solicitud de permiso?
+                      </span>
+                      <span className="text-slate-400 text-sm font-black">
+                        {activeFaq === 4 ? "−" : "+"}
+                      </span>
+                    </button>
+                    {activeFaq === 4 && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                        En WebBluetooth (Chrome/Edge), la autorización de
+                        vinculación la otorgas tú en el cuadro emergente del
+                        navegador. Los relojes no reciben notificaciones de
+                        pantalla para vincularse; en su lugar, para que el
+                        sensor óptico encienda la luz verde trasera debes:
+                        <br />
+                        <br />
+                        <strong>1. Desconectar el reloj del celular:</strong> Si
+                        el reloj está enlazado a su app en el celular (Fitpro,
+                        Da Fit, Wearfit), el canal Bluetooth está ocupado y
+                        rechazará la telemetría del PC. Apaga el Bluetooth del
+                        teléfono unos momentos.
+                        <br />
+                        <br />
+                        <strong>2. Abrir Ritmo Cardíaco en el reloj:</strong> En
+                        la pantalla del smartwatch, toca la opción de medición o
+                        haz clic en el botón{" "}
+                        <em>"⚡ Forzar Activación de Sensor"</em> en SIAT.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* FAQ 5 */}
+                  <div className="p-3.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveFaq(activeFaq === 5 ? null : 5)}
+                      className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-800 dark:text-white"
+                    >
+                      <span>
+                        💾 ¿Qué ocurre si se corta la conexión o el servidor
+                        está ocupado?
+                      </span>
+                      <span className="text-slate-400 text-sm font-black">
+                        {activeFaq === 5 ? "−" : "+"}
+                      </span>
+                    </button>
+                    {activeFaq === 5 && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                        SIAT cuenta con persistencia{" "}
+                        <strong>IndexedDB local</strong>. Cada latido registrado
+                        se almacena localmente en tu navegador de forma segura.
+                        Cuando la conexión se restablece, el sincronizador
+                        automático envía los registros pendientes al backend sin
+                        perder información clínica de la sesión.
                       </p>
                     )}
                   </div>

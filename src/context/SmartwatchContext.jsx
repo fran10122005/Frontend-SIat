@@ -12,6 +12,11 @@ import {
   getSocketConnectionState,
 } from "../hooks/socket";
 import { getSavedSelectedChild } from "../utils/authStorage";
+import { saveTelemetry } from "../services/indexedDb";
+import {
+  startTelemetrySync,
+  stopTelemetrySync,
+} from "../services/telemetrySync";
 
 const SmartwatchContext = createContext();
 
@@ -56,11 +61,16 @@ const KNOWN_SERVICES = [
 
 // Comandos de activación para encender el sensor óptico PPG (LED verde) en múltiples chipsets
 const ACTIVATION_COMMANDS = [
-  new Uint8Array([0xcd, 0x00, 0x01, 0x01]), // Fitpro HR start
-  new Uint8Array([0xab, 0x00, 0x04, 0xff, 0x31, 0x09, 0x01]), // Wearfit HR start
-  new Uint8Array([0xd0, 0x01, 0x01]), // IDO / VeryFit (IDW13) continuous HR
-  new Uint8Array([0x05, 0x01, 0x01]), // IDO HR trigger
-  new Uint8Array([0x01, 0x00, 0x01]), // Generic UART start
+  new Uint8Array([0xcd, 0x00, 0x02, 0x04, 0x01]), // Fitpro / HryFine Real-Time HR trigger
+  new Uint8Array([0xcd, 0x00, 0x01, 0x01]), // Fitpro HR sensor start
+  new Uint8Array([0xab, 0x00, 0x04, 0xff, 0x31, 0x09, 0x01]), // Wearfit / Wearfit Pro HR start
+  new Uint8Array([0xab, 0x00, 0x04, 0xff, 0x32, 0x80, 0x01]), // Wearfit continuous mode
+  new Uint8Array([0xd0, 0x01, 0x01]), // IDO / VeryFit (IDW13, ID205) continuous HR
+  new Uint8Array([0x05, 0x01, 0x01]), // IDO HR single trigger
+  new Uint8Array([0x08, 0x01, 0x00, 0x01]), // IDO continuous monitor
+  new Uint8Array([0x04, 0x01, 0x01]), // Da Fit / MoYoung start
+  new Uint8Array([0x01, 0x00, 0x01]), // Generic Nordic UART start
+  new Uint8Array([0x01]), // SIG Control Point reset / start
 ];
 
 export function SmartwatchProvider({ children }) {
@@ -103,7 +113,9 @@ export function SmartwatchProvider({ children }) {
 
   const deviceRef = useRef(null);
   const notifyCharRef = useRef(null);
+  const notifyCharsRef = useRef([]);
   const writeCharRef = useRef(null);
+  const writeCharsRef = useRef([]);
   const pingTimerRef = useRef(null);
   const lastProcessedTimeRef = useRef(0);
   const activeSessionIdRef = useRef(null);
@@ -118,6 +130,14 @@ export function SmartwatchProvider({ children }) {
     if (typeof window !== "undefined" && "bluetooth" in navigator) {
       setIsSupported(true);
     }
+  }, []);
+
+  // Iniciar servicio de sincronización en segundo plano hacia el backend SIAT
+  useEffect(() => {
+    startTelemetrySync();
+    return () => {
+      stopTelemetrySync();
+    };
   }, []);
 
   // Persistir estado de conexión en localStorage
@@ -181,6 +201,19 @@ export function SmartwatchProvider({ children }) {
         estres: stress,
       });
 
+      // Persistir inmediatamente en IndexedDB local (100% offline-ready)
+      saveTelemetry({
+        bpm,
+        stress,
+        mov,
+        time: timeStr,
+        deviceName: data.deviceName || deviceName || "Smartwatch BLE",
+        nin_codi: data.nin_codi || getSavedSelectedChild()?.id || null,
+        ses_codi: data.ses_codi || activeSessionIdRef.current || null,
+      }).catch((dbErr) => {
+        console.warn("Fallo guardando telemetría en IndexedDB:", dbErr);
+      });
+
       // Transmisión al backend por WebSockets si está habilitado
       if (source === "ble" && streamToCloud) {
         try {
@@ -220,12 +253,15 @@ export function SmartwatchProvider({ children }) {
     setLiveStress(null);
     setLiveMov(null);
     setSensorStatus("idle");
+    setConnectionStage(null);
     deviceRef.current = null;
     notifyCharRef.current = null;
+    notifyCharsRef.current = [];
     writeCharRef.current = null;
+    writeCharsRef.current = [];
   }, []);
 
-  // Parser Universal para paquetes de bytes BLE (GATT estándar, IDW13, Fitpro, Wearfit Pro)
+  // Parser Universal para paquetes de bytes BLE (GATT estándar, IDW13, Fitpro, Wearfit Pro, Da Fit)
   const handleBleRawData = useCallback(
     (event) => {
       const dataView = event.target.value;
@@ -242,17 +278,25 @@ export function SmartwatchProvider({ children }) {
         } else if (dataView.byteLength >= 2) {
           parsedBpm = dataView.getUint8(1);
         }
-      } catch (err) {
+      } catch {
         // Ignorar si no es estructura estándar
       }
 
       // 2. Caso Propietario IDO / VeryFit / Fitpro / Wearfit / Da Fit
       if (!parsedBpm || parsedBpm < 35 || parsedBpm > 240) {
         const bytes = new Uint8Array(dataView.buffer);
-        // Buscar un byte en rango fisiológico válido (40 - 220 BPM)
+        // Buscar un byte en rango fisiológico válido (40 - 220 BPM), omitiendo bytes de comando conocidos
         for (let i = 0; i < bytes.length; i++) {
           const b = bytes[i];
-          if (b >= 40 && b <= 215) {
+          if (
+            b >= 40 &&
+            b <= 215 &&
+            b !== 0xcd &&
+            b !== 0xab &&
+            b !== 0xd0 &&
+            b !== 0xd1 &&
+            b !== 0xff
+          ) {
             parsedBpm = b;
             break;
           }
@@ -278,22 +322,52 @@ export function SmartwatchProvider({ children }) {
     [deviceName, processTelemetryData],
   );
 
-  // Enviar comando de activación para encender el LED verde del sensor óptico
-  const sendActivationCommand = async (writeChar) => {
-    if (!writeChar) return;
-    for (const cmd of ACTIVATION_COMMANDS) {
-      try {
-        if (writeChar.properties.writeWithoutResponse) {
-          await writeChar.writeValueWithoutResponse(cmd);
-        } else if (writeChar.properties.write) {
-          await writeChar.writeValueWithResponse(cmd);
+  // Enviar ráfaga de activación a todas las características de escritura encontradas
+  const sendAllActivationCommands = async (chars) => {
+    if (!chars || chars.length === 0) return;
+    for (const char of chars) {
+      for (const cmd of ACTIVATION_COMMANDS) {
+        try {
+          if (char.properties.writeWithoutResponse) {
+            await char.writeValueWithoutResponse(cmd);
+          } else if (char.properties.write) {
+            await char.writeValueWithResponse(cmd);
+          }
+          await new Promise((r) => setTimeout(r, 20));
+        } catch {
+          // Ignorar incompatibilidades de comandos con characteristics específicos
         }
-        break;
-      } catch (err) {
-        // Intentar siguiente comando de activación
       }
     }
   };
+
+  // Forzar reactivación manual del sensor óptico desde la UI
+  const forceSensorActivation = useCallback(async () => {
+    if (
+      !deviceRef.current?.gatt?.connected ||
+      !writeCharsRef.current ||
+      writeCharsRef.current.length === 0
+    ) {
+      return false;
+    }
+    setConnectionStage("activating_sensor");
+    await sendAllActivationCommands(writeCharsRef.current);
+    setConnectionStage("ready");
+    return true;
+  }, []);
+
+  // Simular pulso de prueba clínico para verificar la sincronización y la UI
+  const triggerTestPulse = useCallback(() => {
+    const testBpm = Math.floor(Math.random() * (95 - 72 + 1)) + 72;
+    processTelemetryData(
+      {
+        bpm: testBpm,
+        mov: 1.0,
+        deviceName: deviceName || "Smartwatch BLE (Test)",
+      },
+      "ble",
+    );
+  }, [deviceName, processTelemetryData]);
 
   // Conectar dispositivo Smartwatch por Bluetooth LE (WebBluetooth API Real)
   const connectBluetoothDevice = useCallback(async () => {
@@ -340,62 +414,98 @@ export function SmartwatchProvider({ children }) {
         setBatteryLevel(null);
       }
 
-      // Buscar características de Notificación y Escritura en los servicios disponibles
-      let foundNotify = false;
+      // Descubrir y activar características de Notificación y Escritura
+      const writeChars = [];
+      const notifyChars = [];
 
-      // 1. Intentar Servicio Estándar Heart Rate
+      // 1. Intentar Servicio Estándar Heart Rate SIG (0x180D)
       try {
         const hrService = await server.getPrimaryService("heart_rate");
-        const hrChar = await hrService.getCharacteristic(
-          "heart_rate_measurement",
-        );
-        await hrChar.startNotifications();
-        hrChar.addEventListener("characteristicvaluechanged", handleBleRawData);
-        notifyCharRef.current = hrChar;
-        foundNotify = true;
-      } catch (err) {
-        // Probar servicios propietarios Fitpro / Wearfit
+        try {
+          const hrChar = await hrService.getCharacteristic(
+            "heart_rate_measurement",
+          );
+          await hrChar.startNotifications();
+          hrChar.addEventListener(
+            "characteristicvaluechanged",
+            handleBleRawData,
+          );
+          notifyCharRef.current = hrChar;
+          notifyChars.push(hrChar);
+        } catch (hrNotifErr) {
+          console.warn(
+            "Fallo suscribiendo a heart_rate_measurement:",
+            hrNotifErr,
+          );
+        }
+
+        try {
+          const hrCtrl = await hrService.getCharacteristic(
+            "heart_rate_control_point",
+          );
+          writeChars.push(hrCtrl);
+        } catch {
+          // Opcional en el perfil Heart Rate
+        }
+      } catch {
+        // Servicio Heart Rate estándar no presente
       }
 
-      // 2. Intentar Servicios Propietarios Fitpro / Wearfit / Da Fit si el estándar no está
-      if (!foundNotify) {
+      // 2. Descubrir TODOS los servicios primarios para capturar canales propietarios (Fitpro, IDO, Da Fit, Wearfit)
+      try {
         const services = await server.getPrimaryServices();
         for (const service of services) {
           try {
             const characteristics = await service.getCharacteristics();
             for (const char of characteristics) {
               if (char.properties.notify || char.properties.indicate) {
-                await char.startNotifications();
-                char.addEventListener(
-                  "characteristicvaluechanged",
-                  handleBleRawData,
-                );
-                notifyCharRef.current = char;
-                foundNotify = true;
+                if (!notifyChars.includes(char)) {
+                  try {
+                    await char.startNotifications();
+                    char.addEventListener(
+                      "characteristicvaluechanged",
+                      handleBleRawData,
+                    );
+                    notifyChars.push(char);
+                    if (!notifyCharRef.current) notifyCharRef.current = char;
+                  } catch {
+                    // Característica no suscriptible
+                  }
+                }
               }
               if (
                 char.properties.write ||
                 char.properties.writeWithoutResponse
               ) {
-                writeCharRef.current = char;
+                if (!writeChars.includes(char)) {
+                  writeChars.push(char);
+                }
               }
             }
-          } catch {
-            // Continuar explorando servicios
+          } catch (svcCharErr) {
+            console.warn("Error leyendo características:", svcCharErr);
           }
         }
+      } catch (allSvcErr) {
+        console.warn("Error consultando servicios primarios:", allSvcErr);
+      }
+
+      writeCharsRef.current = writeChars;
+      notifyCharsRef.current = notifyChars;
+      if (writeChars.length > 0) {
+        writeCharRef.current = writeChars[0];
       }
 
       // Enviar comando para activar el sensor óptico en el reloj
       setConnectionStage("activating_sensor");
-      if (writeCharRef.current) {
-        await sendActivationCommand(writeCharRef.current);
-        // Enviar ping cada 15 segundos para mantener el sensor activo en modelos Fitpro/Wearfit
+      if (writeChars.length > 0) {
+        await sendAllActivationCommands(writeChars);
+        // Enviar ping cada 12 segundos para mantener el sensor activo
         pingTimerRef.current = setInterval(() => {
-          if (writeCharRef.current) {
-            sendActivationCommand(writeCharRef.current).catch(() => {});
+          if (writeCharsRef.current && writeCharsRef.current.length > 0) {
+            sendAllActivationCommands(writeCharsRef.current).catch(() => {});
           }
-        }, 15000);
+        }, 12000);
       }
 
       setConnectionStage("ready");
@@ -501,6 +611,8 @@ export function SmartwatchProvider({ children }) {
     setStreamToCloud,
     connectBluetoothDevice,
     disconnectSmartwatch,
+    forceSensorActivation,
+    triggerTestPulse,
     setSimulationMode,
     stopSimulation,
   };

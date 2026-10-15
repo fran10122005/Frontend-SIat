@@ -157,6 +157,10 @@ export function getErrorMessage(err, fallback) {
 
 // Muestra el error a través de un toast (convención del proyecto).
 export function toastError(err, showToast, fallback) {
+  if (err && typeof err === "object") {
+    if (err._toastShown) return;
+    err._toastShown = true;
+  }
   const message = getErrorMessage(err, fallback);
   if (!message) return;
   showToast(`❌ ${message}`);
