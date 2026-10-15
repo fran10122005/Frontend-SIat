@@ -341,34 +341,6 @@ export function SmartwatchProvider({ children }) {
     }
   };
 
-  // Forzar reactivación manual del sensor óptico desde la UI
-  const forceSensorActivation = useCallback(async () => {
-    if (
-      !deviceRef.current?.gatt?.connected ||
-      !writeCharsRef.current ||
-      writeCharsRef.current.length === 0
-    ) {
-      return false;
-    }
-    setConnectionStage("activating_sensor");
-    await sendAllActivationCommands(writeCharsRef.current);
-    setConnectionStage("ready");
-    return true;
-  }, []);
-
-  // Simular pulso de prueba clínico para verificar la sincronización y la UI
-  const triggerTestPulse = useCallback(() => {
-    const testBpm = Math.floor(Math.random() * (95 - 72 + 1)) + 72;
-    processTelemetryData(
-      {
-        bpm: testBpm,
-        mov: 1.0,
-        deviceName: deviceName || "Smartwatch BLE (Test)",
-      },
-      "ble",
-    );
-  }, [deviceName, processTelemetryData]);
-
   // Conectar dispositivo Smartwatch por Bluetooth LE (WebBluetooth API Real)
   const connectBluetoothDevice = useCallback(async () => {
     if (!isSupported) {
@@ -611,8 +583,6 @@ export function SmartwatchProvider({ children }) {
     setStreamToCloud,
     connectBluetoothDevice,
     disconnectSmartwatch,
-    forceSensorActivation,
-    triggerTestPulse,
     setSimulationMode,
     stopSimulation,
   };

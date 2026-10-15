@@ -34,16 +34,12 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     setStreamToCloud,
     connectBluetoothDevice,
     disconnectSmartwatch,
-    forceSensorActivation,
-    triggerTestPulse,
   } = useSmartwatch();
 
   const { registerConnectedDevice } = useGlobalContext();
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [guideTab, setGuideTab] = useState("pc");
   const [activeFaq, setActiveFaq] = useState(null);
-  const [isActivatingSensor, setIsActivatingSensor] = useState(false);
-  const [activationFeedback, setActivationFeedback] = useState(null);
   const [syncStatus, setSyncStatus] = useState(null);
 
   // Escuchar estado de sincronización offline con IndexedDB
@@ -71,22 +67,6 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
       });
     }
   }, [isConnected, deviceName, batteryLevel, registerConnectedDevice]);
-
-  const handleForceActivation = async () => {
-    setIsActivatingSensor(true);
-    setActivationFeedback("Enviando ráfaga de activación al sensor...");
-    try {
-      await forceSensorActivation();
-      setActivationFeedback("¡Ráfaga de activación enviada al reloj!");
-    } catch {
-      setActivationFeedback("Comandos enviados a los canales BLE.");
-    } finally {
-      setTimeout(() => {
-        setIsActivatingSensor(false);
-        setTimeout(() => setActivationFeedback(null), 3500);
-      }, 700);
-    }
-  };
 
   const handleConnect = async () => {
     try {
@@ -263,49 +243,37 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
 
             {!lastBpm ? (
               <div className="space-y-2.5">
-                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+                <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
                   <Info className="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <div className="flex-1 space-y-1">
-                    <p>
-                      <strong>Sensor en espera:</strong> Para que el reloj
-                      comience a transmitir datos, colócalo ajustado en la
-                      muñeca o abre la app de <em>"Ritmo Cardíaco"</em> en la
-                      pantalla del reloj.
+                  <div className="flex-1 space-y-1.5">
+                    <p className="font-bold text-slate-800 dark:text-slate-100">
+                      Dispositivo conectado vía Bluetooth
                     </p>
-                    {activationFeedback && (
-                      <p className="text-emerald-700 dark:text-emerald-300 font-bold text-[11px] animate-in fade-in flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        {activationFeedback}
-                      </p>
-                    )}
+                    <p className="text-[11px] leading-relaxed">
+                      •{" "}
+                      <strong>
+                        Pulseras y sensores con estándar abierto (Polar, CooSpo,
+                        Garmin):
+                      </strong>{" "}
+                      Colócalo ajustado a la muñeca; el ritmo se graficará de
+                      inmediato.
+                      <br />•{" "}
+                      <strong>
+                        Smartwatches comerciales (Aiwa, Samsung, Da Fit):
+                      </strong>{" "}
+                      Requieren sincronización mediante la{" "}
+                      <strong>App Móvil SIAT</strong> para transmitir la
+                      telemetría al sistema.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowGuideModal(true)}
+                      className="inline-flex items-center gap-1.5 text-xs font-black text-blue-600 dark:text-blue-400 hover:underline pt-1"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      Ver guía de conexión y descarga de App Móvil
+                    </button>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                  <button
-                    type="button"
-                    onClick={handleForceActivation}
-                    disabled={isActivatingSensor}
-                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
-                    title="Enviar señales Bluetooth para activar los LEDs verdes del reloj"
-                  >
-                    <Zap
-                      className={`w-3.5 h-3.5 ${isActivatingSensor ? "animate-spin" : ""}`}
-                    />
-                    {isActivatingSensor
-                      ? "Enviando comandos..."
-                      : "⚡ Forzar Activación de Sensor"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={triggerTestPulse}
-                    className="px-3.5 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold text-xs flex items-center gap-1.5 border border-blue-200 dark:border-blue-800 transition-all active:scale-95"
-                    title="Simular un pulso para verificar gráficos, IndexedDB y sincronización con el servidor"
-                  >
-                    <Heart className="w-3.5 h-3.5 text-rose-500" />
-                    🧪 Simular Pulso de Prueba
-                  </button>
                 </div>
               </div>
             ) : (
