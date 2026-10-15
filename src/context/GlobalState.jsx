@@ -161,6 +161,20 @@ export const GlobalProvider = ({ children }) => {
     document.documentElement.classList.contains("dark"),
   );
 
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = useCallback((message) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) =>
+      showToast(e?.detail?.message || e?.detail || "Notificación");
+    window.addEventListener("global-toast", handler);
+    return () => window.removeEventListener("global-toast", handler);
+  }, [showToast]);
+
   const toggleTheme = (mode) => {
     // mode: 'light' | 'dark' | 'system' | undefined (toggle)
     if (mode === "light") {
@@ -375,7 +389,7 @@ export const GlobalProvider = ({ children }) => {
     setCurrentView("login");
     routerNavigate("/auth/login", { replace: true });
     showToast("⏱️ Sesión cerrada por inactividad");
-  }, [routerNavigate]);
+  }, [routerNavigate, showToast]);
 
   useIdleTimer(IDLE_TIMEOUT, handleIdleTimeout, idleActive);
 
@@ -390,7 +404,7 @@ export const GlobalProvider = ({ children }) => {
       },
     });
     return unsubscribe;
-  }, [routerNavigate]);
+  }, [routerNavigate, showToast]);
 
   const [isOnline, setIsOnline] = useState(true);
   const [networkStatus, setNetworkStatus] = useState("online"); // 'online' | 'offline_network' | 'offline_server'
@@ -1340,19 +1354,6 @@ export const GlobalProvider = ({ children }) => {
       showToast("🌟 Progreso del objetivo semanal registrado.");
     }
   };
-
-  const [toastMessage, setToastMessage] = useState(null);
-
-  const showToast = (message) => {
-    setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  useEffect(() => {
-    const handler = (e) => showToast(e.detail.message);
-    window.addEventListener("global-toast", handler);
-    return () => window.removeEventListener("global-toast", handler);
-  }, []);
 
   const navigate = (view) => {
     if (view === "student" && userRole !== "ESPECIALISTA") {
