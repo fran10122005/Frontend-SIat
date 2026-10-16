@@ -201,17 +201,21 @@ export default function HardwareInventory() {
                     </span>
                     <span
                       className={`px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 ${
-                        isConnected || isOnline
+                        isConnected
                           ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                          : "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400"
+                          : liveBpm !== null
+                            ? "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
+                            : "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400"
                       }`}
                     >
                       <span
-                        className={`w-2 h-2 rounded-full ${isConnected || isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+                        className={`w-2 h-2 rounded-full ${isConnected || liveBpm !== null ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
                       />
-                      {isConnected || isOnline
-                        ? "Pulsera En Línea"
-                        : "Pulsera Desconectada"}
+                      {isConnected
+                        ? "Smartwatch BLE Conectado"
+                        : liveBpm !== null
+                          ? "Telemetría Cloud Activa"
+                          : "Smartwatch Desconectado"}
                     </span>
                   </div>
                 </div>

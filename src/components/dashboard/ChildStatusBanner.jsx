@@ -13,9 +13,8 @@ export default function ChildStatusBanner({
   const pulseDuration = liveBpm ? `${60 / liveBpm}s` : "1.2s";
   const esFemenino = genero === "femenino";
 
-  const isTransmitting = (isConnected || isWebSocketActive) && liveBpm !== null;
-  const isWaitingSensor =
-    (isConnected || isWebSocketActive) && liveBpm === null;
+  const isTransmitting = liveBpm !== null && liveBpm > 0;
+  const isWaitingSensor = isConnected && liveBpm === null;
 
   let estado = "Sin telemetría activa";
   let statusLabel = "Desconectado";
@@ -81,14 +80,26 @@ export default function ChildStatusBanner({
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10">
-            {isConnected || isWebSocketActive ? (
-              <Wifi className="w-3.5 h-3.5 text-emerald-300" />
+            {isConnected ? (
+              <>
+                <Wifi className="w-3.5 h-3.5 text-emerald-300" />
+                <span className="text-[11px] font-semibold">
+                  Smartwatch Conectado
+                </span>
+              </>
+            ) : isTransmitting ? (
+              <>
+                <Wifi className="w-3.5 h-3.5 text-emerald-300" />
+                <span className="text-[11px] font-semibold">
+                  Telemetría Nube
+                </span>
+              </>
             ) : (
-              <WifiOff className="w-3.5 h-3.5 text-slate-300" />
+              <>
+                <WifiOff className="w-3.5 h-3.5 text-slate-300" />
+                <span className="text-[11px] font-semibold">Desconectada</span>
+              </>
             )}
-            <span className="text-[11px] font-semibold">
-              {isConnected || isWebSocketActive ? "Conectada" : "Desconectada"}
-            </span>
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10">
             <Heart

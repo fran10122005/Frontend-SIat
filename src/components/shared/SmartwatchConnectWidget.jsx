@@ -29,6 +29,7 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     deviceName,
     batteryLevel,
     lastBpm,
+    lastRawPacket,
     errorMsg,
     streamToCloud,
     setStreamToCloud,
@@ -58,9 +59,13 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     };
   }, []);
 
-  // Auto-registrar el smartwatch vinculado en la lista de dispositivos del niño
+  // Auto-registrar el smartwatch vinculado en la lista de dispositivos del niño si existe la función
   useEffect(() => {
-    if (isConnected && deviceName) {
+    if (
+      isConnected &&
+      deviceName &&
+      typeof registerConnectedDevice === "function"
+    ) {
       registerConnectedDevice({
         name: deviceName,
         batteryLevel: batteryLevel || 100,
@@ -245,33 +250,39 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
               <div className="space-y-2.5">
                 <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
                   <Info className="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <div className="flex-1 space-y-1.5">
+                  <div className="flex-1 space-y-2">
                     <p className="font-bold text-slate-800 dark:text-slate-100">
-                      Dispositivo conectado vía Bluetooth
+                      Dispositivo vinculado vía Bluetooth — Paso siguiente:
                     </p>
                     <p className="text-[11px] leading-relaxed">
-                      •{" "}
-                      <strong>
-                        Pulseras y sensores con estándar abierto (Polar, CooSpo,
-                        Garmin):
-                      </strong>{" "}
-                      Colócalo ajustado a la muñeca; el ritmo se graficará de
-                      inmediato.
-                      <br />•{" "}
-                      <strong>
-                        Smartwatches comerciales (Aiwa, Samsung, Da Fit):
-                      </strong>{" "}
-                      Requieren sincronización mediante la{" "}
-                      <strong>App Móvil SIAT</strong> para transmitir la
-                      telemetría al sistema.
+                      👉 <strong>Para activar las pulsaciones:</strong> Colócate
+                      el reloj ajustado a la piel y entra a la pantalla de{" "}
+                      <strong>"Ritmo Cardíaco"</strong> o{" "}
+                      <strong>"Ejercicio"</strong> en la pantalla del reloj. Los
+                      LEDs verdes se encenderán y transmitirán los BPM a la app
+                      de inmediato.
                     </p>
+
+                    {lastRawPacket ? (
+                      <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-700 dark:text-emerald-300">
+                        📡 Señal BLE recibida:{" "}
+                        <span className="font-bold">[{lastRawPacket.hex}]</span>{" "}
+                        ({lastRawPacket.length} bytes) — procesando pulso...
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[10px] font-mono text-blue-700 dark:text-blue-300">
+                        📡 Canal BLE conectado. Esperando que actives la
+                        medición en la pantalla del reloj...
+                      </div>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => setShowGuideModal(true)}
                       className="inline-flex items-center gap-1.5 text-xs font-black text-blue-600 dark:text-blue-400 hover:underline pt-1"
                     >
                       <HelpCircle className="w-3.5 h-3.5" />
-                      Ver guía de conexión y descarga de App Móvil
+                      Ver guía detallada de vinculación
                     </button>
                   </div>
                 </div>

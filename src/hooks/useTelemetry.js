@@ -2,6 +2,7 @@ import { useSmartwatch } from "../context/SmartwatchContext";
 
 export function useTelemetry() {
   const {
+    isConnected,
     liveBpm,
     liveStress,
     liveMov,
@@ -13,6 +14,7 @@ export function useTelemetry() {
   } = useSmartwatch();
 
   return {
+    isConnected,
     liveBpm,
     liveStress,
     liveMov,

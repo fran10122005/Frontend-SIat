@@ -49,7 +49,8 @@ export default function MainDashboard() {
   const [exporting, setExporting] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
 
-  const { liveBpm, liveStress, liveMov, isWebSocketActive } = useTelemetry();
+  const { isConnected, liveBpm, liveStress, liveMov, isWebSocketActive } =
+    useTelemetry();
   const { alertsList } = useClinicalData();
 
   const [latestReport, setLatestReport] = useState(null);
@@ -107,7 +108,11 @@ export default function MainDashboard() {
         { label: "Pulso", value: `${liveBpm} BPM` },
         {
           label: "Pulsera",
-          value: isWebSocketActive ? "Conectada" : "Desconectada",
+          value: isConnected
+            ? "Conectada"
+            : liveBpm !== null
+              ? "Streaming Remoto"
+              : "Desconectada",
         },
         { label: "Alertas", value: crisisCount.toString() },
       ];
@@ -316,12 +321,18 @@ export default function MainDashboard() {
                     </h3>
                     <span
                       className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${
-                        isWebSocketActive
+                        liveBpm !== null
                           ? "bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50"
-                          : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                          : isConnected
+                            ? "bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800/50"
+                            : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
                       }`}
                     >
-                      {isWebSocketActive ? "Transmitiendo" : "En Espera"}
+                      {liveBpm !== null
+                        ? "Transmitiendo"
+                        : isConnected
+                          ? "En Espera (Piel)"
+                          : "Sin Conectar"}
                     </span>
                   </div>
                   <div className="mt-3 space-y-1.5 text-[11px]">
@@ -357,8 +368,8 @@ export default function MainDashboard() {
                         }`}
                       >
                         {isWebSocketActive
-                          ? "Socket.IO Transmitiendo"
-                          : "Socket.IO En Espera"}
+                          ? "Servidor Cloud Conectado"
+                          : "Servidor Cloud Desconectado"}
                       </span>
                     </div>
                   </div>
