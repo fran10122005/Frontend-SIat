@@ -17,6 +17,11 @@ import {
   X,
   Radio,
   Zap,
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  Cpu,
+  Terminal,
 } from "lucide-react";
 
 export default function SmartwatchConnectWidget({ embedded = false }) {
@@ -27,9 +32,15 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     connectionStage,
     sensorStatus,
     deviceName,
+    connectedDeviceId,
     batteryLevel,
     lastBpm,
     lastRawPacket,
+    rawPacketsHistory,
+    discoveredServices,
+    subscribedChars,
+    triggerSensorActivation,
+    sendManualBleCommand,
     errorMsg,
     streamToCloud,
     setStreamToCloud,
@@ -42,6 +53,21 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
   const [guideTab, setGuideTab] = useState("pc");
   const [activeFaq, setActiveFaq] = useState(null);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
+
+  const handleTriggerSensor = async () => {
+    setIsActivating(true);
+    try {
+      if (typeof triggerSensorActivation === "function") {
+        await triggerSensorActivation();
+      }
+    } catch (e) {
+      console.warn("Error activando sensor:", e);
+    } finally {
+      setTimeout(() => setIsActivating(false), 1200);
+    }
+  };
 
   // Escuchar estado de sincronización offline con IndexedDB
   useEffect(() => {
@@ -245,6 +271,170 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
                 <span>Sincronizar telemetría a la nube</span>
               </label>
             </div>
+
+            {/* Botonera de control de sensor y diagnóstico */}
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
+              <button
+                type="button"
+                onClick={handleTriggerSensor}
+                disabled={isActivating}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all shadow-sm ${
+                  isActivating
+                    ? "bg-amber-500 text-white animate-pulse"
+                    : "bg-blue-600 hover:bg-blue-700 text-white active:scale-95"
+                }`}
+                title="Envía una señal para encender las luces verdes del sensor de pulso"
+              >
+                <Zap
+                  className={`w-3.5 h-3.5 ${isActivating ? "animate-spin" : ""}`}
+                />
+                {isActivating
+                  ? "Enviando pulso..."
+                  : "Probar Activación de Sensor"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDiagnostics((prev) => !prev)}
+                className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all"
+              >
+                <Terminal className="w-3.5 h-3.5 text-blue-500" />
+                <span>Diagnóstico BLE en Vivo</span>
+                {showDiagnostics ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
+
+            {/* PANEL DE DIAGNÓSTICO BLE Y MONITOR DE PAQUETES */}
+            {showDiagnostics && (
+              <div className="p-3.5 rounded-2xl bg-slate-900 text-slate-200 border border-slate-800 space-y-3 font-mono text-[11px] animate-in fade-in">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-emerald-400" />
+                    <span className="font-bold text-white">
+                      Enlace BLE: {deviceName}
+                    </span>
+                    {connectedDeviceId && (
+                      <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                        {connectedDeviceId}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded-full">
+                    {subscribedChars.length} canales suscritos
+                  </span>
+                </div>
+
+                {/* Aviso sobre la app oficial Aiwa Wear */}
+                <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-800/60 text-amber-300 text-[10px] font-sans flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+                  <p>
+                    <strong>Aviso importante:</strong> Si la aplicación oficial{" "}
+                    <strong>Aiwa Wear</strong> está activa en segundo plano en
+                    el teléfono, bloqueará el envío de datos a SIAT. Ve a{" "}
+                    <em>
+                      Ajustes de Android &gt; Aplicaciones &gt; Aiwa Wear &gt;
+                      Forzar detención
+                    </em>
+                    .
+                  </p>
+                </div>
+
+                {/* Monitor de Paquetes en Tiempo Real */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Activity className="w-3 h-3 text-emerald-400" />
+                      Tráfico de Paquetes BLE Recibidos (
+                      {rawPacketsHistory.length})
+                    </span>
+                    {rawPacketsHistory.length > 0 && (
+                      <span className="text-[9px] text-emerald-400">
+                        Recibiendo datos
+                      </span>
+                    )}
+                  </div>
+
+                  {rawPacketsHistory.length === 0 ? (
+                    <div className="p-3 rounded-xl bg-black/40 border border-slate-800 text-slate-400 text-center font-sans text-xs">
+                      <p className="font-semibold text-slate-300">
+                        Aún no se reciben paquetes de telemetría del reloj
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Ponte el reloj bien ajustado y toca la pantalla de{" "}
+                        <strong className="text-white">"Ritmo Cardíaco"</strong>{" "}
+                        en el reloj para encender las luces verdes ópticas.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 max-h-36 overflow-y-auto p-2 rounded-xl bg-black/60 border border-slate-800 font-mono text-[10px]">
+                      {rawPacketsHistory.map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between gap-2 py-0.5 border-b border-slate-800/40"
+                        >
+                          <span className="text-slate-400">{p.time}</span>
+                          <span className="text-emerald-400 font-semibold truncate max-w-[200px] sm:max-w-[340px]">
+                            [{p.hex}]
+                          </span>
+                          <span className="text-slate-400 shrink-0">
+                            {p.length}B
+                          </span>
+                          {p.parsedBpm ? (
+                            <span className="text-rose-400 font-bold bg-rose-950/60 px-1.5 py-0.2 rounded shrink-0">
+                              {p.parsedBpm} BPM
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 text-[9px] shrink-0">
+                              raw
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Servicios GATT descubiertos */}
+                {discoveredServices.length > 0 && (
+                  <details className="text-[10px] text-slate-400">
+                    <summary className="cursor-pointer hover:text-white font-semibold flex items-center gap-1 select-none">
+                      <span>
+                        Ver {discoveredServices.length} servicios GATT
+                        descubiertos
+                      </span>
+                    </summary>
+                    <div className="mt-2 space-y-1.5 max-h-32 overflow-y-auto p-2 bg-black/40 rounded-lg">
+                      {discoveredServices.map((s, idx) => (
+                        <div
+                          key={idx}
+                          className="border-b border-slate-800/60 pb-1"
+                        >
+                          <p className="text-blue-400 font-bold">
+                            Svc: {s.uuid}
+                          </p>
+                          {s.characteristics?.map((c, cidx) => (
+                            <p key={cidx} className="pl-3 text-slate-300">
+                              Char: {c.uuid}{" "}
+                              <span className="text-slate-500">
+                                (
+                                {Object.keys(c.properties || {})
+                                  .filter((k) => c.properties[k])
+                                  .join(", ")}
+                                )
+                              </span>
+                            </p>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
 
             {!lastBpm ? (
               <div className="space-y-2.5">

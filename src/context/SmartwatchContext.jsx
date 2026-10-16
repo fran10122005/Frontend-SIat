@@ -40,6 +40,18 @@ const STORAGE_KEY_CONNECTED = "siat_smartwatch_connected";
 const STORAGE_KEY_BATTERY = "siat_smartwatch_battery";
 const STORAGE_KEY_STREAM = "siat_smartwatch_stream";
 
+// Helper robusto para convertir hex string a DataView
+function hexStringToDataView(hexString) {
+  if (!hexString || typeof hexString !== "string")
+    return new DataView(new ArrayBuffer(0));
+  const clean = hexString.replace(/[^0-9a-fA-F]/g, "");
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < clean.length; i += 2) {
+    bytes[i / 2] = parseInt(clean.substring(i, i + 2), 16);
+  }
+  return new DataView(bytes.buffer);
+}
+
 // UUIDs de servicios BLE conocidos en formato estándar estricto de 128-bit (compatible con WebBluetooth y BleClient)
 const KNOWN_SERVICES = [
   "0000180d-0000-1000-8000-00805f9b34fb", // Heart Rate SIG standard
@@ -51,26 +63,28 @@ const KNOWN_SERVICES = [
   "00000a00-0000-1000-8000-00805f9b34fb",
   "0000ea80-0000-1000-8000-00805f9b34fb",
   "0000feea-0000-1000-8000-00805f9b34fb",
-  "0000fee7-0000-1000-8000-00805f9b34fb", // Wearfit / Telink / IDO
+  "0000fee7-0000-1000-8000-00805f9b34fb", // Wearfit / Telink / IDO / Umeox
+  "0000fee0-0000-1000-8000-00805f9b34fb", // Moyoung / DaFit
   "0000ae00-0000-1000-8000-00805f9b34fb",
   "0000af00-0000-1000-8000-00805f9b34fb",
-  "0000fff0-0000-1000-8000-00805f9b34fb", // Fitpro / HryFine
+  "0000fff0-0000-1000-8000-00805f9b34fb", // Fitpro / HryFine / Qwatch
   "0000fff1-0000-1000-8000-00805f9b34fb",
   "0000fff2-0000-1000-8000-00805f9b34fb",
   "0000ff00-0000-1000-8000-00805f9b34fb",
-  "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART (Da Fit / Wearfit)
+  "0000fef5-0000-1000-8000-00805f9b34fb", // Dialog Semiconductor
+  "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART (Da Fit / Wearfit / Jieli)
+  "de5bf728-d711-4e47-af26-65e3012a5dc7", // Jieli / Umeox Smartband
 ];
 
 // Comandos de activación en formato numérico puro para conversión universal (DataView / Uint8Array)
 const RAW_ACTIVATION_COMMANDS = [
-  [0xcd, 0x00, 0x02, 0x04, 0x01], // Fitpro / HryFine Real-Time HR trigger
+  [0x04, 0x01, 0x01], // Da Fit / Linwear HR trigger
   [0xcd, 0x00, 0x01, 0x01], // Fitpro HR sensor start
+  [0xba, 0x01, 0x01], // Qwatch / Umeox HR measure trigger
+  [0xcd, 0x00, 0x02, 0x04, 0x01], // Fitpro / HryFine Real-Time HR trigger
   [0xab, 0x00, 0x04, 0xff, 0x31, 0x09, 0x01], // Wearfit / Wearfit Pro HR start
-  [0xab, 0x00, 0x04, 0xff, 0x32, 0x80, 0x01], // Wearfit continuous mode
-  [0xd0, 0x01, 0x01], // IDO / VeryFit (IDW13, ID205) continuous HR
+  [0xd0, 0x01, 0x01], // IDO / VeryFit continuous HR
   [0x05, 0x01, 0x01], // IDO HR single trigger
-  [0x08, 0x01, 0x00, 0x01], // IDO continuous monitor
-  [0x04, 0x01, 0x01], // Da Fit / MoYoung start
   [0x01, 0x00, 0x01], // Generic Nordic UART start
   [0x01], // SIG Control Point reset / start
 ];
@@ -88,8 +102,12 @@ export function SmartwatchProvider({ children }) {
   // Estado real del dispositivo (nunca falso-positivo de localStorage)
   const [isConnected, setIsConnected] = useState(false);
   const [deviceName, setDeviceName] = useState("");
+  const [connectedDeviceId, setConnectedDeviceId] = useState("");
   const [batteryLevel, setBatteryLevel] = useState(null);
   const [lastRawPacket, setLastRawPacket] = useState(null);
+  const [rawPacketsHistory, setRawPacketsHistory] = useState([]);
+  const [discoveredServices, setDiscoveredServices] = useState([]);
+  const [subscribedChars, setSubscribedChars] = useState([]);
   const [streamToCloud, setStreamToCloudState] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_STREAM);
     return saved !== null ? saved === "true" : true;
@@ -237,13 +255,29 @@ export function SmartwatchProvider({ children }) {
           console.warn("Error enviando socket telemetry:", err);
         }
 
-        // 2. Persistencia REST directa al backend
+        // 2. Persistencia REST directa al backend (con endpoint oficial de monitoreo)
         try {
-          fetch("https://backend-siat.onrender.com/api/telemetry", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }).catch(() => {});
+          const token = localStorage.getItem("token");
+          const headers = { "Content-Type": "application/json" };
+          if (token) headers["Authorization"] = `Bearer ${token}`;
+
+          if (activeSessionIdRef.current) {
+            fetch(
+              "https://backend-siat.onrender.com/api/monitoreo/telemetria",
+              {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                  ses_codi: activeSessionIdRef.current,
+                  con_codi: "CONF_STD",
+                  tel_regi: bpm,
+                  tel_marc: Math.floor(Date.now() / 1000),
+                  tel_stress: stress,
+                  tel_mov: mov,
+                }),
+              },
+            ).catch(() => {});
+          }
         } catch {}
       }
     },
@@ -259,12 +293,15 @@ export function SmartwatchProvider({ children }) {
     setIsConnected(false);
     setIsConnecting(false);
     setDeviceName("");
+    setConnectedDeviceId("");
     setBatteryLevel(null);
     setLiveBpm(null);
     setLastBpm(null);
     setLiveStress(null);
     setLiveMov(null);
     setLastRawPacket(null);
+    setDiscoveredServices([]);
+    setSubscribedChars([]);
     setSensorStatus("idle");
     setConnectionStage(null);
     deviceRef.current = null;
@@ -274,16 +311,28 @@ export function SmartwatchProvider({ children }) {
     writeCharsRef.current = [];
   }, []);
 
-  // Parser Universal para paquetes de bytes BLE (GATT estándar, IDW13, Fitpro, Wearfit Pro, Da Fit, Aiwa, Jieli)
+  // Parser Universal para paquetes de bytes BLE (GATT estándar, IDW13, Fitpro, Wearfit Pro, Da Fit, Aiwa, Jieli, Qwatch/Umeox)
   const handleBleRawData = useCallback(
     (event) => {
-      const dataView =
-        event?.target?.value ||
-        (event instanceof DataView
-          ? event
-          : event?.buffer
-            ? new DataView(event.buffer)
-            : null);
+      let dataView = null;
+      if (event instanceof DataView) {
+        dataView = event;
+      } else if (event?.buffer instanceof ArrayBuffer) {
+        dataView = new DataView(
+          event.buffer,
+          event.byteOffset || 0,
+          event.byteLength,
+        );
+      } else if (event?.target?.value instanceof DataView) {
+        dataView = event.target.value;
+      } else if (event?.value instanceof DataView) {
+        dataView = event.value;
+      } else if (typeof event === "string") {
+        dataView = hexStringToDataView(event);
+      } else if (event?.value && typeof event.value === "string") {
+        dataView = hexStringToDataView(event.value);
+      }
+
       if (!dataView || dataView.byteLength === 0) return;
 
       const bytes = new Uint8Array(
@@ -294,8 +343,6 @@ export function SmartwatchProvider({ children }) {
       const hexStr = Array.from(bytes)
         .map((b) => b.toString(16).padStart(2, "0").toUpperCase())
         .join(" ");
-
-      setLastRawPacket({ hex: hexStr, time: Date.now(), length: bytes.length });
 
       let parsedBpm = null;
 
@@ -312,7 +359,7 @@ export function SmartwatchProvider({ children }) {
         // Ignorar si no es estructura estándar
       }
 
-      // 2. Patrones específicos de fabricantes (Aiwa, Da Fit, Fitpro, Wearfit, Jieli)
+      // 2. Patrones específicos de fabricantes (Aiwa / Umeox, Da Fit, Fitpro, Wearfit, Jieli, Qwatch)
       if (!parsedBpm || parsedBpm < 35 || parsedBpm > 240) {
         // Da Fit / MoYoung / Oplayer: [0x04, 0x01, bpm, ...] o [0x05, 0x01, bpm, ...]
         if ((bytes[0] === 0x04 || bytes[0] === 0x05) && bytes.length >= 3) {
@@ -338,9 +385,18 @@ export function SmartwatchProvider({ children }) {
             }
           }
         }
+        // Qwatch / Umeox: [0xBA, len, ..., bpm]
+        else if (bytes[0] === 0xba && bytes.length >= 3) {
+          for (let i = 2; i < bytes.length; i++) {
+            if (bytes[i] >= 45 && bytes[i] <= 215) {
+              parsedBpm = bytes[i];
+              break;
+            }
+          }
+        }
 
-        // Búsqueda general en payload fisiológico (omitiendo byte 0 de comando/cabecera)
-        if (!parsedBpm) {
+        // Búsqueda adaptativa en payload fisiológico (omitiendo encabezados de control comunes)
+        if (!parsedBpm || parsedBpm < 35 || parsedBpm > 240) {
           const startIdx = bytes.length > 2 ? 1 : 0;
           for (let i = startIdx; i < bytes.length; i++) {
             const b = bytes[i];
@@ -349,6 +405,7 @@ export function SmartwatchProvider({ children }) {
               b <= 210 &&
               b !== 0xcd &&
               b !== 0xab &&
+              b !== 0xba &&
               b !== 0xd0 &&
               b !== 0xd1 &&
               b !== 0xff &&
@@ -364,6 +421,22 @@ export function SmartwatchProvider({ children }) {
           }
         }
       }
+
+      const packetInfo = {
+        id: Date.now() + Math.random(),
+        time: new Date().toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        hex: hexStr,
+        length: bytes.length,
+        parsedBpm:
+          parsedBpm && parsedBpm >= 40 && parsedBpm <= 220 ? parsedBpm : null,
+      };
+
+      setLastRawPacket(packetInfo);
+      setRawPacketsHistory((prev) => [packetInfo, ...prev.slice(0, 19)]);
 
       // Si obtuvimos un valor válido del sensor físico
       if (parsedBpm && parsedBpm >= 40 && parsedBpm <= 220) {
@@ -460,8 +533,9 @@ export function SmartwatchProvider({ children }) {
 
         deviceRef.current = device;
         setDeviceName(device.name || "Smartwatch BLE");
+        setConnectedDeviceId(device.deviceId || "");
 
-        // 4. Vincular a nivel de sistema Android (Bonding)
+        // 4. Vincular a nivel de sistema Android (Bonding opcional)
         setConnectionStage("connecting_gatt");
         try {
           const isBonded = await BleClient.isBonded(device.deviceId);
@@ -493,6 +567,7 @@ export function SmartwatchProvider({ children }) {
 
         setConnectionStage("discovering_services");
         const services = await BleClient.getServices(device.deviceId);
+        setDiscoveredServices(services || []);
         console.log("Servicios BLE descubiertos en dispositivo:", services);
 
         // 7. Intentar leer nivel de batería
@@ -508,8 +583,9 @@ export function SmartwatchProvider({ children }) {
         } catch {}
 
         const nativeWriteChars = [];
+        const subs = [];
 
-        // 8. Suscribir a todas las características notificables
+        // 8. Suscribir ordenadamente a todas las características notificables (con delay para evitar colisiones CCCD)
         for (const s of services) {
           if (!s.characteristics) continue;
           for (const c of s.characteristics) {
@@ -523,15 +599,18 @@ export function SmartwatchProvider({ children }) {
                     handleBleRawData(value);
                   },
                 );
-                console.log(
-                  `Suscrito a notificaciones en: ${s.uuid} / ${c.uuid}`,
-                );
+                subs.push({
+                  service: s.uuid,
+                  char: c.uuid,
+                  type: c.properties?.notify ? "notify" : "indicate",
+                });
+                await new Promise((r) => setTimeout(r, 50));
               } catch (subErr) {
                 console.warn(`No se pudo suscribir a ${c.uuid}:`, subErr);
               }
             }
 
-            // Registrar canales de escritura para ráfaga de activación
+            // Registrar canales de escritura para activación
             if (c.properties?.write || c.properties?.writeWithoutResponse) {
               nativeWriteChars.push({
                 service: s.uuid,
@@ -542,58 +621,33 @@ export function SmartwatchProvider({ children }) {
           }
         }
 
-        // 9. Enviar ráfaga de activación en formato DataView para encender sensor óptico
+        setSubscribedChars(subs);
+
+        // 9. Enviar un pulso inicial suave de activación a características de escritura rápida
         if (nativeWriteChars.length > 0) {
           setConnectionStage("activating_sensor");
+          const safeTriggers = [
+            [0x04, 0x01, 0x01], // Da Fit / Linwear
+            [0xcd, 0x00, 0x01, 0x01], // Fitpro
+            [0xba, 0x01, 0x01], // Qwatch / Umeox
+            [0x01], // SIG Control Point
+          ];
           for (const wc of nativeWriteChars) {
-            for (const cmdNums of RAW_ACTIVATION_COMMANDS) {
-              try {
-                const cmdDataView = numbersToDataView(cmdNums);
-                if (wc.properties.writeWithoutResponse) {
+            if (wc.properties.writeWithoutResponse) {
+              for (const cmdNums of safeTriggers) {
+                try {
+                  const cmdDataView = numbersToDataView(cmdNums);
                   await BleClient.writeWithoutResponse(
                     device.deviceId,
                     wc.service,
                     wc.char,
                     cmdDataView,
                   );
-                } else {
-                  await BleClient.write(
-                    device.deviceId,
-                    wc.service,
-                    wc.char,
-                    cmdDataView,
-                  );
-                }
-                await new Promise((r) => setTimeout(r, 20));
-              } catch {}
-            }
-          }
-
-          // Mantener ping periódico cada 12 segundos
-          pingTimerRef.current = setInterval(async () => {
-            for (const wc of nativeWriteChars) {
-              for (const cmdNums of RAW_ACTIVATION_COMMANDS) {
-                try {
-                  const cmdDataView = numbersToDataView(cmdNums);
-                  if (wc.properties.writeWithoutResponse) {
-                    await BleClient.writeWithoutResponse(
-                      device.deviceId,
-                      wc.service,
-                      wc.char,
-                      cmdDataView,
-                    );
-                  } else {
-                    await BleClient.write(
-                      device.deviceId,
-                      wc.service,
-                      wc.char,
-                      cmdDataView,
-                    );
-                  }
+                  await new Promise((r) => setTimeout(r, 40));
                 } catch {}
               }
             }
-          }, 12000);
+          }
         }
 
         setConnectionStage("ready");
@@ -831,15 +885,82 @@ export function SmartwatchProvider({ children }) {
     };
   }, [processTelemetryData]);
 
+  // Función para activar el sensor óptico en el reloj bajo demanda
+  const triggerSensorActivation = useCallback(async () => {
+    if (!isConnected) return;
+    if (Capacitor.isNativePlatform() && deviceRef.current?.deviceId) {
+      const devId = deviceRef.current.deviceId;
+      for (const s of discoveredServices) {
+        if (!s.characteristics) continue;
+        for (const c of s.characteristics) {
+          if (c.properties?.writeWithoutResponse || c.properties?.write) {
+            for (const cmdNums of RAW_ACTIVATION_COMMANDS) {
+              try {
+                const cmdDataView = numbersToDataView(cmdNums);
+                if (c.properties.writeWithoutResponse) {
+                  await BleClient.writeWithoutResponse(
+                    devId,
+                    s.uuid,
+                    c.uuid,
+                    cmdDataView,
+                  );
+                } else {
+                  await BleClient.write(devId, s.uuid, c.uuid, cmdDataView);
+                }
+                await new Promise((r) => setTimeout(r, 35));
+              } catch {}
+            }
+          }
+        }
+      }
+    } else if (writeCharsRef.current && writeCharsRef.current.length > 0) {
+      await sendAllActivationCommands(writeCharsRef.current);
+    }
+  }, [isConnected, discoveredServices]);
+
+  // Enviar comando manual hexadecimal a una característica específica
+  const sendManualBleCommand = useCallback(
+    async (serviceUuid, charUuid, bytesArray) => {
+      if (!deviceRef.current?.deviceId) return;
+      try {
+        const dataView = numbersToDataView(bytesArray);
+        if (Capacitor.isNativePlatform()) {
+          try {
+            await BleClient.writeWithoutResponse(
+              deviceRef.current.deviceId,
+              serviceUuid,
+              charUuid,
+              dataView,
+            );
+          } catch {
+            await BleClient.write(
+              deviceRef.current.deviceId,
+              serviceUuid,
+              charUuid,
+              dataView,
+            );
+          }
+        }
+      } catch (cmdErr) {
+        console.warn("Error enviando comando manual BLE:", cmdErr);
+      }
+    },
+    [],
+  );
+
   const value = {
     isSupported,
     isConnected,
     isConnecting,
     connectionStage,
     deviceName,
+    connectedDeviceId,
     batteryLevel,
     lastBpm,
     lastRawPacket,
+    rawPacketsHistory,
+    discoveredServices,
+    subscribedChars,
     liveBpm,
     liveStress,
     liveMov,
@@ -854,6 +975,8 @@ export function SmartwatchProvider({ children }) {
     setStreamToCloud,
     connectBluetoothDevice,
     disconnectSmartwatch,
+    triggerSensorActivation,
+    sendManualBleCommand,
     setSimulationMode,
     stopSimulation,
   };
