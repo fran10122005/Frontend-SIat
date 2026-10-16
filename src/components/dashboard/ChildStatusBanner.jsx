@@ -9,12 +9,15 @@ export default function ChildStatusBanner({
   nomNino,
   genero = "masculino",
 }) {
-  const { isConnected, batteryLevel } = useSmartwatch();
+  const { isConnected, batteryLevel, telemetrySource, lastReadingTimestamp } =
+    useSmartwatch();
   const pulseDuration = liveBpm ? `${60 / liveBpm}s` : "1.2s";
   const esFemenino = genero === "femenino";
 
   const isTransmitting = liveBpm !== null && liveBpm > 0;
   const isWaitingSensor = isConnected && liveBpm === null;
+  const isBleDirect = telemetrySource === "BLE_DIRECT";
+  const isHealthConnect = telemetrySource === "HEALTH_CONNECT";
 
   let estado = "Sin telemetría activa";
   let statusLabel = "Desconectado";
@@ -54,6 +57,14 @@ export default function ChildStatusBanner({
       "Smartwatch vinculado. Esperando que el sensor óptico detecte el pulso en contacto con la piel.";
   }
 
+  const formattedLastSync = lastReadingTimestamp
+    ? new Date(lastReadingTimestamp).toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : null;
+
   return (
     <div
       className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${colorClase} p-4 text-white shadow-md transition-all duration-300`}
@@ -64,7 +75,7 @@ export default function ChildStatusBanner({
             <div className={`status-dot ${dotColor}`}></div>
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-0.5">
+            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
               <h2 className="text-base font-bold leading-tight">
                 {nomNino
                   ? `${nomNino} — ${estado}`
@@ -73,14 +84,46 @@ export default function ChildStatusBanner({
               <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
                 {statusLabel}
               </span>
+              {/* Badge distintivo del canal activo de telemetría */}
+              {isTransmitting && (
+                <span
+                  className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                    isBleDirect
+                      ? "bg-emerald-400/20 border-emerald-300/40 text-emerald-200"
+                      : isHealthConnect
+                        ? "bg-sky-400/20 border-sky-300/40 text-sky-200"
+                        : "bg-white/20 border-white/30 text-white"
+                  }`}
+                >
+                  {isBleDirect
+                    ? "Tiempo Real (BLE)"
+                    : isHealthConnect
+                      ? "Sincronización (Health Connect)"
+                      : "Telemetría Nube"}
+                </span>
+              )}
             </div>
             <p className="text-xs text-white/75 max-w-md">{mensaje}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10">
-            {isConnected ? (
+            {isBleDirect ? (
+              <>
+                <Wifi className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+                <span className="text-[11px] font-semibold">
+                  BLE Directo (1s)
+                </span>
+              </>
+            ) : isHealthConnect ? (
+              <>
+                <Wifi className="w-3.5 h-3.5 text-sky-300" />
+                <span className="text-[11px] font-semibold">
+                  Health Connect
+                </span>
+              </>
+            ) : isConnected ? (
               <>
                 <Wifi className="w-3.5 h-3.5 text-emerald-300" />
                 <span className="text-[11px] font-semibold">
@@ -113,7 +156,7 @@ export default function ChildStatusBanner({
         </div>
       </div>
 
-      <div className="relative mt-2 flex gap-3">
+      <div className="relative mt-2 flex gap-3 items-center flex-wrap">
         <div className="flex items-center gap-1.5 text-[10px] text-white/60">
           <Activity className="w-3 h-3" /> Mov:{" "}
           {liveMov !== null && liveMov !== undefined ? `${liveMov}G` : "--G"}
@@ -124,11 +167,13 @@ export default function ChildStatusBanner({
             ? `${batteryLevel}%`
             : "--%"}
         </div>
-        <span className="text-[10px] text-white/40 ml-auto">
-          {new Date().toLocaleTimeString("es-ES", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+        <span className="text-[10px] text-white/50 ml-auto">
+          {formattedLastSync
+            ? `Última lectura: ${formattedLastSync}`
+            : new Date().toLocaleTimeString("es-ES", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
         </span>
       </div>
     </div>

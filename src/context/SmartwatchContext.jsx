@@ -22,6 +22,7 @@ import {
   BleClient,
   numbersToDataView,
 } from "@capacitor-community/bluetooth-le";
+import HeartRateTelemetryService from "../services/heartRateTelemetryService";
 
 const SmartwatchContext = createContext();
 
@@ -129,6 +130,13 @@ export function SmartwatchProvider({ children }) {
   const [sensorStatus, setSensorStatus] = useState("idle"); // 'idle', 'waiting_skin', 'streaming'
   const [activeSessionId, setActiveSessionIdState] = useState(null);
 
+  // Arquitectura Híbrida de Telemetría (BLE Directo + Android Health Connect)
+  const [telemetrySource, setTelemetrySource] = useState("NONE"); // 'BLE_DIRECT' | 'HEALTH_CONNECT' | 'NONE'
+  const [lastReadingTimestamp, setLastReadingTimestamp] = useState(null);
+  const [healthConnectAvailable, setHealthConnectAvailable] = useState(false);
+  const [healthConnectAuthorized, setHealthConnectAuthorized] = useState(false);
+  const [healthConnectPolling, setHealthConnectPolling] = useState(false);
+
   const deviceRef = useRef(null);
   const notifyCharRef = useRef(null);
   const notifyCharsRef = useRef([]);
@@ -141,6 +149,7 @@ export function SmartwatchProvider({ children }) {
   const setActiveSessionId = useCallback((id) => {
     setActiveSessionIdState(id);
     activeSessionIdRef.current = id;
+    HeartRateTelemetryService.setActiveSessionId(id);
   }, []);
 
   // Comprobar soporte para Bluetooth (WebBluetooth API en navegador o Capacitor BLE nativo en móvil)
@@ -175,6 +184,71 @@ export function SmartwatchProvider({ children }) {
     setTelemetryHistory((prev) => [...prev.slice(-14), record]);
   }, []);
 
+  // Sincronizar streamToCloud con HeartRateTelemetryService
+  useEffect(() => {
+    HeartRateTelemetryService.setStreamToCloud(streamToCloud);
+  }, [streamToCloud]);
+
+  // Suscripción al Servicio Unificado de Telemetría (BLE + Health Connect)
+  useEffect(() => {
+    const unsubReading = HeartRateTelemetryService.onReading((reading) => {
+      setLiveBpm(reading.bpm);
+      setLastBpm(reading.bpm);
+      setLiveStress(reading.stress);
+      setLiveMov(reading.mov);
+      setTelemetrySource(reading.source);
+      setLastReadingTimestamp(reading.timestamp);
+      setSensorStatus("streaming");
+      setIsWebSocketActive(true);
+      if (reading.deviceName) {
+        setDeviceName(reading.deviceName);
+      }
+      appendTelemetryRecord({
+        time: reading.time,
+        bpm: reading.bpm,
+        mov: reading.mov,
+        stress: reading.stress,
+        calma: 100 - reading.stress,
+        estres: reading.stress,
+        source: reading.source,
+      });
+    });
+
+    const unsubStatus = HeartRateTelemetryService.onStatusChange((status) => {
+      if (status.healthConnectAvailable !== undefined) {
+        setHealthConnectAvailable(status.healthConnectAvailable);
+      }
+      if (status.healthConnectAuthorized !== undefined) {
+        setHealthConnectAuthorized(status.healthConnectAuthorized);
+      }
+      if (status.healthConnectPolling !== undefined) {
+        setHealthConnectPolling(status.healthConnectPolling);
+      }
+      if (status.activeSource) {
+        setTelemetrySource(status.activeSource);
+      }
+      if (
+        status.bleConnected !== undefined &&
+        status.activeSource === "BLE_DIRECT"
+      ) {
+        setIsConnected(status.bleConnected);
+      }
+    });
+
+    HeartRateTelemetryService.checkHealthConnectAvailability()
+      .then((res) => {
+        if (res?.available) {
+          HeartRateTelemetryService.checkHealthConnectPermissions();
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      unsubReading();
+      unsubStatus();
+    };
+  }, [appendTelemetryRecord]);
+
   // Publicar y procesar telemetría real recibida
   const processTelemetryData = useCallback(
     (data, source = "internal") => {
@@ -206,6 +280,9 @@ export function SmartwatchProvider({ children }) {
       setLiveMov(mov);
       setSensorStatus("streaming");
       setIsWebSocketActive(true);
+      if (source === "ble") {
+        setTelemetrySource("BLE_DIRECT");
+      }
 
       appendTelemetryRecord({
         time: timeStr,
@@ -817,12 +894,16 @@ export function SmartwatchProvider({ children }) {
     }
   }, [isSupported, handleDisconnected, handleBleRawData]);
 
-  // Desconectar dispositivo Bluetooth
+  // Desconectar dispositivo Bluetooth y detener telemetría
   const disconnectSmartwatch = useCallback(async () => {
     if (pingTimerRef.current) {
       clearInterval(pingTimerRef.current);
       pingTimerRef.current = null;
     }
+    try {
+      await HeartRateTelemetryService.disconnectBle();
+    } catch {}
+
     if (Capacitor.isNativePlatform() && deviceRef.current?.deviceId) {
       try {
         await BleClient.disconnect(deviceRef.current.deviceId);
@@ -835,7 +916,76 @@ export function SmartwatchProvider({ children }) {
       deviceRef.current.gatt.disconnect();
     }
     handleDisconnected();
-  }, [handleDisconnected]);
+    if (telemetrySource === "BLE_DIRECT") {
+      setTelemetrySource("NONE");
+    }
+  }, [handleDisconnected, telemetrySource]);
+
+  // Métodos de Control para Android Health Connect
+  const requestHealthConnectPermissions = useCallback(async () => {
+    setErrorMsg(null);
+    try {
+      const granted =
+        await HeartRateTelemetryService.requestHealthConnectPermissions();
+      setHealthConnectAuthorized(granted);
+      if (granted) {
+        HeartRateTelemetryService.startHealthConnectPolling();
+      }
+      return granted;
+    } catch (err) {
+      setErrorMsg(
+        err.message || "Error al solicitar permisos de Health Connect",
+      );
+      throw err;
+    }
+  }, []);
+
+  const checkHealthConnectAvailability = useCallback(async () => {
+    const res =
+      await HeartRateTelemetryService.checkHealthConnectAvailability();
+    setHealthConnectAvailable(Boolean(res?.available));
+    return res;
+  }, []);
+
+  const checkHealthConnectPermissions = useCallback(async () => {
+    const res = await HeartRateTelemetryService.checkHealthConnectPermissions();
+    setHealthConnectAuthorized(Boolean(res));
+    return res;
+  }, []);
+
+  const startHealthConnectPolling = useCallback((intervalSec = 25) => {
+    HeartRateTelemetryService.startHealthConnectPolling(intervalSec);
+    setHealthConnectPolling(true);
+    setTelemetrySource("HEALTH_CONNECT");
+  }, []);
+
+  const stopHealthConnectPolling = useCallback(() => {
+    HeartRateTelemetryService.stopHealthConnectPolling();
+    setHealthConnectPolling(false);
+    if (telemetrySource === "HEALTH_CONNECT") {
+      setTelemetrySource("NONE");
+    }
+  }, [telemetrySource]);
+
+  const fetchHealthConnectHeartRate = useCallback(async (minutes = 20) => {
+    return await HeartRateTelemetryService.fetchHealthConnectHeartRate(minutes);
+  }, []);
+
+  const openHealthConnectSettings = useCallback(async () => {
+    return await HeartRateTelemetryService.openHealthConnectSettings();
+  }, []);
+
+  const simulateHealthConnectBatch = useCallback(
+    (bpmValues, customDeviceName) => {
+      const res = HeartRateTelemetryService.simulateHealthConnectBatch(
+        bpmValues,
+        customDeviceName,
+      );
+      setTelemetrySource("HEALTH_CONNECT");
+      return res;
+    },
+    [],
+  );
 
   // Control de modo de simulación clínica (solo si el especialista lo activa explícitamente)
   const setSimulationMode = useCallback((mode) => {
@@ -972,6 +1122,19 @@ export function SmartwatchProvider({ children }) {
     simulationMode,
     streamToCloud,
     errorMsg,
+    telemetrySource,
+    lastReadingTimestamp,
+    healthConnectAvailable,
+    healthConnectAuthorized,
+    healthConnectPolling,
+    requestHealthConnectPermissions,
+    checkHealthConnectAvailability,
+    checkHealthConnectPermissions,
+    startHealthConnectPolling,
+    stopHealthConnectPolling,
+    fetchHealthConnectHeartRate,
+    openHealthConnectSettings,
+    simulateHealthConnectBatch,
     setStreamToCloud,
     connectBluetoothDevice,
     disconnectSmartwatch,
