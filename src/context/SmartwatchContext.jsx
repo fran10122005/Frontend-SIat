@@ -17,6 +17,8 @@ import {
   startTelemetrySync,
   stopTelemetrySync,
 } from "../services/telemetrySync";
+import { Capacitor } from "@capacitor/core";
+import { BleClient } from "@capacitor-community/bluetooth-le";
 
 const SmartwatchContext = createContext();
 
@@ -35,11 +37,8 @@ const STORAGE_KEY_CONNECTED = "siat_smartwatch_connected";
 const STORAGE_KEY_BATTERY = "siat_smartwatch_battery";
 const STORAGE_KEY_STREAM = "siat_smartwatch_stream";
 
-// UUIDs de servicios BLE conocidos (Estándar SIG, IDO / VeryFit IDW13, Fitpro, Wearfit, Da Fit, Nordic UART, etc.)
+// UUIDs de servicios BLE conocidos en formato estándar estricto de 128-bit (compatible con WebBluetooth y BleClient)
 const KNOWN_SERVICES = [
-  "heart_rate",
-  "battery_service",
-  "device_information",
   "0000180d-0000-1000-8000-00805f9b34fb", // Heart Rate SIG standard
   "0000180f-0000-1000-8000-00805f9b34fb", // Battery Service SIG
   "0000180a-0000-1000-8000-00805f9b34fb", // Device Information SIG
@@ -125,9 +124,14 @@ export function SmartwatchProvider({ children }) {
     activeSessionIdRef.current = id;
   }, []);
 
-  // Comprobar soporte para WebBluetooth API
+  // Comprobar soporte para Bluetooth (WebBluetooth API en navegador o Capacitor BLE nativo en móvil)
   useEffect(() => {
-    if (typeof window !== "undefined" && "bluetooth" in navigator) {
+    if (Capacitor.isNativePlatform()) {
+      setIsSupported(true);
+      BleClient.initialize().catch((err) => {
+        console.warn("Fallo inicializando BLE nativo:", err);
+      });
+    } else if (typeof window !== "undefined" && "bluetooth" in navigator) {
       setIsSupported(true);
     }
   }, []);
@@ -341,12 +345,10 @@ export function SmartwatchProvider({ children }) {
     }
   };
 
-  // Conectar dispositivo Smartwatch por Bluetooth LE (WebBluetooth API Real)
+  // Conectar dispositivo Smartwatch por Bluetooth LE (WebBluetooth API en Web o BLE Nativo en Android/Capacitor)
   const connectBluetoothDevice = useCallback(async () => {
     if (!isSupported) {
-      setErrorMsg(
-        "Tu navegador no soporta WebBluetooth. Usa Google Chrome o Microsoft Edge sobre HTTPS o localhost.",
-      );
+      setErrorMsg("Bluetooth no disponible en este dispositivo.");
       return;
     }
 
@@ -354,6 +356,76 @@ export function SmartwatchProvider({ children }) {
     setIsConnecting(true);
     setConnectionStage("scanning");
 
+    // Rama Móvil Nativa (Android Capacitor)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await BleClient.initialize();
+        const device = await BleClient.requestDevice({
+          optionalServices: KNOWN_SERVICES,
+        });
+
+        if (!device) {
+          setIsConnecting(false);
+          setConnectionStage(null);
+          return;
+        }
+
+        setDeviceName(device.name || "Smartwatch BLE");
+        setConnectionStage("connecting_gatt");
+
+        await BleClient.connect(device.deviceId, () => {
+          handleDisconnected();
+        });
+
+        setConnectionStage("discovering_services");
+        // Intentar leer nivel de batería
+        try {
+          const bat = await BleClient.read(
+            device.deviceId,
+            "0000180f-0000-1000-8000-00805f9b34fb",
+            "00002a19-0000-1000-8000-00805f9b34fb",
+          );
+          if (bat && bat.byteLength > 0) {
+            setBatteryLevel(bat.getUint8(0));
+          }
+        } catch {
+          // Batería no disponible
+        }
+
+        // Suscribirse al sensor óptico de ritmo cardíaco
+        try {
+          await BleClient.startNotifications(
+            device.deviceId,
+            "0000180d-0000-1000-8000-00805f9b34fb",
+            "00002a37-0000-1000-8000-00805f9b34fb",
+            (value) => {
+              handleBleRawData({ target: { value } });
+            },
+          );
+        } catch (subErr) {
+          console.warn("No se pudo suscribir a Heart Rate estándar:", subErr);
+        }
+
+        setConnectionStage("ready");
+        setIsConnected(true);
+        setIsConnecting(false);
+        setSensorStatus("waiting_skin");
+        return;
+      } catch (nativeErr) {
+        console.error("Error BLE nativo:", nativeErr);
+        setIsConnecting(false);
+        setIsConnected(false);
+        setConnectionStage(null);
+        if (nativeErr.message && !nativeErr.message.includes("cancelled")) {
+          setErrorMsg(
+            nativeErr.message || "Error al conectar por Bluetooth nativo",
+          );
+        }
+        return;
+      }
+    }
+
+    // Rama Web (Navegador Chrome / Edge en PC)
     try {
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
@@ -376,10 +448,12 @@ export function SmartwatchProvider({ children }) {
       setConnectionStage("discovering_services");
       // Intentar leer batería real
       try {
-        const batteryService =
-          await server.getPrimaryService("battery_service");
-        const batteryChar =
-          await batteryService.getCharacteristic("battery_level");
+        const batteryService = await server.getPrimaryService(
+          "0000180f-0000-1000-8000-00805f9b34fb",
+        );
+        const batteryChar = await batteryService.getCharacteristic(
+          "00002a19-0000-1000-8000-00805f9b34fb",
+        );
         const val = await batteryChar.readValue();
         setBatteryLevel(val.getUint8(0));
       } catch {
@@ -392,10 +466,12 @@ export function SmartwatchProvider({ children }) {
 
       // 1. Intentar Servicio Estándar Heart Rate SIG (0x180D)
       try {
-        const hrService = await server.getPrimaryService("heart_rate");
+        const hrService = await server.getPrimaryService(
+          "0000180d-0000-1000-8000-00805f9b34fb",
+        );
         try {
           const hrChar = await hrService.getCharacteristic(
-            "heart_rate_measurement",
+            "00002a37-0000-1000-8000-00805f9b34fb",
           );
           await hrChar.startNotifications();
           hrChar.addEventListener(
