@@ -266,7 +266,7 @@ export default function DiarioHogar() {
         triggers: triggers || null,
         positiveNote: positiveNote || null,
         therapyDone: therapyDone || null,
-        bpm: isConnected && liveBpm ? liveBpm : null,
+        bpm: liveBpm ? liveBpm : null,
       };
       await api.post("/ninos/bitacora", payload);
       showToast("✅ Reporte guardado");
@@ -600,7 +600,7 @@ export default function DiarioHogar() {
                   )}
                 </div>
 
-                {isConnected && liveBpm && (
+                {(isConnected || liveBpm) && liveBpm && (
                   <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-700 dark:text-emerald-300">
                     <Heart className="w-3.5 h-3.5 fill-emerald-500 shrink-0" />
                     <span>

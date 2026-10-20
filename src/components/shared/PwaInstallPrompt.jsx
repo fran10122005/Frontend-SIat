@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import {
   Download,
   Smartphone,
@@ -136,6 +137,11 @@ export default function PwaInstallPrompt({ variant = "topbar" }) {
     isStandalone ||
     localStorage.getItem("siat_pwa_installed") === "true" ||
     localStorage.getItem("siat_pwa_dismissed") === "true";
+
+  // En la app nativa (APK de Android / Capacitor), jamás mostrar instalación PWA
+  if (Capacitor.isNativePlatform()) return null;
+  // Desactivar banners flotantes invasivos
+  if (variant === "banner" || variant === "floating") return null;
 
   // Si ya está instalada como app o el usuario la marcó como instalada/descartada, no mostrar absolutamente nada
   if (isInstalledOrDismissed) return null;

@@ -1,5 +1,6 @@
-import { Heart, Activity, Wifi, WifiOff, Battery } from "lucide-react";
+import { Heart, Activity, Wifi, WifiOff, Battery, Watch } from "lucide-react";
 import { useSmartwatch } from "../../context/SmartwatchContext";
+import { useGlobalContext } from "../../context/GlobalState";
 
 export default function ChildStatusBanner({
   liveBpm,
@@ -9,13 +10,41 @@ export default function ChildStatusBanner({
   nomNino,
   genero = "masculino",
 }) {
-  const { isConnected, batteryLevel, telemetrySource, lastReadingTimestamp } =
-    useSmartwatch();
-  const pulseDuration = liveBpm ? `${60 / liveBpm}s` : "1.2s";
+  const {
+    isConnected,
+    batteryLevel,
+    telemetrySource,
+    lastReadingTimestamp,
+    telemetryHistory,
+  } = useSmartwatch();
+  const { navigate } = useGlobalContext();
+
+  // Obtener lectura en vivo o la más reciente del historial
+  const latestTelemetry =
+    telemetryHistory && telemetryHistory.length > 0
+      ? telemetryHistory[telemetryHistory.length - 1]
+      : null;
+
+  const activeBpm =
+    liveBpm !== null && liveBpm !== undefined
+      ? liveBpm
+      : (latestTelemetry?.bpm ?? null);
+
+  const activeStress =
+    liveStress !== null && liveStress !== undefined
+      ? liveStress
+      : (latestTelemetry?.stress ?? null);
+
+  const activeMov =
+    liveMov !== null && liveMov !== undefined
+      ? liveMov
+      : (latestTelemetry?.mov ?? null);
+
+  const pulseDuration = activeBpm ? `${60 / activeBpm}s` : "1.2s";
   const esFemenino = genero === "femenino";
 
-  const isTransmitting = liveBpm !== null && liveBpm > 0;
-  const isWaitingSensor = isConnected && liveBpm === null;
+  const isTransmitting = activeBpm !== null && activeBpm > 0;
+  const isWaitingSensor = isConnected && activeBpm === null;
   const isBleDirect = telemetrySource === "BLE_DIRECT";
   const isHealthConnect = telemetrySource === "HEALTH_CONNECT";
 
@@ -27,7 +56,7 @@ export default function ChildStatusBanner({
     "No hay un smartwatch transmitiendo datos biométricos en este momento.";
 
   if (isTransmitting) {
-    const stress = liveStress !== null ? liveStress : 0;
+    const stress = activeStress !== null ? activeStress : 0;
     if (stress <= 50) {
       estado = esFemenino ? "tranquila" : "tranquilo";
       statusLabel = "Estable";
@@ -146,13 +175,25 @@ export default function ChildStatusBanner({
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10">
             <Heart
-              className={`w-3.5 h-3.5 ${liveBpm !== null ? "text-rose-300 animate-pulse" : "text-slate-300"}`}
-              style={liveBpm ? { animationDuration: pulseDuration } : undefined}
+              className={`w-3.5 h-3.5 ${activeBpm !== null ? "text-rose-300 animate-pulse" : "text-slate-300"}`}
+              style={
+                activeBpm ? { animationDuration: pulseDuration } : undefined
+              }
             />
             <span className="text-[11px] font-semibold">
-              {liveBpm !== null ? `${liveBpm} BPM` : "-- BPM"}
+              {activeBpm !== null ? `${activeBpm} BPM` : "-- BPM"}
             </span>
           </div>
+
+          {!isTransmitting && (
+            <button
+              onClick={() => navigate("sensores")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer ml-1"
+            >
+              <Watch className="w-3.5 h-3.5" />
+              <span>Vincular Reloj</span>
+            </button>
+          )}
         </div>
       </div>
 

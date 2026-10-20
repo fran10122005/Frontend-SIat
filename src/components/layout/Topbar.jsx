@@ -60,8 +60,8 @@ export default function Topbar() {
         </button>
 
         {/* Breadcrumb e Indicador/Selector de Niño */}
-        <div className="hidden sm:flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-initial min-w-0 mr-1 sm:mr-0">
+          <div className="hidden lg:flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">
             <span>SIAT</span>
             <span className="text-slate-300 dark:text-slate-700">/</span>
             <span className="text-slate-600 dark:text-slate-300">
@@ -74,26 +74,30 @@ export default function Topbar() {
           {(userRole === "REPRESENTANTE" || userRole === "ROL_REP") &&
             listaNinos &&
             listaNinos.length > 1 && (
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700 max-w-[280px] sm:max-w-none overflow-x-auto no-scrollbar shrink-0">
                 {listaNinos.map((child) => {
+                  const childId = child.id_ninos || child.nin_codi;
                   const isActive =
+                    selectedChildId === childId ||
                     selectedChildId === child.id_ninos ||
                     selectedChildId === child.nin_codi;
                   return (
                     <button
-                      key={child.id_ninos || child.nin_codi}
+                      key={childId}
                       type="button"
-                      onClick={() =>
-                        setSelectedChildId(child.id_ninos || child.nin_codi)
-                      }
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                      onClick={() => {
+                        setSelectedChildId(childId);
+                        setNomNino(child.nom_nino);
+                        saveSelectedChild(childId, child.nom_nino);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
                         isActive
                           ? "bg-blue-600 text-white shadow-xs"
                           : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
                       }`}
                       title={`Cambiar expediente a ${child.nom_nino}`}
                     >
-                      <Baby className="w-3.5 h-3.5" />
+                      <Baby className="w-3.5 h-3.5 shrink-0" />
                       <span>{child.nom_nino}</span>
                     </button>
                   );
@@ -104,9 +108,9 @@ export default function Topbar() {
           {(userRole === "ESPECIALISTA" || userRole === "ROL_ESP") && (
             <div className="flex items-center gap-1.5">
               {selectedChildId && activeChild ? (
-                <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/60 rounded-full px-3 py-1 text-xs text-blue-700 dark:text-blue-300 font-semibold shadow-2xs animate-in fade-in duration-200">
+                <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/60 rounded-full px-2.5 sm:px-3 py-1 text-xs text-blue-700 dark:text-blue-300 font-semibold shadow-2xs animate-in fade-in duration-200">
                   <Baby className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                  <span className="truncate max-w-[140px]">
+                  <span className="truncate max-w-[100px] sm:max-w-[140px]">
                     {activeChild.nom_nino}
                   </span>
                   <button
@@ -125,9 +129,10 @@ export default function Topbar() {
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-full px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Dashboard Global</span>
+                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-full px-2 sm:px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="hidden xs:inline">Dashboard Global</span>
+                  <span className="inline xs:hidden">Global</span>
                 </div>
               )}
             </div>
@@ -135,12 +140,12 @@ export default function Topbar() {
         </div>
 
         {/* Contenedor derecho de acciones */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-1.5 sm:gap-3 ml-auto shrink-0">
           <PwaInstallPrompt variant="topbar" />
           <NotificationBell />
           <button
             onClick={handleStartTour}
-            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+            className="hidden sm:flex p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
             title="Ver Tutorial"
           >
             <HelpCircle className="w-5 h-5" />
@@ -159,7 +164,7 @@ export default function Topbar() {
 
           <div
             onClick={() => setCurrentView("profile")}
-            className="flex items-center gap-3 cursor-pointer p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors pl-4 border-l border-slate-200 dark:border-slate-700"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors sm:pl-4 sm:border-l border-slate-200 dark:border-slate-700"
           >
             <div className="flex flex-col items-end hidden sm:flex">
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">

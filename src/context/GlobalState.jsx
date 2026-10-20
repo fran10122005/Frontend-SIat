@@ -1051,7 +1051,7 @@ export const GlobalProvider = ({ children }) => {
       }
 
       if (!resData) return;
-      const { reportes, sesiones } = resData;
+      const { reportes, sesiones, bitacoras } = resData;
 
       // Map reportes (Indicaciones)
       if (reportes && reportes.length > 0) {
@@ -1073,9 +1073,15 @@ export const GlobalProvider = ({ children }) => {
         const mappedHistory = sesiones.map((s) => {
           const hasAlerts = s.tr_alert && s.tr_alert.length > 0;
           const proCalm = hasAlerts ? 65 : 95;
-          const note = s.ses_nota || "Sesión terapéutica regular";
+          const note =
+            s.ses_nota || s.tm_activ?.act_trea || "Sesión terapéutica regular";
+          const dObj = new Date(s.ses_inic);
+          const day = String(dObj.getDate()).padStart(2, "0");
+          const month = String(dObj.getMonth() + 1).padStart(2, "0");
+          const year = dObj.getFullYear();
           return {
-            fec_repo: new Date(s.ses_inic).toLocaleDateString("es-ES"),
+            fec_repo: `${day}/${month}/${year}`,
+            raw_date: s.ses_inic,
             pro_calm: proCalm,
             tot_sesi: 1,
             fue_efec: !hasAlerts,
@@ -1083,10 +1089,33 @@ export const GlobalProvider = ({ children }) => {
           };
         });
         setClinicalHistory(mappedHistory);
+      } else if (bitacoras && bitacoras.length > 0) {
+        const mappedBitacoras = bitacoras.map((b) => {
+          const isStable =
+            b.bit_anmo === "Tranquilo" ||
+            b.bit_anmo === "Estable" ||
+            b.bit_anmo === "Alegre";
+          const proCalm = isStable ? 90 : 60;
+          const dObj = new Date(b.bit_fech);
+          const day = String(dObj.getDate()).padStart(2, "0");
+          const month = String(dObj.getMonth() + 1).padStart(2, "0");
+          const year = dObj.getFullYear();
+          return {
+            fec_repo: `${day}/${month}/${year}`,
+            raw_date: b.bit_fech,
+            pro_calm: proCalm,
+            tot_sesi: 1,
+            fue_efec: isStable,
+            com_tend:
+              b.bit_obse ||
+              `Registro de hogar: ${b.bit_anmo || "Sin observaciones"}`,
+          };
+        });
+        setClinicalHistory(mappedBitacoras);
 
         // Map alertas
         const allAlerts = [];
-        sesiones.forEach((s) => {
+        (sesiones || []).forEach((s) => {
           if (s.tr_alert) {
             s.tr_alert.forEach((al) => {
               allAlerts.push({

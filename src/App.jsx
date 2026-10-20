@@ -262,8 +262,6 @@ export default function App() {
     <div className="app-shell relative">
       <OfflineStatusPill />
       {renderPage()}
-      <PwaInstallPrompt variant="banner" />
-      <PwaUpdatePrompt />
 
       {/* Auto Logout Modal */}
       {showSessionExpired && (

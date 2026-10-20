@@ -28,7 +28,6 @@ import AacBoardDrawer from "../components/dashboard/AacBoardDrawer";
 import UserPreferencesModal from "../components/shared/UserPreferencesModal";
 
 import PageTitle from "../components/ui/PageTitle";
-import SmartwatchConnectWidget from "../components/shared/SmartwatchConnectWidget";
 
 export default function MainDashboard() {
   const {
@@ -198,9 +197,6 @@ export default function MainDashboard() {
                 </button>
               </div>
             </div>
-
-            {/* Smartwatch Conexión Bluetooth */}
-            <SmartwatchConnectWidget />
 
             {/* Estado del niño */}
             <ChildStatusBanner

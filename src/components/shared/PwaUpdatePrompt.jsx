@@ -1,15 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { Sparkles, RefreshCw, X } from "lucide-react";
 
 export default function PwaUpdatePrompt() {
+  const [dismissed, setDismissed] = useState(() => {
+    return sessionStorage.getItem("siat_sw_update_dismissed") === "true";
+  });
+
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
       if (r) {
-        console.log("Service Worker registrado correctamente.");
+        console.log("Service Worker registrado.");
       }
     },
     onRegisterError(error) {
@@ -17,7 +22,15 @@ export default function PwaUpdatePrompt() {
     },
   });
 
-  if (!needRefresh) return null;
+  // En la app nativa (APK), no hay Service Worker de PWA que actualizar
+  if (Capacitor.isNativePlatform()) return null;
+  if (!needRefresh || dismissed) return null;
+
+  const handleDismiss = () => {
+    setNeedRefresh(false);
+    setDismissed(true);
+    sessionStorage.setItem("siat_sw_update_dismissed", "true");
+  };
 
   return (
     <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:w-96 z-[160] bg-slate-900/95 border border-blue-500/40 text-white p-4 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col gap-3 animate-in slide-in-from-bottom duration-300">
@@ -37,7 +50,7 @@ export default function PwaUpdatePrompt() {
           </div>
         </div>
         <button
-          onClick={() => setNeedRefresh(false)}
+          onClick={handleDismiss}
           className="text-slate-400 hover:text-slate-200 p-1 rounded-lg"
           aria-label="Cerrar aviso"
         >
@@ -46,7 +59,7 @@ export default function PwaUpdatePrompt() {
       </div>
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
         <button
-          onClick={() => setNeedRefresh(false)}
+          onClick={handleDismiss}
           className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white rounded-lg transition-colors"
         >
           Después

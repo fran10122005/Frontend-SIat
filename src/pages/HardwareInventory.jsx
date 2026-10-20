@@ -124,10 +124,38 @@ export default function HardwareInventory() {
     setShowModal(true);
   };
 
-  // Representative calculations for display
-  const currentBpm = isConnected && liveBpm !== null ? liveBpm : "--";
-  const currentMov = isConnected && liveMov !== null ? liveMov : "--";
-  const currentStress = isConnected && liveStress !== null ? liveStress : 0;
+  // Representative calculations for display (BLE Directo, Health Connect o WebSocket / Nube)
+  const latestTelemetry =
+    telemetryHistory && telemetryHistory.length > 0
+      ? telemetryHistory[telemetryHistory.length - 1]
+      : null;
+
+  const activeBpm =
+    liveBpm !== null && liveBpm !== undefined
+      ? liveBpm
+      : (latestTelemetry?.bpm ?? null);
+
+  const activeMov =
+    liveMov !== null && liveMov !== undefined
+      ? liveMov
+      : (latestTelemetry?.mov ?? null);
+
+  const activeStress =
+    liveStress !== null && liveStress !== undefined
+      ? liveStress
+      : (latestTelemetry?.stress ?? null);
+
+  const isDataActive = isConnected || activeBpm !== null;
+
+  const currentBpm = activeBpm !== null ? activeBpm : "--";
+  const currentMov =
+    activeMov !== null
+      ? typeof activeMov === "number"
+        ? activeMov.toFixed(1)
+        : activeMov
+      : "--";
+  const currentStress =
+    activeStress !== null ? Math.round(Number(activeStress)) : 0;
 
   const getMovLabel = (g) => {
     const num = Number(g);
@@ -440,7 +468,11 @@ export default function HardwareInventory() {
                                 ? `${batteryLevel}%`
                                 : isConnected
                                   ? "En línea"
-                                  : "Desconectado"}
+                                  : isDataActive
+                                    ? batteryLevel != null
+                                      ? `${batteryLevel}%`
+                                      : "En línea"
+                                    : "Desconectado"}
                             </span>
                           </div>
                         </div>
@@ -449,12 +481,14 @@ export default function HardwareInventory() {
                           <Wifi className="w-5 h-5 text-blue-500 shrink-0" />
                           <div>
                             <span className="text-[10px] text-slate-400 font-bold block uppercase">
-                              Antena Bluetooth
+                              Antena / Enlace IoT
                             </span>
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                               {isConnected
                                 ? `${deviceName || "Smartwatch BLE"} (Conectado)`
-                                : "Desconectado"}
+                                : isDataActive
+                                  ? `${deviceName || "Telemetría Cloud / Socket"} (En vivo)`
+                                  : "Desconectado"}
                             </span>
                           </div>
                         </div>

@@ -35,7 +35,7 @@ export default function HistoryProgress() {
     useGlobalContext();
   const isRepresentante = userRole === "REPRESENTANTE";
   const [activeTab, setActiveTab] = useState("evolucion"); // "evolucion" | "incidentes"
-  const [dateRange, setDateRange] = useState("7days");
+  const [dateRange, setDateRange] = useState("all"); // Mostrar todo el historial por defecto
   const [searchNotes, setSearchNotes] = useState("");
   const [filterEfectividad, setFilterEfectividad] = useState("TODOS");
 
@@ -104,17 +104,21 @@ export default function HistoryProgress() {
   function parseFecRepo(str) {
     if (!str) return null;
     try {
-      if (typeof str !== "string") {
-        const d = new Date(str);
-        return isNaN(d.getTime()) ? null : d;
+      if (str instanceof Date) return isNaN(str.getTime()) ? null : str;
+      const parsedIso = new Date(str);
+      if (!isNaN(parsedIso.getTime()) && String(str).includes("-")) {
+        return parsedIso;
       }
-      const parts = str.split("/");
-      if (parts.length === 3) {
-        const [day, month, year] = parts;
-        return new Date(+year, +month - 1, +day);
+      if (typeof str === "string" && str.includes("/")) {
+        const parts = str.split("/");
+        if (parts.length === 3) {
+          let [day, month, year] = parts;
+          if (+year < 100) year = 2000 + +year;
+          const d = new Date(+year, +month - 1, +day);
+          return isNaN(d.getTime()) ? null : d;
+        }
       }
-      const d = new Date(str);
-      return isNaN(d.getTime()) ? null : d;
+      return isNaN(parsedIso.getTime()) ? null : parsedIso;
     } catch (e) {
       console.error("Error parsing date:", e);
       return null;
@@ -130,8 +134,10 @@ export default function HistoryProgress() {
       const limit = dateRange === "7days" ? 7 : 30;
       const cutoff = new Date(now.getTime() - limit * 24 * 60 * 60 * 1000);
       data = data.filter((d) => {
-        const dDate = parseFecRepo(d.fec_repo);
-        if (!dDate) return true;
+        const dDate = d.raw_date
+          ? new Date(d.raw_date)
+          : parseFecRepo(d.fec_repo);
+        if (!dDate || isNaN(dDate.getTime())) return true;
         return dDate >= cutoff;
       });
     }
