@@ -211,12 +211,13 @@ export default function App() {
 
   const safeView = getSafeView();
 
-  // Si detectamos que la vista solicitada fue bloqueada, sincronizamos el estado global (corrige el localStorage)
+  // Si la vista solicitada no está permitida por permisos o autenticación,
+  // redirigimos canónicamente tanto el estado como la URL del router para evitar bucles.
   useEffect(() => {
     if (safeView !== currentView) {
-      setCurrentView(safeView);
+      navigate(safeView);
     }
-  }, [safeView, currentView, setCurrentView]);
+  }, [safeView, currentView, navigate]);
 
   const renderPage = () => {
     // Usamos safeView para garantizar que jamás se renderice un componente no autorizado

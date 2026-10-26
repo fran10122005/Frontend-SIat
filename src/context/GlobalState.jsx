@@ -390,10 +390,10 @@ export const GlobalProvider = ({ children }) => {
       return;
     }
     const view = pathToView[path];
-    if (view && view !== currentView) {
-      setCurrentView(view);
+    if (view) {
+      setCurrentView((prev) => (prev !== view ? view : prev));
     }
-  }, [location.pathname, currentView, userRole, routerNavigate]);
+  }, [location.pathname, routerNavigate]);
 
   useEffect(() => {
     localStorage.setItem("userRole", userRole);
@@ -635,6 +635,11 @@ export const GlobalProvider = ({ children }) => {
     }
   }, [activeChild, nomNino, userRole, selectedChildId]);
 
+  const hasFetchedNinosRef = useRef(false);
+  const hasFetchedCategoriesRef = useRef(false);
+  const lastRoutinesChildRef = useRef(undefined);
+  const hasFetchedAuthMeRef = useRef(false);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const isPublic =
@@ -650,8 +655,12 @@ export const GlobalProvider = ({ children }) => {
       !isPublic &&
       (userRole === "ESPECIALISTA" || userRole === "REPRESENTANTE")
     ) {
-      fetchNinos();
+      if (!hasFetchedNinosRef.current) {
+        hasFetchedNinosRef.current = true;
+        fetchNinos();
+      }
     } else if (!token || isPublic) {
+      hasFetchedNinosRef.current = false;
       setListaNinos([]); // Limpiar estado residual
     }
   }, [currentView, userRole]);
@@ -670,8 +679,17 @@ export const GlobalProvider = ({ children }) => {
       !isPublic &&
       (userRole === "ESPECIALISTA" || userRole === "REPRESENTANTE")
     ) {
-      fetchRoutines();
-      fetchCategories();
+      if (!hasFetchedCategoriesRef.current) {
+        hasFetchedCategoriesRef.current = true;
+        fetchCategories();
+      }
+      if (lastRoutinesChildRef.current !== selectedChildId) {
+        lastRoutinesChildRef.current = selectedChildId;
+        fetchRoutines();
+      }
+    } else if (!token || isPublic) {
+      hasFetchedCategoriesRef.current = false;
+      lastRoutinesChildRef.current = undefined;
     }
   }, [currentView, userRole, selectedChildId]);
 
@@ -684,14 +702,16 @@ export const GlobalProvider = ({ children }) => {
       currentView === "reset-password" ||
       currentView === "register-repre";
 
-    let active = true;
     if (!token || isPublic) {
+      hasFetchedAuthMeRef.current = false;
       setUserFoto("");
-      return () => {
-        active = false;
-      };
+      return;
     }
 
+    if (hasFetchedAuthMeRef.current) return;
+    hasFetchedAuthMeRef.current = true;
+
+    let active = true;
     api
       .get("/auth/me")
       .then((res) => {
@@ -1346,12 +1366,17 @@ export const GlobalProvider = ({ children }) => {
     }
   }, []);
 
+  const lastChildFetchedRef = useRef(null);
+
   useEffect(() => {
-    if (selectedChildId) {
+    if (selectedChildId && selectedChildId !== lastChildFetchedRef.current) {
+      lastChildFetchedRef.current = selectedChildId;
       fetchHistorialCompleto(selectedChildId);
       fetchPeiGoals(selectedChildId);
       fetchCrisisAlerts(selectedChildId);
       fetchSessions(selectedChildId);
+    } else if (!selectedChildId) {
+      lastChildFetchedRef.current = null;
     }
   }, [selectedChildId]);
 
@@ -1430,16 +1455,21 @@ export const GlobalProvider = ({ children }) => {
     }
   };
 
-  const navigate = (view) => {
-    if (view === "student" && userRole !== "ESPECIALISTA") {
-      showToast("⚠️ Acceso denegado: Se requiere rol de Especialista.");
-      return;
-    }
+  const navigate = useCallback(
+    (view) => {
+      if (view === "student" && userRole !== "ESPECIALISTA") {
+        showToast("⚠️ Acceso denegado: Se requiere rol de Especialista.");
+        return;
+      }
 
-    setCurrentView(view);
-    const path = getPathForView(view, userRole);
-    if (path) routerNavigate(path);
-  };
+      setCurrentView(view);
+      const path = getPathForView(view, userRole);
+      if (path && location.pathname !== path) {
+        routerNavigate(path, { replace: true });
+      }
+    },
+    [userRole, routerNavigate, location.pathname, showToast],
+  );
 
   const addFeedback = (fue_efec) => {
     // La UI ya usa evaluateAlert que hace el API request correcto.
