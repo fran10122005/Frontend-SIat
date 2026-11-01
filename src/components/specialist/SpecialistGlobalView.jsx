@@ -40,7 +40,10 @@ export default function SpecialistGlobalView({
   return (
     <>
       {/* KPIs Globales */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 animate-in fade-in duration-300">
+      <div
+        data-tour="sp-global-kpis"
+        className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 animate-in fade-in duration-300"
+      >
         <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 md:p-5 shadow-sm border border-slate-200 dark:border-slate-800/60 relative overflow-hidden flex items-center gap-4">
           <div className="p-2.5 md:p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
             <UserCircle2 className="w-5 h-5 md:w-6 md:h-6" />
@@ -85,7 +88,10 @@ export default function SpecialistGlobalView({
       </div>
 
       {/* Gráficas Globales */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div
+        data-tour="sp-global-charts"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300"
+      >
         {/* Incidentes conductuales últimos 7 días */}
         <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col h-[280px] lg:h-[350px]">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide mb-1">
@@ -204,7 +210,10 @@ export default function SpecialistGlobalView({
       </div>
 
       {/* Accesos rápidos compactos */}
-      <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
+      <div
+        data-tour="sp-global-actions"
+        className="flex flex-wrap gap-2 animate-in fade-in duration-300"
+      >
         {quickActions.map((action) => {
           const Icon = action.icon;
           return (
@@ -225,7 +234,10 @@ export default function SpecialistGlobalView({
       </div>
 
       {/* Alertas Globales */}
-      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[300px] animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div
+        data-tour="sp-global-alerts"
+        className="bg-white dark:bg-[#1E293B] rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[300px] animate-in fade-in slide-in-from-bottom-4 duration-300"
+      >
         <div className="mb-4">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-rose-500" />

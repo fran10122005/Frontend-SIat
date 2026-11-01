@@ -234,12 +234,15 @@ export const GlobalProvider = ({ children }) => {
       setIsDark(prefersDark);
     } else {
       // simple toggle
-      if (isDark) {
-        document.documentElement.classList.remove("dark");
-      } else {
+      const nextDark = !isDark;
+      if (nextDark) {
         document.documentElement.classList.add("dark");
+        localStorage.setItem("siat_theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("siat_theme", "light");
       }
-      setIsDark(!isDark);
+      setIsDark(nextDark);
     }
   };
 

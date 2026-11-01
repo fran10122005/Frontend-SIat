@@ -51,9 +51,16 @@ body {
 body {
   overflow-x: hidden;
   overflow-y: auto;
-  background: #F8FAFC;
+  background-color: #EEF2F6;
   color: #1E293B;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html:not(.dark) body {
+  background-color: #EEF2F6 !important;
+  color: #1E293B !important;
 }
 
 #root {
@@ -61,9 +68,10 @@ body {
   overflow: hidden;
 }
 
-.dark body {
-  background-color: #0B1120 !important;
-  color: #F8FAFC !important;
+.dark body,
+html.dark body {
+  background-color: #0B1320 !important;
+  color: #CBD5E1 !important;
 }
 
 button,
@@ -139,24 +147,29 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.75rem;
   font-weight: 600;
   border-radius: 0.5rem;
-  border: 1px solid #E2E8F0;
-  background-color: #FFFFFF;
-  color: #475569;
+  border: 1px solid #CBD5E1;
+  background-color: #FAFBFD;
+  color: #334155;
   transition: all 0.2s ease;
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 .btn-secondary:hover {
-  background-color: #F1F5F9;
-  border-color: #CBD5E1;
-  color: #1E293B;
+  background-color: #EEF2F6;
+  border-color: #94A3B8;
+  color: #0F172A;
 }
-.dark .btn-secondary {
-  background-color: rgba(30, 41, 59, 0.6);
-  border-color: rgba(255, 255, 255, 0.08);
+.dark .btn-secondary,
+html.dark .btn-secondary {
+  background-color: #162032;
+  border-color: rgba(255, 255, 255, 0.1);
   color: #CBD5E1;
+  box-shadow: none;
 }
-.dark .btn-secondary:hover {
-  background-color: rgba(51, 65, 85, 0.6);
+.dark .btn-secondary:hover,
+html.dark .btn-secondary:hover {
+  background-color: #1E293B;
+  border-color: rgba(255, 255, 255, 0.2);
   color: #F1F5F9;
 }
 
@@ -237,54 +250,64 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(71, 85, 105, 0.7);
 }
 
-/* 3. Global Modern Glassmorphism Cards & Lists */
-/* Light mode: subtle frosted glass (only when html does not have .dark) */
-html:not(.dark) .bg-white {
-  background-color: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  border-color: rgba(3, 78, 161, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(3, 78, 161, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+/* 3. Global Amable / Eye-Friendly Surfaces & Cards */
+/* Modo Claro Amable: tarjetas blancas limpias, bordes naturales y sombra suave anti-deslumbramiento */
+html:not(.dark) .bg-white:not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]),
+html:not(.dark) button.bg-white {
+  background-color: #FAFBFD !important;
+  border-color: #CBD5E1 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 4px 16px -2px rgba(15, 23, 42, 0.03);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Dark mode: deep navy glassmorphism for card surfaces */
-.dark .bg-white:not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]),
+/* Modo Oscuro Amable (Dark Comfort): elevación real en Slate-800/900 con bordes sutiles anti-reflejo */
+.dark .bg-white:not(button):not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]),
 .dark .bg-white\/85,
-.dark .bg-white\/95 {
-  background-color: rgba(15, 23, 42, 0.75) !important;
-  backdrop-filter: blur(16px) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35) !important;
-  color: #F1F5F9;
-}
-
+.dark .bg-white\/95,
 .dark .dark\:bg-\[\#1E293B\],
 .dark .dark\:bg-\[\#1e293b\],
 .dark .dark\:bg-slate-800,
 .dark .dark\:bg-slate-800\/90,
 .dark .bg-\[\#1E293B\],
 .dark .bg-\[\#1e293b\],
-.dark .bg-slate-900,
 .dark .bg-slate-800,
-.dark .bg-slate-850 {
-  background-color: rgba(15, 23, 42, 0.75) !important;
-  backdrop-filter: blur(16px) !important;
-  border-color: rgba(255, 255, 255, 0.07) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+.dark .bg-slate-850,
+.dark .dark\:bg-\[\#141e2d\],
+.dark .dark\:bg-\[\#1a2332\],
+.dark .dark\:bg-\[\#131d2e\] {
+  background-color: #162032 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4) !important;
+  color: #CBD5E1;
 }
 
-/* Global soften borders for Dark Mode */
+/* Suavizado óptico de bordes en modo oscuro */
 .dark .border-slate-700,
 .dark .border-slate-800,
 .dark .border-slate-700\/60,
-.dark .border-gray-200 {
+.dark .border-slate-800\/60,
+.dark .border-gray-200,
+.dark .border-gray-300 {
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Fondo del área de contenido principal en oscuro */
+/* Lienzos y áreas principales en oscuro: tono pizarra noche descansado */
+.dark .bg-\[\#F8FAFC\],
+.dark .bg-\[\#F4F7F9\],
+.dark .dark\:bg-\[\#0B1120\],
+.dark .dark\:bg-slate-900,
+.dark .bg-slate-900 {
+  background-color: #0B1320 !important;
+}
+
+/* Contenedores interiores secundarios en oscuro (subsecciones) */
 .dark .bg-slate-50,
-.dark .bg-\[\#F8FAFC\] {
-  background-color: #0B1120 !important;
+.dark .bg-gray-50,
+.dark .dark\:bg-slate-900\/30,
+.dark .dark\:bg-slate-900\/40,
+.dark .dark\:bg-slate-900\/50,
+.dark .dark\:bg-slate-900\/60 {
+  background-color: rgba(15, 23, 42, 0.6) !important;
 }
 
 /* Hover effect on clickable system cards */
@@ -307,15 +330,14 @@ html:not(.dark) .bg-white {
   background-color: var(--color-brand) !important;
   background-image: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--color-brand) 92%, #ffffff) 0%,
-    var(--color-brand) 45%,
-    var(--brand-700) 100%
+    color-mix(in srgb, var(--color-brand) 96%, #ffffff) 0%,
+    var(--color-brand) 100%
   ) !important;
-  color: #fff !important;
+  color: #FFFFFF !important;
   font-weight: 600 !important;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-brand) 32%, transparent) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-brand) 20%, transparent) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
 .bg-blue-600:hover,
@@ -397,14 +419,14 @@ input[type="search"],
 input[type="tel"],
 select,
 textarea {
-  border: 1px solid #E2E8F0 !important;
-  background-color: #FFFFFF !important;
-  color: #1E293B !important;
+  border: 1px solid #CBD5E1 !important;
+  background-color: #FAFBFD !important;
+  color: #0F172A !important;
   border-radius: 0.625rem !important;
   padding: 0.5rem 0.75rem;
   height: 2.5rem;
   transition: all 0.2s ease !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
 }
 
 textarea {
@@ -421,14 +443,25 @@ textarea {
 .dark input[type="tel"],
 .dark select,
 .dark textarea {
-  border: 1px solid #334155 !important;
-  background-color: #0F172A !important;
-  color: #F8FAFC !important;
+  border: 1px solid rgba(148, 163, 184, 0.2) !important;
+  background-color: #121B2A !important;
+  color: #F1F5F9 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748B !important;
+}
+
+.dark select option {
+  background-color: #162032 !important;
+  color: #F1F5F9 !important;
 }
 
 .dark input[type="date"]::-webkit-calendar-picker-indicator,
 .dark input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.2);
+  filter: invert(0.9) brightness(1.1);
   cursor: pointer;
 }
 
@@ -437,14 +470,14 @@ select:focus,
 textarea:focus {
   border-color: var(--color-brand-ring) !important;
   outline: none !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-ring) 24%, transparent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-ring) 18%, transparent) !important;
 }
 
 .dark input:focus,
 .dark select:focus,
 .dark textarea:focus {
-  border-color: color-mix(in srgb, var(--color-brand-ring) 74%, #ffffff) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-ring) 30%, transparent) !important;
+  border-color: color-mix(in srgb, var(--color-brand-ring) 70%, #ffffff) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-ring) 28%, transparent) !important;
 }
 
 /* 6. Main Titles (Brand gradient) */
@@ -1152,96 +1185,136 @@ html {
 }
 
 /* ==========================================================================
-   BULLETPROOF DARK MODE SYSTEM OVERRIDES (HIGH CONTRAST & LEGIBILITY)
+   AMABLE CON LA VISTA / EYE-FRIENDLY CLINICAL SYSTEM (HIGH LEGIBILITY & COMFORT)
    ========================================================================== */
 
 html.dark body {
-  background-color: #0B1120 !important;
-  color: #F8FAFC !important;
+  background-color: #0B1320 !important;
+  color: #CBD5E1 !important;
 }
 
-/* 1. Card & Container Backgrounds */
+/* 1. Card & Container Backgrounds en Modo Oscuro (Elevación real y descanso visual) */
 html.dark .bg-white:not(button):not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]) {
-  background-color: #0F172A !important;
-  color: #F8FAFC;
+  background-color: #162032 !important;
+  color: #CBD5E1;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 html.dark .bg-slate-50,
 html.dark .bg-gray-50 {
-  background-color: #1E293B !important;
-  color: #F8FAFC;
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  color: #CBD5E1;
 }
 
 html.dark .bg-slate-100,
 html.dark .bg-gray-100 {
-  background-color: #334155 !important;
-  color: #F8FAFC;
-}
-
-/* 2. Text Legibility & Contrast */
-html.dark .text-slate-900:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
-html.dark .text-slate-800:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
-html.dark .text-slate-700:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
-html.dark .text-gray-900:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
-html.dark .text-gray-800:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]),
-html.dark .text-gray-700:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-purple"]) {
-  color: #F8FAFC;
-}
-
-html.dark .text-slate-600:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]),
-html.dark .text-slate-500:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]),
-html.dark .text-gray-600:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]),
-html.dark .text-gray-500:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]) {
+  background-color: rgba(30, 41, 59, 0.65) !important;
   color: #CBD5E1;
 }
 
-html.dark .text-slate-400,
-html.dark .text-gray-400 {
-  color: #94A3B8;
+/* 2. Jerarquía Tipográfica Descansada (Anti-Glare / Cuidado Visual) */
+/* Títulos: blanco perla suave sin deslumbramiento */
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6,
+html.dark .text-slate-900:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .text-gray-900:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .dark\:text-white {
+  color: #F1F5F9 !important;
 }
 
-/* 2b. Status Badges Translucency in Dark Mode */
+/* Cuerpo y lectura: Slate-300 (confortable para la retina, sin quemar) */
+html.dark .text-slate-800:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .text-slate-700:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .text-gray-800:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .text-gray-700:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .dark\:text-slate-100,
+html.dark .dark\:text-slate-200 {
+  color: #CBD5E1 !important;
+}
+
+/* Subtítulos, metadatos y etiquetas: Slate-400 */
+html.dark .text-slate-600:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .text-slate-500:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .text-gray-600:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .text-gray-500:not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-indigo"]):not([class*="text-sky"]):not([class*="text-purple"]):not([class*="text-brand"]),
+html.dark .dark\:text-slate-300,
+html.dark .dark\:text-slate-400 {
+  color: #94A3B8 !important;
+}
+
+/* Textos tenues, timestamps y pistas: Slate-500 */
+html.dark .text-slate-400,
+html.dark .text-gray-400,
+html.dark .dark\:text-slate-500 {
+  color: #64748B !important;
+}
+
+/* 2b. Badges e Indicadores Clínicos Relajantes en Modo Oscuro (Pasteles descansados) */
 html.dark .bg-emerald-50,
-html.dark .bg-emerald-100 {
-  background-color: rgba(16, 185, 129, 0.18) !important;
-  color: #34D399 !important;
+html.dark .bg-emerald-100,
+html.dark .dark\:bg-emerald-950\/30,
+html.dark .dark\:bg-emerald-900\/20,
+html.dark .dark\:bg-emerald-900\/30 {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+  color: #6EE7B7 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
 }
 
 html.dark .bg-amber-50,
-html.dark .bg-amber-100 {
-  background-color: rgba(245, 158, 11, 0.18) !important;
-  color: #FBBF24 !important;
+html.dark .bg-amber-100,
+html.dark .dark\:bg-amber-950\/30,
+html.dark .dark\:bg-amber-900\/20,
+html.dark .dark\:bg-amber-900\/30 {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+  color: #FCD34D !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
 }
 
 html.dark .bg-rose-50,
 html.dark .bg-rose-100,
 html.dark .bg-red-50,
-html.dark .bg-red-100 {
-  background-color: rgba(244, 63, 94, 0.18) !important;
-  color: #FB7185 !important;
+html.dark .bg-red-100,
+html.dark .dark\:bg-rose-950\/30,
+html.dark .dark\:bg-rose-900\/20,
+html.dark .dark\:bg-rose-900\/30 {
+  background-color: rgba(244, 63, 94, 0.14) !important;
+  color: #FDA4AF !important;
+  border-color: rgba(244, 63, 94, 0.25) !important;
 }
 
 html.dark .bg-blue-50,
 html.dark .bg-blue-100,
 html.dark .bg-indigo-50,
-html.dark .bg-indigo-100 {
-  background-color: rgba(59, 130, 246, 0.18) !important;
-  color: #60A5FA !important;
+html.dark .bg-indigo-100,
+html.dark .dark\:bg-blue-950\/30,
+html.dark .dark\:bg-blue-900\/20,
+html.dark .dark\:bg-blue-900\/30 {
+  background-color: rgba(59, 130, 246, 0.14) !important;
+  color: #93C5FD !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
 }
 
-/* 3. Borders & Dividers */
+/* 3. Bordes y Divisores Amables */
 html.dark .border-slate-100,
 html.dark .border-slate-200,
 html.dark .border-gray-100,
-html.dark .border-gray-200 {
-  border-color: rgba(51, 65, 85, 0.7) !important;
+html.dark .border-gray-200,
+html.dark .border-slate-800,
+html.dark .border-slate-800\/60,
+html.dark .border-slate-700 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
 html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
 html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
-html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
-  border-color: rgba(51, 65, 85, 0.7) !important;
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.07) !important;
 }
 
 /* 4. Form Inputs, Selects, Textareas & Options */
@@ -1255,9 +1328,9 @@ html.dark input[type="time"],
 html.dark input[type="search"],
 html.dark select,
 html.dark textarea {
-  background-color: #1E293B !important;
-  color: #F8FAFC !important;
-  border-color: #334155 !important;
+  background-color: #121B2A !important;
+  color: #F1F5F9 !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
 }
 
 html.dark input::placeholder,
@@ -1266,51 +1339,147 @@ html.dark textarea::placeholder {
 }
 
 html.dark select option {
-  background-color: #0F172A !important;
-  color: #F8FAFC !important;
+  background-color: #162032 !important;
+  color: #F1F5F9 !important;
 }
 
-/* 5. Modals, Dialogs & Floating Panels */
+/* 5. Modales, Diálogos y Drawers */
 html.dark [role="dialog"],
 html.dark .modal-content,
 html.dark .drawer-content {
-  background-color: #0F172A !important;
-  border-color: #1E293B !important;
-  color: #F8FAFC !important;
+  background-color: #162032 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #CBD5E1 !important;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* 6. Tables */
+/* 6. Tablas Clínicas */
 html.dark table thead tr,
 html.dark table th {
-  background-color: #1E293B !important;
-  color: #CBD5E1 !important;
-  border-color: #334155 !important;
+  background-color: #121A28 !important;
+  color: #94A3B8 !important;
+  border-color: rgba(51, 65, 85, 0.5) !important;
 }
 
 html.dark table td {
-  border-color: rgba(51, 65, 85, 0.6) !important;
-  color: #F8FAFC !important;
+  border-color: rgba(51, 65, 85, 0.35) !important;
+  color: #CBD5E1 !important;
 }
 
 html.dark table tbody tr:hover {
-  background-color: rgba(30, 41, 59, 0.6) !important;
+  background-color: rgba(255, 255, 255, 0.03) !important;
 }
 
-/* 7. Dark Mode Scrollbars */
+/* 7. Barras de Desplazamiento Discretas */
 html.dark ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 html.dark ::-webkit-scrollbar-track {
-  background: #0F172A;
+  background: transparent;
 }
 
 html.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
 }
 
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
+  background: rgba(148, 163, 184, 0.35);
+}
+
+
+/* ==========================================================================
+   MODO CLARO CONFORT (ANTI-DESLUMBRAMIENTO / EYE-FRIENDLY LIGHT SYSTEM)
+   ========================================================================== */
+
+/* 1. Fondo de lienzo suave / Soft resting matte canvas (sin blanco puro deslumbrante) */
+html:not(.dark) body,
+html:not(.dark) .app-shell,
+html:not(.dark) .bg-\[\#F8FAFC\],
+html:not(.dark) .bg-\[\#F4F7F9\],
+html:not(.dark) .bg-\[\#f8fafc\],
+html:not(.dark) .bg-\[\#f4f7f9\],
+html:not(.dark) .bg-slate-50\/50,
+html:not(.dark) [class*="bg-[#F8FAFC]"],
+html:not(.dark) [class*="bg-[#F4F7F9]"] {
+  background-color: #EEF2F6 !important;
+}
+
+/* 2. Cabeceras fijas y barras de navegación en Modo Claro */
+html:not(.dark) header.sticky,
+html:not(.dark) header.bg-white\/90,
+html:not(.dark) .bg-white\/90,
+html:not(.dark) .bg-white\/95,
+html:not(.dark) .bg-white\/80,
+html:not(.dark) .topbar {
+  background-color: rgba(250, 251, 253, 0.92) !important;
+  border-color: rgba(203, 213, 225, 0.85) !important;
+}
+
+/* 3. Sub-secciones, paneles anidados y cabeceras de tarjeta */
+html:not(.dark) .bg-slate-50:not(.badge):not(.pill):not(button):not(.status-dot),
+html:not(.dark) .bg-gray-50:not(.badge):not(.pill):not(button):not(.status-dot) {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+}
+
+html:not(.dark) .bg-slate-100:not(.badge):not(.pill):not(button):not(.status-dot),
+html:not(.dark) .bg-gray-100:not(.badge):not(.pill):not(button):not(.status-dot) {
+  background-color: #E2E8F0 !important;
+}
+
+/* 4. Modales, diálogos y popovers */
+html:not(.dark) [role="dialog"],
+html:not(.dark) .modal-content,
+html:not(.dark) .drawer-content {
+  background-color: #FAFBFD !important;
+  border: 1px solid #CBD5E1 !important;
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.15) !important;
+}
+
+/* 5. Tablas clínicas descansadas en Modo Claro */
+html:not(.dark) table thead tr,
+html:not(.dark) table th {
+  background-color: #EEF2F6 !important;
+  color: #475569 !important;
+  border-color: #CBD5E1 !important;
+}
+
+html:not(.dark) table td {
+  border-color: #E2E8F0 !important;
+  color: #334155 !important;
+}
+
+html:not(.dark) table tbody tr:hover {
+  background-color: #F1F5F9 !important;
+}
+
+/* 6. Driver.js Popovers (Guía interactiva) */
+html:not(.dark) .driver-popover {
+  background-color: #FAFBFD !important;
+  border: 1px solid #CBD5E1 !important;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.15) !important;
+}
+
+html:not(.dark) .driver-popover-title {
+  color: #0F172A !important;
+}
+
+html:not(.dark) .driver-popover-description {
+  color: #334155 !important;
+}
+
+html:not(.dark) .driver-popover-footer .driver-popover-prev-btn, 
+html:not(.dark) .driver-popover-footer .driver-popover-close-btn {
+  color: #475569 !important;
+  border: 1px solid #CBD5E1 !important;
+  background-color: #EEF2F6 !important;
+}
+
+html:not(.dark) .driver-popover-footer .driver-popover-prev-btn:hover,
+html:not(.dark) .driver-popover-footer .driver-popover-close-btn:hover {
+  background-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}

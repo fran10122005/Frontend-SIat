@@ -169,7 +169,10 @@ export default function MainDashboard() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1200px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 pb-12">
             {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div
+              data-tour="parent-dash-header"
+              className="flex flex-col lg:flex-row lg:items-end justify-between gap-4"
+            >
               <div>
                 <PageTitle icon={LayoutDashboard}>Inicio</PageTitle>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -184,6 +187,7 @@ export default function MainDashboard() {
                 <button
                   onClick={handleExportDashboard}
                   disabled={exporting}
+                  data-tour="parent-dash-export"
                   className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center gap-1.5 text-xs disabled:opacity-50"
                 >
                   <Download className="w-3.5 h-3.5" />{" "}
@@ -191,6 +195,7 @@ export default function MainDashboard() {
                 </button>
                 <button
                   onClick={() => navigate("diario_hogar")}
+                  data-tour="parent-dash-diary-btn"
                   className="px-3 py-2 bg-brand-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all flex items-center gap-1.5 text-xs"
                 >
                   <NotebookPen className="w-3.5 h-3.5" /> Diario de Hoy
@@ -199,26 +204,33 @@ export default function MainDashboard() {
             </div>
 
             {/* Estado del niño */}
-            <ChildStatusBanner
-              liveBpm={liveBpm}
-              liveStress={liveStress}
-              liveMov={liveMov}
-              isWebSocketActive={isWebSocketActive}
-              nomNino={nomNino}
-            />
+            <div data-tour="parent-dash-status">
+              <ChildStatusBanner
+                liveBpm={liveBpm}
+                liveStress={liveStress}
+                liveMov={liveMov}
+                isWebSocketActive={isWebSocketActive}
+                nomNino={nomNino}
+              />
+            </div>
 
             {/* Cuerpo: dos columnas */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 flex flex-col gap-6">
-                <DaySummary
-                  homeData={latestReport || homeData}
-                  agenda={agendaHoy}
-                  indicacion={weeklyGoal}
-                  onNavigate={navigate}
-                />
+                <div data-tour="parent-dash-summary">
+                  <DaySummary
+                    homeData={latestReport || homeData}
+                    agenda={agendaHoy}
+                    indicacion={weeklyGoal}
+                    onNavigate={navigate}
+                  />
+                </div>
 
                 {/* Foco Clínico */}
-                <div className="bg-white dark:bg-[#1E293B] rounded-2xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60">
+                <div
+                  data-tour="parent-dash-focus"
+                  className="bg-white dark:bg-[#1E293B] rounded-2xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60"
+                >
                   <span className="text-overline bg-blue-50/50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded">
                     Foco Clínico de la Semana
                   </span>
@@ -244,7 +256,10 @@ export default function MainDashboard() {
               {/* Columna derecha */}
               <div className="flex flex-col gap-6">
                 {/* Zona SOS */}
-                <div className="bg-white dark:bg-[#1E293B] rounded-xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60">
+                <div
+                  data-tour="parent-dash-sos"
+                  className="bg-white dark:bg-[#1E293B] rounded-xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60"
+                >
                   <div className="flex items-center gap-1.5 text-overline text-rose-600 dark:text-rose-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                     SOS Sensorial
@@ -270,7 +285,10 @@ export default function MainDashboard() {
                 </div>
 
                 {/* Últimos Eventos */}
-                <div className="bg-white dark:bg-[#1E293B] rounded-xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col max-h-[260px]">
+                <div
+                  data-tour="parent-dash-events"
+                  className="bg-white dark:bg-[#1E293B] rounded-xl card-padding shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col max-h-[260px]"
+                >
                   <h3 className="text-overline text-slate-950 dark:text-white mb-3 flex items-center gap-2">
                     <Bell className="w-3.5 h-3.5 text-slate-400" /> Últimos
                     Eventos

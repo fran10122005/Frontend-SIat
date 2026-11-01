@@ -75,7 +75,7 @@ export default function UserPreferencesModal({ open, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-[#141e2d] rounded-2xl shadow-2xl w-full max-w-md border border-slate-200/80 dark:border-slate-700/60 flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-200 max-h-[92vh]"
+        className="bg-[#FAFBFD] dark:bg-[#141e2d] rounded-2xl shadow-2xl w-full max-w-md border border-slate-200/80 dark:border-slate-700/60 flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-200 max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -113,18 +113,33 @@ export default function UserPreferencesModal({ open, onClose }) {
             />
             <div className="grid grid-cols-3 gap-2.5 mt-3">
               {[
-                { value: "light", Icon: Sun, label: "Claro" },
-                { value: "system", Icon: Monitor, label: "Sistema" },
-                { value: "dark", Icon: Moon, label: "Oscuro" },
-              ].map(({ value, Icon, label }) => (
+                {
+                  value: "light",
+                  Icon: Sun,
+                  label: "Claro Confort",
+                  desc: "Suave y sin reflejos",
+                },
+                {
+                  value: "system",
+                  Icon: Monitor,
+                  label: "Automático",
+                  desc: "Según tu sistema",
+                },
+                {
+                  value: "dark",
+                  Icon: Moon,
+                  label: "Noche Calmante",
+                  desc: "Anti-fatiga visual",
+                },
+              ].map(({ value, Icon, label, desc }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setLocal((p) => ({ ...p, theme: value }))}
-                  className={`flex flex-col items-center gap-2 py-3.5 px-2 rounded-xl border-2 transition-all text-xs font-semibold ${
+                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all text-xs font-semibold ${
                     local.theme === value
                       ? "border-[var(--color-brand,#2563eb)] bg-blue-50 dark:bg-blue-900/20 text-[var(--color-brand,#2563eb)] dark:text-blue-300"
-                      : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600"
+                      : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
                   }`}
                 >
                   <div
@@ -136,7 +151,10 @@ export default function UserPreferencesModal({ open, onClose }) {
                   >
                     <Icon className="w-4 h-4" />
                   </div>
-                  {label}
+                  <span className="font-bold">{label}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal leading-tight text-center">
+                    {desc}
+                  </span>
                 </button>
               ))}
             </div>

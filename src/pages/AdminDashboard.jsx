@@ -854,6 +854,7 @@ function AdminDashboard({ onNavigate }) {
               {activeTab === "dashboard" && (
                 <div className="flex gap-2">
                   <button
+                    data-tour="admin-dash-export"
                     onClick={async () => {
                       try {
                         const { exportDashboardReport } =
@@ -916,6 +917,7 @@ function AdminDashboard({ onNavigate }) {
                     <FileText className="w-4 h-4" /> Exportar
                   </button>
                   <button
+                    data-tour="admin-dash-schedule"
                     onClick={handleOpenScheduleModal}
                     className="px-4 py-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded-lg shadow-sm border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all flex items-center gap-2 text-sm shrink-0"
                   >
@@ -929,10 +931,15 @@ function AdminDashboard({ onNavigate }) {
             {activeTab === "dashboard" &&
               (metricas ? (
                 <div className="space-y-6 animate-in fade-in duration-300">
-                  <AdminKPIs metricas={metricas} />
+                  <div data-tour="admin-dash-kpis">
+                    <AdminKPIs metricas={metricas} />
+                  </div>
 
                   {/* Quick Actions */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div
+                    data-tour="admin-dash-actions"
+                    className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+                  >
                     <button
                       id="tour-admin-tab-especialistas"
                       onClick={() => changeTab("especialistas")}
@@ -1001,8 +1008,12 @@ function AdminDashboard({ onNavigate }) {
                     </button>
                   </div>
 
-                  <AdminCharts metricas={metricas} isDark={isDark} />
-                  <AdminActivityLog userName={userName} logs={auditLogs} />
+                  <div data-tour="admin-dash-charts">
+                    <AdminCharts metricas={metricas} isDark={isDark} />
+                  </div>
+                  <div data-tour="admin-dash-audit">
+                    <AdminActivityLog userName={userName} logs={auditLogs} />
+                  </div>
                 </div>
               ) : (
                 <LoadingState variant="dashboard" role="ADMIN_INSTITUCION" />

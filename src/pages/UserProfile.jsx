@@ -229,7 +229,7 @@ function PasswordInput({
 function Card({ children, className = "" }) {
   return (
     <div
-      className={`bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300 hover:shadow-md ${className}`}
+      className={`bg-[#FAFBFD] dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200/90 dark:border-slate-700 overflow-hidden transition-all duration-300 hover:shadow-md ${className}`}
     >
       {children}
     </div>
@@ -243,7 +243,7 @@ function CardHeader({ icon: Icon, title, subtitle, tone = "slate" }) {
     emerald: "text-emerald-500",
   };
   return (
-    <div className="px-4 sm:px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex items-center gap-2">
+    <div className="px-4 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/50 flex items-center gap-2">
       <Icon className={`w-5 h-5 ${tones[tone]}`} />
       <div>
         <h3 className="font-bold text-slate-800 dark:text-white">{title}</h3>
@@ -305,16 +305,16 @@ function PreferenciasPanel() {
   return (
     <Card className="p-5 sm:p-6 space-y-7">
       {/* Tema */}
-      <section>
+      <section data-tour="pref-theme">
         <PrefSectionLabel
           icon={<Moon className="w-3.5 h-3.5" />}
           label="Tema Visual"
         />
         <div className="grid grid-cols-3 gap-2.5 mt-3">
           {[
-            { value: "light", Icon: Sun, label: "Claro" },
-            { value: "system", Icon: Monitor, label: "Sistema" },
-            { value: "dark", Icon: Moon, label: "Oscuro" },
+            { value: "light", Icon: Sun, label: "Claro Confort" },
+            { value: "system", Icon: Monitor, label: "Automático" },
+            { value: "dark", Icon: Moon, label: "Noche Calmante" },
           ].map(({ value, Icon, label }) => (
             <button
               key={value}
@@ -342,7 +342,7 @@ function PreferenciasPanel() {
       </section>
 
       {/* Color de acento */}
-      <section>
+      <section data-tour="pref-accent">
         <PrefSectionLabel
           icon={<Palette className="w-3.5 h-3.5" />}
           label="Color de Acento"
@@ -381,7 +381,7 @@ function PreferenciasPanel() {
       </section>
 
       {/* Tamaño de fuente */}
-      <section>
+      <section data-tour="pref-density">
         <PrefSectionLabel
           icon={<Type className="w-3.5 h-3.5" />}
           label="Tamaño de Fuente"
@@ -1144,6 +1144,7 @@ export default function UserProfile({ initialTab }) {
 
                 {/* Navegación de pestañas */}
                 <nav
+                  data-tour="profile-nav-tabs"
                   className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                   aria-label="Secciones del perfil"
                 >
@@ -1565,77 +1566,79 @@ export default function UserProfile({ initialTab }) {
                 {activeTab === "seguridad" && (
                   <div className="space-y-6">
                     {/* Passkeys */}
-                    <Card>
-                      <CardHeader
-                        icon={Fingerprint}
-                        title="Passkeys (WebAuthn)"
-                        subtitle="Accede con tu huella, rostro o PIN del dispositivo"
-                        tone="emerald"
-                      />
-                      <div className="p-4 sm:p-6 space-y-4">
-                        {passkeys.length === 0 ? (
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Aún no has configurado acceso rápido.
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {passkeys.map((k) => (
-                              <div
-                                key={k.pk_id}
-                                className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900 rounded-xl px-3 py-2.5"
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <Fingerprint className="w-4 h-4 text-blue-500 shrink-0" />
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                                      {k.pk_nomb}
-                                    </p>
-                                    <p className="text-[10px] text-slate-400">
-                                      {k.pk_last_used
-                                        ? `Último uso: ${new Date(k.pk_last_used).toLocaleDateString()}`
-                                        : "Creado recientemente"}
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDeleteFingerprint(k.pk_id)
-                                  }
-                                  className="text-slate-400 hover:text-red-500 transition-colors shrink-0 rounded-lg p-1.5 focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                                  aria-label={`Eliminar acceso rápido ${k.pk_nomb}`}
+                    <div data-tour="profile-passkeys">
+                      <Card>
+                        <CardHeader
+                          icon={Fingerprint}
+                          title="Passkeys (WebAuthn)"
+                          subtitle="Accede con tu huella, rostro o PIN del dispositivo"
+                          tone="emerald"
+                        />
+                        <div className="p-4 sm:p-6 space-y-4">
+                          {passkeys.length === 0 ? (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Aún no has configurado acceso rápido.
+                            </p>
+                          ) : (
+                            <div className="space-y-2">
+                              {passkeys.map((k) => (
+                                <div
+                                  key={k.pk_id}
+                                  className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900 rounded-xl px-3 py-2.5"
                                 >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Fingerprint className="w-4 h-4 text-blue-500 shrink-0" />
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                                        {k.pk_nomb}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400">
+                                        {k.pk_last_used
+                                          ? `Último uso: ${new Date(k.pk_last_used).toLocaleDateString()}`
+                                          : "Creado recientemente"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteFingerprint(k.pk_id)
+                                    }
+                                    className="text-slate-400 hover:text-red-500 transition-colors shrink-0 rounded-lg p-1.5 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                                    aria-label={`Eliminar acceso rápido ${k.pk_nomb}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
 
-                        <CollapsibleNote
-                          icon={Info}
-                          tone="blue"
-                          title="¿Cómo funciona el acceso con huella?"
-                        >
-                          SIAT <strong>no almacena tu huella dactilar</strong>{" "}
-                          ni datos biométricos. Solo se guarda una clave
-                          criptográfica pública en nuestros servidores. Tu
-                          huella permanece en tu dispositivo de forma segura.
-                        </CollapsibleNote>
+                          <CollapsibleNote
+                            icon={Info}
+                            tone="blue"
+                            title="¿Cómo funciona el acceso con huella?"
+                          >
+                            SIAT <strong>no almacena tu huella dactilar</strong>{" "}
+                            ni datos biométricos. Solo se guarda una clave
+                            criptográfica pública en nuestros servidores. Tu
+                            huella permanece en tu dispositivo de forma segura.
+                          </CollapsibleNote>
 
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="md"
-                          fullWidth
-                          leftIcon={<Fingerprint className="w-4 h-4" />}
-                          loading={fpLoading}
-                          onClick={handleRegisterFingerprint}
-                        >
-                          Registrar nueva passkey
-                        </Button>
-                      </div>
-                    </Card>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="md"
+                            fullWidth
+                            leftIcon={<Fingerprint className="w-4 h-4" />}
+                            loading={fpLoading}
+                            onClick={handleRegisterFingerprint}
+                          >
+                            Registrar nueva passkey
+                          </Button>
+                        </div>
+                      </Card>
+                    </div>
 
                     {/* Contraseña */}
                     <form onSubmit={submitPassword}>
@@ -2026,7 +2029,7 @@ export default function UserProfile({ initialTab }) {
 
                 {/* ═══ PESTAÑA: PREFERENCIAS ═══ */}
                 {activeTab === "preferencias" && (
-                  <div className="space-y-6">
+                  <div data-tour="profile-prefs" className="space-y-6">
                     <Card>
                       <CardHeader
                         icon={Settings2}

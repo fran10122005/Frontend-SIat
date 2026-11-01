@@ -9,6 +9,14 @@ import {
 
 const TourContext = createContext(undefined);
 
+const normalizeRole = (role) => {
+  if (role === "ROL_ADM" || role === "ADMIN_INSTITUCION")
+    return "ADMIN_INSTITUCION";
+  if (role === "ROL_ESP" || role === "ESPECIALISTA") return "ESPECIALISTA";
+  if (role === "ROL_REP" || role === "REPRESENTANTE") return "REPRESENTANTE";
+  return role;
+};
+
 export const TourProvider = ({ children }) => {
   const tour = useTour({
     showProgress: true,
@@ -22,9 +30,10 @@ export const TourProvider = ({ children }) => {
   const startRoleTour = useCallback(
     (role) => {
       let steps = [];
-      if (role === "ADMIN_INSTITUCION") steps = adminTourSteps;
-      else if (role === "ESPECIALISTA") steps = specialistTourSteps;
-      else if (role === "REPRESENTANTE") steps = parentTourSteps;
+      const normRole = normalizeRole(role);
+      if (normRole === "ADMIN_INSTITUCION") steps = adminTourSteps;
+      else if (normRole === "ESPECIALISTA") steps = specialistTourSteps;
+      else if (normRole === "REPRESENTANTE") steps = parentTourSteps;
 
       const visible = steps.filter(
         (step) => !step.element || document.querySelector(step.element),
@@ -57,7 +66,13 @@ export const TourProvider = ({ children }) => {
   const startContextualTour = useCallback(
     (role, fallbackKey) => {
       if (!role) return;
-      const key = moduleKeyRef.current || fallbackKey;
+      const rawKey = moduleKeyRef.current || fallbackKey;
+      const key =
+        rawKey === "global_dashboard"
+          ? "dashboard"
+          : rawKey === "settings"
+            ? "profile"
+            : rawKey;
       const steps = getDynamicTourSteps(key, role);
       const visible = steps.filter(
         (step) => !step.element || document.querySelector(step.element),

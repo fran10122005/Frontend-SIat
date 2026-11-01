@@ -577,7 +577,7 @@ export default function SpecialistDashboard() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex flex-col gap-1.5 min-w-0">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <PageTitle icon={Users}>
+                  <PageTitle icon={Users} data-tour="sp-header">
                     {activeChild
                       ? `Panel del Paciente: ${activeChild.nom_nino} ${activeChild.ape_nino}`
                       : `Bienvenido, ${userName || "Especialista"}`}
@@ -620,6 +620,7 @@ export default function SpecialistDashboard() {
                       className="whitespace-nowrap shadow-sm shadow-brand-500/20"
                       leftIcon={<AlertCircle className="w-3.5 h-3.5" />}
                       onClick={() => setShowIncidentModal(true)}
+                      data-tour="sp-incident-btn"
                     >
                       Registrar Incidente
                     </Button>
@@ -630,6 +631,7 @@ export default function SpecialistDashboard() {
                       className="whitespace-nowrap"
                       leftIcon={<FilePlus className="w-3.5 h-3.5" />}
                       onClick={() => setShowIndicacionModal(true)}
+                      data-tour="sp-indicacion-btn"
                     >
                       Anotar Indicación
                     </Button>
@@ -643,6 +645,7 @@ export default function SpecialistDashboard() {
                       className="whitespace-nowrap"
                       leftIcon={<Sliders className="w-3.5 h-3.5" />}
                       onClick={() => setShowAlertRules(true)}
+                      data-tour="sp-rules-btn"
                     >
                       Reglas Alerta
                     </Button>
@@ -654,6 +657,7 @@ export default function SpecialistDashboard() {
                       leftIcon={<Download className="w-4 h-4" />}
                       onClick={handleExportDashboard}
                       disabled={exporting}
+                      data-tour="sp-export-pdf"
                     >
                       {exporting ? "..." : "Reporte PDF"}
                     </Button>
@@ -857,7 +861,10 @@ export default function SpecialistDashboard() {
                 {activeChild && (
                   <div className="space-y-6 animate-in slide-in-from-bottom-5 duration-300 delay-150">
                     {/* 1. HERO CARD DEL PACIENTE */}
-                    <div className="bg-white dark:bg-[#131d2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 md:p-6 shadow-sm relative overflow-hidden">
+                    <div
+                      data-tour="sp-hero"
+                      className="bg-white dark:bg-[#131d2e] rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 md:p-6 shadow-sm relative overflow-hidden"
+                    >
                       <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
 
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
@@ -964,7 +971,10 @@ export default function SpecialistDashboard() {
                       {/* === COLUMNA IZQUIERDA (7 COLS): Terapéutica y Conductual === */}
                       <div className="lg:col-span-7 space-y-5">
                         {/* Metas PEI del Paciente */}
-                        <Card className="p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                        <Card
+                          data-tour="sp-pei-card"
+                          className="p-5 shadow-sm border border-slate-200/80 dark:border-slate-800"
+                        >
                           <div className="flex items-center justify-between gap-3 mb-4">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
@@ -1055,6 +1065,7 @@ export default function SpecialistDashboard() {
                                           onClick={() =>
                                             handleIncrementPeiTrial(g.id)
                                           }
+                                          data-tour="sp-pei-trial"
                                           className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white text-xs font-bold transition-all flex items-center gap-1 shadow-sm active:scale-95 disabled:cursor-not-allowed"
                                           title="Registrar ensayo logrado (+1)"
                                         >
@@ -1101,7 +1112,10 @@ export default function SpecialistDashboard() {
                         </Card>
 
                         {/* Registro de Incidentes Conductuales (Modelo ABC) */}
-                        <Card className="p-5 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                        <Card
+                          data-tour="sp-abc-card"
+                          className="p-5 shadow-sm border border-slate-200/80 dark:border-slate-800"
+                        >
                           <div className="flex items-center justify-between gap-3 mb-4">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
@@ -1213,10 +1227,15 @@ export default function SpecialistDashboard() {
                       {/* === COLUMNA DERECHA (5 COLS): Telemetría, Hogar y Feed de Alertas === */}
                       <div className="lg:col-span-5 space-y-5">
                         {/* Smartwatch / BLE Connect Widget */}
-                        <SmartwatchConnectWidget />
+                        <div data-tour="sp-ble-widget">
+                          <SmartwatchConnectWidget />
+                        </div>
 
                         {/* Detonantes Sensoriales Identificados */}
-                        <Card className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                        <Card
+                          data-tour="sp-sensory-triggers"
+                          className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800"
+                        >
                           <div className="flex items-center justify-between gap-2 mb-3">
                             <div className="flex items-center gap-2">
                               <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
@@ -1250,7 +1269,10 @@ export default function SpecialistDashboard() {
                         </Card>
 
                         {/* Resumen Diario del Hogar (Representante) */}
-                        <Card className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                        <Card
+                          data-tour="sp-home-log"
+                          className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800"
+                        >
                           <div className="flex items-center justify-between gap-2 mb-3">
                             <div className="flex items-center gap-2">
                               <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
@@ -1311,7 +1333,10 @@ export default function SpecialistDashboard() {
                         </Card>
 
                         {/* Feed Unificado: Alertas & Indicaciones Clínicas */}
-                        <Card className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                        <Card
+                          data-tour="sp-feed-tabs"
+                          className="p-4 shadow-sm border border-slate-200/80 dark:border-slate-800"
+                        >
                           <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
                             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                               <button
