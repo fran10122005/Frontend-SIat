@@ -51,7 +51,7 @@ export default function AdminCharts({ metricas, isDark }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px] transition-all duration-200 hover:shadow-md">
+      <div className="bg-slate-50/90 dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200/90 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px] transition-all duration-200 hover:shadow-md">
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">
@@ -125,7 +125,7 @@ export default function AdminCharts({ metricas, isDark }) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px] transition-all duration-200 hover:shadow-md">
+      <div className="bg-slate-50/90 dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200/90 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px] transition-all duration-200 hover:shadow-md">
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">

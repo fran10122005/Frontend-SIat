@@ -49,7 +49,7 @@ export default function Topbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 w-full shrink-0 items-center justify-between border-b border-slate-200/90 dark:border-slate-800/80 bg-[#FAFBFD]/92 dark:bg-[#0B1320]/85 px-4 sm:px-6 pt-[env(safe-area-inset-top)] backdrop-blur-md transition-colors duration-200">
+      <header className="sticky top-0 z-30 flex h-16 w-full shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800/80 bg-slate-100/95 dark:bg-[#0B1320]/85 px-4 sm:px-6 pt-[env(safe-area-inset-top)] backdrop-blur-md transition-colors duration-200">
         {/* Botón menú hamburguesa en móvil */}
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}

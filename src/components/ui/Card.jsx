@@ -8,7 +8,7 @@ const Card = forwardRef(
     return (
       <div
         ref={ref}
-        className={`bg-[#FAFBFD] dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200/90 dark:border-slate-700 overflow-hidden transition-all duration-300 ${hover ? "hover:shadow-md hover:border-slate-300" : ""} ${padded ? "p-4 sm:p-6" : ""} ${className}`}
+        className={`bg-slate-50/90 dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200/90 dark:border-slate-700 overflow-hidden transition-all duration-300 ${hover ? "hover:shadow-md hover:border-slate-300" : ""} ${padded ? "p-4 sm:p-6" : ""} ${className}`}
         {...props}
       >
         {children}
@@ -31,7 +31,7 @@ export function CardHeader({
     emerald: "text-emerald-500",
   };
   return (
-    <div className="px-4 sm:px-6 py-3 border-b border-slate-200/80 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/50 flex items-center gap-2">
+    <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/60 flex items-center gap-2">
       {Icon && <Icon className={`w-4 h-4 shrink-0 ${tones[tone]}`} />}
       <div className="flex-1 min-w-0">
         <h3 className="font-bold text-slate-800 dark:text-white truncate text-sm sm:text-base">

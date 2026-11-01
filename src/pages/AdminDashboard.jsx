@@ -943,7 +943,7 @@ function AdminDashboard({ onNavigate }) {
                     <button
                       id="tour-admin-tab-especialistas"
                       onClick={() => changeTab("especialistas")}
-                      className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 hover:-translate-y-0.5 transition-all text-left group"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50/70 via-slate-50/80 to-blue-50/20 dark:bg-slate-800/90 rounded-xl border border-blue-200/80 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 hover:-translate-y-0.5 transition-all text-left group"
                     >
                       <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl border border-blue-200/50 dark:border-blue-900/40 group-hover:scale-105 transition-transform">
                         <Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -960,7 +960,7 @@ function AdminDashboard({ onNavigate }) {
                     <button
                       id="tour-admin-tab-asignaciones"
                       onClick={() => changeTab("asignaciones")}
-                      className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-purple-400 dark:hover:border-purple-500/50 hover:-translate-y-0.5 transition-all text-left group"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-purple-50/70 via-slate-50/80 to-purple-50/20 dark:bg-slate-800/90 rounded-xl border border-purple-200/80 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-purple-400 dark:hover:border-purple-500/50 hover:-translate-y-0.5 transition-all text-left group"
                     >
                       <div className="p-2.5 bg-purple-100 dark:bg-purple-950/60 rounded-xl border border-purple-200/50 dark:border-purple-900/40 group-hover:scale-105 transition-transform">
                         <Link2 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -976,7 +976,7 @@ function AdminDashboard({ onNavigate }) {
                     </button>
                     <button
                       onClick={() => changeTab("usuarios")}
-                      className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:-translate-y-0.5 transition-all text-left group"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-emerald-50/70 via-slate-50/80 to-emerald-50/20 dark:bg-slate-800/90 rounded-xl border border-emerald-200/80 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:-translate-y-0.5 transition-all text-left group"
                     >
                       <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/60 rounded-xl border border-emerald-200/50 dark:border-emerald-900/40 group-hover:scale-105 transition-transform">
                         <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -992,7 +992,7 @@ function AdminDashboard({ onNavigate }) {
                     </button>
                     <button
                       onClick={() => changeTab("catalogos")}
-                      className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-500/50 hover:-translate-y-0.5 transition-all text-left group"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-amber-50/70 via-slate-50/80 to-amber-50/20 dark:bg-slate-800/90 rounded-xl border border-amber-200/80 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-500/50 hover:-translate-y-0.5 transition-all text-left group"
                     >
                       <div className="p-2.5 bg-amber-100 dark:bg-amber-950/60 rounded-xl border border-amber-200/50 dark:border-amber-900/40 group-hover:scale-105 transition-transform">
                         <Building2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />

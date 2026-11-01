@@ -148,7 +148,7 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   border-radius: 0.5rem;
   border: 1px solid #CBD5E1;
-  background-color: #FAFBFD;
+  background-color: #F4F6F9;
   color: #334155;
   transition: all 0.2s ease;
   cursor: pointer;
@@ -254,7 +254,7 @@ html.dark .btn-secondary:hover {
 /* Modo Claro Amable: tarjetas blancas limpias, bordes naturales y sombra suave anti-deslumbramiento */
 html:not(.dark) .bg-white:not(.badge):not(.avatar):not(.pill):not([class*="bg-white/"]),
 html:not(.dark) button.bg-white {
-  background-color: #FAFBFD !important;
+  background-color: #F4F6F9 !important;
   border-color: #CBD5E1 !important;
   box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 4px 16px -2px rgba(15, 23, 42, 0.03);
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
@@ -420,7 +420,7 @@ input[type="tel"],
 select,
 textarea {
   border: 1px solid #CBD5E1 !important;
-  background-color: #FAFBFD !important;
+  background-color: #F4F6F9 !important;
   color: #0F172A !important;
   border-radius: 0.625rem !important;
   padding: 0.5rem 0.75rem;
@@ -1344,7 +1344,7 @@ html.dark select option {
 }
 
 /* 5. Modales, Diálogos y Drawers */
-html.dark [role="dialog"],
+html.dark [role="dialog"]:not(.fixed):not(.inset-0),
 html.dark .modal-content,
 html.dark .drawer-content {
   background-color: #162032 !important;
@@ -1414,7 +1414,7 @@ html:not(.dark) .bg-white\/90,
 html:not(.dark) .bg-white\/95,
 html:not(.dark) .bg-white\/80,
 html:not(.dark) .topbar {
-  background-color: rgba(250, 251, 253, 0.92) !important;
+  background-color: rgba(241, 245, 249, 0.96) !important;
   border-color: rgba(203, 213, 225, 0.85) !important;
 }
 
@@ -1430,11 +1430,24 @@ html:not(.dark) .bg-gray-100:not(.badge):not(.pill):not(button):not(.status-dot)
   background-color: #E2E8F0 !important;
 }
 
+/* Preservar siempre la transparencia y desenfoque del fondo de modales (Backdrop Overlay) */
+.fixed.inset-0.bg-slate-900\/50,
+.fixed.inset-0.bg-slate-900\/60,
+.fixed.inset-0.bg-slate-900\/70,
+.fixed.inset-0.bg-slate-900\/80,
+.fixed.inset-0.bg-black\/60,
+.fixed.inset-0.bg-black\/70,
+div[class*="fixed"][class*="inset-0"][class*="backdrop-blur"] {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* 4. Modales, diálogos y popovers */
-html:not(.dark) [role="dialog"],
+html:not(.dark) [role="dialog"]:not(.fixed):not(.inset-0),
 html:not(.dark) .modal-content,
 html:not(.dark) .drawer-content {
-  background-color: #FAFBFD !important;
+  background-color: #F4F6F9 !important;
   border: 1px solid #CBD5E1 !important;
   box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.15) !important;
 }
@@ -1458,7 +1471,7 @@ html:not(.dark) table tbody tr:hover {
 
 /* 6. Driver.js Popovers (Guía interactiva) */
 html:not(.dark) .driver-popover {
-  background-color: #FAFBFD !important;
+  background-color: #F4F6F9 !important;
   border: 1px solid #CBD5E1 !important;
   box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.15) !important;
 }

@@ -44,8 +44,8 @@ export default function SpecialistGlobalView({
         data-tour="sp-global-kpis"
         className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 animate-in fade-in duration-300"
       >
-        <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 md:p-5 shadow-sm border border-slate-200 dark:border-slate-800/60 relative overflow-hidden flex items-center gap-4">
-          <div className="p-2.5 md:p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+        <div className="bg-gradient-to-br from-blue-50/90 via-slate-50/80 to-blue-50/30 dark:bg-[#1E293B] rounded-xl p-4 md:p-5 shadow-sm border border-blue-200/90 dark:border-slate-800/60 relative overflow-hidden flex items-center gap-4">
+          <div className="p-2.5 md:p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-lg">
             <UserCircle2 className="w-5 h-5 md:w-6 md:h-6" />
           </div>
           <div>
@@ -58,8 +58,8 @@ export default function SpecialistGlobalView({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 md:p-5 shadow-sm border border-slate-200 dark:border-slate-800/60 relative overflow-hidden flex items-center gap-4">
-          <div className="p-2.5 md:p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
+        <div className="bg-gradient-to-br from-indigo-50/90 via-slate-50/80 to-indigo-50/30 dark:bg-[#1E293B] rounded-xl p-4 md:p-5 shadow-sm border border-indigo-200/90 dark:border-slate-800/60 relative overflow-hidden flex items-center gap-4">
+          <div className="p-2.5 md:p-3 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 rounded-lg">
             <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" />
           </div>
           <div>

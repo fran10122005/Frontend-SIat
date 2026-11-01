@@ -17,10 +17,11 @@ export default function AdminModal({
     <div
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
-      role="dialog"
-      aria-modal="true"
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-modal-title"
         className={`bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full ${widthClass} overflow-hidden border-t border-slate-200 dark:border-slate-700/80 sm:border animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 max-h-[94dvh] sm:max-h-[92vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -34,7 +35,10 @@ export default function AdminModal({
                 </div>
               )}
               <div className="min-w-0">
-                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+                <h3
+                  id="admin-modal-title"
+                  className="text-base sm:text-lg font-bold text-white tracking-tight truncate"
+                >
                   {title}
                 </h3>
                 {subtitle && (

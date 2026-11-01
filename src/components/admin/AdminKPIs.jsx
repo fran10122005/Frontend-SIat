@@ -12,10 +12,12 @@ const kpiConfig = [
     key: "totalNinos",
     label: "Pacientes Activos",
     icon: Users,
-    gradient: "from-blue-500/10 to-transparent",
-    iconBg: "bg-blue-100 dark:bg-blue-900/30",
+    gradient: "from-blue-500/15 via-blue-500/5 to-transparent",
+    iconBg: "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300",
     iconColor: "text-blue-600 dark:text-blue-400",
     textColor: "text-slate-900 dark:text-white",
+    cardBg:
+      "bg-gradient-to-br from-blue-50/90 via-slate-50/80 to-blue-50/30 dark:bg-[#1E293B] border-blue-200/90 dark:border-slate-800/60",
     suffix: "",
     trend: null,
     trendDir: null,
@@ -24,10 +26,13 @@ const kpiConfig = [
     key: "totalEspecialistas",
     label: "Especialistas (Staff)",
     icon: Stethoscope,
-    gradient: "from-emerald-500/10 to-transparent",
-    iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
+    gradient: "from-emerald-500/15 via-emerald-500/5 to-transparent",
+    iconBg:
+      "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300",
     iconColor: "text-emerald-600 dark:text-emerald-400",
     textColor: "text-slate-900 dark:text-white",
+    cardBg:
+      "bg-gradient-to-br from-emerald-50/90 via-slate-50/80 to-emerald-50/30 dark:bg-[#1E293B] border-emerald-200/90 dark:border-slate-800/60",
     suffix: "",
     trend: null,
     trendDir: null,
@@ -36,10 +41,13 @@ const kpiConfig = [
     key: "asignacionesActivas",
     label: "Casos Asignados",
     icon: Clock,
-    gradient: "from-purple-500/10 to-transparent",
-    iconBg: "bg-purple-100 dark:bg-purple-900/30",
+    gradient: "from-purple-500/15 via-purple-500/5 to-transparent",
+    iconBg:
+      "bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300",
     iconColor: "text-purple-600 dark:text-purple-400",
     textColor: "text-slate-900 dark:text-white",
+    cardBg:
+      "bg-gradient-to-br from-purple-50/90 via-slate-50/80 to-purple-50/30 dark:bg-[#1E293B] border-purple-200/90 dark:border-slate-800/60",
     suffix: "",
     trend: null,
     trendDir: null,
@@ -49,9 +57,11 @@ const kpiConfig = [
     label: "Incidentes / Crisis (Mes)",
     icon: ShieldAlert,
     gradient: "from-rose-600 to-rose-700",
-    iconBg: "bg-white/20",
+    iconBg: "bg-white/20 text-white",
     iconColor: "text-white",
     textColor: "text-white",
+    cardBg:
+      "bg-gradient-to-br from-rose-600 to-rose-700 border-rose-600/20 text-white",
     suffix: "",
     trend: null,
     trendDir: null,
@@ -72,11 +82,11 @@ export default function AdminKPIs({ metricas }) {
         return (
           <div
             key={cfg.key}
-            className={`group relative rounded-xl p-3 md:p-5 shadow-sm border overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${isAlert ? "bg-gradient-to-br " + cfg.gradient + " border-rose-600/20" : "bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-800/60"}`}
+            className={`group relative rounded-xl p-3 md:p-5 shadow-sm border overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${cfg.cardBg}`}
             style={{ animationDelay: `${i * 80}ms` }}
           >
             <div
-              className={`absolute inset-0 bg-gradient-to-br ${cfg.gradient} opacity-0 dark:opacity-100`}
+              className={`absolute inset-0 bg-gradient-to-br ${cfg.gradient} opacity-50 dark:opacity-100`}
             />
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-2 md:mb-3">
