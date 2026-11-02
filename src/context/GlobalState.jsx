@@ -579,29 +579,26 @@ export const GlobalProvider = ({ children }) => {
         }));
         setListaNinos(mapped);
 
-        // Si ya hay un niño seleccionado (o recuperado de localStorage para representante)
-        const currentTargetId =
-          userRole === "ESPECIALISTA"
-            ? selectedChildId
-            : selectedChildId || getSavedSelectedChild().id;
+        // Si ya hay un niño seleccionado (o recuperado de localStorage)
+        const currentTargetId = selectedChildId || getSavedSelectedChild().id;
 
         const matched = currentTargetId
           ? mapped.find(
               (n) =>
-                n.id_ninos === currentTargetId ||
-                n.nin_codi === currentTargetId,
+                String(n.id_ninos) === String(currentTargetId) ||
+                String(n.nin_codi) === String(currentTargetId),
             )
           : null;
 
         if (matched) {
-          if (selectedChildId !== matched.id_ninos) {
+          if (String(selectedChildId) !== String(matched.id_ninos)) {
             setSelectedChildId(matched.id_ninos);
           }
           if (nomNino !== matched.nom_nino) {
             setNomNino(matched.nom_nino);
           }
           saveSelectedChild(matched.id_ninos, matched.nom_nino);
-        } else if (!selectedChildId && userRole !== "ESPECIALISTA") {
+        } else if (mapped.length > 0) {
           setSelectedChildId(mapped[0].id_ninos);
           setNomNino(mapped[0].nom_nino);
           saveSelectedChild(mapped[0].id_ninos, mapped[0].nom_nino);
@@ -617,16 +614,14 @@ export const GlobalProvider = ({ children }) => {
 
   const activeChild = useMemo(() => {
     if (!listaNinos || listaNinos.length === 0) return null;
-    // Si el rol es especialista y no hay selectedChildId, el estado activo es null (Vista Global)
-    if (userRole === "ESPECIALISTA" && !selectedChildId) return null;
     const found = listaNinos.find(
-      (n) => n.id_ninos === selectedChildId || n.nin_codi === selectedChildId,
+      (n) =>
+        String(n.id_ninos) === String(selectedChildId) ||
+        String(n.nin_codi) === String(selectedChildId),
     );
     if (found) return found;
-    // Para representantes, fallback al primer niño de la lista
-    if (userRole !== "ESPECIALISTA") return listaNinos[0];
-    return null;
-  }, [selectedChildId, listaNinos, userRole]);
+    return listaNinos[0] || null;
+  }, [selectedChildId, listaNinos]);
 
   useEffect(() => {
     if (activeChild) {

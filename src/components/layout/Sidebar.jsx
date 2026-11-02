@@ -36,27 +36,8 @@ export default function Sidebar() {
   const activeMenu = currentView;
 
   const specialistItems = [
-    ...(selectedChildId
-      ? [
-          {
-            id: "global_dashboard",
-            icon: LayoutDashboard,
-            label: "Dashboard Global",
-          },
-          {
-            id: "dashboard",
-            icon: UserCircle,
-            label: "Panel del Paciente",
-          },
-        ]
-      : [
-          {
-            id: "dashboard",
-            icon: LayoutDashboard,
-            label: "Dashboard Global",
-          },
-        ]),
-    { id: "patients", icon: Users, label: "Selección de Pacientes" },
+    { id: "dashboard", icon: LayoutDashboard, label: "Panel Principal" },
+    { id: "patients", icon: Users, label: "Pacientes" },
     { id: "student", icon: UserCircle, label: "Ficha del Paciente" },
     { id: "historial", icon: TrendingUp, label: "Historial de Evolución" },
     { id: "home_analytics", icon: LineChart, label: "Análisis en Casa" },
@@ -155,14 +136,6 @@ export default function Sidebar() {
                   if (isBlocked) {
                     showToast("👆 Selecciona un paciente para continuar");
                     navigate("patients");
-                    setIsSidebarOpen(false);
-                    return;
-                  }
-                  if (item.id === "global_dashboard") {
-                    setSelectedChildId(null);
-                    setNomNino(null);
-                    saveSelectedChild(null, null);
-                    navigate("dashboard");
                     setIsSidebarOpen(false);
                     return;
                   }

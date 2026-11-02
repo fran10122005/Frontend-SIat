@@ -114,3 +114,4 @@ generateAndroidIcons().catch((err) => {
   console.error('❌ Error generando iconos de Android:', err);
   process.exit(1);
 });
+

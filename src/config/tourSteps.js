@@ -70,9 +70,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-dashboard",
     popover: {
-      title: "📊 Panel Clínico & Monitoreo",
+      title: "📊 Panel Clínico del Paciente",
       description:
-        "🎯 Propósito: Alterna entre el paciente en consulta y el resumen global de tu población.\n⚡ Acción: Selecciona un paciente para ver su frecuencia cardíaca, registrar crisis o avanzar metas.\n💡 Clave: Alertas visuales y sonoras inmediatas ante sobrecargas sensoriales.",
+        "🎯 Propósito: Centro de supervisión directa del niño en consulta.\n⚡ Acción: Observa las pulsaciones en vivo, registra avances en metas PEI y documenta desregulaciones.\n💡 Clave: Cambia de paciente en la barra superior cuando atiendas a otro niño.",
       side: "right",
       align: "center",
     },
@@ -347,48 +347,6 @@ const specialistModuleTours = {
         description:
           "🎯 Propósito: Bitácora interactiva de avisos automáticos del sensor y pautas clínicas prescritas.\n⚡ Acción: Alterna entre pestañas para verificar si los padres confirmaron la lectura de tus pautas.\n💡 Clave: Canal de comunicación con acuse de recibo y trazabilidad total.",
         side: "left",
-        align: "center",
-      },
-    },
-
-    // --- Rama B: Vista Global (sin paciente seleccionado) ---
-    {
-      element: '[data-tour="sp-global-kpis"]',
-      popover: {
-        title: "📊 Resumen de tu Nómina de Pacientes",
-        description:
-          "🎯 Propósito: Panorama general de toda tu población de niños asignados.\n⚡ Acción: Revisa pacientes activos, promedio de logro en metas PEI y alertas críticas del día.\n💡 Clave: Identifica rápidamente qué casos necesitan seguimiento prioritario.",
-        side: "bottom",
-        align: "start",
-      },
-    },
-    {
-      element: '[data-tour="sp-global-charts"]',
-      popover: {
-        title: "📉 Epidemiología y Distribución de Crisis",
-        description:
-          "🎯 Propósito: Gráficas comparativas de tipología de crisis y factores detonantes.\n⚡ Acción: Evalúa tendencias semanales para medir la efectividad de las intervenciones.\n💡 Clave: Evidencia estadística para reportes de investigación y dirección médica.",
-        side: "top",
-        align: "center",
-      },
-    },
-    {
-      element: '[data-tour="sp-global-actions"]',
-      popover: {
-        title: "⚡ Acciones Rápidas Globales",
-        description:
-          "🎯 Propósito: Atajos inmediatos sin necesidad de navegar por múltiples menús.\n⚡ Acción: Selecciona un paciente, diseña una terapia estructurada o calibra un nuevo sensor.\n💡 Clave: Agiliza la gestión operativa entre sesiones clínicas.",
-        side: "top",
-        align: "start",
-      },
-    },
-    {
-      element: '[data-tour="sp-global-alerts"]',
-      popover: {
-        title: "🚨 Novedades y Alertas Recientes",
-        description:
-          "🎯 Propósito: Feed centralizado de crisis sensoriales reportadas en toda tu nómina.\n⚡ Acción: Revisa eventos ordenados cronológicamente por nivel de severidad.\n💡 Clave: Te mantiene informado de desregulaciones ocurridas fuera de consulta.",
-        side: "top",
         align: "center",
       },
     },

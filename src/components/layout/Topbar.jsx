@@ -105,38 +105,48 @@ export default function Topbar() {
               </div>
             )}
 
-          {(userRole === "ESPECIALISTA" || userRole === "ROL_ESP") && (
-            <div className="flex items-center gap-1.5">
-              {selectedChildId && activeChild ? (
-                <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/60 rounded-full px-2.5 sm:px-3 py-1 text-xs text-blue-700 dark:text-blue-300 font-semibold shadow-2xs animate-in fade-in duration-200">
-                  <Baby className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                  <span className="truncate max-w-[100px] sm:max-w-[140px]">
-                    {activeChild.nom_nino}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedChildId(null);
-                      setNomNino(null);
-                      saveSelectedChild(null, null);
-                      if (currentView !== "dashboard")
-                        setCurrentView("dashboard");
-                    }}
-                    className="ml-0.5 p-0.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-500 hover:text-blue-800 dark:text-blue-400 dark:hover:text-white transition-colors cursor-pointer"
-                    title="Deseleccionar y volver al Dashboard Global"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-full px-2 sm:px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span className="hidden xs:inline">Dashboard Global</span>
-                  <span className="inline xs:hidden">Global</span>
-                </div>
-              )}
-            </div>
-          )}
+          {(userRole === "ESPECIALISTA" || userRole === "ROL_ESP") &&
+            listaNinos &&
+            listaNinos.length > 0 && (
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-full border border-slate-200 dark:border-slate-700 max-w-[280px] sm:max-w-none overflow-x-auto no-scrollbar shrink-0">
+                {listaNinos.length === 1 ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200">
+                    <Baby className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>
+                      {listaNinos[0].nom_nino} {listaNinos[0].ape_nino}
+                    </span>
+                  </div>
+                ) : (
+                  listaNinos.map((child) => {
+                    const childId = child.id_ninos || child.nin_codi;
+                    const isActive =
+                      String(selectedChildId) === String(childId) ||
+                      String(activeChild?.id_ninos) === String(childId) ||
+                      String(activeChild?.nin_codi) === String(childId);
+                    return (
+                      <button
+                        key={childId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedChildId(childId);
+                          setNomNino(child.nom_nino);
+                          saveSelectedChild(childId, child.nom_nino);
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                          isActive
+                            ? "bg-blue-600 text-white shadow-xs"
+                            : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
+                        }`}
+                        title={`Cambiar a ${child.nom_nino} ${child.ape_nino}`}
+                      >
+                        <Baby className="w-3.5 h-3.5 shrink-0" />
+                        <span>{child.nom_nino}</span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
         </div>
 
         {/* Contenedor derecho de acciones */}
