@@ -912,9 +912,10 @@ html {
 
 .driver-popover-description {
   font-size: 0.875rem !important;
-  line-height: 1.5 !important;
+  line-height: 1.55 !important;
   color: #64748B !important;
   margin-bottom: 1.25rem !important;
+  white-space: pre-line !important;
 }
 
 .driver-popover-footer button {
@@ -968,6 +969,7 @@ html {
 
 .dark .driver-popover-description {
   color: #94A3B8 !important;
+  white-space: pre-line !important;
 }
 
 .dark .driver-popover-footer .driver-popover-prev-btn,

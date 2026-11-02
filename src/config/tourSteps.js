@@ -2,9 +2,11 @@
  * tourSteps.js — Definición centralizada de todos los tutoriales interactivos de SIAT.
  * Los pasos de rol usan selectores de navegación (#tour-sidebar-*, #tour-admin-*).
  * Los tours por módulo usan selectores data-tour-* que existen en el DOM de cada página.
- * Cada paso describe con especificidad clínica, técnica y funcional el elemento destacado.
- * El contexto (TourContext) omite automáticamente los pasos cuyo elemento no
- * exista en pantalla (p. ej. modales cerrados o vistas condicionales).
+ * Cada paso sigue una estructura de alta eficiencia:
+ *  🎯 Propósito: Qué control o información presenta el elemento.
+ *  ⚡ Acción: Qué debe pulsar o seleccionar el usuario.
+ *  💡 Clave: Beneficio clínico, operativo o recomendación práctica.
+ * El contexto (TourContext) omite automáticamente pasos de elementos no visibles.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -15,9 +17,9 @@ export const adminTourSteps = [
   {
     element: "#tour-admin-sidebar",
     popover: {
-      title: "Consola de Gobierno Institucional",
+      title: "🏛️ Gobierno Institucional",
       description:
-        "Panel de control centralizado para la dirección clínica. Administra nóminas médicas, representantes legales, asignaciones terapéuticas, infraestructura de servidores y políticas de seguridad multi-tenant.",
+        "🎯 Propósito: Barra de gestión central para dirección y administración clínica.\n⚡ Acción: Navega entre nómina médica, representantes legales, asignaciones terapéuticas y auditoría.\n💡 Clave: Toda modificación queda registrada para cumplimiento normativo LOPNNA.",
       side: "right",
       align: "start",
     },
@@ -25,9 +27,9 @@ export const adminTourSteps = [
   {
     element: "#tour-admin-kpis",
     popover: {
-      title: "Métricas Ejecutivas en Tiempo Real",
+      title: "📊 Métricas Ejecutivas en Tiempo Real",
       description:
-        "Supervisa la población activa de pacientes, altas de la semana, especialistas en servicio y volumen de incidentes severos del mes con comparativa de tendencias.",
+        "🎯 Propósito: Supervisión integral de la carga clínica y el pulso institucional.\n⚡ Acción: Observa pacientes activos, altas de la semana, especialistas en servicio y crisis del mes.\n💡 Clave: Compara las tendencias mensuales para planificar turnos y recursos.",
       side: "bottom",
       align: "start",
     },
@@ -35,9 +37,9 @@ export const adminTourSteps = [
   {
     element: "#tour-admin-tab-especialistas",
     popover: {
-      title: "Gestión de Especialistas Clínicos",
+      title: "🩺 Nómina de Especialistas Clínicos",
       description:
-        "Acreditación de terapeutas ocupacionales, psicólogos y neuropediatras. Valida credenciales médicas MPPS, asigna especialidades y gestiona el estado de sus accesos.",
+        "🎯 Propósito: Acreditación y control de terapeutas ocupacionales, psicólogos y neuropediatras.\n⚡ Acción: Pulsa aquí para dar de alta terapeutas, validar colegiatura MPPS y asignar especialidades.\n💡 Clave: Solo el personal activo y acreditado puede acceder a expedientes de pacientes.",
       side: "right",
       align: "center",
     },
@@ -45,9 +47,9 @@ export const adminTourSteps = [
   {
     element: "#tour-admin-tab-asignaciones",
     popover: {
-      title: "Aislamiento y Asignaciones Terapéuticas",
+      title: "🔗 Matriz de Asignaciones Clínicas",
       description:
-        "Vincula especialistas con pacientes. Garantiza el principio de menor privilegio: un profesional clínico solo puede acceder a los expedientes y telemetría de los niños que tiene formalmente asignados.",
+        "🎯 Propósito: Vincula formalmente a cada niño con sus terapeutas tratantes.\n⚡ Acción: Crea o modifica asignaciones para iniciar el acompañamiento terapéutico.\n💡 Clave: Principio de menor privilegio: ningún especialista puede ver pacientes fuera de su nómina asignada.",
       side: "right",
       align: "center",
     },
@@ -58,9 +60,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-specialist-sidebar",
     popover: {
-      title: "Portal Clínico del Especialista",
+      title: "🩺 Estación de Trabajo Terapéutica",
       description:
-        "Bienvenido a tu estación de trabajo terapéutica. Diseñada para el seguimiento conductual, la prescripción de indicaciones, el avance de metas PEI y la biotelemetría en tiempo real.",
+        "🎯 Propósito: Tu centro clínico para seguimiento conductual, metas PEI y bioseñales en vivo.\n⚡ Acción: Explora las secciones laterales para atender pacientes, programar terapias o calibrar sensores.\n💡 Clave: Diseñado para registrar datos rápidamente durante la sesión con el niño.",
       side: "right",
       align: "start",
     },
@@ -68,9 +70,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-dashboard",
     popover: {
-      title: "Panel Clínico Principal",
+      title: "📊 Panel Clínico & Monitoreo",
       description:
-        "Alterna entre el Dashboard Global (resumen de toda tu población de pacientes) y el Panel Individual del Paciente seleccionado con sus bioseñales y metas en curso.",
+        "🎯 Propósito: Alterna entre el paciente en consulta y el resumen global de tu población.\n⚡ Acción: Selecciona un paciente para ver su frecuencia cardíaca, registrar crisis o avanzar metas.\n💡 Clave: Alertas visuales y sonoras inmediatas ante sobrecargas sensoriales.",
       side: "right",
       align: "center",
     },
@@ -78,9 +80,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-patients",
     popover: {
-      title: "Directorio y Admisión de Pacientes",
+      title: "👥 Directorio y Admisión de Pacientes",
       description:
-        "Consulta expedientes asignados, filtra por nivel TEA o estado de conexión del sensor, realiza admisiones clínicas y genera invitaciones de enlace para los representantes.",
+        "🎯 Propósito: Nómina de niños asignados bajo tu supervisión profesional.\n⚡ Acción: Busca por nombre, filtra por nivel TEA, verifica conexión del reloj o admite un nuevo paciente.\n💡 Clave: Genera invitaciones digitales para que los representantes activen su acceso familiar.",
       side: "right",
       align: "center",
     },
@@ -88,9 +90,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-student",
     popover: {
-      title: "Ficha Maestra del Paciente",
+      title: "📋 Ficha Maestra del Paciente",
       description:
-        "Expediente integral del niño: diagnóstico clínico, clasificación del espectro TEA, perfil de reactividad sensorial y datos de contacto de sus representantes legales.",
+        "🎯 Propósito: Expediente clínico integral del niño con diagnóstico y reactividad sensorial.\n⚡ Acción: Consulta diagnósticos TEA, antecedentes familiares y datos de contacto del tutor legal.\n💡 Clave: La base fisiológica para personalizar los umbrales de alerta del smartwatch.",
       side: "right",
       align: "center",
     },
@@ -98,9 +100,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-historial",
     popover: {
-      title: "Historial de Evolución e Incidentes A-B-C",
+      title: "📈 Evolución Clínica y Bitácora A-B-C",
       description:
-        "Auditoría cronológica de crisis sensoriales, efectividad de rutinas e informes médicos detallados listos para exportar en PDF apaisado o vertical con validez institucional.",
+        "🎯 Propósito: Auditoría cronológica de crisis y efectividad de las intervenciones.\n⚡ Acción: Revisa sesiones anteriores, analiza detonantes recurrentes y exporta informes en PDF.\n💡 Clave: Informes estructurados con validez médica para neuropediatras y escuelas.",
       side: "right",
       align: "center",
     },
@@ -108,9 +110,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-home_analytics",
     popover: {
-      title: "Análisis Cruzado en Casa",
+      title: "🏡 Análisis Cruzado con el Hogar",
       description:
-        "Cruza los reportes del diario del hogar (sueño, ánimo, apetito, medicación) con la biotelemetría del smartwatch para evaluar el impacto del entorno familiar en la autorregulación.",
+        "🎯 Propósito: Correlaciona el descanso, alimentación y estado anímico en casa con la biotelemetría.\n⚡ Acción: Revisa cómo influye una noche de mal sueño en las desregulaciones del día.\n💡 Clave: Integra a la familia como aliada directa del proceso terapéutico.",
       side: "right",
       align: "center",
     },
@@ -118,9 +120,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-rutinas",
     popover: {
-      title: "Catálogo y Reproductor de Terapias",
+      title: "🧩 Terapias Guiadas y Pictogramas",
       description:
-        "Crea terapias paso a paso con pictogramas y temporizador, reproduce sesiones guiadas en vivo y registra la cooperación del paciente (1 a 5 estrellas) vinculada a metas PEI.",
+        "🎯 Propósito: Catálogo de actividades terapéuticas secuenciadas paso a paso.\n⚡ Acción: Ejecuta sesiones guiadas en pantalla completa y califica la cooperación (1-5 estrellas).\n💡 Clave: Cada actividad completada abona progreso verificable a las metas PEI.",
       side: "right",
       align: "center",
     },
@@ -128,9 +130,9 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-inventario",
     popover: {
-      title: "Calibración IoT y Sensores Biométricos",
+      title: "📡 Calibración de Sensores IoT",
       description:
-        "Enlace directo por Web BLE con el smartwatch del niño, calibración guiada de 15 segundos para el pulso basal en reposo y simulación de crisis para entrenamiento.",
+        "🎯 Propósito: Conexión Bluetooth Low Energy (BLE) y calibración de pulsaciones basales.\n⚡ Acción: Enlaza el reloj del niño, realiza el test guiado de 15 segundos y ajusta los límites BPM.\n💡 Clave: Anticipa desregulaciones antes de que se manifiesten físicamente.",
       side: "right",
       align: "center",
     },
@@ -141,9 +143,9 @@ export const parentTourSteps = [
   {
     element: "#tour-parent-sidebar",
     popover: {
-      title: "Portal del Representante (Familia)",
+      title: "🏠 Espacio de Apoyo Familiar",
       description:
-        "Tu espacio para acompañar el progreso de tu niño, consultar bioseñales en vivo, mantenerte en contacto con los terapeutas y aplicar herramientas de regulación en casa.",
+        "🎯 Propósito: Tu centro de acompañamiento para cuidar el bienestar de tu niño todos los días.\n⚡ Acción: Consulta el estado en vivo, llena el diario de sueño y utiliza herramientas de calma.\n💡 Clave: Comunicación fluida y en tiempo real con el equipo de especialistas.",
       side: "right",
       align: "start",
     },
@@ -151,9 +153,9 @@ export const parentTourSteps = [
   {
     element: "#tour-sidebar-dashboard",
     popover: {
-      title: "Inicio y Estado en Vivo",
+      title: "🚦 Semáforo Emocional en Vivo",
       description:
-        "Semáforo emocional en tiempo real, resumen del día, indicaciones de la semana y botones de auxilio sensorial inmediato (SOS).",
+        "🎯 Propósito: Conoce si tu niño está en calma, alerta o en sobrecarga a partir de su pulso.\n⚡ Acción: Observa el color del semáforo y revisa las pautas prioritarias enviadas por el especialista.\n💡 Clave: Cuenta con botón SOS para activar ejercicios de respiración guiada de inmediato.",
       side: "right",
       align: "center",
     },
@@ -161,9 +163,9 @@ export const parentTourSteps = [
   {
     element: "#tour-sidebar-sensores",
     popover: {
-      title: "Seguimiento Biométrico (IoT)",
+      title: "💓 Pulso y Estrés en Tiempo Real",
       description:
-        "Lecturas continuas del smartwatch del niño: pulso cardíaco (BPM), nivel de movimiento y estrés para anticipar crisis sensoriales antes de que escalen.",
+        "🎯 Propósito: Lecturas biométricas continuas enviadas por la pulsera inteligente del niño.\n⚡ Acción: Verifica las pulsaciones (BPM) y el nivel de estrés para anticiparte a una crisis.\n💡 Clave: Si el pulso sube sin actividad física, aplica una pausa de respiración o calma.",
       side: "right",
       align: "center",
     },
@@ -171,9 +173,9 @@ export const parentTourSteps = [
   {
     element: "#tour-sidebar-agenda",
     popover: {
-      title: "Día a Día (Estructuración Visual)",
+      title: "📅 Rutina Visual Día a Día",
       description:
-        "Horario visual de actividades cotidianas y tareas terapéuticas asignadas por el especialista. Marca cada actividad completada para brindar certidumbre al niño.",
+        "🎯 Propósito: Horario interactivo con pictogramas para estructurar el día del niño.\n⚡ Acción: Marca las tareas cotidianas completadas para brindarle certidumbre y tranquilidad.\n💡 Clave: La anticipación visual previene crisis por transiciones imprevistas.",
       side: "right",
       align: "center",
     },
@@ -181,9 +183,9 @@ export const parentTourSteps = [
   {
     element: "#tour-sidebar-diario_hogar",
     popover: {
-      title: "Diario del Hogar (Registro Diario)",
+      title: "📝 Diario del Hogar (Registro Rápido)",
       description:
-        "Fundamental para el éxito del tratamiento: registra cómo durmió, su apetito, su estado de ánimo y cualquier conducta inusual. El terapeuta lee esto antes de cada sesión.",
+        "🎯 Propósito: Comparte en 1 minuto cómo durmió, su apetito, su ánimo y medicinas tomadas.\n⚡ Acción: Completa este registro cada mañana para que el terapeuta prepare la sesión del día.\n💡 Clave: Información clave para entender qué detona el malestar de tu niño.",
       side: "right",
       align: "center",
     },
@@ -191,9 +193,9 @@ export const parentTourSteps = [
   {
     element: "#tour-sidebar-herramientas",
     popover: {
-      title: "Kit de Apoyo Sensorial y Conductual",
+      title: "🎒 Kit de Regulación y Comunicación",
       description:
-        "5 herramientas interactivas: Tablero de comunicación aumentativa (AAC) con voz, Primero-Después, 12 ejercicios de regulación sensorial, Temporizador visual y Economía de fichas.",
+        "🎯 Propósito: 5 herramientas interactivas: Tablero de voz AAC, Primero-Después, 12 ejercicios sensoriales, temporizador y fichas.\n⚡ Acción: Úsalas ante momentos de tensión o para reforzar conductas positivas.\n💡 Clave: Diseñadas clínicamente para dar respuestas inmediatas en casa.",
       side: "right",
       align: "center",
     },
@@ -201,9 +203,9 @@ export const parentTourSteps = [
   {
     element: "#tour-sidebar-perfil_padre",
     popover: {
-      title: "Expediente del Niño y Consentimiento LOPNNA",
+      title: "📑 Expediente y Consentimiento LOPNNA",
       description:
-        "Consulta la ficha médica de tu niño, verifica el estado del consentimiento legal informado y administra el acceso rápido mediante biometría (Passkeys).",
+        "🎯 Propósito: Datos oficiales de tu niño, estado de la autorización legal y seguridad.\n⚡ Acción: Configura el acceso biométrico rápido con huella dactilar o rostro (Passkeys).\n💡 Clave: Privacidad garantizada bajo el Artículo 65 de la LOPNNA.",
       side: "right",
       align: "center",
     },
@@ -221,9 +223,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-header"]',
       popover: {
-        title: "Panel Clínico del Paciente",
+        title: "🎯 Panel Clínico del Paciente",
         description:
-          "Vista de acompañamiento focalizada. Desde aquí supervisas en tiempo real el bienestar del niño, registras ensayos clínicos y ejecutas intervenciones terapéuticas.",
+          "🎯 Propósito: Centro de supervisión focalizada del niño en sesión terapéutica.\n⚡ Acción: Monitorea el bienestar del paciente, revisa alertas y ejecuta acciones de intervención rápida.\n💡 Clave: Puedes cambiar de paciente en cualquier momento desde el selector superior.",
         side: "bottom",
         align: "start",
       },
@@ -231,9 +233,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-hero"]',
       popover: {
-        title: "Ficha Rápida del Niño",
+        title: "👤 Ficha Rápida del Niño",
         description:
-          "Identificación completa del paciente: fotografía, nivel de desarrollo TEA, edad calculada y rango basal de frecuencia cardíaca calibrado en reposo (BPM mínimo y máximo).",
+          "🎯 Propósito: Identificación del paciente: fotografía, nivel TEA, edad y rango de pulso basal (BPM).\n⚡ Acción: Verifica que las pulsaciones actuales se mantengan dentro de su franja segura calibrada.\n💡 Clave: Si el pulso supera el límite máximo en reposo, el sistema activa alerta preventiva.",
         side: "bottom",
         align: "start",
       },
@@ -241,9 +243,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-incident-btn"]',
       popover: {
-        title: "Registrar Incidente Conductual (Modelo A-B-C)",
+        title: "🚨 Registrar Incidente A-B-C",
         description:
-          "Registra eventos clínicos bajo el modelo Antecedente (detonante sensorial o ambiental), Conducta (tipo y severidad) y Consecuencia (estrategia de regulación aplicada).",
+          "🎯 Propósito: Documentar eventos de crisis o desregulación bajo el modelo Antecedente-Conducta-Consecuencia.\n⚡ Acción: Haz clic aquí durante o después de la crisis para registrar el detonante, severidad y la estrategia aplicada.\n💡 Clave: Se tabula al instante en el historial clínico y actualiza los indicadores del mes.",
         side: "left",
         align: "center",
       },
@@ -251,9 +253,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-indicacion-btn"]',
       popover: {
-        title: "Prescribir Indicación Clínica",
+        title: "📋 Prescribir Indicación al Hogar",
         description:
-          "Emite pautas terapéuticas para el hogar o el aula con acuse de lectura digital. El representante la visualizará de inmediato como foco prioritario en su panel.",
+          "🎯 Propósito: Emitir pautas de intervención o tareas para la familia o la escuela.\n⚡ Acción: Pulsa para redactar la instrucción; el representante la recibirá con foco prioritario.\n💡 Clave: Cuenta con acuse de lectura digital para seguimiento en la próxima consulta.",
         side: "left",
         align: "center",
       },
@@ -261,9 +263,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-rules-btn"]',
       popover: {
-        title: "Umbrales Clínicos de Alerta",
+        title: "⚙️ Umbrales de Alerta Personalizados",
         description:
-          "Personaliza los límites de sobrecarga sensorial para este paciente específico: umbral de taquicardia por estrés, tiempo de persistencia y canales de notificación.",
+          "🎯 Propósito: Calibrar los límites de sobrecarga sensorial para la fisiología específica de este niño.\n⚡ Acción: Ajusta los BPM máximos de estrés, el tiempo de tolerancia y los canales de aviso.\n💡 Clave: Evita falsas alarmas calibrando según la edad y condición del paciente.",
         side: "left",
         align: "center",
       },
@@ -271,9 +273,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-export-pdf"]',
       popover: {
-        title: "Exportar Informe Clínico",
+        title: "📑 Exportar Informe Clínico PDF",
         description:
-          "Descarga un informe profesional en PDF con gráficas de evolución, resumen de bioseñales y bitácora de incidentes para entregar a la dirección o a neuropediatría.",
+          "🎯 Propósito: Generar el expediente formal con curvas de bioseñales y bitácora de desregulaciones.\n⚡ Acción: Haz clic para descargar el PDF con membrete institucional listo para entregar.\n💡 Clave: Formato validado para neuropediatras, psicólogos y auditorías médicas.",
         side: "left",
         align: "center",
       },
@@ -281,9 +283,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-pei-card"]',
       popover: {
-        title: "Metas PEI (Plan Educativo Individualizado)",
+        title: "🎯 Metas PEI (Objetivos SMART)",
         description:
-          "Monitoreo de objetivos SMART de autonomía, comunicación o autorregulación sensorial. Muestra el porcentaje de logro acumulado según el criterio clínico establecido.",
+          "🎯 Propósito: Seguimiento del Plan Educativo Individualizado en autonomía, lenguaje y regulación.\n⚡ Acción: Monitorea el porcentaje de logro y pulsa (+) para agregar un nuevo objetivo clínico.\n💡 Clave: Permite demostrar el avance terapéutico del paciente con datos medibles.",
         side: "top",
         align: "center",
       },
@@ -291,9 +293,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-pei-trial"]',
       popover: {
-        title: "Registro de Ensayo Logrado (+1)",
+        title: "✨ Registrar Ensayo Logrado (+1)",
         description:
-          "Durante la sesión de terapia o consulta presencial, pulsa este botón cada vez que el niño ejecute satisfactoriamente la conducta esperada para avanzar el progreso en vivo.",
+          "🎯 Propósito: Avanzar en vivo el progreso de una conducta aprendida durante la sesión.\n⚡ Acción: Pulsa este botón cada vez que el niño cumpla la tarea con éxito.\n💡 Clave: Actualiza automáticamente el porcentaje de avance de la meta PEI.",
         side: "top",
         align: "center",
       },
@@ -301,9 +303,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-abc-card"]',
       popover: {
-        title: "Bitácora de Incidentes Recientes",
+        title: "📖 Bitácora de Crisis Recientes",
         description:
-          "Historial cronológico de desregulaciones con código de color por severidad (Leve, Moderada o Grave), duración en minutos y estrategia terapéutica empleada.",
+          "🎯 Propósito: Registro cronológico de crisis clasificadas por color (Leve, Moderada, Severa).\n⚡ Acción: Revisa los detonantes y estrategias previas para planificar la intervención de hoy.\n💡 Clave: Detecta si un detonante ambiental se repite de forma consistente.",
         side: "top",
         align: "center",
       },
@@ -311,9 +313,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-ble-widget"]',
       popover: {
-        title: "Estado del Enlace Wearable (IoT)",
+        title: "📡 Enlace Wearable Bluetooth",
         description:
-          "Supervisa la conexión Bluetooth Low Energy (BLE) con la pulsera o smartwatch del niño, nivel de batería del dispositivo y estabilidad de transmisión.",
+          "🎯 Propósito: Conexión directa por Web Bluetooth (BLE SIG 0x2A37) con la pulsera del niño.\n⚡ Acción: Pulsa para escanear y conectar el dispositivo, o verificar batería y estabilidad.\n💡 Clave: Lecturas en vivo sin intermediarios ni demoras de red.",
         side: "left",
         align: "center",
       },
@@ -321,9 +323,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-sensory-triggers"]',
       popover: {
-        title: "Detonantes Sensoriales Frecuentes",
+        title: "⚠️ Detonantes Sensoriales Frecuentes",
         description:
-          "Patrones detectados por el sistema a partir de las crisis registradas: sobrecarga acústica, hipersensibilidad táctil, transiciones imprevistas o fatiga visual.",
+          "🎯 Propósito: Ranking inteligente de causas de estrés (acústico, táctil, transiciones, fatiga).\n⚡ Acción: Adapta el entorno terapéutico antes de comenzar actividades de alta exigencia.\n💡 Clave: Previene crisis anticipando la exposición a factores detonantes.",
         side: "left",
         align: "center",
       },
@@ -331,9 +333,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-home-log"]',
       popover: {
-        title: "Bitácora del Hogar (Reporte de Hoy)",
+        title: "🏡 Reporte del Hogar de Hoy",
         description:
-          "Información vital cargada por los padres en el Diario del Hogar: horas y calidad de sueño, estado anímico matutino, apetito y administración de medicamentos.",
+          "🎯 Propósito: Información reportada por la familia: horas de sueño, ánimo, apetito y medicinas.\n⚡ Acción: Consulta este reporte antes de la sesión para ajustar el ritmo terapéutico.\n💡 Clave: Si el niño durmió poco o está irritable, prioriza ejercicios de calma.",
         side: "left",
         align: "center",
       },
@@ -341,9 +343,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-feed-tabs"]',
       popover: {
-        title: "Feed Clínico Unificado",
+        title: "🔔 Feed de Alertas e Indicaciones",
         description:
-          "Alterna entre las alertas biométricas generadas automáticamente por el sensor y las indicaciones médicas prescritas con su estado de lectura por parte de la familia.",
+          "🎯 Propósito: Bitácora interactiva de avisos automáticos del sensor y pautas clínicas prescritas.\n⚡ Acción: Alterna entre pestañas para verificar si los padres confirmaron la lectura de tus pautas.\n💡 Clave: Canal de comunicación con acuse de recibo y trazabilidad total.",
         side: "left",
         align: "center",
       },
@@ -353,9 +355,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-global-kpis"]',
       popover: {
-        title: "KPIs Globales de Población",
+        title: "📊 Resumen de tu Nómina de Pacientes",
         description:
-          "Resumen ejecutivo de todos tus pacientes: niños activos bajo tu cuidado, porcentaje promedio de cumplimiento de metas PEI y alertas críticas en las últimas 24 horas.",
+          "🎯 Propósito: Panorama general de toda tu población de niños asignados.\n⚡ Acción: Revisa pacientes activos, promedio de logro en metas PEI y alertas críticas del día.\n💡 Clave: Identifica rápidamente qué casos necesitan seguimiento prioritario.",
         side: "bottom",
         align: "start",
       },
@@ -363,9 +365,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-global-charts"]',
       popover: {
-        title: "Análisis Epidemiológico y Conductual",
+        title: "📉 Epidemiología y Distribución de Crisis",
         description:
-          "Gráficos semanales con la distribución de incidentes por tipología (agresión, estereotipia, llanto, aislamiento) y la proporción de detonantes ambientales.",
+          "🎯 Propósito: Gráficas comparativas de tipología de crisis y factores detonantes.\n⚡ Acción: Evalúa tendencias semanales para medir la efectividad de las intervenciones.\n💡 Clave: Evidencia estadística para reportes de investigación y dirección médica.",
         side: "top",
         align: "center",
       },
@@ -373,9 +375,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-global-actions"]',
       popover: {
-        title: "Acciones Rápidas Globales",
+        title: "⚡ Acciones Rápidas Globales",
         description:
-          "Accesos directos para seleccionar pacientes específicos, programar rutinas de intervención o calibrar nuevo hardware biométrico.",
+          "🎯 Propósito: Atajos inmediatos sin necesidad de navegar por múltiples menús.\n⚡ Acción: Selecciona un paciente, diseña una terapia estructurada o calibra un nuevo sensor.\n💡 Clave: Agiliza la gestión operativa entre sesiones clínicas.",
         side: "top",
         align: "start",
       },
@@ -383,9 +385,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-global-alerts"]',
       popover: {
-        title: "Novedades y Alertas Críticas",
+        title: "🚨 Novedades y Alertas Recientes",
         description:
-          "Feed centralizado con las alertas de crisis sensorial registradas recientemente en toda tu nómina de pacientes, ordenadas por severidad y hora.",
+          "🎯 Propósito: Feed centralizado de crisis sensoriales reportadas en toda tu nómina.\n⚡ Acción: Revisa eventos ordenados cronológicamente por nivel de severidad.\n💡 Clave: Te mantiene informado de desregulaciones ocurridas fuera de consulta.",
         side: "top",
         align: "center",
       },
@@ -397,9 +399,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pm-header"]',
       popover: {
-        title: "Directorio de Pacientes Asignados",
+        title: "👥 Directorio de Pacientes Asignados",
         description:
-          "Nómina de niños bajo tu supervisión clínica. Aquí se gestiona la admisión de nuevos pacientes, el perfil TEA y los enlaces de activación para las familias.",
+          "🎯 Propósito: Nómina activa de niños bajo tu cuidado clínico.\n⚡ Acción: Gestiona admisiones, revisa clasificaciones TEA y genera enlaces de invitación familiar.\n💡 Clave: Solo muestra pacientes formalmente vinculados a tu usuario.",
         side: "bottom",
         align: "start",
       },
@@ -407,9 +409,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pm-search"]',
       popover: {
-        title: "Búsqueda Rápida",
+        title: "🔍 Búsqueda Inmediata",
         description:
-          "Localiza expedientes al instante por nombre, apellido o código de identificación clínica.",
+          "🎯 Propósito: Localización rápida de expedientes clínicos.\n⚡ Acción: Escribe el nombre, apellido o código de cédula/historial del paciente.\n💡 Clave: Filtra los resultados en tiempo real mientras escribes.",
         side: "bottom",
         align: "center",
       },
@@ -417,9 +419,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pm-filter-nivel"]',
       popover: {
-        title: "Filtro por Nivel de Desarrollo TEA",
+        title: "🎯 Filtro por Nivel de Apoyo TEA",
         description:
-          "Filtra la lista según la clasificación clínica (Nivel 1: Apoyo leve, Nivel 2: Apoyo sustancial, Nivel 3: Apoyo muy sustancial).",
+          "🎯 Propósito: Segmentar pacientes según su grado de requerimiento de apoyo.\n⚡ Acción: Selecciona Nivel 1 (Apoyo leve), Nivel 2 (Sustancial) o Nivel 3 (Muy sustancial).\n💡 Clave: Permite organizar sesiones terapéuticas por nivel de complejidad.",
         side: "bottom",
         align: "center",
       },
@@ -427,9 +429,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pm-filter-estado"]',
       popover: {
-        title: "Filtro por Conexión del Wearable",
+        title: "📡 Filtro por Conexión Wearable",
         description:
-          "Identifica rápidamente qué niños tienen la pulsera conectada y transmitiendo datos biométricos en este momento.",
+          "🎯 Propósito: Identificar qué niños tienen su pulsera activa en este momento.\n⚡ Acción: Filtra por 'Conectados' para verificar quiénes están transmitiendo telemetría en vivo.\n💡 Clave: Facilita la supervisión durante terapias presenciales o actividades escolares.",
         side: "bottom",
         align: "center",
       },
@@ -437,9 +439,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pm-register"]',
       popover: {
-        title: "Admisión de Nuevo Paciente",
+        title: "➕ Admisión de Nuevo Paciente",
         description:
-          "Abre el formulario clínico de admisión: registra los datos de filiación, diagnóstico TEA, y genera el código de invitación LOPNNA para el representante legal.",
+          "🎯 Propósito: Formulario de ingreso de un nuevo niño al programa terapéutico.\n⚡ Acción: Haz clic para registrar datos de filiación, diagnóstico y generar el código LOPNNA para los padres.\n💡 Clave: Vincula automáticamente al representante legal con el expediente.",
         side: "left",
         align: "center",
       },
@@ -447,9 +449,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pm-grid"]',
       popover: {
-        title: "Tarjetas de Pacientes",
+        title: "🗂️ Tarjetas Clínicas de Pacientes",
         description:
-          "Cada ficha muestra la fotografía, edad cronológica, nivel TEA, estado del enlace Bluetooth y el botón para abrir su expediente clínico integral.",
+          "🎯 Propósito: Vista de pájaro del estado de cada niño asignado.\n⚡ Acción: Pulsa sobre cualquier tarjeta para abrir su expediente maestro o panel en vivo.\n💡 Clave: Muestra edad, nivel TEA y estado de vinculación Bluetooth.",
         side: "top",
         align: "center",
       },
@@ -461,9 +463,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sr-header"]',
       popover: {
-        title: "Ficha Clínica del Estudiante",
+        title: "📋 Ficha Clínica Maestra",
         description:
-          "Expediente clínico maestro. Centraliza la información diagnóstica, biométrica, legal y familiar del paciente.",
+          "🎯 Propósito: Expediente integral que centraliza datos diagnósticos, legales y familiares.\n⚡ Acción: Revisa el historial de desarrollo, perfil sensorial y contactos de emergencia.\n💡 Clave: Fuente de verdad clínica inmutable para el equipo multidisciplinario.",
         side: "bottom",
         align: "start",
       },
@@ -471,9 +473,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sr-identity"]',
       popover: {
-        title: "Datos de Filiación e Identidad",
+        title: "🆔 Datos de Filiación e Identidad",
         description:
-          "Nombre legal, fecha de nacimiento, edad calculada, género y código interno inmutable del expediente clínico.",
+          "🎯 Propósito: Información legal del menor protegida bajo normativa LOPNNA.\n⚡ Acción: Verifica nombre, fecha de nacimiento, edad exacta calculada y código institucional.\n💡 Clave: Garantiza la identidad unívoca del paciente en todo informe médico expedido.",
         side: "right",
         align: "center",
       },
@@ -481,9 +483,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sr-clinical"]',
       popover: {
-        title: "Parámetros del Espectro Autista",
+        title: "🧠 Clasificación del Espectro Autista",
         description:
-          "Clasificación TEA y perfil de reactividad sensorial (hiporreactivo, hiperreactivo o mixto). Estos datos calibran los algoritmos de detección de crisis de SIAT.",
+          "🎯 Propósito: Perfil de neurodesarrollo y reactividad sensorial (hiperreactivo, hiporreactivo o mixto).\n⚡ Acción: Consulta los patrones de sensibilidad acústica, táctil o visual para ajustar el tratamiento.\n💡 Clave: Estos parámetros calibran la sensibilidad de los algoritmos de detección de crisis.",
         side: "left",
         align: "center",
       },
@@ -491,9 +493,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sr-links"]',
       popover: {
-        title: "Vínculos Clínicos y Tutores Legales",
+        title: "👨‍👩‍👦 Representantes y Vínculo Legal",
         description:
-          "Representante legal vinculado bajo normativa LOPNNA y especialistas asignados para la intervención multidisciplinaria.",
+          "🎯 Propósito: Identificación del tutor legal y especialistas asignados al caso.\n⚡ Acción: Revisa los teléfonos de contacto familiar y el estado de la patria potestad/tutela.\n💡 Clave: Cumplimiento estricto del consentimiento informado LOPNNA Art. 65.",
         side: "left",
         align: "center",
       },
@@ -501,9 +503,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sr-edit"]',
       popover: {
-        title: "Edición del Expediente",
+        title: "✏️ Edición y Actualización de Expediente",
         description:
-          "Permite actualizar diagnósticos, observaciones clínicas o datos de contacto familiar manteniendo la trazabilidad en auditoría.",
+          "🎯 Propósito: Actualizar diagnósticos médicos, pautas farmacológicas o datos de contacto.\n⚡ Acción: Pulsa para modificar campos y guardar cambios en el expediente.\n💡 Clave: Cada edición queda auditada con fecha, hora y cédula del especialista.",
         side: "top",
         align: "center",
       },
@@ -515,9 +517,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="hist-header"]',
       popover: {
-        title: "Historial de Evolución Terapéutica",
+        title: "📈 Historial y Bitácora Longitudinal",
         description:
-          "Módulo de análisis longitudinal: compara la evolución de las sesiones de terapia con la bitácora de crisis conductuales registradas a lo largo del tiempo.",
+          "🎯 Propósito: Módulo de seguimiento del progreso a lo largo de semanas y meses.\n⚡ Acción: Compara la asistencia a terapias, progreso en rutinas y frecuencia de crisis.\n💡 Clave: Permite verificar científicamente si el tratamiento está dando resultados.",
         side: "bottom",
         align: "start",
       },
@@ -525,9 +527,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="hist-tabs"]',
       popover: {
-        title: "Doble Pestaña de Análisis",
+        title: "🔄 Pestañas: Evolución vs Bitácora A-B-C",
         description:
-          "Alterna entre 'Evolución y Sesiones' (asistencia, cooperación y progreso en rutinas) y 'Bitácora A-B-C' (análisis funcional de antecedentes, conductas y consecuencias).",
+          "🎯 Propósito: Dos ópticas clínicas: progreso general y análisis funcional de conducta.\n⚡ Acción: Cambia a 'Bitácora A-B-C' para filtrar incidentes por severidad, fecha o detonante.\n💡 Clave: Permite aislar crisis graves para preparar informes neuropediátricos.",
         side: "bottom",
         align: "center",
       },
@@ -535,9 +537,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="hist-kpis"]',
       popover: {
-        title: "Indicadores de Estabilidad",
+        title: "📊 Indicadores de Estabilidad Conductual",
         description:
-          "Total de crisis en el período, duración promedio de desregulación en minutos y porcentaje de autorregulación exitosa lograda.",
+          "🎯 Propósito: Métricas consolidadas: total de crisis del período, duración media y autorregulación.\n⚡ Acción: Monitorea si la duración de los episodios disminuye con el paso del tiempo.\n💡 Clave: Reducción en tiempo de desregulación es señal de maduración sensorial.",
         side: "bottom",
         align: "center",
       },
@@ -545,9 +547,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="hist-export-btn"]',
       popover: {
-        title: "Exportación de Informes Médicos",
+        title: "📥 Exportación de Auditoría a PDF / Excel",
         description:
-          "Genera un informe consolidado en PDF o exporta la tabla completa a Excel para auditorías médicas, informes escolares o trámites legales.",
+          "🎯 Propósito: Generar reportes formales con gráficas y tablas de incidentes.\n⚡ Acción: Haz clic para descargar en PDF o en hoja de cálculo (.xlsx) para auditorías.\n💡 Clave: Incluye firma digital y membrete oficial de la institución.",
         side: "left",
         align: "center",
       },
@@ -559,9 +561,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="rout-header"]',
       popover: {
-        title: "Catálogo de Terapias y Actividades",
+        title: "🧩 Catálogo de Terapias Estructuradas",
         description:
-          "Diseño de planes terapéuticos estructurados. Cada actividad contiene pasos visuales secuenciados, materiales necesarios y autoguía con temporizador.",
+          "🎯 Propósito: Biblioteca de actividades terapéuticas con pasos visuales y temporizador.\n⚡ Acción: Diseña terapias para estimulación sensorial, motricidad o autonomía personal.\n💡 Clave: Diseñadas bajo el método TEACCH para reducir la ansiedad del niño.",
         side: "bottom",
         align: "start",
       },
@@ -569,9 +571,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="rout-create-btn"]',
       popover: {
-        title: "Crear Nueva Actividad Terapéutica",
+        title: "➕ Crear Nueva Terapia Guiada",
         description:
-          "Configura una actividad definiendo su categoría (sensorial, autonomía, motricidad), pasos ilustrados, duración sugerida y meta PEI asociada.",
+          "🎯 Propósito: Configurar una nueva secuencia terapéutica personalizada.\n⚡ Acción: Define categoría, duración, materiales, pictogramas y la meta PEI asociada.\n💡 Clave: La actividad quedará disponible de inmediato para reproducirla en consulta o en casa.",
         side: "left",
         align: "center",
       },
@@ -579,9 +581,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="rout-player"]',
       popover: {
-        title: "Reproductor de Terapia en Vivo",
+        title: "▶️ Reproductor de Terapia en Vivo",
         description:
-          "Guía paso a paso en pantalla completa con cronómetro, autoguía y evaluación al finalizar de 1 a 5 estrellas para calificar el nivel de cooperación del niño.",
+          "🎯 Propósito: Guía interactiva paso a paso con cronómetro y retroalimentación visual.\n⚡ Acción: Reproduce la sesión y al finalizar califica la cooperación del niño (1 a 5 estrellas).\n💡 Clave: Los datos de ejecución se suman automáticamente al progreso de metas PEI.",
         side: "top",
         align: "center",
       },
@@ -593,9 +595,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="hw-title"]',
       popover: {
-        title: "Calibración IoT y Sensores Wearables",
+        title: "📡 Calibración de Sensores Biométricos",
         description:
-          "Administración de biotelemetría. Conecta smartwatches y pulseras compatibles mediante Bluetooth Low Energy (BLE SIG 0x2A37).",
+          "🎯 Propósito: Administración de biotelemetría mediante Web Bluetooth (BLE SIG 0x2A37).\n⚡ Acción: Enlaza el smartwatch del niño y configura los parámetros basales de pulso.\n💡 Clave: Compatible con pulseras y relojes estándar sin apps intermediarias.",
         side: "bottom",
         align: "start",
       },
@@ -603,9 +605,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="hw-bpm"]',
       popover: {
-        title: "Frecuencia Cardíaca en Vivo (BPM)",
+        title: "💓 Monitor de Frecuencia Cardíaca (BPM)",
         description:
-          "Monitoreo de pulsaciones en tiempo real con indicador de señal y diferenciación entre pulso en reposo, estrés y sobrecarga sensorial.",
+          "🎯 Propósito: Pulsaciones en tiempo real con diferenciación entre calma y sobrecarga.\n⚡ Acción: Observa la respuesta cardíaca ante diferentes estímulos sensoriales.\n💡 Clave: Un incremento sostenido del 25% sobre la línea base advierte desregulación inminente.",
         side: "bottom",
         align: "center",
       },
@@ -613,9 +615,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="hw-calibration-btn"]',
       popover: {
-        title: "Calibración Basal de 15 Segundos",
+        title: "⏱️ Calibración Basal de 15 Segundos",
         description:
-          "Prueba guiada para registrar la frecuencia cardíaca en reposo del paciente. Esta lectura fija la línea base personalizada para calcular umbrales de alerta.",
+          "🎯 Propósito: Registrar la frecuencia cardíaca promedio del niño en estado de reposo.\n⚡ Acción: Pide al niño que esté tranquilo y pulsa para iniciar la captura de 15 segundos.\n💡 Clave: Establece la línea base exacta para calibrar los umbrales de alerta del paciente.",
         side: "top",
         align: "center",
       },
@@ -623,9 +625,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="hw-simulation-btn"]',
       popover: {
-        title: "Simulador de Crisis y Telemetría",
+        title: "🧪 Simulador de Crisis y Telemetría",
         description:
-          "Herramienta para entornos de desarrollo y entrenamiento: simula lecturas de taquicardia o crisis sensorial para probar alertas sin requerir un sensor físico.",
+          "🎯 Propósito: Entorno de pruebas clínicas y entrenamiento del personal sin sensor físico.\n⚡ Acción: Genera patrones de taquicardia o estrés para verificar que las alertas funcionen correctamente.\n💡 Clave: Ideal para capacitar a nuevos especialistas y padres en el protocolo SOS.",
         side: "top",
         align: "center",
       },
@@ -637,9 +639,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="ha-header"]',
       popover: {
-        title: "Análisis Integral del Hogar",
+        title: "🏡 Análisis Cruzado con el Hogar",
         description:
-          "Visualiza el impacto de los factores cotidianos (sueño, apetito y ánimo) reportados por los padres sobre el comportamiento clínico del paciente.",
+          "🎯 Propósito: Correlacionar los factores del entorno familiar con la conducta clínica.\n⚡ Acción: Examina el impacto de las horas de sueño, apetito y ánimo en las desregulaciones.\n💡 Clave: Permite detectar detonantes ambientales que ocurren fuera del centro médico.",
         side: "bottom",
         align: "start",
       },
@@ -647,9 +649,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="ha-charts"]',
       popover: {
-        title: "Correlación Multidimensional",
+        title: "📉 Gráficas de Correlación Multidimensional",
         description:
-          "Gráficos de tendencia que revelan cómo las horas de descanso y los cambios en la alimentación influyen directamente en la aparición de crisis sensoriales.",
+          "🎯 Propósito: Visualizar tendencias cruzadas entre bioseñales y calidad del descanso.\n⚡ Acción: Identifica si los días con menos de 7 horas de sueño registran picos de taquicardia.\n💡 Clave: Información clave para orientar a la familia en pautas de higiene del sueño.",
         side: "top",
         align: "center",
       },
@@ -661,9 +663,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="profile-nav-tabs"]',
       popover: {
-        title: "Secciones del Perfil Profesional",
+        title: "⚙️ Configuración de Cuenta Profesional",
         description:
-          "Navega entre tus datos personales y sanitarios, configuración de seguridad, notificaciones y preferencias de interfaz.",
+          "🎯 Propósito: Gestión de credenciales, seguridad biométrica y ergonomía visual.\n⚡ Acción: Navega entre tus datos personales, métodos de acceso y preferencias de pantalla.\n💡 Clave: Mantén actualizada tu información de contacto para recibir notificaciones clínicas.",
         side: "bottom",
         align: "start",
       },
@@ -671,9 +673,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="profile-passkeys"]',
       popover: {
-        title: "Passkeys (Biometría WebAuthn / FIDO2)",
+        title: "🔐 Acceso Biométrico Rápido (Passkeys)",
         description:
-          "Configura acceso ultrarrápido sin contraseñas usando tu huella dactilar, FaceID o PIN del dispositivo, con protección criptográfica de estándar bancario y clínico.",
+          "🎯 Propósito: Iniciar sesión en 1 segundo usando huella dactilar, FaceID o PIN del dispositivo.\n⚡ Acción: Haz clic en 'Registrar Passkey' para vincular tus biometría sin necesidad de contraseñas.\n💡 Clave: Estándar FIDO2/WebAuthn con máxima protección contra suplantación de identidad.",
         side: "top",
         align: "center",
       },
@@ -681,9 +683,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pref-theme"]',
       popover: {
-        title: "Modos Visuales Amables con la Vista",
+        title: "👁️ Modos Visuales Descansados",
         description:
-          "Elige entre 'Claro Confort' (suave, sin reflejos planos), 'Noche Calmante' (modo oscuro anti-fatiga visual diseñado para jornadas prolongadas) o 'Automático'.",
+          "🎯 Propósito: Personalizar el contraste para evitar el encandilamiento y fatiga ocular.\n⚡ Acción: Elige 'Claro Confort' (tonos suaves amables) o 'Noche Calmante' (modo oscuro profundo).\n💡 Clave: Diseñado específicamente para jornadas clínicas extensas frente al monitor.",
         side: "top",
         align: "center",
       },
@@ -691,9 +693,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pref-accent"]',
       popover: {
-        title: "Paleta Cromática Clínica",
+        title: "🎨 Color de Acento Institucional",
         description:
-          "Personaliza los colores de acento de la aplicación con 6 opciones calibradas para facilitar la ergonomía y la concentración visual.",
+          "🎯 Propósito: Ajustar el color primario de botones y gráficos de la interfaz.\n⚡ Acción: Selecciona entre 6 variantes cromáticas optimizadas para concentración.\n💡 Clave: Elige el tono con el que te sientas más cómodo durante tu jornada.",
         side: "top",
         align: "center",
       },
@@ -701,9 +703,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pref-density"]',
       popover: {
-        title: "Densidad y Accesibilidad de Tipografía",
+        title: "📐 Densidad y Tamaño de Letra",
         description:
-          "Ajusta el espaciado de pantalla (compacto o estándar) y el tamaño base de letra para adaptar SIAT a tus preferencias ergonómicas.",
+          "🎯 Propósito: Adaptar el espaciado y legibilidad a tu pantalla o tablet.\n⚡ Acción: Alterna entre espaciado cómodo o compacto y ajusta el tamaño base de texto.\n💡 Clave: Mayor ergonomía si utilizas SIAT en dispositivos móviles o tablets en consulta.",
         side: "top",
         align: "center",
       },
@@ -721,9 +723,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="parent-dash-header"]',
       popover: {
-        title: "Inicio del Representante",
+        title: "🏠 Panel Principal de la Familia",
         description:
-          "Tu panel principal diario. Aquí encuentras el estado emocional de tu niño, los accesos rápidos de apoyo y el resumen de las terapias de hoy.",
+          "🎯 Propósito: Tu centro de control diario para acompañar el bienestar de tu niño.\n⚡ Acción: Consulta el estado en vivo, atajos de calma y las terapias programadas para hoy.\n💡 Clave: Diseñado para darte tranquilidad y respuestas inmediatas en cualquier momento.",
         side: "bottom",
         align: "start",
       },
@@ -731,9 +733,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="parent-dash-status"]',
       popover: {
-        title: "Semáforo Biométrico en Tiempo Real",
+        title: "🚦 Semáforo Biométrico en Tiempo Real",
         description:
-          "Indica el estado de regulación del niño (Verde: Calma, Amarillo: Alerta Sensorial, Rojo: Posible Crisis) a partir del pulso (BPM), estrés y movimiento medidos por el smartwatch.",
+          "🎯 Propósito: Estado de regulación del niño (Verde: Calma, Amarillo: Alerta, Rojo: Posible Sobrecarga).\n⚡ Acción: Monitorea las pulsaciones (BPM) y el nivel de estrés que transmite su pulsera.\n💡 Clave: Te avisa de cambios fisiológicos antes de que ocurra una desregulación visible.",
         side: "bottom",
         align: "center",
       },
@@ -741,9 +743,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="parent-dash-summary"]',
       popover: {
-        title: "Resumen del Día",
+        title: "📋 Resumen y Agenda del Día",
         description:
-          "Muestra el reporte del hogar de hoy, la rutina diaria pendiente y la indicación clínica activa formulada por el especialista tratante.",
+          "🎯 Propósito: Vista rápida de las actividades, rutinas pendientes y pautas activas.\n⚡ Acción: Revisa las tareas cotidianas que faltan por completar durante la jornada.\n💡 Clave: Mantener rutinas predecibles genera seguridad emocional en el niño.",
         side: "top",
         align: "center",
       },
@@ -751,9 +753,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="parent-dash-focus"]',
       popover: {
-        title: "Foco Clínico de la Semana",
+        title: "🎯 Foco Terapéutico de la Semana",
         description:
-          "Pauta terapéutica prioritaria establecida por tu especialista para trabajar en casa (por ejemplo: anticipación visual antes de salir, o ejercicios de respiración).",
+          "🎯 Propósito: La pauta o recomendación prioritaria enviada por el especialista tratante.\n⚡ Acción: Lee la sugerencia clínica y aplícala en casa durante los momentos clave del día.\n💡 Clave: Alinea el trabajo de los padres con las metas de la consulta presencial.",
         side: "top",
         align: "center",
       },
@@ -761,9 +763,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="parent-dash-sos"]',
       popover: {
-        title: "Protocolo SOS Sensorial",
+        title: "🆘 Protocolo SOS de Calma Inmediata",
         description:
-          "Herramientas de auxilio inmediato: activa un ejercicio guiado de respiración calmante o despliega el tablero de comunicación rápida AAC con voz.",
+          "🎯 Propósito: Auxilio rápido en momentos de sobrecarga sensorial o desregulación.\n⚡ Acción: Pulsa para activar ejercicios de respiración guiada o el tablero de comunicación AAC con voz.\n💡 Clave: Herramientas accesibles con 1 solo toque para calmar situaciones difíciles.",
         side: "top",
         align: "center",
       },
@@ -771,9 +773,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="parent-dash-events"]',
       popover: {
-        title: "Últimos Eventos y Notificaciones",
+        title: "🔔 Eventos y Notificaciones del Día",
         description:
-          "Historial en vivo de avisos del smartwatch y lecturas de telemetría registradas a lo largo de la jornada.",
+          "🎯 Propósito: Historial de avisos generados por el smartwatch y notas terapéuticas.\n⚡ Acción: Consulta los registros de pulsaciones altas o alertas detectadas en la jornada.\n💡 Clave: Te permite identificar en qué momento del día el niño experimentó más tensión.",
         side: "top",
         align: "center",
       },
@@ -781,9 +783,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="parent-dash-diary-btn"]',
       popover: {
-        title: "Diario de Hoy",
+        title: "📝 Llenar Diario de Hoy",
         description:
-          "Acceso directo para registrar cómo durmió tu niño, su apetito, su ánimo y su medicación. Ayuda mucho al especialista para preparar la próxima sesión.",
+          "🎯 Propósito: Acceso directo al formulario diario de sueño, apetito y humor matutino.\n⚡ Acción: Tarda solo 1 minuto en registrar cómo durmió y cómo comenzó el día el niño.\n💡 Clave: El especialista lee esta información antes de iniciar la terapia en el centro médico.",
         side: "bottom",
         align: "center",
       },
@@ -791,9 +793,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="parent-dash-export"]',
       popover: {
-        title: "Descargar Reporte del Día",
+        title: "📥 Descargar Reporte del Día en PDF",
         description:
-          "Genera un documento PDF con el resumen de bioseñales y eventos de hoy, ideal para compartirlo en consultas médicas o terapéuticas.",
+          "🎯 Propósito: Generar un resumen formal con los datos biométricos y eventos de hoy.\n⚡ Acción: Haz clic para descargar el documento y compartirlo en citas médicas o escolares.\n💡 Clave: Evidencia objetiva para el pediatra o neurólogo.",
         side: "bottom",
         align: "center",
       },
@@ -805,9 +807,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="hw-title"]',
       popover: {
-        title: "Telemetría IoT en Tiempo Real",
+        title: "💓 Telemetría IoT en Tiempo Real",
         description:
-          "Supervisión continua de bioseñales transmitidas por la pulsera inteligente del niño mediante Bluetooth o sincronización en la nube.",
+          "🎯 Propósito: Supervisión continua de las señales transmitidas por la pulsera inteligente del niño.\n⚡ Acción: Monitorea pulsaciones, nivel de estrés y movimiento corporal en vivo.\n💡 Clave: Funciona por Bluetooth o sincronización automática en la nube.",
         side: "bottom",
         align: "start",
       },
@@ -815,9 +817,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="hw-bpm"]',
       popover: {
-        title: "Frecuencia Cardíaca (BPM)",
+        title: "💓 Frecuencia Cardíaca (BPM)",
         description:
-          "Pulsaciones por minuto en vivo contrastadas con el rango basal seguro que calibró el terapeuta. Un incremento sostenido activa una sugerencia de calma.",
+          "🎯 Propósito: Pulsaciones por minuto en vivo comparadas con el rango seguro del niño.\n⚡ Acción: Verifica que el valor esté dentro del área verde (rango basal en reposo).\n💡 Clave: Un pulso elevado persistente sin ejercicio advierte tensión sensorial.",
         side: "bottom",
         align: "center",
       },
@@ -825,9 +827,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="hw-stress"]',
       popover: {
-        title: "Índice de Estrés Sensorial",
+        title: "⚡ Índice de Estrés Sensorial",
         description:
-          "Algoritmo que evalúa la variabilidad de la frecuencia cardíaca (VFC) para detectar sobrecarga sensorial antes de que se manifieste una crisis visible.",
+          "🎯 Propósito: Algoritmo que mide la variabilidad del pulso para detectar sobrecarga.\n⚡ Acción: Si el indicador sube a color amarillo o rojo, inicia una pausa de relajación.\n💡 Clave: Permite intervenir antes de que el niño sufra un meltdown o berrinche.",
         side: "bottom",
         align: "center",
       },
@@ -835,9 +837,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="hw-mov"]',
       popover: {
-        title: "Nivel de Movimiento Corporal",
+        title: "🏃 Movimiento Corporal y Agitación",
         description:
-          "Medido a través del acelerómetro del smartwatch; permite distinguir entre actividad física normal (juego, carrera) y estereotipias motoras por desregulación.",
+          "🎯 Propósito: Registrar la actividad física a través del acelerómetro del reloj.\n⚡ Acción: Permite distinguir entre juego activo (correr, saltar) y balanceo por desregulación.\n💡 Clave: Evita confundir el cansancio físico con una crisis sensorial.",
         side: "bottom",
         align: "center",
       },
@@ -845,9 +847,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="hw-history"]',
       popover: {
-        title: "Gráfico de Evolución de Sesión",
+        title: "📈 Curva de Evolución de la Sesión",
         description:
-          "Curva continua de BPM y estrés durante la última hora para observar cómo responde el niño a diferentes estímulos de su entorno.",
+          "🎯 Propósito: Gráfico continuo de pulsaciones y estrés durante la última hora.\n⚡ Acción: Observa cómo reacciona el niño ante ruidos, visitas o cambios de ambiente.\n💡 Clave: Te ayuda a identificar qué situaciones le generan mayor tranquilidad.",
         side: "top",
         align: "center",
       },
@@ -859,9 +861,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ag-header"]',
       popover: {
-        title: "Agenda Visual Día a Día",
+        title: "📅 Agenda Visual Día a Día",
         description:
-          "Estructurador visual de rutina. Ayuda al niño a comprender la secuencia del día y reduce la ansiedad producida por la incertidumbre.",
+          "🎯 Propósito: Estructurar la rutina diaria del niño mediante apoyos visuales y pictogramas.\n⚡ Acción: Ayuda al niño a saber qué actividad viene después para reducir su incertidumbre.\n💡 Clave: La anticipación es la herramienta más eficaz para evitar crisis en transiciones.",
         side: "bottom",
         align: "start",
       },
@@ -869,9 +871,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ag-checklist"]',
       popover: {
-        title: "Checklist Interactivo",
+        title: "✅ Checklist Interactivo de Tareas",
         description:
-          "Lista de tareas cotidianas y terapéuticas. Marca cada tarea con un toque al terminarla; la retroalimentación visual refuerza el logro del niño.",
+          "🎯 Propósito: Secuencia de actividades cotidianas (bañarse, desayunar, tareas, juego).\n⚡ Acción: Pulsa para marcar cada actividad completada junto a tu niño.\n💡 Clave: La confirmación visual refuerza el sentido de logro y autonomía.",
         side: "top",
         align: "center",
       },
@@ -879,9 +881,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ag-create"]',
       popover: {
-        title: "Agregar Nueva Actividad",
+        title: "➕ Agregar Nueva Actividad a la Rutina",
         description:
-          "Crea una actividad personalizada para el horario del niño definiendo su hora, nombre, nivel de dificultad y apoyo visual.",
+          "🎯 Propósito: Personalizar el horario del niño con actividades propias de la familia.\n⚡ Acción: Haz clic para definir la hora, nombre de la tarea y su imagen representativa.\n💡 Clave: Mantén horarios consistentes para brindar mayor estabilidad.",
         side: "left",
         align: "center",
       },
@@ -893,9 +895,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="dh-header"]',
       popover: {
-        title: "Diario del Hogar",
+        title: "📝 Diario del Hogar (Registro Familiar)",
         description:
-          "Registro familiar fundamental. Permite documentar los factores biológicos y ambientales que inciden en el comportamiento del niño.",
+          "🎯 Propósito: Documentar cada mañana los factores biológicos que impactan en el niño.\n⚡ Acción: Completa los 4 datos básicos (sueño, ánimo, apetito y crisis) en 1 minuto.\n💡 Clave: El especialista utiliza estos datos para calibrar la dificultad de cada terapia.",
         side: "bottom",
         align: "start",
       },
@@ -903,9 +905,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="dh-sueno"]',
       popover: {
-        title: "Calidad y Horas de Sueño",
+        title: "😴 Calidad y Horas de Sueño",
         description:
-          "Registra cuánto y cómo durmió tu niño anoche. El mal descanso es uno de los mayores desencadenantes de sobrecarga sensorial.",
+          "🎯 Propósito: Registrar cuántas horas durmió y si tuvo despertares nocturnos.\n⚡ Acción: Selecciona las horas de descanso y califica si fue un sueño reparador o inquieto.\n💡 Clave: El mal descanso es el detonante número uno de crisis sensoriales en TEA.",
         side: "top",
         align: "center",
       },
@@ -913,9 +915,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="dh-animo"]',
       popover: {
-        title: "Estado Anímico Matutino",
+        title: "😊 Estado Anímico Matutino",
         description:
-          "Califica el humor del niño al comenzar el día (alegre, tranquilo, irritable, ansioso) para que el especialista adapte la exigencia terapéutica.",
+          "🎯 Propósito: Indicar la disposición emocional del niño al despertar.\n⚡ Acción: Elige entre alegre, tranquilo, irritable o ansioso.\n💡 Clave: Permite al terapeuta saber si el niño viene con alta sensibilidad o receptivo.",
         side: "top",
         align: "center",
       },
@@ -923,9 +925,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="dh-apetito"]',
       popover: {
-        title: "Apetito y Alimentación",
+        title: "🍽️ Apetito y Alimentación",
         description:
-          "Indica cómo fue la ingesta de alimentos hoy para monitorear selectividades alimentarias o molestias digestivas comunes.",
+          "🎯 Propósito: Registrar cómo fue la ingesta de alimentos y selectividad sensorial.\n⚡ Acción: Marca si comió bien, poco o rechazó texturas específicas de comida.\n💡 Clave: Molestias estomacales no verbalizadas se manifiestan frecuentemente como desregulación.",
         side: "top",
         align: "center",
       },
@@ -933,9 +935,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="dh-crisis"]',
       popover: {
-        title: "Reporte de Crisis o Conductas Inusuales",
+        title: "🚨 Reporte de Crisis en Casa",
         description:
-          "Si ocurrió una desregulación en casa, describe qué la detonó, cuánto duró y cómo lograron calmarlo para ajustar el plan de intervención.",
+          "🎯 Propósito: Documentar si ocurrió algún meltdown o desregulación fuera del centro médico.\n⚡ Acción: Describe brevemente qué detonó la crisis, cuánto duró y qué técnica ayudó a calmarlo.\n💡 Clave: Ayuda al especialista a ajustar el plan de intervención.",
         side: "top",
         align: "center",
       },
@@ -947,9 +949,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ht-header"]',
       popover: {
-        title: "Kit de Herramientas de Apoyo",
+        title: "🎒 Kit de Herramientas de Apoyo",
         description:
-          "5 herramientas interactivas diseñadas específicamente para niños dentro del Espectro Autista. Selecciónalas con un toque en las pestañas superiores.",
+          "🎯 Propósito: 5 herramientas interactivas diseñadas clínicamente para el apoyo en TEA.\n⚡ Acción: Navega entre las pestañas para elegir la herramienta que necesites en cada momento.\n💡 Clave: Disponibles sin conexión para usarlas en casa, la escuela o la calle.",
         side: "bottom",
         align: "start",
       },
@@ -957,9 +959,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ht-tabs"]',
       popover: {
-        title: "Selector de Herramientas",
+        title: "🎛️ Selector de Herramientas Terapéuticas",
         description:
-          "Alterna entre: 1. Tablero AAC (comunicación con voz), 2. Primero-Después, 3. Regulación Sensorial, 4. Temporizador Visual y 5. Economía de Fichas.",
+          "🎯 Propósito: Cambiar rápidamente de herramienta según la necesidad del niño.\n⚡ Acción: Elige: 1. Tablero AAC (Voz), 2. Primero-Después, 3. Calma Sensorial, 4. Temporizador o 5. Fichas.\n💡 Clave: Cada herramienta atiende una fase distinta de la autorregulación.",
         side: "bottom",
         align: "center",
       },
@@ -967,9 +969,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ht-aac"]',
       popover: {
-        title: "Comunicación Aumentativa y Alternativa (AAC)",
+        title: "🗣️ Comunicación Aumentativa (AAC)",
         description:
-          "Tablero de pictogramas categorizados con síntesis de voz (TTS). Permite al niño construir frases para expresar necesidades básicas, emociones y deseos.",
+          "🎯 Propósito: Tablero de pictogramas con voz para niños con dificultades en el habla.\n⚡ Acción: Toca los pictogramas para formar frases y expresar hambre, dolor, emociones o deseos.\n💡 Clave: Reduce drásticamente la frustración por no poder comunicarse verbalmente.",
         side: "top",
         align: "center",
       },
@@ -977,9 +979,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ht-aac-speak"]',
       popover: {
-        title: "Reproducir Frase con Voz",
+        title: "🔊 Reproducir Frase con Voz Natural",
         description:
-          "Pronuncia en voz alta la frase estructurada con los pictogramas seleccionados por el niño o el representante.",
+          "🎯 Propósito: Síntesis de voz automática de la frase construida con pictogramas.\n⚡ Acción: Pulsa para que el teléfono pronuncie la frase en voz alta y clara.\n💡 Clave: Fortalece el modelo auditivo del lenguaje en el niño.",
         side: "top",
         align: "center",
       },
@@ -987,9 +989,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ht-ft-panel"]',
       popover: {
-        title: "Tablero Primero - Después",
+        title: "↔️ Tablero Primero - Después",
         description:
-          "Estructurador visual de contingencia conductual: 'Primero hacemos la tarea no preferida, Después recibes la recompensa o juego favorito'. Facilita enormemente las transiciones.",
+          "🎯 Propósito: Contingencia visual: 'Primero hacemos la tarea, Después recibes tu juego favorito'.\n⚡ Acción: Selecciona la actividad obligatoria a la izquierda y el reforzador a la derecha.\n💡 Clave: Facilita transiciones difíciles sin confrontación.",
         side: "top",
         align: "center",
       },
@@ -997,9 +999,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ht-sensory-grid"]',
       popover: {
-        title: "12 Estrategias de Regulación Sensorial",
+        title: "🧘 12 Estrategias de Regulación Sensorial",
         description:
-          "Ejercicios guiados paso a paso con voz y temporizador: respiración diafragmática, presión profunda propioceptiva, pausas vestibulares y técnicas de calma.",
+          "🎯 Propósito: Ejercicios guiados paso a paso con temporizador y voz de apoyo.\n⚡ Acción: Elige entre respiración diafragmática, presión propioceptiva, masajes o pausas de calma.\n💡 Clave: Diseñados por terapeutas ocupacionales para bajar la sobrecarga del sistema nervioso.",
         side: "top",
         align: "center",
       },
@@ -1007,9 +1009,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ht-timer-panel"]',
       popover: {
-        title: "Temporizador Visual Circular",
+        title: "⏳ Temporizador Visual Circular",
         description:
-          "Reloj visual con dial de color que se desvanece y alarma sonora suave. Ayuda a materializar el paso del tiempo en niños con pensamiento visual.",
+          "🎯 Propósito: Hacer visible el paso del tiempo con un dial de color que se reduce gradualmente.\n⚡ Acción: Ajusta los minutos deseados y pulsa iniciar para anticipar el final de una actividad.\n💡 Clave: Los niños con pensamiento visual asimilan el tiempo sin angustia.",
         side: "top",
         align: "center",
       },
@@ -1017,9 +1019,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="ht-econ-panel"]',
       popover: {
-        title: "Economía de Fichas (Refuerzo Positivo)",
+        title: "⭐ Economía de Fichas (Refuerzo Positivo)",
         description:
-          "Sistema gamificado donde el niño acumula estrellas por completar conductas positivas y las canjea por recompensas previamente pactadas con la familia.",
+          "🎯 Propósito: Sistema motivacional donde el niño acumula estrellas por conductas positivas.\n⚡ Acción: Otorga una estrella cada vez que complete una meta pactada y canjéala por recompensas.\n💡 Clave: Estimula hábitos positivos mediante refuerzo inmediato.",
         side: "top",
         align: "center",
       },
@@ -1031,9 +1033,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="pp-header"]',
       popover: {
-        title: "Expediente del Niño y Filiación Legal",
+        title: "📑 Expediente del Niño y Filiación Legal",
         description:
-          "Información clínica oficial del paciente, datos de contacto del representante y estado del consentimiento legal informado LOPNNA.",
+          "🎯 Propósito: Consulta de la ficha clínica oficial del niño y tus datos de contacto.\n⚡ Acción: Revisa diagnósticos registrados, teléfonos de emergencia y especialistas asignados.\n💡 Clave: Datos protegidos y cifrados bajo estándares de confidencialidad médica.",
         side: "bottom",
         align: "start",
       },
@@ -1041,9 +1043,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="pp-consent"]',
       popover: {
-        title: "Consentimiento Legal LOPNNA (Art. 65)",
+        title: "⚖️ Consentimiento Legal LOPNNA (Art. 65)",
         description:
-          "Estado de validación de la autorización para el tratamiento de datos de salud y telemetría de menores de edad, conforme a la legislación vigente.",
+          "🎯 Propósito: Estado formal de la autorización de tratamiento de datos de salud de menores.\n⚡ Acción: Verifica que tu consentimiento informado esté activo y validado conforme a la ley.\n💡 Clave: Garantiza tus derechos como representante legal en la custodia de datos médicos.",
         side: "top",
         align: "center",
       },
@@ -1055,9 +1057,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="profile-nav-tabs"]',
       popover: {
-        title: "Configuración de tu Cuenta",
+        title: "⚙️ Configuración de tu Cuenta Familiar",
         description:
-          "Administra tus datos de representante, contraseñas, métodos de autenticación rápida y preferencias visuales.",
+          "🎯 Propósito: Administrar datos de acceso, seguridad y preferencias de la pantalla.\n⚡ Acción: Cambia contraseñas, añade métodos biométricos y personaliza el tema visual.\n💡 Clave: Mantén actualizada tu información para recibir alertas oportunas.",
         side: "bottom",
         align: "start",
       },
@@ -1065,9 +1067,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="profile-passkeys"]',
       popover: {
-        title: "Acceso Rápido con Huella o Rostro (Passkeys)",
+        title: "🔐 Acceso con Huella o Rostro (Passkeys)",
         description:
-          "Registra tu huella dactilar o FaceID para ingresar a SIAT en un solo segundo sin tener que memorizar ni escribir contraseñas.",
+          "🎯 Propósito: Ingresar a SIAT en 1 segundo usando la huella o FaceID de tu teléfono.\n⚡ Acción: Pulsa en 'Registrar Passkey' para no tener que recordar ni escribir contraseñas.\n💡 Clave: Máxima seguridad criptográfica y comodidad en el día a día.",
         side: "top",
         align: "center",
       },
@@ -1075,9 +1077,9 @@ const parentModuleTours = {
     {
       element: '[data-tour="pref-theme"]',
       popover: {
-        title: "Temas Visuales Cómodos para la Vista",
+        title: "👁️ Modos Visuales Amables con la Vista",
         description:
-          "Elige el modo 'Claro Confort' o 'Noche Calmante' (anti-fatiga visual) para navegar cómodamente a cualquier hora del día o de la noche.",
+          "🎯 Propósito: Reducir el cansancio ocular según la hora del día o nivel de iluminación.\n⚡ Acción: Elige 'Claro Confort' (tonos suaves no encandilantes) o 'Noche Calmante' (modo oscuro).\n💡 Clave: Navega cómodamente sin brillo agresivo en habitaciones oscuras.",
         side: "top",
         align: "center",
       },
@@ -1095,9 +1097,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-dash-kpis"]',
       popover: {
-        title: "Panel Ejecutivo de Gestión",
+        title: "📊 Consola Ejecutiva Institucional",
         description:
-          "Indicadores clave de la institución: pacientes activos totales, altas registradas en la semana, especialistas en nómina y volumen de incidentes severos del mes.",
+          "🎯 Propósito: Resumen global de la operación clínica y asistencial de la fundación.\n⚡ Acción: Supervisa pacientes activos, altas médicas, especialistas de guardia e incidentes del mes.\n💡 Clave: Muestra variaciones porcentuales automáticas frente al mes previo.",
         side: "bottom",
         align: "start",
       },
@@ -1105,9 +1107,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-dash-actions"]',
       popover: {
-        title: "Accesos Rápidos Institucionales",
+        title: "⚡ Accesos Rápidos de Gestión",
         description:
-          "Navegación directa con un solo clic hacia la nómina de especialistas, asignación de pacientes, directorio de usuarios y ficha de tu fundación.",
+          "🎯 Propósito: Atajos inmediatos a los módulos más frecuentados por la directiva.\n⚡ Acción: Pulsa para acreditar especialistas, asignar pacientes, auditar usuarios o editar la fundación.\n💡 Clave: Ahorra clics en tareas operativas diarias.",
         side: "bottom",
         align: "center",
       },
@@ -1115,9 +1117,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-dash-charts"]',
       popover: {
-        title: "Carga Clínica y Distribución TEA",
+        title: "📉 Carga Terapéutica y Distribución TEA",
         description:
-          "Gráficos Recharts interactivos: analiza la carga de pacientes por terapeuta y la distribución poblacional por grado del espectro autista.",
+          "🎯 Propósito: Análisis estadístico de admisiones de pacientes y horas de terapia impartidas.\n⚡ Acción: Evalúa la distribución poblacional por grado del espectro y la productividad médica.\n💡 Clave: Base sólida para la planificación presupuestaria y contratación de personal.",
         side: "top",
         align: "center",
       },
@@ -1125,9 +1127,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-dash-audit"]',
       popover: {
-        title: "Bitácora Global de Auditoría y Seguridad",
+        title: "🛡️ Registro Inmutable de Auditoría",
         description:
-          "Registro inmutable de todos los eventos del sistema: inicios de sesión, cambios de expediente, asignaciones y alertas clínicas para cumplimiento normativo.",
+          "🎯 Propósito: Trazabilidad total de operaciones críticas (inicios de sesión, asignaciones, cambios).\n⚡ Acción: Revisa los logs de seguridad con fecha, hora, dirección IP y usuario responsable.\n💡 Clave: Cumplimiento de estándares de custodia de información médica confidencial.",
         side: "top",
         align: "center",
       },
@@ -1135,9 +1137,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-dash-export"]',
       popover: {
-        title: "Exportación Ejecutiva a PDF y Excel",
+        title: "📑 Exportación Ejecutiva a PDF y Excel",
         description:
-          "Genera el informe mensual consolidado de gestión institucional en PDF o descarga la auditoría completa en formato Excel (.xlsx).",
+          "🎯 Propósito: Generación de informes consolidados de gestión para juntas directivas.\n⚡ Acción: Haz clic para exportar en PDF con membrete institucional o en tabla Excel (.xlsx).\n💡 Clave: Listo para adjuntar en memorias y cuentas o auditorías gubernamentales.",
         side: "left",
         align: "center",
       },
@@ -1145,9 +1147,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-dash-schedule"]',
       popover: {
-        title: "Automatización de Reportes por Correo",
+        title: "⏰ Automatización de Reportes por Correo",
         description:
-          "Programa el envío automático semanal o mensual de informes de auditoría hacia los correos de la directiva institucional.",
+          "🎯 Propósito: Programar el envío automático periódico de auditorías a la directiva.\n⚡ Acción: Define frecuencia (semanal o mensual) y correos de destino para recibir reportes sin esfuerzo.\n💡 Clave: Mantiene informada a la directiva institucional de forma desatendida.",
         side: "left",
         align: "center",
       },
@@ -1159,9 +1161,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-especialistas"]',
       popover: {
-        title: "Nómina de Especialistas Médicos",
+        title: "🩺 Nómina de Especialistas Médicos",
         description:
-          "Alta, acreditación y control de terapeutas. Incluye validación de colegiatura médica MPPS, asignación de especialidades clínicas y reset de credenciales.",
+          "🎯 Propósito: Control integral del staff clínico: psicólogos, terapeutas y neuropediatras.\n⚡ Acción: Consulta cédulas, correos corporativos, especialidad y estado de acceso.\n💡 Clave: Solo el personal activo y acreditado puede acceder a historias clínicas.",
         side: "top",
         align: "center",
       },
@@ -1169,9 +1171,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-esp-subnav"]',
       popover: {
-        title: "Especialistas vs Catálogo de Especialidades",
+        title: "🗂️ Especialistas vs Catálogo de Especialidades",
         description:
-          "Alterna entre el listado del personal clínico activo y el catálogo institucional de especialidades (Terapia Ocupacional, Fonoaudiología, Psicología, Neuropediatría).",
+          "🎯 Propósito: Alternar entre la nómina de médicos y las disciplinas habilitadas en el centro.\n⚡ Acción: Añade nuevas especialidades terapéuticas según la oferta asistencial de la fundación.\n💡 Clave: Mantiene estandarizada la categorización de los profesionales.",
         side: "top",
         align: "center",
       },
@@ -1179,9 +1181,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-esp-btn-nuevo"]',
       popover: {
-        title: "Acreditar Nuevo Especialista",
+        title: "➕ Acreditar Nuevo Especialista",
         description:
-          "Abre el formulario para registrar un nuevo terapeuta con su número de cédula, correo institucional, especialidad y credencial profesional.",
+          "🎯 Propósito: Registrar un nuevo profesional con credenciales médicas MPPS.\n⚡ Acción: Haz clic para abrir el formulario y asignar correo institucional, cédula y especialidad.\n💡 Clave: Genera credenciales de acceso inicial que el especialista personalizará al ingresar.",
         side: "left",
         align: "center",
       },
@@ -1193,9 +1195,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-representantes"]',
       popover: {
-        title: "Directorio de Representantes Legales",
+        title: "👨‍👩‍👦 Directorio de Representantes Legales",
         description:
-          "Gestión de los padres y tutores de los pacientes. Permite validar su vinculación filial, generar códigos de invitación y auditar accesos.",
+          "🎯 Propósito: Registro centralizado de padres, madres y tutores legales de los pacientes.\n⚡ Acción: Audita vinculación familiar, teléfonos de emergencia y estado del consentimiento LOPNNA.\n💡 Clave: Base para la comunicación legal e invitaciones de enlace familiar.",
         side: "top",
         align: "center",
       },
@@ -1203,9 +1205,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-rep-search"]',
       popover: {
-        title: "Búsqueda por Cédula o Nombre",
+        title: "🔍 Búsqueda Rápida por Cédula o Nombre",
         description:
-          "Localiza inmediatamente a cualquier tutor legal ingresando su número de documento de identidad o apellidos.",
+          "🎯 Propósito: Localización inmediata de cualquier tutor legal registrado.\n⚡ Acción: Ingresa el número de documento de identidad o apellidos para filtrar al instante.\n💡 Clave: Facilita la verificación de filiación en admisiones o emergencias.",
         side: "bottom",
         align: "center",
       },
@@ -1213,9 +1215,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-rep-btn-nuevo"]',
       popover: {
-        title: "Vincular Representante y Paciente",
+        title: "➕ Vincular Representante y Paciente",
         description:
-          "Formulario de asociación familiar: registra al tutor legal y vincula a su representado bajo las disposiciones del Art. 65 de la LOPNNA.",
+          "🎯 Propósito: Formalizar la asociación jurídica entre el tutor legal y el niño.\n⚡ Acción: Abre el formulario de vinculación familiar bajo los requerimientos del Art. 65 LOPNNA.\n💡 Clave: Habilita el acceso del representante al portal de seguimiento y diario del hogar.",
         side: "left",
         align: "center",
       },
@@ -1227,9 +1229,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-historial_clinico"]',
       popover: {
-        title: "Auditoría Clínica Institucional",
+        title: "📈 Auditoría Clínica Institucional",
         description:
-          "Bitácora centralizada de todos los incidentes conductuales y crisis sensoriales reportadas en la fundación, accesible para la dirección médica.",
+          "🎯 Propósito: Bitácora centralizada de todos los incidentes conductuales y crisis reportadas.\n⚡ Acción: Revisa la trazabilidad de eventos desreguladores en toda la población atendida.\n💡 Clave: Herramienta de supervisión para la dirección médica de FUNAUTA.",
         side: "top",
         align: "center",
       },
@@ -1237,9 +1239,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-hist-filtros"]',
       popover: {
-        title: "Filtros por Paciente, Severidad y Fecha",
+        title: "🎯 Filtros por Paciente, Severidad y Fecha",
         description:
-          "Aísla los incidentes severos o analiza el comportamiento de un paciente específico en un rango de fechas determinado.",
+          "🎯 Propósito: Segmentación focalizada de crisis para análisis clínicos específicos.\n⚡ Acción: Aísla incidentes severos o consulta un rango de fechas para evaluar períodos críticos.\n💡 Clave: Permite auditorías rápidas ante consultas médicas externas o requerimientos legales.",
         side: "bottom",
         align: "center",
       },
@@ -1251,9 +1253,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-asignaciones"]',
       popover: {
-        title: "Matriz de Asignaciones Clínicas",
+        title: "🔗 Matriz de Asignaciones Terapéuticas",
         description:
-          "Asocia cada niño con su terapeuta principal o multidisciplinario. Define estrictamente la privacidad y los permisos de acceso a los expedientes.",
+          "🎯 Propósito: Control formal de los vínculos entre especialistas tratantes y pacientes.\n⚡ Acción: Supervisa qué terapeuta tiene asignado a cada niño y desde qué fecha.\n💡 Clave: Garantiza que ningún profesional acceda a historiales de niños fuera de su cobertura.",
         side: "top",
         align: "center",
       },
@@ -1261,9 +1263,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-asig-btn-nuevo"]',
       popover: {
-        title: "Crear Nueva Asignación",
+        title: "➕ Crear Nueva Asignación",
         description:
-          "Selecciona al especialista tratante y al paciente para formalizar el inicio del acompañamiento terapéutico institucional.",
+          "🎯 Propósito: Asociar a un paciente con un especialista para iniciar su acompañamiento.\n⚡ Acción: Selecciona el médico tratante y el niño para formalizar el inicio terapéutico.\n💡 Clave: El niño aparecerá de inmediato en el panel clínico del especialista seleccionado.",
         side: "left",
         align: "center",
       },
@@ -1275,9 +1277,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-usuarios"]',
       popover: {
-        title: "Control de Cuentas y Accesos (RBAC)",
+        title: "👥 Control de Cuentas y Accesos (RBAC)",
         description:
-          "Administración de usuarios: activación/suspensión de cuentas, reenvío de claves temporales y asignación de roles de seguridad.",
+          "🎯 Propósito: Administración de seguridad: activación, bloqueo o reset de cuentas del sistema.\n⚡ Acción: Reenvía credenciales temporales, cambia roles o suspende accesos al personal.\n💡 Clave: Control estricto de accesos basado en roles (Admin, Especialista, Representante).",
         side: "top",
         align: "center",
       },
@@ -1289,9 +1291,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-infraestructura"]',
       popover: {
-        title: "Monitor de Infraestructura y Uptime",
+        title: "🖥️ Monitor de Infraestructura y Uptime",
         description:
-          "Supervisión del estado del API Core (Node.js/Express), latencia de la base de datos PostgreSQL Serverless (Neon) y conexiones WebSocket activas en tiempo real.",
+          "🎯 Propósito: Monitoreo técnico del estado operativo de los servidores y base de datos.\n⚡ Acción: Verifica la disponibilidad del API Node.js, latencia de PostgreSQL y WebSockets activos.\n💡 Clave: Diagnostica problemas de conectividad o lentitud en tiempo real.",
         side: "top",
         align: "center",
       },
@@ -1303,9 +1305,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-cat-institution"]',
       popover: {
-        title: "Identidad Institucional de la Fundación",
+        title: "🏛️ Identidad Institucional de la Fundación",
         description:
-          "Configura los datos fiscales, RIF, sede física, teléfonos de emergencia y membrete que aparecerán en los informes clínicos oficiales expedidos por SIAT.",
+          "🎯 Propósito: Configurar datos fiscales, RIF, sede física y teléfonos de la institución.\n⚡ Acción: Asegúrate de que los datos institucionales estén al día.\n💡 Clave: Estos datos aparecen automáticamente en el membrete de todos los informes PDF expedidos.",
         side: "top",
         align: "center",
       },
@@ -1313,9 +1315,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="admin-cat-edit"]',
       popover: {
-        title: "Modificar Datos de la Fundación",
+        title: "✏️ Modificar Datos Institucionales",
         description:
-          "Habilita el modo de edición para actualizar el domicilio legal o datos de contacto de la institución clínica.",
+          "🎯 Propósito: Actualizar el domicilio legal, teléfono de contacto o autoridades de la sede.\n⚡ Acción: Haz clic para habilitar el modo de edición y guarda los cambios.\n💡 Clave: Mantiene la vigencia legal de los documentos impresos y exportados.",
         side: "top",
         align: "center",
       },
@@ -1327,9 +1329,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="profile-nav-tabs"]',
       popover: {
-        title: "Perfil del Administrador",
+        title: "⚙️ Perfil y Seguridad del Administrador",
         description:
-          "Administra tus credenciales institucionales, llaves criptográficas de acceso y preferencias del panel.",
+          "🎯 Propósito: Gestión de credenciales directivas, autenticación criptográfica y apariencia.\n⚡ Acción: Configura llaves de seguridad FIDO2 (Passkeys) y personaliza el tema visual.\n💡 Clave: Protege la cuenta con mayor nivel de privilegios de la institución.",
         side: "bottom",
         align: "start",
       },
@@ -1337,9 +1339,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="profile-passkeys"]',
       popover: {
-        title: "Passkeys de Seguridad para Administradores",
+        title: "🔐 Passkeys FIDO2 para Administradores",
         description:
-          "Registra llaves de seguridad físicas (FIDO2) o biometría de tu estación de trabajo para proteger la cuenta directiva contra accesos no autorizados.",
+          "🎯 Propósito: Acceso ultra-seguro sin contraseñas usando Windows Hello, biometría o llave física.\n⚡ Acción: Registra tu método biométrico para blindar la consola contra accesos no autorizados.\n💡 Clave: Estándar criptográfico recomendado para cuentas directivas y de gobierno.",
         side: "top",
         align: "center",
       },
@@ -1347,9 +1349,9 @@ const adminModuleTours = {
     {
       element: '[data-tour="pref-theme"]',
       popover: {
-        title: "Temas de Gestión Descansados",
+        title: "👁️ Temas de Gestión Anti-Fatiga Visual",
         description:
-          "Personaliza el entorno con el nuevo modo Noche Calmante (anti-fatiga visual) o el modo Claro Confort para auditorías prolongadas.",
+          "🎯 Propósito: Ajustar el contraste de pantalla para auditorías y jornadas prolongadas.\n⚡ Acción: Alterna entre 'Claro Confort' (tonos mates descansados) y 'Noche Calmante'.\n💡 Clave: Elimina encandilamientos y reduce drásticamente el cansancio visual.",
         side: "top",
         align: "center",
       },

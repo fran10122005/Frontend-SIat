@@ -65,7 +65,8 @@ export default function IncidentModal({
               </h3>
               {activeChild && (
                 <p className="text-rose-100 text-xs">
-                  Paciente: {activeChild.nom_nino} {activeChild.ape_nino}
+                  Paciente: {activeChild.nom_nino || activeChild.nombre}{" "}
+                  {activeChild.ape_nino || activeChild.apellido}
                 </p>
               )}
             </div>

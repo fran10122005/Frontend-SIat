@@ -114,9 +114,9 @@ export default function SpecialistDashboard() {
   // Form States
   const [incidentData, setIncidentData] = useState({
     inc_tipo: "",
-    inc_dura: "",
+    inc_dura: "1-5 minutos",
     inc_deto: "",
-    inc_seve: "",
+    inc_seve: "Moderada",
     inc_ruti: "",
     inc_conse: "",
     inc_inter: "",
@@ -126,7 +126,13 @@ export default function SpecialistDashboard() {
 
   // Patient context memoizado
   const activeChild = useMemo(() => {
-    return listaNinos.find((n) => n.id_ninos === selectedChildId) || null;
+    return (
+      (listaNinos || []).find(
+        (n) =>
+          String(n.id_ninos) === String(selectedChildId) ||
+          String(n.nin_codi) === String(selectedChildId),
+      ) || null
+    );
   }, [listaNinos, selectedChildId]);
 
   // ==== ESTADÍSTICAS GLOBALES DINÁMICAS ====
@@ -426,27 +432,36 @@ export default function SpecialistDashboard() {
   // ==== HANDLERS ====
   const handleIncidentSubmit = async (e) => {
     e.preventDefault();
-    if (!activeChild) return;
-    if (
-      !incidentData.inc_tipo ||
-      !incidentData.inc_dura ||
-      !incidentData.inc_deto ||
-      !incidentData.inc_seve
-    ) {
-      showToast("⚠️ Completa tipo, duración, detonante y severidad.");
+    const childCodi =
+      activeChild?.nin_codi || activeChild?.id_ninos || selectedChildId;
+    if (!childCodi) {
+      showToast("⚠️ Debes seleccionar un paciente primero.");
+      return;
+    }
+    const inc_tipo = (incidentData.inc_tipo || "").trim();
+    const inc_deto = (incidentData.inc_deto || "").trim();
+    const inc_dura = (incidentData.inc_dura || "1-5 minutos").trim();
+    const inc_seve = (incidentData.inc_seve || "Moderada").trim();
+
+    if (!inc_tipo || !inc_deto) {
+      showToast("⚠️ Por favor selecciona el tipo de conducta y el detonante.");
       return;
     }
     try {
-      await api.post(
-        `/especialista/incidentes/${activeChild.id_ninos}`,
-        incidentData,
-      );
+      const payload = {
+        ...incidentData,
+        inc_tipo,
+        inc_deto,
+        inc_dura,
+        inc_seve,
+      };
+      await api.post(`/especialista/incidentes/${childCodi}`, payload);
       setShowIncidentModal(false);
       setIncidentData({
         inc_tipo: "",
-        inc_dura: "",
+        inc_dura: "1-5 minutos",
         inc_deto: "",
-        inc_seve: "",
+        inc_seve: "Moderada",
         inc_ruti: "",
         inc_conse: "",
         inc_inter: "",
@@ -454,7 +469,7 @@ export default function SpecialistDashboard() {
         inc_obse: "",
       });
       showToast("🚨 Incidente conductual registrado y tabulado.");
-      await fetchIncidentes(activeChild.id_ninos);
+      await fetchIncidentes(childCodi);
     } catch (err) {
       console.error("Error al registrar incidente:", err);
       toastError(err, showToast, "Error al registrar el incidente conductual.");
@@ -1446,6 +1461,7 @@ export default function SpecialistDashboard() {
           incidentData={incidentData}
           setIncidentData={setIncidentData}
           handleIncidentSubmit={handleIncidentSubmit}
+          activeChild={activeChild}
         />
       )}
 
