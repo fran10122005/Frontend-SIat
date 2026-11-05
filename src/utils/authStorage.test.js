@@ -8,6 +8,8 @@ import {
   getSavedSelectedChild,
   saveSelectedChild,
   setupAuthSync,
+  normalizeRole,
+  getValidSession,
 } from "./authStorage";
 
 // Helper para generar tokens JWT de prueba sin librerías externas
@@ -140,5 +142,57 @@ describe("authStorage - setupAuthSync", () => {
     expect(onLogin).not.toHaveBeenCalled();
 
     cleanup();
+  });
+});
+
+describe("authStorage - normalizeRole y getValidSession", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("normalizeRole mapea códigos de rol del backend y cadenas de rol", () => {
+    expect(normalizeRole("ROL_ADM")).toBe("ADMIN_INSTITUCION");
+    expect(normalizeRole("ADMIN_INSTITUCION")).toBe("ADMIN_INSTITUCION");
+    expect(normalizeRole("ROL_ESP")).toBe("ESPECIALISTA");
+    expect(normalizeRole("ESPECIALISTA")).toBe("ESPECIALISTA");
+    expect(normalizeRole("ROL_REP")).toBe("REPRESENTANTE");
+    expect(normalizeRole("REPRESENTANTE")).toBe("REPRESENTANTE");
+    expect(normalizeRole(null)).toBeNull();
+    expect(normalizeRole("")).toBeNull();
+  });
+
+  it("getValidSession retorna isValid: false si no hay token", () => {
+    const session = getValidSession();
+    expect(session.isValid).toBe(false);
+    expect(session.role).toBeNull();
+    expect(session.token).toBeNull();
+  });
+
+  it("getValidSession retorna isValid: false y limpia si el token está expirado", () => {
+    const pastExp = Math.floor(Date.now() / 1000) - 300;
+    const expiredToken = createMockJwt({ rol_codi: "ROL_ADM", exp: pastExp });
+    localStorage.setItem("token", expiredToken);
+    localStorage.setItem("userRole", "ADMIN_INSTITUCION");
+
+    const session = getValidSession();
+    expect(session.isValid).toBe(false);
+    expect(localStorage.getItem("token")).toBeNull();
+    expect(localStorage.getItem("userRole")).toBeNull();
+  });
+
+  it("getValidSession retorna isValid: true y extrae el rol de un token válido", () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 7200;
+    const validToken = createMockJwt({
+      usu_codi: "USU_1",
+      rol_codi: "ROL_ADM",
+      exp: futureExp,
+    });
+    localStorage.setItem("token", validToken);
+
+    const session = getValidSession();
+    expect(session.isValid).toBe(true);
+    expect(session.role).toBe("ADMIN_INSTITUCION");
+    expect(session.token).toBe(validToken);
+    expect(localStorage.getItem("userRole")).toBe("ADMIN_INSTITUCION");
   });
 });

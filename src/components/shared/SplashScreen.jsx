@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getValidSession } from "../../utils/authStorage";
 import {
   Heart,
   Sparkles,
@@ -64,10 +65,11 @@ const roleIcons = {
 
 export default function SplashScreen() {
   const [index, setIndex] = useState(0);
-  const role =
+  const session =
     typeof window !== "undefined"
-      ? localStorage.getItem("userRole") || "REPRESENTANTE"
-      : "REPRESENTANTE";
+      ? getValidSession()
+      : { isValid: false, role: null };
+  const role = session.isValid ? session.role : "REPRESENTANTE";
 
   const mensajes = roleMessages[role] || roleMessages.REPRESENTANTE;
   const iconos = roleIcons[role] || roleIcons.REPRESENTANTE;

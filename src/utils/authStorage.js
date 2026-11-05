@@ -73,6 +73,70 @@ export function getAuthToken() {
 }
 
 /**
+ * Normaliza cualquier formato de rol (ej: ROL_ADM, ROL_ESP, ROL_REP)
+ * a las constantes estándar de la aplicación.
+ * @param {string|null} rawRole
+ * @returns {string|null}
+ */
+export function normalizeRole(rawRole) {
+  if (!rawRole || typeof rawRole !== "string") return null;
+  const trimmed = rawRole.trim();
+  if (trimmed === "ROL_ADM" || trimmed === "ADMIN_INSTITUCION")
+    return "ADMIN_INSTITUCION";
+  if (trimmed === "ROL_ESP" || trimmed === "ESPECIALISTA")
+    return "ESPECIALISTA";
+  if (trimmed === "ROL_REP" || trimmed === "REPRESENTANTE")
+    return "REPRESENTANTE";
+  return trimmed;
+}
+
+/**
+ * Valida criptográficamente y verifica la sesión actual almacenada.
+ * Comprueba:
+ * 1. Existencia del token.
+ * 2. Que el token no esté expirado.
+ * 3. Que el payload del JWT sea válido y contenga un rol reconocido.
+ * Si la sesión no es válida, limpia los restos de localStorage de forma preventiva.
+ * @returns {{ isValid: boolean, token: string|null, role: string|null, decoded: object|null }}
+ */
+export function getValidSession() {
+  const token = getAuthToken();
+  if (!token || isTokenExpired(token, 0)) {
+    if (token) clearAuthSession();
+    return { isValid: false, token: null, role: null, decoded: null };
+  }
+
+  const decoded = parseJwt(token);
+  if (!decoded) {
+    clearAuthSession();
+    return { isValid: false, token: null, role: null, decoded: null };
+  }
+
+  const tokenRole = normalizeRole(decoded.rol_codi);
+  const localRole = normalizeRole(
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem(AUTH_KEYS.USER_ROLE)
+      : null,
+  );
+  const role = tokenRole || localRole;
+
+  if (!role) {
+    clearAuthSession();
+    return { isValid: false, token: null, role: null, decoded: null };
+  }
+
+  try {
+    if (typeof localStorage !== "undefined") {
+      if (localStorage.getItem(AUTH_KEYS.USER_ROLE) !== role) {
+        localStorage.setItem(AUTH_KEYS.USER_ROLE, role);
+      }
+    }
+  } catch {}
+
+  return { isValid: true, token, role, decoded };
+}
+
+/**
  * Establece la sesión del usuario de forma atómica en localStorage.
  * @param {object} params
  * @param {string} params.token - JWT principal

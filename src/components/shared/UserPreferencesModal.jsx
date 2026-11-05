@@ -70,10 +70,7 @@ export default function UserPreferencesModal({ open, onClose }) {
   if (!open) return null;
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div
         className="bg-[#FAFBFD] dark:bg-[#141e2d] rounded-2xl shadow-2xl w-full max-w-md border border-slate-200/80 dark:border-slate-700/60 flex flex-col overflow-hidden animate-in zoom-in-95 fade-in duration-200 max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}

@@ -32,6 +32,7 @@ export default function Sidebar() {
     setSelectedChildId,
     isSidebarOpen,
     setIsSidebarOpen,
+    logout,
   } = useGlobalContext();
   const activeMenu = currentView;
 
@@ -184,11 +185,12 @@ export default function Sidebar() {
         <div className="p-4 border-t border-white/10 bg-white/5 backdrop-blur-sm">
           <button
             onClick={() => {
-              setUserRole(null);
-              setSelectedChildId(null);
-              setNomNino(null);
-              navigate("login");
               setIsSidebarOpen(false);
+              if (typeof logout === "function") {
+                logout();
+              } else {
+                navigate("login");
+              }
             }}
             className="w-full flex items-center px-4 py-3 rounded-xl text-left transition-all duration-300 text-rose-400/90 hover:bg-rose-500/15 hover:text-rose-300 group hover:translate-x-1"
           >

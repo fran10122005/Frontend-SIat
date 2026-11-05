@@ -1,6 +1,8 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useGlobalContext } from "../../context/GlobalState";
 import api from "../../api/axios";
+import ConfirmDialog from "./ConfirmDialog";
+import useUnsavedChanges from "../../hooks/useUnsavedChanges";
 import {
   X,
   ChevronRight,
@@ -435,6 +437,39 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   const [repPhotoPreview, setRepPhotoPreview] = useState(null);
   const [repPhotoUploading, setRepPhotoUploading] = useState(false);
 
+  const isDirty = Boolean(
+    form.nin_nomb ||
+    form.nin_apel ||
+    form.nin_cedu ||
+    form.nin_fnac ||
+    form.nin_diag ||
+    form.rep_nomb ||
+    form.rep_crro ||
+    photoPreview ||
+    docFiles.length > 0,
+  );
+
+  const {
+    showDiscardConfirm,
+    setShowDiscardConfirm,
+    handleAttemptClose,
+    confirmDiscard,
+  } = useUnsavedChanges(isDirty, onClose);
+
+  const [isShaking, setIsShaking] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleAttemptClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, handleAttemptClose]);
+
   if (!isOpen) return null;
 
   const set = (field, value) =>
@@ -715,653 +750,689 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl flex flex-col border-t border-slate-200 dark:border-slate-700/80 sm:border max-h-[95dvh] sm:max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
-        {/* ── Header ── */}
-        <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-700/60 dark:border-slate-800 shrink-0">
-          <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/30" />
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/20 text-blue-300 rounded-xl shrink-0 border border-blue-400/20">
-                <Baby className="w-5 h-5" />
+    <>
+      <div
+        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setIsShaking(true);
+            setTimeout(() => setIsShaking(false), 300);
+          }
+        }}
+      >
+        <div
+          className={`bg-[#f8fafc] dark:bg-[#1a2332] rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl flex flex-col border-t border-slate-200 dark:border-slate-700/80 sm:border max-h-[95dvh] sm:max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 transition-transform ${
+            isShaking ? "scale-[1.01] ring-2 ring-blue-500/30" : ""
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* ── Header ── */}
+          <div className="relative px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-700/60 dark:border-slate-800 shrink-0">
+            <div className="sm:hidden absolute top-1.5 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/30" />
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 text-blue-300 rounded-xl shrink-0 border border-blue-400/20">
+                  <Baby className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white tracking-tight">
+                    Registro de Nuevo Paciente
+                  </h3>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-white tracking-tight">
-                  Registro de Nuevo Paciente
-                </h3>
-              </div>
+              <button
+                onClick={handleAttemptClose}
+                aria-label="Cerrar"
+                className="text-slate-300 hover:text-white p-2.5 -m-1 rounded-lg hover:bg-white/10 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              aria-label="Cerrar"
-              className="text-slate-300 hover:text-white p-2.5 -m-1 rounded-lg hover:bg-white/10 transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
-        </div>
 
-        {/* ── Stepper ── */}
-        <div className="px-4 sm:px-7 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-0">
-            {STEPS.map((s, i) => (
-              <div key={s.num} className="flex items-center flex-1">
-                <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-sm
-                    ${step > s.num ? "bg-brand-500 text-white" : step === s.num ? "bg-brand-600 text-white ring-4 ring-brand-200 dark:ring-brand-900" : "bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400"}`}
-                  >
-                    {step > s.num ? (
-                      <CheckCircle2 className="w-5 h-5" />
-                    ) : (
-                      <s.icon className="w-4 h-4" />
-                    )}
-                  </div>
-                  <span
-                    className={`text-[10px] font-semibold whitespace-nowrap ${step >= s.num ? "text-brand-600 dark:text-brand-400" : "text-slate-400"}`}
-                  >
-                    {s.label}
-                  </span>
-                </div>
-                {i < STEPS.length - 1 && (
-                  <div className="flex-1 h-0.5 mx-2 mb-4 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+          {/* ── Stepper ── */}
+          <div className="px-4 sm:px-7 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-0">
+              {STEPS.map((s, i) => (
+                <div key={s.num} className="flex items-center flex-1">
+                  <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
                     <div
-                      className={`h-full bg-brand-500 rounded-full transition-all duration-500 ${step > s.num ? "w-full" : "w-0"}`}
-                    />
+                      className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-sm
+                    ${step > s.num ? "bg-brand-500 text-white" : step === s.num ? "bg-brand-600 text-white ring-4 ring-brand-200 dark:ring-brand-900" : "bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400"}`}
+                    >
+                      {step > s.num ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        <s.icon className="w-4 h-4" />
+                      )}
+                    </div>
+                    <span
+                      className={`text-[10px] font-semibold whitespace-nowrap ${step >= s.num ? "text-brand-600 dark:text-brand-400" : "text-slate-400"}`}
+                    >
+                      {s.label}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Body ── */}
-        <div className="overflow-y-auto flex-1 px-4 sm:px-7 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6">
-          {/* ════════════ PASO 1: IDENTIDAD DEL PACIENTE ════════════ */}
-          {step === 1 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-              {/* Foto de perfil compacta */}
-              <PhotoUploadZone
-                preview={photoPreview}
-                onFileSelect={handlePhotoSelect}
-                uploading={photoUploading}
-                progress={photoProgress}
-                onRemove={handlePhotoRemove}
-              />
-
-              {/* Datos personales */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="Nombre(s) completo(s) según partida de nacimiento o cédula escolar."
-                  >
-                    Nombre(s) del Paciente
-                  </FieldLabel>
-                  <InputField
-                    type="text"
-                    value={form.nin_nomb}
-                    onChange={(e) => set("nin_nomb", e.target.value)}
-                    placeholder="Ej. José Andrés"
-                  />
-                </div>
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="Apellido(s) completo(s) según documento de identidad."
-                  >
-                    Apellido(s)
-                  </FieldLabel>
-                  <InputField
-                    type="text"
-                    value={form.nin_apel}
-                    onChange={(e) => set("nin_apel", e.target.value)}
-                    placeholder="Ej. Rodríguez Pérez"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="Fecha de nacimiento exacta. Se usa para calcular la edad y adaptar los protocolos de seguimiento."
-                  >
-                    Fecha de Nacimiento
-                  </FieldLabel>
-                  <InputField
-                    type="date"
-                    value={form.nin_fnac}
-                    max={new Date().toISOString().split("T")[0]}
-                    onChange={(e) => set("nin_fnac", e.target.value)}
-                  />
-                  {edad !== null && (
-                    <p className="text-[10px] text-brand-600 dark:text-brand-400 mt-1 font-semibold">
-                      → {edad} año{edad !== 1 ? "s" : ""} de edad
-                    </p>
+                  {i < STEPS.length - 1 && (
+                    <div className="flex-1 h-0.5 mx-2 mb-4 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                      <div
+                        className={`h-full bg-brand-500 rounded-full transition-all duration-500 ${step > s.num ? "w-full" : "w-0"}`}
+                      />
+                    </div>
                   )}
                 </div>
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="Sexo biológico del paciente, relevante para el protocolo clínico y estadísticas de la institución."
-                  >
-                    Sexo Biológico
-                  </FieldLabel>
-                  <SelectField
-                    value={form.nin_gner}
-                    onChange={(e) => set("nin_gner", e.target.value)}
-                  >
-                    <option value="M">Masculino</option>
-                    <option value="F">Femenino</option>
-                  </SelectField>
-                </div>
-              </div>
-
-              {/* Nivel TEA */}
-              <div>
-                <FieldLabel
-                  required
-                  tooltip="Nivel de soporte según la evaluación diagnóstica más reciente. Se recomienda seleccionar el nivel indicado en el informe del neuropediatra o psicólogo clínico."
-                >
-                  Nivel de Soporte Requerido (Clasificación DSM-5)
-                </FieldLabel>
-                <div className="grid grid-cols-3 gap-3">
-                  {Object.entries(NIVEL_INFO).map(([key, info]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => set("nin_nivd", key)}
-                      className={`text-left p-3 rounded-xl border-2 transition-all duration-200 ${form.nin_nivd === key ? info.color + " border-current" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300"}`}
-                    >
-                      <p
-                        className={`text-xs font-bold mb-1 ${form.nin_nivd === key ? "" : "text-slate-600 dark:text-slate-400"}`}
-                      >
-                        {key}
-                      </p>
-                      <p
-                        className={`text-[10px] leading-relaxed ${form.nin_nivd === key ? "" : "text-slate-400"}`}
-                      >
-                        {info.label.split("—")[1].trim()}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-                {form.nin_nivd && (
-                  <div
-                    className={`mt-2 p-3 rounded-xl border text-[10px] leading-relaxed ${nivelInfo.color}`}
-                  >
-                    <strong>Criterio DSM-5:</strong> {nivelInfo.desc}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <FieldLabel tooltip="Descripción breve del diagnóstico (ej. 'TEA con Retraso del Lenguaje', 'TEA + TDAH'). Se mostrará en el expediente clínico del paciente.">
-                  Descripción del Diagnóstico{" "}
-                  <span className="text-slate-400 font-normal">(Opcional)</span>
-                </FieldLabel>
-                <InputField
-                  type="text"
-                  value={form.nin_diag}
-                  onChange={(e) => set("nin_diag", e.target.value)}
-                  placeholder="Ej. TEA Nivel 2 con retraso en el lenguaje expresivo"
-                />
-              </div>
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* ════════════ PASO 2: HISTORIAL CLÍNICO ════════════ */}
-          {step === 2 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <InfoCollapse
-                tone="amber"
-                title="¿Por qué pedimos esta información?"
-              >
-                El algoritmo de detección de SIAT utiliza el perfil sensorial
-                del paciente para{" "}
-                <strong>calibrar los umbrales de alerta</strong> de los sensores
-                IoT y evitar falsos positivos desde el primer día de monitoreo.
-              </InfoCollapse>
+          {/* ── Body ── */}
+          <div className="overflow-y-auto flex-1 px-4 sm:px-7 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6">
+            {/* ════════════ PASO 1: IDENTIDAD DEL PACIENTE ════════════ */}
+            {step === 1 && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                {/* Foto de perfil compacta */}
+                <PhotoUploadZone
+                  preview={photoPreview}
+                  onFileSelect={handlePhotoSelect}
+                  uploading={photoUploading}
+                  progress={photoProgress}
+                  onRemove={handlePhotoRemove}
+                />
 
-              <div>
-                <FieldLabel tooltip="La sensibilidad o comorbilidad principal que el equipo clínico debe conocer para el manejo de alertas en tiempo real.">
-                  Condición Sensorial o Comorbilidad Principal
-                </FieldLabel>
-                <SelectField
-                  value={form.sen_tipo}
-                  onChange={(e) => {
-                    set("sen_tipo", e.target.value);
-                    if (!e.target.value) set("sen_nvli", "");
-                  }}
-                >
-                  <option value="">No reportada actualmente</option>
-                  <optgroup label="Sensorialidades">
-                    <option value="Auditiva">
-                      Hipersensibilidad Auditiva (Hiperacusia)
-                    </option>
-                    <option value="Táctil">
-                      Hipersensibilidad Táctil (Táctil Defensiva)
-                    </option>
-                    <option value="Visual">
-                      Hipersensibilidad Visual (Fotofobia)
-                    </option>
-                    <option value="Olfativa">Hipersensibilidad Olfativa</option>
-                    <option value="Vestibular">
-                      Procesamiento Vestibular Atípico
-                    </option>
-                    <option value="Propioceptiva">
-                      Procesamiento Propioceptivo Atípico
-                    </option>
-                  </optgroup>
-                  <optgroup label="Comorbilidades">
-                    <option value="TDAH">
-                      Trastorno por Déficit de Atención (TDAH)
-                    </option>
-                    <option value="Ansiedad">
-                      Trastorno de Ansiedad Generalizada
-                    </option>
-                    <option value="Epilepsia">
-                      Epilepsia / Trastorno Convulsivo
-                    </option>
-                    <option value="TOC">
-                      Trastorno Obsesivo Compulsivo (TOC)
-                    </option>
-                    <option value="DI">
-                      Discapacidad Intelectual Concurrente
-                    </option>
-                  </optgroup>
-                  <option value="Otro">Otra condición no listada</option>
-                </SelectField>
-              </div>
-
-              {form.sen_tipo && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
+                {/* Datos personales */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <FieldLabel
                       required
-                      tooltip="Nivel de impacto en el funcionamiento diario del paciente, según la evaluación del especialista."
+                      tooltip="Nombre(s) completo(s) según partida de nacimiento o cédula escolar."
                     >
-                      Nivel de Impacto en el Funcionamiento
+                      Nombre(s) del Paciente
                     </FieldLabel>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        {
-                          val: "Leve",
-                          desc: "Manejable con rutinas y anticipación.",
-                          color:
-                            "border-emerald-400 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20",
-                        },
-                        {
-                          val: "Moderado",
-                          desc: "Requiere contención activa con frecuencia.",
-                          color:
-                            "border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-900/20",
-                        },
-                        {
-                          val: "Severo",
-                          desc: "Desencadena crisis agudas. Requiere protocolo de emergencia.",
-                          color:
-                            "border-red-400 bg-red-50 text-red-700 dark:bg-red-900/20",
-                        },
-                      ].map((opt) => (
-                        <button
-                          key={opt.val}
-                          type="button"
-                          onClick={() => set("sen_nvli", opt.val)}
-                          className={`p-3 rounded-xl border-2 text-left transition-all ${form.sen_nvli === opt.val ? opt.color : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"}`}
-                        >
-                          <p
-                            className={`text-xs font-bold mb-1 ${form.sen_nvli === opt.val ? "" : "text-slate-600 dark:text-slate-400"}`}
-                          >
-                            {opt.val}
-                          </p>
-                          <p
-                            className={`text-[10px] leading-relaxed ${form.sen_nvli === opt.val ? "" : "text-slate-400"}`}
-                          >
-                            {opt.desc}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
+                    <InputField
+                      type="text"
+                      value={form.nin_nomb}
+                      onChange={(e) => set("nin_nomb", e.target.value)}
+                      placeholder="Ej. José Andrés"
+                    />
                   </div>
-
                   <div>
-                    <FieldLabel tooltip="Observaciones adicionales del clínico sobre la condición. Por ejemplo, desencadenantes conocidos, estrategias que funcionan, etc.">
-                      Notas Clínicas Adicionales{" "}
-                      <span className="text-slate-400 font-normal">
-                        (Opcional)
-                      </span>
+                    <FieldLabel
+                      required
+                      tooltip="Apellido(s) completo(s) según documento de identidad."
+                    >
+                      Apellido(s)
                     </FieldLabel>
-                    <textarea
-                      value={form.sen_nota}
-                      onChange={(e) => set("sen_nota", e.target.value)}
-                      rows={3}
-                      placeholder="Ej. Reactivo a sonidos agudos en frecuencias >2kHz. Se calma con música instrumental suave. Estrategia: auriculares de reducción de ruido."
-                      className="form-textarea !py-3 resize-none"
+                    <InputField
+                      type="text"
+                      value={form.nin_apel}
+                      onChange={(e) => set("nin_apel", e.target.value)}
+                      placeholder="Ej. Rodríguez Pérez"
                     />
                   </div>
                 </div>
-              )}
 
-              {/* Documentos médicos */}
-              <div>
-                <FieldLabel tooltip="Adjunta la evaluación diagnóstica, informes de neuropediatría, psicología, fonoaudiología u otros especialistas. Se almacenarán de forma segura y encriptada.">
-                  Documentos Clínicos{" "}
-                  <span className="text-slate-400 font-normal">
-                    (Opcional, pero recomendado)
-                  </span>
-                </FieldLabel>
-                {!isCloudinaryReady() && (
-                  <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl mb-3">
-                    <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-relaxed">
-                      Cloudinary aún no está configurado. Los documentos se
-                      listarán localmente. Cuando configures las credenciales
-                      mañana se subirán automáticamente.
-                    </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel
+                      required
+                      tooltip="Fecha de nacimiento exacta. Se usa para calcular la edad y adaptar los protocolos de seguimiento."
+                    >
+                      Fecha de Nacimiento
+                    </FieldLabel>
+                    <InputField
+                      type="date"
+                      value={form.nin_fnac}
+                      max={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => set("nin_fnac", e.target.value)}
+                    />
+                    {edad !== null && (
+                      <p className="text-[10px] text-brand-600 dark:text-brand-400 mt-1 font-semibold">
+                        → {edad} año{edad !== 1 ? "s" : ""} de edad
+                      </p>
+                    )}
                   </div>
-                )}
-                <DocUploadZone
-                  files={docFiles}
-                  onFilesAdd={handleDocsAdd}
-                  onFileRemove={handleDocRemove}
-                  uploading={docsUploading}
-                />
-              </div>
-            </div>
-          )}
+                  <div>
+                    <FieldLabel
+                      required
+                      tooltip="Sexo biológico del paciente, relevante para el protocolo clínico y estadísticas de la institución."
+                    >
+                      Sexo Biológico
+                    </FieldLabel>
+                    <SelectField
+                      value={form.nin_gner}
+                      onChange={(e) => set("nin_gner", e.target.value)}
+                    >
+                      <option value="M">Masculino</option>
+                      <option value="F">Femenino</option>
+                    </SelectField>
+                  </div>
+                </div>
 
-          {/* ════════════ PASO 3: REPRESENTANTE LEGAL ════════════ */}
-          {step === 3 && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-              <InfoCollapse tone="blue" title="Protección legal (LOPNNA)">
-                Según el <strong>Artículo 65 LOPNNA</strong>, el representante
-                legal deberá completar el consentimiento informado digitalizado
-                al activar su cuenta mediante el enlace que SIAT generará al
-                finalizar este registro.
-              </InfoCollapse>
+                {/* Nivel TEA */}
+                <div>
+                  <FieldLabel
+                    required
+                    tooltip="Nivel de soporte según la evaluación diagnóstica más reciente. Se recomienda seleccionar el nivel indicado en el informe del neuropediatra o psicólogo clínico."
+                  >
+                    Nivel de Soporte Requerido (Clasificación DSM-5)
+                  </FieldLabel>
+                  <div className="grid grid-cols-3 gap-3">
+                    {Object.entries(NIVEL_INFO).map(([key, info]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => set("nin_nivd", key)}
+                        className={`text-left p-3 rounded-xl border-2 transition-all duration-200 ${form.nin_nivd === key ? info.color + " border-current" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300"}`}
+                      >
+                        <p
+                          className={`text-xs font-bold mb-1 ${form.nin_nivd === key ? "" : "text-slate-600 dark:text-slate-400"}`}
+                        >
+                          {key}
+                        </p>
+                        <p
+                          className={`text-[10px] leading-relaxed ${form.nin_nivd === key ? "" : "text-slate-400"}`}
+                        >
+                          {info.label.split("—")[1].trim()}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                  {form.nin_nivd && (
+                    <div
+                      className={`mt-2 p-3 rounded-xl border text-[10px] leading-relaxed ${nivelInfo.color}`}
+                    >
+                      <strong>Criterio DSM-5:</strong> {nivelInfo.desc}
+                    </div>
+                  )}
+                </div>
 
-              {/* Cédula: identificador único del representante (primer campo) */}
-              <div className="flex flex-col sm:flex-row gap-4 items-start">
-                {/* Foto del representante */}
-                <div className="shrink-0">
-                  <FieldLabel tooltip="JPG, PNG o WebP · Máx. 5 MB. Foto de identificación del representante legal.">
-                    Foto del Representante{" "}
+                <div>
+                  <FieldLabel tooltip="Descripción breve del diagnóstico (ej. 'TEA con Retraso del Lenguaje', 'TEA + TDAH'). Se mostrará en el expediente clínico del paciente.">
+                    Descripción del Diagnóstico{" "}
                     <span className="text-slate-400 font-normal">
                       (Opcional)
                     </span>
                   </FieldLabel>
-                  <div
-                    onClick={() =>
-                      !repPhotoUploading &&
-                      document.getElementById("rep-photo-input")?.click()
-                    }
-                    className={`relative w-20 h-20 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 group mt-2
-                      ${repPhotoUploading ? "cursor-wait opacity-60" : "border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 hover:border-brand-500"}`}
-                  >
-                    {repPhotoPreview ? (
-                      <>
-                        <img
-                          src={repPhotoPreview}
-                          alt="Foto del representante"
-                          className="w-full h-full object-cover"
-                        />
-                        {form.rep_foto && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Camera className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <User className="w-6 h-6 text-slate-400 group-hover:text-brand-500 transition-colors" />
-                    )}
-                    {repPhotoUploading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                  </div>
-                  <input
-                    id="rep-photo-input"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(e) => handleRepPhotoSelect(e.target.files[0])}
-                    className="hidden"
+                  <InputField
+                    type="text"
+                    value={form.nin_diag}
+                    onChange={(e) => set("nin_diag", e.target.value)}
+                    placeholder="Ej. TEA Nivel 2 con retraso en el lenguaje expresivo"
                   />
                 </div>
+              </div>
+            )}
 
-                <div className="grid grid-cols-1 flex-1 sm:grid-cols-2 gap-4">
+            {/* ════════════ PASO 2: HISTORIAL CLÍNICO ════════════ */}
+            {step === 2 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <InfoCollapse
+                  tone="amber"
+                  title="¿Por qué pedimos esta información?"
+                >
+                  El algoritmo de detección de SIAT utiliza el perfil sensorial
+                  del paciente para{" "}
+                  <strong>calibrar los umbrales de alerta</strong> de los
+                  sensores IoT y evitar falsos positivos desde el primer día de
+                  monitoreo.
+                </InfoCollapse>
+
+                <div>
+                  <FieldLabel tooltip="La sensibilidad o comorbilidad principal que el equipo clínico debe conocer para el manejo de alertas en tiempo real.">
+                    Condición Sensorial o Comorbilidad Principal
+                  </FieldLabel>
+                  <SelectField
+                    value={form.sen_tipo}
+                    onChange={(e) => {
+                      set("sen_tipo", e.target.value);
+                      if (!e.target.value) set("sen_nvli", "");
+                    }}
+                  >
+                    <option value="">No reportada actualmente</option>
+                    <optgroup label="Sensorialidades">
+                      <option value="Auditiva">
+                        Hipersensibilidad Auditiva (Hiperacusia)
+                      </option>
+                      <option value="Táctil">
+                        Hipersensibilidad Táctil (Táctil Defensiva)
+                      </option>
+                      <option value="Visual">
+                        Hipersensibilidad Visual (Fotofobia)
+                      </option>
+                      <option value="Olfativa">
+                        Hipersensibilidad Olfativa
+                      </option>
+                      <option value="Vestibular">
+                        Procesamiento Vestibular Atípico
+                      </option>
+                      <option value="Propioceptiva">
+                        Procesamiento Propioceptivo Atípico
+                      </option>
+                    </optgroup>
+                    <optgroup label="Comorbilidades">
+                      <option value="TDAH">
+                        Trastorno por Déficit de Atención (TDAH)
+                      </option>
+                      <option value="Ansiedad">
+                        Trastorno de Ansiedad Generalizada
+                      </option>
+                      <option value="Epilepsia">
+                        Epilepsia / Trastorno Convulsivo
+                      </option>
+                      <option value="TOC">
+                        Trastorno Obsesivo Compulsivo (TOC)
+                      </option>
+                      <option value="DI">
+                        Discapacidad Intelectual Concurrente
+                      </option>
+                    </optgroup>
+                    <option value="Otro">Otra condición no listada</option>
+                  </SelectField>
+                </div>
+
+                {form.sen_tipo && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
+                    <div>
+                      <FieldLabel
+                        required
+                        tooltip="Nivel de impacto en el funcionamiento diario del paciente, según la evaluación del especialista."
+                      >
+                        Nivel de Impacto en el Funcionamiento
+                      </FieldLabel>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          {
+                            val: "Leve",
+                            desc: "Manejable con rutinas y anticipación.",
+                            color:
+                              "border-emerald-400 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20",
+                          },
+                          {
+                            val: "Moderado",
+                            desc: "Requiere contención activa con frecuencia.",
+                            color:
+                              "border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-900/20",
+                          },
+                          {
+                            val: "Severo",
+                            desc: "Desencadena crisis agudas. Requiere protocolo de emergencia.",
+                            color:
+                              "border-red-400 bg-red-50 text-red-700 dark:bg-red-900/20",
+                          },
+                        ].map((opt) => (
+                          <button
+                            key={opt.val}
+                            type="button"
+                            onClick={() => set("sen_nvli", opt.val)}
+                            className={`p-3 rounded-xl border-2 text-left transition-all ${form.sen_nvli === opt.val ? opt.color : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"}`}
+                          >
+                            <p
+                              className={`text-xs font-bold mb-1 ${form.sen_nvli === opt.val ? "" : "text-slate-600 dark:text-slate-400"}`}
+                            >
+                              {opt.val}
+                            </p>
+                            <p
+                              className={`text-[10px] leading-relaxed ${form.sen_nvli === opt.val ? "" : "text-slate-400"}`}
+                            >
+                              {opt.desc}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <FieldLabel tooltip="Observaciones adicionales del clínico sobre la condición. Por ejemplo, desencadenantes conocidos, estrategias que funcionan, etc.">
+                        Notas Clínicas Adicionales{" "}
+                        <span className="text-slate-400 font-normal">
+                          (Opcional)
+                        </span>
+                      </FieldLabel>
+                      <textarea
+                        value={form.sen_nota}
+                        onChange={(e) => set("sen_nota", e.target.value)}
+                        rows={3}
+                        placeholder="Ej. Reactivo a sonidos agudos en frecuencias >2kHz. Se calma con música instrumental suave. Estrategia: auriculares de reducción de ruido."
+                        className="form-textarea !py-3 resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Documentos médicos */}
+                <div>
+                  <FieldLabel tooltip="Adjunta la evaluación diagnóstica, informes de neuropediatría, psicología, fonoaudiología u otros especialistas. Se almacenarán de forma segura y encriptada.">
+                    Documentos Clínicos{" "}
+                    <span className="text-slate-400 font-normal">
+                      (Opcional, pero recomendado)
+                    </span>
+                  </FieldLabel>
+                  {!isCloudinaryReady() && (
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl mb-3">
+                      <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                      <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-relaxed">
+                        Cloudinary aún no está configurado. Los documentos se
+                        listarán localmente. Cuando configures las credenciales
+                        mañana se subirán automáticamente.
+                      </p>
+                    </div>
+                  )}
+                  <DocUploadZone
+                    files={docFiles}
+                    onFilesAdd={handleDocsAdd}
+                    onFileRemove={handleDocRemove}
+                    uploading={docsUploading}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ════════════ PASO 3: REPRESENTANTE LEGAL ════════════ */}
+            {step === 3 && (
+              <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                <InfoCollapse tone="blue" title="Protección legal (LOPNNA)">
+                  Según el <strong>Artículo 65 LOPNNA</strong>, el representante
+                  legal deberá completar el consentimiento informado
+                  digitalizado al activar su cuenta mediante el enlace que SIAT
+                  generará al finalizar este registro.
+                </InfoCollapse>
+
+                {/* Cédula: identificador único del representante (primer campo) */}
+                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                  {/* Foto del representante */}
+                  <div className="shrink-0">
+                    <FieldLabel tooltip="JPG, PNG o WebP · Máx. 5 MB. Foto de identificación del representante legal.">
+                      Foto del Representante{" "}
+                      <span className="text-slate-400 font-normal">
+                        (Opcional)
+                      </span>
+                    </FieldLabel>
+                    <div
+                      onClick={() =>
+                        !repPhotoUploading &&
+                        document.getElementById("rep-photo-input")?.click()
+                      }
+                      className={`relative w-20 h-20 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden cursor-pointer transition-all duration-200 group mt-2
+                      ${repPhotoUploading ? "cursor-wait opacity-60" : "border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 hover:border-brand-500"}`}
+                    >
+                      {repPhotoPreview ? (
+                        <>
+                          <img
+                            src={repPhotoPreview}
+                            alt="Foto del representante"
+                            className="w-full h-full object-cover"
+                          />
+                          {form.rep_foto && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Camera className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <User className="w-6 h-6 text-slate-400 group-hover:text-brand-500 transition-colors" />
+                      )}
+                      {repPhotoUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      id="rep-photo-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => handleRepPhotoSelect(e.target.files[0])}
+                      className="hidden"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 flex-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <FieldLabel
+                        required
+                        tooltip="Identificador único en el sistema. Al salir del campo se verifica automáticamente si ya está registrado: en ese caso el nuevo paciente se vinculará a su cuenta existente."
+                      >
+                        <IdCard className="w-3 h-3" /> Cédula de Identidad
+                      </FieldLabel>
+                      <InputField
+                        type="text"
+                        inputMode="numeric"
+                        value={form.rep_cedu}
+                        onChange={(e) => {
+                          set("rep_cedu", e.target.value.replace(/\D/g, ""));
+                          setRepExistente(null);
+                        }}
+                        onBlur={(e) => buscarRep(e.target.value)}
+                        placeholder="Ej. 12345678"
+                        className="border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel
+                        required
+                        tooltip="SIAT generará credenciales seguras y enviará a este correo el enlace de activación de la cuenta del representante, cifrado de extremo a extremo."
+                      >
+                        <Mail className="w-3 h-3" /> Correo Electrónico de
+                        Acceso
+                      </FieldLabel>
+                      <InputField
+                        type="email"
+                        value={form.usu_crro}
+                        onChange={(e) => set("usu_crro", e.target.value)}
+                        placeholder="correo@ejemplo.com"
+                        disabled={!!repExistente}
+                        className={
+                          repExistente
+                            ? "opacity-70"
+                            : "border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {buscandoRep && (
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" />
+                    Verificando si el representante ya está registrado...
+                  </div>
+                )}
+
+                {repExistente && (
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                        Representante ya registrado en SIAT
+                      </p>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 leading-relaxed">
+                        {repExistente.rep_nomb} {repExistente.rep_apel} ·{" "}
+                        {repExistente.rep_rela} · Tiene {repExistente.ninos}{" "}
+                        paciente{repExistente.ninos !== 1 ? "s" : ""}. El nuevo
+                        paciente se vinculará automáticamente a este
+                        representante existente (no se enviará una nueva
+                        invitación).
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <FieldLabel
                       required
-                      tooltip="Identificador único en el sistema. Al salir del campo se verifica automáticamente si ya está registrado: en ese caso el nuevo paciente se vinculará a su cuenta existente."
+                      tooltip="Nombre(s) del padre, madre o tutor legal responsable del paciente."
                     >
-                      <IdCard className="w-3 h-3" /> Cédula de Identidad
+                      <User className="w-3 h-3" /> Nombre(s) del Representante
                     </FieldLabel>
                     <InputField
                       type="text"
-                      inputMode="numeric"
-                      value={form.rep_cedu}
-                      onChange={(e) => {
-                        set("rep_cedu", e.target.value.replace(/\D/g, ""));
-                        setRepExistente(null);
-                      }}
-                      onBlur={(e) => buscarRep(e.target.value)}
-                      placeholder="Ej. 12345678"
-                      className="border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                      value={form.rep_nomb}
+                      onChange={(e) => set("rep_nomb", e.target.value)}
+                      placeholder="Ej. María Elena"
+                      disabled={!!repExistente}
+                      className={repExistente ? "opacity-70" : ""}
                     />
+                  </div>
+                  <div>
+                    <FieldLabel required>Apellido(s)</FieldLabel>
+                    <InputField
+                      type="text"
+                      value={form.rep_apel}
+                      onChange={(e) => set("rep_apel", e.target.value)}
+                      placeholder="Ej. Rodríguez"
+                      disabled={!!repExistente}
+                      className={repExistente ? "opacity-70" : ""}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel
+                      required
+                      tooltip="Vínculo legal con el paciente. Determina el nivel de acceso y responsabilidad en el sistema."
+                    >
+                      <IdCard className="w-3 h-3" /> Parentesco / Vínculo Legal
+                    </FieldLabel>
+                    <SelectField
+                      value={form.rep_rela}
+                      onChange={(e) => set("rep_rela", e.target.value)}
+                      disabled={!!repExistente}
+                    >
+                      <option value="Madre">Madre</option>
+                      <option value="Padre">Padre</option>
+                      <option value="Tutor Legal">
+                        Tutor Legal (designado por tribunal)
+                      </option>
+                      <option value="Abuelo/a">Abuelo/a</option>
+                      <option value="Hermano/a Mayor">
+                        Hermano/a Mayor de edad
+                      </option>
+                      <option value="Otro Familiar">
+                        Otro Familiar Directo
+                      </option>
+                    </SelectField>
                   </div>
                   <div>
                     <FieldLabel
                       required
-                      tooltip="SIAT generará credenciales seguras y enviará a este correo el enlace de activación de la cuenta del representante, cifrado de extremo a extremo."
+                      tooltip="Número de contacto principal. Se usará para notificaciones de emergencia."
                     >
-                      <Mail className="w-3 h-3" /> Correo Electrónico de Acceso
+                      <Phone className="w-3 h-3" /> Teléfono Móvil de Contacto
                     </FieldLabel>
                     <InputField
-                      type="email"
-                      value={form.usu_crro}
-                      onChange={(e) => set("usu_crro", e.target.value)}
-                      placeholder="correo@ejemplo.com"
+                      type="tel"
+                      value={form.rep_telf}
+                      onChange={(e) => set("rep_telf", e.target.value)}
+                      placeholder="Ej. 0412 1234567 o +58 412 1234567"
                       disabled={!!repExistente}
-                      className={
-                        repExistente
-                          ? "opacity-70"
-                          : "border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
-                      }
+                      className={`border-slate-200 dark:border-slate-700 focus:ring-emerald-500 ${repExistente ? "opacity-70" : ""}`}
                     />
                   </div>
                 </div>
-              </div>
 
-              {buscandoRep && (
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" />
-                  Verificando si el representante ya está registrado...
-                </div>
-              )}
-
-              {repExistente && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl flex items-start gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                      Representante ya registrado en SIAT
-                    </p>
-                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 leading-relaxed">
-                      {repExistente.rep_nomb} {repExistente.rep_apel} ·{" "}
-                      {repExistente.rep_rela} · Tiene {repExistente.ninos}{" "}
-                      paciente{repExistente.ninos !== 1 ? "s" : ""}. El nuevo
-                      paciente se vinculará automáticamente a este representante
-                      existente (no se enviará una nueva invitación).
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="Nombre(s) del padre, madre o tutor legal responsable del paciente."
-                  >
-                    <User className="w-3 h-3" /> Nombre(s) del Representante
-                  </FieldLabel>
-                  <InputField
-                    type="text"
-                    value={form.rep_nomb}
-                    onChange={(e) => set("rep_nomb", e.target.value)}
-                    placeholder="Ej. María Elena"
-                    disabled={!!repExistente}
-                    className={repExistente ? "opacity-70" : ""}
-                  />
-                </div>
-                <div>
-                  <FieldLabel required>Apellido(s)</FieldLabel>
-                  <InputField
-                    type="text"
-                    value={form.rep_apel}
-                    onChange={(e) => set("rep_apel", e.target.value)}
-                    placeholder="Ej. Rodríguez"
-                    disabled={!!repExistente}
-                    className={repExistente ? "opacity-70" : ""}
-                  />
+                {/* Consentimiento del especialista */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.acepta_lopnna}
+                      onChange={(e) => set("acepta_lopnna", e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-brand-600 shrink-0"
+                    />
+                    <span className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Confirmo que cuento con autorización verbal del
+                      representante legal para registrar al paciente en el
+                      sistema, y que el representante será notificado y deberá
+                      aceptar el consentimiento informado digital conforme al
+                      <strong className="text-slate-800 dark:text-slate-200">
+                        {" "}
+                        Artículo 65 de la LOPNNA{" "}
+                      </strong>
+                      y la{" "}
+                      <strong className="text-slate-800 dark:text-slate-200">
+                        Ley de Infogobierno Art. 79
+                      </strong>
+                      .
+                    </span>
+                  </label>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="Vínculo legal con el paciente. Determina el nivel de acceso y responsabilidad en el sistema."
-                  >
-                    <IdCard className="w-3 h-3" /> Parentesco / Vínculo Legal
-                  </FieldLabel>
-                  <SelectField
-                    value={form.rep_rela}
-                    onChange={(e) => set("rep_rela", e.target.value)}
-                    disabled={!!repExistente}
-                  >
-                    <option value="Madre">Madre</option>
-                    <option value="Padre">Padre</option>
-                    <option value="Tutor Legal">
-                      Tutor Legal (designado por tribunal)
-                    </option>
-                    <option value="Abuelo/a">Abuelo/a</option>
-                    <option value="Hermano/a Mayor">
-                      Hermano/a Mayor de edad
-                    </option>
-                    <option value="Otro Familiar">Otro Familiar Directo</option>
-                  </SelectField>
-                </div>
-                <div>
-                  <FieldLabel
-                    required
-                    tooltip="Número de contacto principal. Se usará para notificaciones de emergencia."
-                  >
-                    <Phone className="w-3 h-3" /> Teléfono Móvil de Contacto
-                  </FieldLabel>
-                  <InputField
-                    type="tel"
-                    value={form.rep_telf}
-                    onChange={(e) => set("rep_telf", e.target.value)}
-                    placeholder="Ej. 0412 1234567 o +58 412 1234567"
-                    disabled={!!repExistente}
-                    className={`border-slate-200 dark:border-slate-700 focus:ring-emerald-500 ${repExistente ? "opacity-70" : ""}`}
-                  />
-                </div>
-              </div>
-
-              {/* Consentimiento del especialista */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.acepta_lopnna}
-                    onChange={(e) => set("acepta_lopnna", e.target.checked)}
-                    className="mt-0.5 w-4 h-4 accent-brand-600 shrink-0"
-                  />
-                  <span className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Confirmo que cuento con autorización verbal del
-                    representante legal para registrar al paciente en el
-                    sistema, y que el representante será notificado y deberá
-                    aceptar el consentimiento informado digital conforme al
-                    <strong className="text-slate-800 dark:text-slate-200">
-                      {" "}
-                      Artículo 65 de la LOPNNA{" "}
-                    </strong>
-                    y la{" "}
-                    <strong className="text-slate-800 dark:text-slate-200">
-                      Ley de Infogobierno Art. 79
-                    </strong>
-                    .
-                  </span>
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Footer ── */}
-        <div className="px-4 sm:px-7 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 rounded-b-3xl flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))] sm:[padding-bottom:1rem]">
-          <div className="text-[10px] text-slate-400">
-            Paso {step} de {STEPS.length} ·{" "}
-            {step === 1
-              ? "Datos del paciente"
-              : step === 2
-                ? "Perfil clínico"
-                : "Representante legal"}
+            )}
           </div>
-          <div className="flex items-center gap-3">
-            {step > 1 ? (
-              <button
-                type="button"
-                onClick={() => setStep((s) => s - 1)}
-                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 flex items-center justify-center gap-1.5 text-sm text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" /> Atrás
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 text-sm text-slate-500 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
-              >
-                Cancelar
-              </button>
-            )}
 
-            {step < 3 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold rounded-xl flex items-center justify-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20"
-              >
-                Continuar <ChevronRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading || !form.acepta_lopnna || docsUploading}
-                className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{" "}
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" /> Completar Registro
-                  </>
-                )}
-              </button>
-            )}
+          {/* ── Footer ── */}
+          <div className="px-4 sm:px-7 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 rounded-b-3xl flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))] sm:[padding-bottom:1rem]">
+            <div className="text-[10px] text-slate-400">
+              Paso {step} de {STEPS.length} ·{" "}
+              {step === 1
+                ? "Datos del paciente"
+                : step === 2
+                  ? "Perfil clínico"
+                  : "Representante legal"}
+            </div>
+            <div className="flex items-center gap-3">
+              {step > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => s - 1)}
+                  className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 flex items-center justify-center gap-1.5 text-sm text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Atrás
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 text-sm text-slate-500 font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+              )}
+
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-semibold rounded-xl flex items-center justify-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20"
+                >
+                  Continuar <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading || !form.acepta_lopnna || docsUploading}
+                  className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{" "}
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" /> Completar Registro
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Diálogo de confirmación para evitar pérdida accidental de datos clínicos */}
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={confirmDiscard}
+        title="¿Descartar registro del paciente?"
+        message="Tienes información ingresada en la ficha de este paciente. Si sales ahora, se perderán todos los datos y archivos cargados."
+        type="danger"
+        confirmLabel="Descartar y salir"
+        cancelLabel="Continuar completando"
+      />
+    </>
   );
 }

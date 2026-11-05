@@ -1576,9 +1576,23 @@ export default function UserProfile({ initialTab }) {
                         />
                         <div className="p-4 sm:p-6 space-y-4">
                           {passkeys.length === 0 ? (
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                              Aún no has configurado acceso rápido.
-                            </p>
+                            <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/40 dark:to-blue-950/40 border border-indigo-100 dark:border-indigo-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0">
+                                  <Fingerprint className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-slate-800 dark:text-white">
+                                    Mejora la seguridad de tu cuenta con
+                                    Passkeys
+                                  </p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                    Inicia sesión al instante usando la huella o
+                                    reconocimiento facial de tu dispositivo.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
                           ) : (
                             <div className="space-y-2">
                               {passkeys.map((k) => (

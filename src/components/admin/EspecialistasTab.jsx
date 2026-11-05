@@ -438,6 +438,13 @@ export default function EspecialistasTab({
             title="Acreditación de Nuevo Especialista"
             icon={BadgeCheck}
             maxWidth="max-w-xl"
+            hasUnsavedChanges={Boolean(
+              newEsp?.esp_nomb?.trim() ||
+              newEsp?.esp_apel?.trim() ||
+              newEsp?.esp_cedu?.trim() ||
+              newEsp?.esp_corr?.trim() ||
+              newEsp?.esp_telf?.trim(),
+            )}
           >
             <form
               onSubmit={async (e) => {
@@ -1376,6 +1383,9 @@ export default function EspecialistasTab({
             title="Registrar Nueva Especialidad"
             icon={Plus}
             maxWidth="max-w-xl"
+            hasUnsavedChanges={Boolean(
+              newEspCat?.esc_nomb?.trim() || newEspCat?.esc_desc?.trim(),
+            )}
           >
             <form
               onSubmit={async (e) => {

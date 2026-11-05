@@ -17,11 +17,22 @@ import {
   saveSelectedChild,
   clearAuthSession,
   setupAuthSync,
+  getValidSession,
+  normalizeRole,
 } from "../utils/authStorage";
 
 const GlobalContext = createContext();
 
 export const useGlobalContext = () => useContext(GlobalContext);
+
+// Rutas públicas que no requieren autenticación
+export const PUBLIC_VIEWS = [
+  "login",
+  "register",
+  "forgot",
+  "reset-password",
+  "register-repre",
+];
 
 // Estándar Internacional SaaS (Opción A): URLs canónicas limpias en inglés kebab-case
 const viewToPath = {
@@ -138,22 +149,34 @@ export const getPathForView = (view, role) => {
 export const GlobalProvider = ({ children }) => {
   const routerNavigate = useNavigate();
   const location = useLocation();
+
+  const session = getValidSession();
+  const initialRole = session.isValid ? session.role : null;
+  const [userRole, setUserRole] = useState(initialRole);
+
   const [currentView, setCurrentView] = useState(() => {
     const path = window.location.pathname;
-    return pathToView[path] || localStorage.getItem("currentView") || "login";
+    const requestedView =
+      pathToView[path] || localStorage.getItem("currentView") || "login";
+    if (PUBLIC_VIEWS.includes(requestedView)) {
+      return requestedView;
+    }
+    // Si la vista solicitada es privada pero no hay sesión activa, forzar login
+    if (!session.isValid) {
+      return "login";
+    }
+    return requestedView;
   });
 
   const savedChildInit = getSavedSelectedChild();
-  const initialRole = localStorage.getItem("userRole") || "ESPECIALISTA";
-  const [userRole, setUserRole] = useState(initialRole);
   const [nomNino, setNomNino] = useState(() =>
-    initialRole === "ESPECIALISTA" ? null : savedChildInit.name || null,
+    initialRole === "REPRESENTANTE" ? savedChildInit.name || null : null,
   );
   const [selectedChildId, setSelectedChildId] = useState(() =>
-    initialRole === "ESPECIALISTA" ? null : savedChildInit.id || null,
+    initialRole === "REPRESENTANTE" ? savedChildInit.id || null : null,
   );
-  const [userName, setUserName] = useState(
-    () => localStorage.getItem("userName") || "",
+  const [userName, setUserName] = useState(() =>
+    session.isValid ? localStorage.getItem("userName") || "" : "",
   );
   const [userFoto, setUserFoto] = useState("");
   const [adminActiveTab, setAdminActiveTab] = useState("dashboard");
@@ -377,7 +400,14 @@ export const GlobalProvider = ({ children }) => {
 
   useEffect(() => {
     const path = location.pathname;
+    const session = getValidSession();
+
     if (path === "/") {
+      if (!session.isValid) {
+        routerNavigate("/auth/login", { replace: true });
+        setCurrentView("login");
+        return;
+      }
       const target = getPathForView(currentView, userRole);
       if (target) routerNavigate(target, { replace: true });
       return;
@@ -394,16 +424,32 @@ export const GlobalProvider = ({ children }) => {
     }
     const view = pathToView[path];
     if (view) {
+      const isPublic = PUBLIC_VIEWS.includes(view);
+      if (!isPublic && !session.isValid) {
+        clearAuthSession();
+        setUserRole(null);
+        setCurrentView("login");
+        routerNavigate("/auth/login", { replace: true });
+        return;
+      }
       setCurrentView((prev) => (prev !== view ? view : prev));
     }
-  }, [location.pathname, routerNavigate]);
+  }, [location.pathname, routerNavigate, userRole, currentView]);
 
   useEffect(() => {
-    localStorage.setItem("userRole", userRole);
+    if (userRole) {
+      localStorage.setItem("userRole", userRole);
+    } else {
+      localStorage.removeItem("userRole");
+    }
   }, [userRole]);
 
   useEffect(() => {
-    localStorage.setItem("userName", userName);
+    if (userName) {
+      localStorage.setItem("userName", userName);
+    } else {
+      localStorage.removeItem("userName");
+    }
   }, [userName]);
 
   // Persistir la selección de niño siempre que cambie
@@ -1453,8 +1499,29 @@ export const GlobalProvider = ({ children }) => {
     }
   };
 
+  const logout = useCallback(() => {
+    disconnectSocket();
+    clearAuthSession();
+    setUserRole(null);
+    setUserName("");
+    setSelectedChildId(null);
+    setNomNino(null);
+    setCurrentView("login");
+    routerNavigate("/auth/login", { replace: true });
+  }, [routerNavigate]);
+
   const navigate = useCallback(
     (view) => {
+      const isPublic = PUBLIC_VIEWS.includes(view);
+      const session = getValidSession();
+      if (!isPublic && !session.isValid) {
+        clearAuthSession();
+        setUserRole(null);
+        setCurrentView("login");
+        routerNavigate("/auth/login", { replace: true });
+        return;
+      }
+
       if (view === "student" && userRole !== "ESPECIALISTA") {
         showToast("⚠️ Acceso denegado: Se requiere rol de Especialista.");
         return;
@@ -1542,6 +1609,7 @@ export const GlobalProvider = ({ children }) => {
         valMaxi,
         historicalData,
         navigate,
+        logout,
         addFeedback,
         updateThresholds,
         setNomNino,

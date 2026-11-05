@@ -6,6 +6,7 @@ import { loginWithFingerprint } from "../../api/passkey";
 import { getErrorMessage } from "../../utils/errorHandler";
 import { setAuthSession, saveSelectedChild } from "../../utils/authStorage";
 import FormAlert from "../shared/FormAlert";
+import FirstLoginSecurityModal from "./FirstLoginSecurityModal";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_SEC = 60;
@@ -31,6 +32,9 @@ function Login({ onNavigate }) {
     }
     return 0;
   });
+
+  const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
+  const [pendingUserSession, setPendingUserSession] = useState(null);
 
   const { setUserRole, setUserName, setSelectedChildId, setNomNino } =
     useGlobalContext();
@@ -118,12 +122,7 @@ function Login({ onNavigate }) {
     }
   };
 
-  const finalizeSession = (user, token) => {
-    setAuthSession({ token, user });
-
-    const displayName = user.nombre || user.usu_nomb || "Usuario";
-    setUserName(displayName);
-
+  const proceedToDashboard = (user) => {
     if (user.rol_codi === "ROL_REP") {
       setUserRole("REPRESENTANTE");
       onNavigate("dashboard");
@@ -138,6 +137,38 @@ function Login({ onNavigate }) {
       onNavigate("admin");
     } else {
       setError("Rol de usuario no reconocido.");
+    }
+  };
+
+  const finalizeSession = (user, token) => {
+    setAuthSession({ token, user });
+
+    const displayName = user.nombre || user.usu_nomb || "Usuario";
+    setUserName(displayName);
+
+    // Si es el primer inicio de sesión del usuario, desplegar asistente de seguridad
+    const promptKey = `siat_security_prompted_${user.usu_codi}`;
+    const alreadyPrompted = localStorage.getItem(promptKey);
+
+    if (user.primer_ingreso && !alreadyPrompted) {
+      setPendingUserSession({ user, token });
+      setShowFirstLoginModal(true);
+      return;
+    }
+
+    proceedToDashboard(user);
+  };
+
+  const handleSecurityModalComplete = () => {
+    if (pendingUserSession?.user?.usu_codi) {
+      localStorage.setItem(
+        `siat_security_prompted_${pendingUserSession.user.usu_codi}`,
+        "true",
+      );
+    }
+    setShowFirstLoginModal(false);
+    if (pendingUserSession?.user) {
+      proceedToDashboard(pendingUserSession.user);
     }
   };
 
@@ -411,6 +442,12 @@ function Login({ onNavigate }) {
             Cómo obtener acceso
           </button>
         </div>
+
+        <FirstLoginSecurityModal
+          open={showFirstLoginModal}
+          user={pendingUserSession?.user}
+          onComplete={handleSecurityModalComplete}
+        />
       </div>
     </div>
   );

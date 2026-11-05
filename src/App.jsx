@@ -26,6 +26,11 @@ import UserProfile from "./pages/UserProfile";
 import PwaInstallPrompt from "@/components/shared/PwaInstallPrompt";
 import PwaUpdatePrompt from "@/components/shared/PwaUpdatePrompt";
 import OfflineStatusPill from "./components/shared/OfflineStatusPill";
+import {
+  getValidSession,
+  normalizeRole,
+  clearAuthSession,
+} from "./utils/authStorage";
 import "./App.css";
 
 export default function App() {
@@ -119,6 +124,7 @@ export default function App() {
   const handleLogout = () => {
     disconnectSocket();
     setShowSessionExpired(false);
+    clearAuthSession();
     setUserRole(null);
     setSelectedChildId(null);
     setNomNino(null);
@@ -138,7 +144,7 @@ export default function App() {
     }
   }, [setCurrentView]);
 
-  // SISTEMA DE SEGURIDAD (RBAC): Guardia de Vistas
+  // SISTEMA DE SEGURIDAD (RBAC): Guardia de Vistas y Autenticación Estricta
   const getSafeView = () => {
     const publicViews = [
       "login",
@@ -149,15 +155,14 @@ export default function App() {
     ];
     if (publicViews.includes(currentView)) return currentView;
 
-    const rawRole = userRole || "GUEST";
-    const role =
-      rawRole === "ROL_ADM"
-        ? "ADMIN_INSTITUCION"
-        : rawRole === "ROL_ESP"
-          ? "ESPECIALISTA"
-          : rawRole === "ROL_REP"
-            ? "REPRESENTANTE"
-            : rawRole;
+    // 1. REQUISITO ESTRICTO: Token de sesión vigente
+    const session = getValidSession();
+    if (!session.isValid) {
+      return "login";
+    }
+
+    // 2. Extraer el rol validado directamente desde el JWT criptográfico
+    const role = session.role || normalizeRole(userRole) || "GUEST";
 
     // Matriz estricta de permisos por rol
     const rolePermissions = {
@@ -229,10 +234,25 @@ export default function App() {
     if (safeView === "register-repre")
       return <RegisterRepre onNavigate={navigate} />;
 
-    if (safeView === "admin") return <AdminDashboard onNavigate={navigate} />;
+    // Verificación de defensa en profundidad para el panel de administración
+    if (safeView === "admin") {
+      const session = getValidSession();
+      if (!session.isValid || session.role !== "ADMIN_INSTITUCION") {
+        return <Auth currentView="login" onNavigate={navigate} />;
+      }
+      return <AdminDashboard onNavigate={navigate} />;
+    }
 
     if (safeView === "dashboard") {
-      if (userRole === "ESPECIALISTA" || userRole === "ROL_ESP")
+      const session = getValidSession();
+      if (!session.isValid) {
+        return <Auth currentView="login" onNavigate={navigate} />;
+      }
+      if (
+        session.role === "ESPECIALISTA" ||
+        userRole === "ESPECIALISTA" ||
+        userRole === "ROL_ESP"
+      )
         return <SpecialistDashboard onNavigate={navigate} />;
       return <MainDashboard onNavigate={navigate} />;
     }

@@ -8,6 +8,7 @@ import {
 } from "../context/GlobalState";
 import { useTourContext } from "../context/TourContext";
 import { toastError } from "../utils/errorHandler";
+import { getValidSession } from "../utils/authStorage";
 import AdminSidebar from "../components/layout/AdminSidebar";
 import * as XLSX from "xlsx";
 import {
@@ -191,8 +192,13 @@ function AdminDashboard({ onNavigate }) {
 
   const mountedRef = useRef(true);
 
+  const session = getValidSession();
+  const isAdmin =
+    session.isValid &&
+    (session.role === "ADMIN_INSTITUCION" || userRole === "ADMIN_INSTITUCION");
+
   useEffect(() => {
-    if (userRole !== "ADMIN_INSTITUCION") {
+    if (!isAdmin) {
       onNavigate("login");
       return;
     }
@@ -782,6 +788,10 @@ function AdminDashboard({ onNavigate }) {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Usuarios");
     XLSX.writeFile(workbook, "usuarios_siat.xlsx");
   };
+
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <div className="flex h-[100dvh] w-full bg-[#F8FAFC] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
