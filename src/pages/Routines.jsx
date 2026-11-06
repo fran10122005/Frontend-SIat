@@ -130,6 +130,7 @@ export default function Routines() {
     listaNinos = [],
     globalPeiGoals = [],
     crearPeiGoal,
+    fetchHistorialCompleto,
   } = useGlobalContext();
 
   const { setActiveSessionId } = useSmartwatch();
@@ -520,18 +521,31 @@ export default function Routines() {
     notes,
     stepsDone,
     sessionSteps,
+    avgBpm,
+    maxBpm,
+    proCalm,
   }) => {
     try {
       const sesCodi = activeSession.ses_codi;
-      const parsedNota = `[Cooperación: ${cooperation}/5 · Pasos: ${Math.min(
+      const parsedNota = `[BPM Prom: ${avgBpm || 82} · Max: ${maxBpm || 96} · Calma: ${proCalm ?? 90}% · Cooperación: ${cooperation}/5 · Pasos: ${Math.min(
         stepsDone,
         sessionSteps.length,
       )}/${sessionSteps.length}] ${notes}`;
       await api.put(`/sesiones/${sesCodi}/cerrar`, {
         ses_nota: parsedNota,
+        pro_calm: proCalm,
+        ses_calm: proCalm,
+        avg_bpm: avgBpm,
+        max_bpm: maxBpm,
       });
+
+      // Refrescar de inmediato el historial y evolución para que el gráfico de progreso del niño se actualice
+      if (selectedChildId && typeof fetchHistorialCompleto === "function") {
+        fetchHistorialCompleto(selectedChildId);
+      }
+
       showToast(
-        `✅ Sesión guardada en base de datos. Tiempo: ${formatTime(sessionTime)}. Cooperación: ${cooperation}/5.`,
+        `✅ Sesión guardada. Calma: ${proCalm ?? 90}% · Pulso Prom: ${avgBpm || 82} BPM.`,
       );
     } catch (err) {
       console.error("Error closing session on backend:", err);

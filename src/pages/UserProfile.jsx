@@ -728,6 +728,12 @@ export default function UserProfile({ initialTab }) {
         } else if (userData.rol_codi === "ROL_ADM" && userData.tm_admin) {
           nomb = userData.tm_admin.adm_nomb;
           apel = userData.tm_admin.adm_apel;
+          telf = userData.tm_admin.adm_telf || "";
+          tdoc = userData.tm_admin.adm_tdoc || "V";
+          cedu =
+            userData.tm_admin.adm_cedu ||
+            userData.usu_cedu ||
+            (userData.cedula ? String(userData.cedula) : "");
           foto = userData.tm_admin.adm_foto || "";
           institucion = userData.tm_admin.tm_insti?.ins_nomb || "";
           ins_codi = userData.tm_admin.ins_codi || "";
@@ -826,6 +832,16 @@ export default function UserProfile({ initialTab }) {
 
   const submitProfile = async (e) => {
     e.preventDefault();
+
+    // Validación de Cédula para Administrador si fue ingresada
+    if ((userRole === "ADMIN_INSTITUCION" || isAdmin) && profile.cedu) {
+      const cleanDigits = String(profile.cedu).replace(/\D/g, "");
+      if (cleanDigits.length < 6 || cleanDigits.length > 8) {
+        showToast("⚠️ La cédula debe contener entre 6 y 8 dígitos.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -834,17 +850,25 @@ export default function UserProfile({ initialTab }) {
         telf: profile.telf,
         foto: profile.foto || null,
       };
-      if (userRole === "ADMIN_INSTITUCION") {
+      if (userRole === "ADMIN_INSTITUCION" || isAdmin) {
         payload.email =
           profile.email && profile.email.trim() !== ""
             ? profile.email.trim()
             : undefined;
+        const cleanCedu = profile.cedu
+          ? String(profile.cedu).replace(/\D/g, "")
+          : null;
+        payload.cedu = cleanCedu;
+        payload.adm_cedu = cleanCedu;
+        payload.cedula = cleanCedu;
+        payload.tdoc = profile.tdoc || "V";
+        payload.adm_tdoc = profile.tdoc || "V";
       }
       if (userRole === "ESPECIALISTA") {
         payload.licencia = profile.licencia;
         payload.tdoc = profile.tdoc;
         payload.fnac = profile.fecnac || null;
-      } else if (userRole !== "ADMIN_INSTITUCION") {
+      } else if (userRole !== "ADMIN_INSTITUCION" && !isAdmin) {
         payload.rela = profile.rela;
       }
       await api.put("/auth/me", payload);
@@ -1259,47 +1283,55 @@ export default function UserProfile({ initialTab }) {
                         {isAdmin && (
                           <div className="border-t border-slate-100 dark:border-slate-800 pt-5 mt-1">
                             <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
-                              Información Institucional
+                              Identificación y Datos Institucionales
                             </p>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                              {/* Cédula del Administrador */}
                               <div className="space-y-2">
-                                <label className={labelClass}>
-                                  Institución
+                                <label
+                                  className={`${labelClass} flex items-center gap-1`}
+                                >
+                                  <IdCard className="w-3 h-3" /> Cédula de
+                                  Identidad
                                 </label>
-                                <input
-                                  type="text"
-                                  value={profile.institucion || "No registrada"}
-                                  readOnly
-                                  disabled
-                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
-                                />
+                                <div className="flex gap-2">
+                                  <select
+                                    name="tdoc"
+                                    value={profile.tdoc || "V"}
+                                    onChange={handleProfileChange}
+                                    className="w-20 px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-xs font-bold text-slate-900 dark:text-white"
+                                  >
+                                    <option value="V">V-</option>
+                                    <option value="E">E-</option>
+                                    <option value="J">J-</option>
+                                    <option value="P">P-</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    name="cedu"
+                                    value={profile.cedu || ""}
+                                    onChange={(e) => {
+                                      const digits = e.target.value
+                                        .replace(/\D/g, "")
+                                        .slice(0, 8);
+                                      setProfile((prev) => ({
+                                        ...prev,
+                                        cedu: digits,
+                                      }));
+                                    }}
+                                    placeholder="Ej: 12345678"
+                                    maxLength={8}
+                                    className={inputClass}
+                                  />
+                                </div>
+                                <p className="text-[10px] text-slate-400">
+                                  Identificador legal del administrador (6 a 8
+                                  dígitos numéricos).
+                                </p>
                               </div>
+
+                              {/* Teléfono de Contacto */}
                               <div className="space-y-2">
-                                <label className={labelClass}>
-                                  Código Institucional (ins_codi)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={profile.ins_codi || "—"}
-                                  readOnly
-                                  disabled
-                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className={labelClass}>Cargo</label>
-                                <input
-                                  type="text"
-                                  value={
-                                    profile.cargo ||
-                                    "Administrador Institucional"
-                                  }
-                                  readOnly
-                                  disabled
-                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
-                                />
-                              </div>
-                              <div className="space-y-2 md:col-span-3">
                                 <label
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
@@ -1313,6 +1345,46 @@ export default function UserProfile({ initialTab }) {
                                   onChange={handleProfileChange}
                                   className={inputClass}
                                   placeholder="+58 212-0000000"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Institución
+                                </label>
+                                <input
+                                  type="text"
+                                  value={profile.institucion || "No registrada"}
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className={labelClass}>Cargo</label>
+                                <input
+                                  type="text"
+                                  value={
+                                    profile.cargo ||
+                                    "Administrador Institucional"
+                                  }
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                />
+                              </div>
+
+                              <div className="space-y-2 md:col-span-2">
+                                <label className={labelClass}>
+                                  Código Institucional del Sistema (ins_codi)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={profile.ins_codi || "—"}
+                                  readOnly
+                                  disabled
+                                  className={`${inputClass} opacity-70 cursor-not-allowed`}
                                 />
                               </div>
                             </div>

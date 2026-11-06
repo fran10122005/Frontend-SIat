@@ -427,10 +427,24 @@ function AdminDashboard({ onNavigate }) {
   };
 
   const handleToggleActivo = (esp_codi, currentState) => {
+    let warningMsg = `¿Estás seguro de que deseas ${currentState ? "desactivar" : "activar"} a este especialista?`;
+
+    if (currentState) {
+      const activeAssignments = asignaciones.filter(
+        (a) =>
+          (String(a.esp_codi) === String(esp_codi) ||
+            String(a.tm_espec?.esp_codi) === String(esp_codi)) &&
+          a.asi_stdo === "Activo",
+      );
+      if (activeAssignments.length > 0) {
+        warningMsg = `⚠️ Este especialista tiene ${activeAssignments.length} paciente(s) con asignación clínica activa. Al desactivarlo, sus pacientes quedarán sin terapeuta habilitado para registrar sesiones. Te recomendamos reasignar los casos. ¿Deseas desactivarlo de todas formas?`;
+      }
+    }
+
     setModalConfig({
       isOpen: true,
       title: currentState ? "Desactivar Especialista" : "Activar Especialista",
-      message: `¿Estás seguro de que deseas ${currentState ? "desactivar" : "activar"} a este especialista?`,
+      message: warningMsg,
       type: currentState ? "danger" : "success",
       onConfirm: async () => {
         try {
@@ -953,7 +967,7 @@ function AdminDashboard({ onNavigate }) {
                     <button
                       id="tour-admin-tab-especialistas"
                       onClick={() => changeTab("especialistas")}
-                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50/70 via-slate-50/80 to-blue-50/20 dark:bg-slate-800/90 rounded-xl border border-blue-200/80 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 hover:-translate-y-0.5 transition-all text-left group"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50/70 via-slate-50/80 to-blue-50/20 dark:bg-none dark:bg-[#162032] rounded-xl border border-blue-200/80 dark:border-slate-800/80 shadow-sm hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 hover:-translate-y-0.5 transition-all text-left group"
                     >
                       <div className="p-2.5 bg-blue-100 dark:bg-blue-950/60 rounded-xl border border-blue-200/50 dark:border-blue-900/40 group-hover:scale-105 transition-transform">
                         <Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -970,7 +984,7 @@ function AdminDashboard({ onNavigate }) {
                     <button
                       id="tour-admin-tab-asignaciones"
                       onClick={() => changeTab("asignaciones")}
-                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-purple-50/70 via-slate-50/80 to-purple-50/20 dark:bg-slate-800/90 rounded-xl border border-purple-200/80 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-purple-400 dark:hover:border-purple-500/50 hover:-translate-y-0.5 transition-all text-left group"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-purple-50/70 via-slate-50/80 to-purple-50/20 dark:bg-none dark:bg-[#162032] rounded-xl border border-purple-200/80 dark:border-slate-800/80 shadow-sm hover:shadow-md hover:border-purple-400 dark:hover:border-purple-500/50 hover:-translate-y-0.5 transition-all text-left group"
                     >
                       <div className="p-2.5 bg-purple-100 dark:bg-purple-950/60 rounded-xl border border-purple-200/50 dark:border-purple-900/40 group-hover:scale-105 transition-transform">
                         <Link2 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -986,7 +1000,7 @@ function AdminDashboard({ onNavigate }) {
                     </button>
                     <button
                       onClick={() => changeTab("usuarios")}
-                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-emerald-50/70 via-slate-50/80 to-emerald-50/20 dark:bg-slate-800/90 rounded-xl border border-emerald-200/80 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:-translate-y-0.5 transition-all text-left group"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-emerald-50/70 via-slate-50/80 to-emerald-50/20 dark:bg-none dark:bg-[#162032] rounded-xl border border-emerald-200/80 dark:border-slate-800/80 shadow-sm hover:shadow-md hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:-translate-y-0.5 transition-all text-left group"
                     >
                       <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/60 rounded-xl border border-emerald-200/50 dark:border-emerald-900/40 group-hover:scale-105 transition-transform">
                         <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -1002,7 +1016,7 @@ function AdminDashboard({ onNavigate }) {
                     </button>
                     <button
                       onClick={() => changeTab("catalogos")}
-                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-amber-50/70 via-slate-50/80 to-amber-50/20 dark:bg-slate-800/90 rounded-xl border border-amber-200/80 dark:border-slate-700/70 shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-500/50 hover:-translate-y-0.5 transition-all text-left group"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-br from-amber-50/70 via-slate-50/80 to-amber-50/20 dark:bg-none dark:bg-[#162032] rounded-xl border border-amber-200/80 dark:border-slate-800/80 shadow-sm hover:shadow-md hover:border-amber-400 dark:hover:border-amber-500/50 hover:-translate-y-0.5 transition-all text-left group"
                     >
                       <div className="p-2.5 bg-amber-100 dark:bg-amber-950/60 rounded-xl border border-amber-200/50 dark:border-amber-900/40 group-hover:scale-105 transition-transform">
                         <Building2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />

@@ -22,6 +22,7 @@ import StatusBadge from "../shared/StatusBadge";
 import FilterBar from "../shared/FilterBar";
 import Pagination from "../shared/Pagination";
 import AdminModal from "../shared/AdminModal";
+import ConfirmDialog from "../shared/ConfirmDialog";
 import FotoUpload from "../shared/FotoUpload";
 import DocumentosClinicos from "../shared/DocumentosClinicos";
 import api from "../../api/axios";
@@ -479,6 +480,18 @@ export default function RepresentantesTab({
       },
     },
   ].filter(Boolean);
+
+  const [confirmEstadoState, setConfirmEstadoState] = useState({
+    isOpen: false,
+    usuCodi: null,
+    currentState: false,
+    email: "",
+  });
+  const [confirmResetState, setConfirmResetState] = useState({
+    isOpen: false,
+    usuCodi: null,
+    email: "",
+  });
 
   const handleResetPass = async (usuCodi, email) => {
     setResettingId(usuCodi);
@@ -1004,7 +1017,11 @@ export default function RepresentantesTab({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleResetPass(r.usu_codi, r.usu_crro);
+                              setConfirmResetState({
+                                isOpen: true,
+                                usuCodi: r.usu_codi,
+                                email: r.usu_crro,
+                              });
                             }}
                             disabled={resettingId === r.usu_codi}
                             title="Restablecer contraseña"
@@ -1019,7 +1036,12 @@ export default function RepresentantesTab({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleToggleEstado(r.usu_codi, r.usu_estd);
+                              setConfirmEstadoState({
+                                isOpen: true,
+                                usuCodi: r.usu_codi,
+                                currentState: r.usu_estd,
+                                email: r.usu_crro,
+                              });
                             }}
                             title={r.usu_estd ? "Desactivar" : "Activar"}
                             className={`action-icon-btn text-slate-500 ${r.usu_estd ? "hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" : "hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"}`}
@@ -1250,17 +1272,17 @@ export default function RepresentantesTab({
           }}
           title="Ficha Integral del Representante"
           subtitle={`${previewRep.rep_nomb || ""} ${previewRep.rep_apel || ""}`.trim()}
-          maxWidth="max-w-3xl"
+          maxWidth="max-w-2xl"
           icon={UserRound}
         >
           {/* Tab bar */}
-          <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl mb-5">
+          <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl mb-4">
             <button
               type="button"
               onClick={() => setPreviewTab("rep")}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
                 previewTab === "rep"
-                  ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-blue-400 shadow-sm font-bold"
+                  ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-blue-400 shadow-xs font-bold"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
@@ -1272,7 +1294,7 @@ export default function RepresentantesTab({
               disabled={!previewRep.ninos?.length && !previewRep.tm_ninos}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                 previewTab === "nino"
-                  ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-blue-400 shadow-sm font-bold"
+                  ? "bg-white dark:bg-slate-900 text-brand-600 dark:text-blue-400 shadow-xs font-bold"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
@@ -1281,135 +1303,125 @@ export default function RepresentantesTab({
               {(previewRep.ninos?.length || (previewRep.tm_ninos ? 1 : 0)) > 1
                 ? "s"
                 : ""}
-              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-200 text-[10px] font-bold">
+              <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold">
                 {previewRep.ninos?.length || (previewRep.tm_ninos ? 1 : 0)}
               </span>
             </button>
           </div>
 
-          {/* ══ TAB: FICHA GENERAL (UNIFICADA - PC EXECUTIVE LAYOUT) ══ */}
+          {/* ══ TAB: FICHA GENERAL (PC EXECUTIVE LAYOUT) ══ */}
           {previewTab === "rep" && (
-            <div className="space-y-5 animate-in fade-in duration-200">
+            <div className="space-y-4 animate-in fade-in duration-200">
               {/* Encabezado Unificado del Perfil */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-4 min-w-0">
-                  {previewRep.rep_foto ? (
-                    <img
-                      src={previewRep.rep_foto}
-                      alt={`${previewRep.rep_nomb} ${previewRep.rep_apel}`}
-                      className="w-16 h-16 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800 shrink-0 shadow-sm"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-400 font-black text-xl shrink-0">
-                      {previewRep.rep_nomb?.charAt(0) || "?"}
-                      {previewRep.rep_apel?.charAt(0) || ""}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
-                        {previewRep.rep_nomb} {previewRep.rep_apel}
-                      </h3>
-                      <StatusBadge active={previewRep.usu_estd} />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs mt-1">
-                      <span className="font-semibold text-brand-700 dark:text-blue-300 bg-brand-50 dark:bg-blue-950/60 px-2 py-0.5 rounded text-[11px] border border-brand-200/60 dark:border-blue-800/60">
-                        {previewRep.rep_rela || "Representante Legal"}
-                      </span>
-                      {previewRep.rep_cedu && (
-                        <span className="font-mono text-slate-700 dark:text-slate-200 font-medium">
-                          C.I. {previewRep.rep_cedu}
-                        </span>
-                      )}
-                      <span className="text-slate-400">·</span>
-                      <span className="font-mono text-slate-500 dark:text-slate-300 text-[11px]">
-                        ID: {previewRep.rep_codi || previewRep.usu_codi}
-                      </span>
-                    </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-850/80 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+                {previewRep.rep_foto ? (
+                  <img
+                    src={previewRep.rep_foto}
+                    alt={`${previewRep.rep_nomb} ${previewRep.rep_apel}`}
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-indigo-200 dark:border-indigo-800 shrink-0 shadow-xs"
+                  />
+                ) : (
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-950/80 dark:to-blue-950/80 border border-indigo-200/70 dark:border-indigo-800/60 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-black text-xl shrink-0 shadow-2xs">
+                    {previewRep.rep_nomb?.charAt(0) || "?"}
+                    {previewRep.rep_apel?.charAt(0) || ""}
                   </div>
-                </div>
-
-                {/* Accesos Directos de Contacto (en línea, sin cuadros pesados) */}
-                <div className="flex sm:flex-col items-start sm:items-end gap-1 text-xs text-slate-600 dark:text-slate-300 w-full sm:w-auto">
-                  {previewRep.usu_crro && (
-                    <span className="inline-flex items-center gap-1.5 text-slate-800 dark:text-slate-200 font-medium truncate">
-                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{previewRep.usu_crro}</span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                      {previewRep.rep_nomb} {previewRep.rep_apel}
+                    </h3>
+                    <StatusBadge active={previewRep.usu_estd} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs mt-1.5">
+                    <span className="font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md text-[11px] border border-blue-200/60 dark:border-blue-900/60">
+                      {previewRep.rep_rela || "Representante Legal"}
                     </span>
-                  )}
-                  {previewRep.rep_telf && (
-                    <a
-                      href={`tel:${previewRep.rep_telf}`}
-                      className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                    {previewRep.rep_cedu && (
+                      <span className="font-mono text-slate-700 dark:text-slate-200 font-medium bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-[11px] border border-slate-200/60 dark:border-slate-700/60">
+                        C.I. {previewRep.rep_cedu}
+                      </span>
+                    )}
+                    <span className="font-mono text-slate-400 dark:text-slate-500 text-[11px]">
+                      ID: {previewRep.rep_codi || previewRep.usu_codi}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ficha Estructurada de Datos en Grid 2x2 Elegante */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-850/60 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-950/60 rounded-lg text-blue-600 dark:text-blue-400 shrink-0 border border-blue-100 dark:border-blue-900/40">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Correo Electrónico (SIAT)
+                    </span>
+                    <span
+                      className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block select-all"
+                      title={previewRep.usu_crro}
                     >
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      {previewRep.rep_telf}
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              {/* Ficha Estructurada de Datos (Tabla Clásica Ejecutiva en lugar de cuadros flotantes) */}
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 overflow-hidden shadow-xs">
-                <div className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                  Información Institucional y Acceso
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800 text-xs">
-                  <div className="p-3.5 space-y-2.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">
-                        Correo Electrónico (SIAT)
-                      </span>
-                      <span className="font-semibold text-slate-900 dark:text-white select-all truncate ml-2">
-                        {previewRep.usu_crro || "-"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">
-                        Teléfono de Contacto
-                      </span>
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        {previewRep.rep_telf || "-"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">
-                        Cédula de Identidad
-                      </span>
-                      <span className="font-mono font-semibold text-slate-900 dark:text-white">
-                        {previewRep.rep_cedu || "-"}
-                      </span>
-                    </div>
+                      {previewRep.usu_crro || "—"}
+                    </span>
                   </div>
-                  <div className="p-3.5 space-y-2.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">
-                        Parentesco Familiar
-                      </span>
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        {previewRep.rep_rela || "Representante Legal"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">
-                        Identificador de Usuario
-                      </span>
-                      <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                        {previewRep.rep_codi || previewRep.usu_codi}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 dark:text-slate-300 font-medium">
-                        Estado en Plataforma
-                      </span>
-                      <StatusBadge active={previewRep.usu_estd} />
-                    </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-850/60 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg text-emerald-600 dark:text-emerald-400 shrink-0 border border-emerald-100 dark:border-emerald-900/40">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Teléfono de Contacto
+                    </span>
+                    {previewRep.rep_telf ? (
+                      <a
+                        href={`tel:${previewRep.rep_telf}`}
+                        className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline block"
+                      >
+                        {previewRep.rep_telf}
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-400 block">—</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-850/60 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg text-indigo-600 dark:text-indigo-400 shrink-0 border border-indigo-100 dark:border-indigo-900/40">
+                    <IdCard className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Cédula de Identidad
+                    </span>
+                    <span className="text-xs font-semibold font-mono text-slate-800 dark:text-slate-200 block">
+                      {previewRep.rep_cedu
+                        ? `V-${previewRep.rep_cedu}`
+                        : "No registrada"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-850/60 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                  <div className="p-2 bg-purple-50 dark:bg-purple-950/60 rounded-lg text-purple-600 dark:text-purple-400 shrink-0 border border-purple-100 dark:border-purple-900/40">
+                    <UserRound className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      Parentesco Registrado
+                    </span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                      {previewRep.rep_rela || "Representante Legal"}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Lista Streamline de Pacientes Vinculados */}
-              <div className="space-y-2.5 pt-1">
+              {/* Pacientes Vinculados */}
+              <div className="space-y-2 pt-1">
                 {(() => {
                   const ninosLista =
                     previewRep.ninos && previewRep.ninos.length > 0
@@ -1419,21 +1431,22 @@ export default function RepresentantesTab({
                   return (
                     <>
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                          <Baby className="w-4 h-4 text-brand-500" />
-                          Paciente(s) Bajo Su Representación (
-                          {ninosLista.length})
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                          <Baby className="w-4 h-4 text-blue-500" />
+                          Paciente(s) a Cargo ({ninosLista.length})
                         </h4>
-                        <button
-                          type="button"
-                          onClick={() => setPreviewTab("nino")}
-                          className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-                        >
-                          Ver expediente clínico completo →
-                        </button>
+                        {ninosLista.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewTab("nino")}
+                            className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                          >
+                            Ver expediente clínico →
+                          </button>
+                        )}
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800 shadow-xs">
+                      <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-850/60 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/80 shadow-2xs">
                         {ninosLista.length === 0 ? (
                           <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
                             Sin pacientes vinculados registrados.
@@ -1442,17 +1455,17 @@ export default function RepresentantesTab({
                           ninosLista.map((ninoItem, idx) => (
                             <div
                               key={ninoItem.nin_codi || idx}
-                              className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                              className="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
                             >
-                              <div className="flex items-center gap-3.5 min-w-0">
+                              <div className="flex items-center gap-3 min-w-0">
                                 {ninoItem.nin_foto ? (
                                   <img
                                     src={ninoItem.nin_foto}
                                     alt={ninoItem.nin_nomb}
-                                    className="w-11 h-11 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                                    className="w-11 h-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
                                   />
                                 ) : (
-                                  <div className="w-11 h-11 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-sm shrink-0">
+                                  <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-900/40 border border-blue-200/60 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-sm shrink-0">
                                     {ninoItem.nin_nomb?.charAt(0) || "?"}
                                   </div>
                                 )}
@@ -1475,7 +1488,7 @@ export default function RepresentantesTab({
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 flex flex-wrap items-center gap-2">
+                                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-1.5">
                                     <span>
                                       {ninoItem.nin_gner === "M"
                                         ? "Masculino"
@@ -1486,7 +1499,7 @@ export default function RepresentantesTab({
                                     {ninoItem.nin_diag && (
                                       <>
                                         <span>·</span>
-                                        <span className="text-slate-700 dark:text-slate-200 font-medium truncate max-w-xs sm:max-w-md">
+                                        <span className="text-slate-600 dark:text-slate-300 font-medium truncate max-w-[200px] sm:max-w-xs">
                                           {ninoItem.nin_diag}
                                         </span>
                                       </>
@@ -1500,7 +1513,7 @@ export default function RepresentantesTab({
                                 onClick={() => setPreviewTab("nino")}
                                 className="self-end sm:self-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-800/60 transition-colors shrink-0"
                               >
-                                Ver Expediente →
+                                Expediente →
                               </button>
                             </div>
                           ))
@@ -1512,7 +1525,7 @@ export default function RepresentantesTab({
               </div>
 
               {/* Botones de acción directa en el pie del modal */}
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-3.5 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -1529,35 +1542,39 @@ export default function RepresentantesTab({
                       usu_crro: r.usu_crro || "",
                     });
                   }}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 shadow-2xs"
                 >
-                  <Pencil className="w-3.5 h-3.5" /> Editar Representante
+                  <Pencil className="w-3.5 h-3.5 text-slate-500" /> Editar
+                  Representante
                 </button>
                 <button
                   type="button"
                   onClick={() =>
-                    handleResetPass(previewRep.usu_codi, previewRep.usu_crro)
+                    setConfirmResetState({
+                      isOpen: true,
+                      usuCodi: previewRep.usu_codi,
+                      email: previewRep.usu_crro,
+                    })
                   }
                   disabled={resettingId === previewRep.usu_codi}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center gap-1.5"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-900/50 hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors flex items-center gap-1.5"
                 >
                   <KeyRound className="w-3.5 h-3.5" /> Restablecer Clave
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    handleToggleEstado(
-                      previewRep.usu_codi,
-                      previewRep.usu_estd,
-                    );
-                    setPreviewRep((prev) =>
-                      prev ? { ...prev, usu_estd: !prev.usu_estd } : prev,
-                    );
+                    setConfirmEstadoState({
+                      isOpen: true,
+                      usuCodi: previewRep.usu_codi,
+                      currentState: previewRep.usu_estd,
+                      email: previewRep.usu_crro,
+                    });
                   }}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-colors flex items-center gap-1.5 ${
                     previewRep.usu_estd
-                      ? "bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50"
-                      : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                      ? "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200/60 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/60"
+                      : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-900/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
                   }`}
                 >
                   {previewRep.usu_estd ? (
@@ -1759,6 +1776,69 @@ export default function RepresentantesTab({
           </form>
         </AdminModal>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmEstadoState.isOpen}
+        onClose={() =>
+          setConfirmEstadoState({
+            isOpen: false,
+            usuCodi: null,
+            currentState: false,
+            email: "",
+          })
+        }
+        onConfirm={() => {
+          const { usuCodi, currentState } = confirmEstadoState;
+          setConfirmEstadoState({
+            isOpen: false,
+            usuCodi: null,
+            currentState: false,
+            email: "",
+          });
+          if (usuCodi) {
+            handleToggleEstado(usuCodi, currentState);
+            setPreviewRep((prev) =>
+              prev && prev.usu_codi === usuCodi
+                ? { ...prev, usu_estd: !currentState }
+                : prev,
+            );
+          }
+        }}
+        title={
+          confirmEstadoState.currentState
+            ? "Desactivar Representante"
+            : "Activar Representante"
+        }
+        message={
+          confirmEstadoState.email
+            ? `¿Estás seguro de que deseas <b>${confirmEstadoState.currentState ? "desactivar" : "activar"}</b> al representante <b>${confirmEstadoState.email}</b>?`
+            : ""
+        }
+        type={confirmEstadoState.currentState ? "danger" : "success"}
+        confirmLabel={
+          confirmEstadoState.currentState ? "Desactivar" : "Activar"
+        }
+      />
+
+      <ConfirmDialog
+        isOpen={confirmResetState.isOpen}
+        onClose={() =>
+          setConfirmResetState({ isOpen: false, usuCodi: null, email: "" })
+        }
+        onConfirm={() => {
+          const { usuCodi, email } = confirmResetState;
+          setConfirmResetState({ isOpen: false, usuCodi: null, email: "" });
+          if (usuCodi) handleResetPass(usuCodi, email);
+        }}
+        title="Restablecer Contraseña"
+        message={
+          confirmResetState.email
+            ? `¿Estás seguro de que deseas restablecer la contraseña de <b>${confirmResetState.email}</b>? Se generará una nueva clave aleatoria de acceso seguro.`
+            : ""
+        }
+        type="warning"
+        confirmLabel="Restablecer"
+      />
     </div>
   );
 }

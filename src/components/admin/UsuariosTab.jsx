@@ -20,6 +20,7 @@ import useExpandableRows from "../../hooks/useExpandableRows";
 import api from "../../api/axios";
 import { useGlobalContext } from "../../context/GlobalState";
 import { toastError } from "../../utils/errorHandler";
+import { getValidSession } from "../../utils/authStorage";
 
 export default function UsuariosTab({
   usuarios,
@@ -42,6 +43,21 @@ export default function UsuariosTab({
     user: null,
     activo: false,
   });
+  const [resetConfirmState, setResetConfirmState] = useState({
+    isOpen: false,
+    user: null,
+  });
+
+  // Identificación del usuario actualmente autenticado para evitar auto-bloqueo
+  const currentSession = useMemo(() => getValidSession(), []);
+  const currentUserId = currentSession?.decoded?.usu_codi;
+  const currentUserEmail = currentSession?.decoded?.usu_crro;
+
+  // Contabilizar administradores activos para prevenir dejar a la institución huérfana
+  const activeAdminsCount = useMemo(() => {
+    return usuarios.filter((u) => u.rol_codi === "ROL_ADM" && u.usu_estd)
+      .length;
+  }, [usuarios]);
 
   const counts = useMemo(() => {
     const activos = usuarios.filter((u) => u.usu_estd).length;
@@ -197,7 +213,45 @@ export default function UsuariosTab({
     }
   };
 
+  const openConfirmReset = (user) => {
+    const isSelf =
+      (currentUserId && String(user.usu_codi) === String(currentUserId)) ||
+      (currentUserEmail &&
+        user.usu_crro?.toLowerCase() === currentUserEmail.toLowerCase());
+
+    if (isSelf) {
+      showToast(
+        "⚠️ Para cambiar tu propia contraseña, hazlo desde la pestaña de Seguridad en Mi Perfil.",
+      );
+      return;
+    }
+    setResetConfirmState({ isOpen: true, user });
+  };
+
   const openConfirmToggle = (user) => {
+    const isSelf =
+      (currentUserId && String(user.usu_codi) === String(currentUserId)) ||
+      (currentUserEmail &&
+        user.usu_crro?.toLowerCase() === currentUserEmail.toLowerCase());
+
+    if (isSelf) {
+      showToast(
+        "⛔ Acción bloqueada: No puedes suspender tu propia cuenta activa.",
+      );
+      return;
+    }
+
+    if (
+      user.rol_codi === "ROL_ADM" &&
+      user.usu_estd &&
+      activeAdminsCount <= 1
+    ) {
+      showToast(
+        "⛔ Acción bloqueada: No puedes suspender al único administrador activo de la institución.",
+      );
+      return;
+    }
+
     setConfirmState({ isOpen: true, user, activo: !user.usu_estd });
   };
 
@@ -370,13 +424,23 @@ export default function UsuariosTab({
                   pagedUsers.map((user) => {
                     const name = getUserName(user);
                     const isActive = user.usu_estd;
+                    const isSelf =
+                      (currentUserId &&
+                        String(user.usu_codi) === String(currentUserId)) ||
+                      (currentUserEmail &&
+                        user.usu_crro?.toLowerCase() ===
+                          currentUserEmail.toLowerCase());
+                    const isLastActiveAdmin =
+                      user.rol_codi === "ROL_ADM" &&
+                      user.usu_estd &&
+                      activeAdminsCount <= 1;
                     const busy =
                       togglingId === user.usu_codi ||
                       resettingId === user.usu_codi;
                     return (
                       <tr
                         key={user.usu_codi}
-                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${expandedId === user.usu_codi ? "mobile-expanded" : ""}`}
+                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${expandedId === user.usu_codi ? "mobile-expanded" : ""} ${isSelf ? "bg-blue-50/30 dark:bg-blue-950/20" : ""}`}
                       >
                         <td
                           className="px-3 sm:px-4 py-3 mobile-summary"
@@ -389,8 +453,13 @@ export default function UsuariosTab({
                               <User className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
-                              <div className="font-semibold text-slate-900 dark:text-white leading-tight truncate">
-                                {name}
+                              <div className="font-semibold text-slate-900 dark:text-white leading-tight truncate flex items-center gap-1.5">
+                                <span className="truncate">{name}</span>
+                                {isSelf && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0">
+                                    Tú
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 truncate">
                                 <Mail className="h-3 w-3 shrink-0" />{" "}
@@ -444,13 +513,17 @@ export default function UsuariosTab({
                         >
                           <button
                             onClick={() => openConfirmToggle(user)}
-                            disabled={busy}
+                            disabled={busy || isSelf || isLastActiveAdmin}
                             title={
-                              isActive
-                                ? "Haz clic para suspender al usuario"
-                                : "Haz clic para activar al usuario"
+                              isSelf
+                                ? "No puedes suspender tu propia cuenta activa de administrador"
+                                : isLastActiveAdmin
+                                  ? "No puedes suspender al único administrador activo de la institución"
+                                  : isActive
+                                    ? "Haz clic para suspender al usuario"
+                                    : "Haz clic para activar al usuario"
                             }
-                            className="transition-transform hover:scale-105 hover:opacity-90 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+                            className={`transition-transform ${isSelf || isLastActiveAdmin ? "opacity-60 cursor-not-allowed" : "hover:scale-105 hover:opacity-90 cursor-pointer"}`}
                           >
                             <StatusBadge active={isActive} />
                           </button>
@@ -461,12 +534,14 @@ export default function UsuariosTab({
                         >
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() =>
-                                handleResetPass(user.usu_codi, user.usu_crro)
+                              onClick={() => openConfirmReset(user)}
+                              disabled={busy || isSelf}
+                              title={
+                                isSelf
+                                  ? "Para cambiar tu propia contraseña, ve a la pestaña de Seguridad en Mi Perfil"
+                                  : "Restablecer contraseña"
                               }
-                              disabled={busy}
-                              title="Restablecer contraseña"
-                              className="action-icon-btn text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30"
+                              className={`action-icon-btn ${isSelf ? "opacity-40 cursor-not-allowed text-slate-400" : "text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30"}`}
                             >
                               {resettingId === user.usu_codi ? (
                                 <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
@@ -476,17 +551,23 @@ export default function UsuariosTab({
                             </button>
                             <button
                               onClick={() => openConfirmToggle(user)}
-                              disabled={busy}
+                              disabled={busy || isSelf || isLastActiveAdmin}
                               title={
-                                isActive
-                                  ? "Suspender usuario"
-                                  : "Activar usuario"
+                                isSelf
+                                  ? "No puedes suspender tu propia cuenta de administrador"
+                                  : isLastActiveAdmin
+                                    ? "No puedes suspender al único administrador activo de la institución"
+                                    : isActive
+                                      ? "Suspender usuario"
+                                      : "Activar usuario"
                               }
-                              className={
-                                isActive
-                                  ? "action-icon-btn text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30"
-                                  : "action-icon-btn text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
-                              }
+                              className={`action-icon-btn ${
+                                isSelf || isLastActiveAdmin
+                                  ? "opacity-40 cursor-not-allowed text-slate-400"
+                                  : isActive
+                                    ? "text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                                    : "text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                              }`}
                             >
                               {togglingId === user.usu_codi ? (
                                 <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin inline-block align-middle" />
@@ -527,6 +608,24 @@ export default function UsuariosTab({
         }
         type={confirmState.activo ? "success" : "danger"}
         confirmLabel={confirmState.activo ? "Activar" : "Suspender"}
+      />
+
+      <ConfirmDialog
+        isOpen={resetConfirmState.isOpen}
+        onClose={() => setResetConfirmState({ isOpen: false, user: null })}
+        onConfirm={() => {
+          const u = resetConfirmState.user;
+          setResetConfirmState({ isOpen: false, user: null });
+          if (u) handleResetPass(u.usu_codi, u.usu_crro);
+        }}
+        title="Restablecer Contraseña"
+        message={
+          resetConfirmState.user
+            ? `¿Estás seguro de que deseas restablecer la contraseña de <b>${resetConfirmState.user.usu_crro}</b>? Se generará una nueva clave aleatoria de acceso seguro.`
+            : ""
+        }
+        type="warning"
+        confirmLabel="Restablecer"
       />
     </div>
   );

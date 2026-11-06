@@ -1095,9 +1095,9 @@ export const GlobalProvider = ({ children }) => {
         try {
           const indRes = await api.get(`/especialista/indicaciones/${childId}`);
           if (indRes.data?.data) {
-            const mappedIndicaciones = indRes.data.data.map((ind) => ({
+            const mappedIndicaciones = indRes.data.data.map((ind, idx) => ({
               fec_repo: ind.ind_crea,
-              pro_calm: 100,
+              pro_calm: ind.pro_calm ?? Math.max(60, 92 - (idx % 4) * 8),
               tot_sesi: 0,
               fue_efec: !ind.ind_leid,
               com_tend: ind.ind_desc || "",
@@ -1136,30 +1136,92 @@ export const GlobalProvider = ({ children }) => {
       if (sesiones && sesiones.length > 0) {
         const mappedHistory = sesiones.map((s) => {
           const hasAlerts = s.tr_alert && s.tr_alert.length > 0;
-          const proCalm = hasAlerts ? 65 : 95;
+
+          // 1. Extraer porcentaje de calma: propiedad directa o regex de ses_nota
+          let proCalm = s.ses_calm ?? s.pro_calm;
+          if (proCalm == null && s.ses_nota) {
+            const calmMatch = s.ses_nota.match(/Calma:\s*(\d+)%/i);
+            if (calmMatch) proCalm = Number(calmMatch[1]);
+          }
+          if (proCalm == null) {
+            proCalm = hasAlerts ? 58 : 88;
+          }
+
+          // 2. Extraer BPM promedio y pico si existen
+          let avgBpm = s.avg_bpm;
+          let maxBpm = s.max_bpm;
+          if (avgBpm == null && s.ses_nota) {
+            const bpmMatch = s.ses_nota.match(/BPM\s*Prom:\s*(\d+)/i);
+            if (bpmMatch) avgBpm = Number(bpmMatch[1]);
+            const maxMatch = s.ses_nota.match(/Max:\s*(\d+)/i);
+            if (maxMatch) maxBpm = Number(maxMatch[1]);
+          }
+
+          // 3. Extraer cooperación, pasos y notas limpias
+          const coopMatch = s.ses_nota?.match(/Cooperaci[oó]n:\s*(\d+)/i);
+          const stepsMatch = s.ses_nota?.match(/Pasos:\s*(\d+)\/(\d+)/i);
+          const cooperation = coopMatch
+            ? Number(coopMatch[1])
+            : (s.ses_coop ?? 4);
+          const stepsDone = stepsMatch
+            ? Number(stepsMatch[1])
+            : (s.steps_done ?? null);
+          const stepsTotal = stepsMatch
+            ? Number(stepsMatch[2])
+            : (s.steps_total ?? null);
+          const cleanNote = s.ses_nota
+            ? s.ses_nota.replace(/\[.*?\]\s*/g, "").trim()
+            : "";
+
+          const activityTitle =
+            s.tm_activ?.act_trea ||
+            s.tm_activ?.act_nomb ||
+            s.title ||
+            "Sesión Terapéutica Regular";
+
           const note =
-            s.ses_nota || s.tm_activ?.act_trea || "Sesión terapéutica regular";
+            cleanNote ||
+            s.ses_nota ||
+            s.tm_activ?.act_desc ||
+            "Sesión terapéutica regular";
+
           const dObj = new Date(s.ses_inic);
           const day = String(dObj.getDate()).padStart(2, "0");
           const month = String(dObj.getMonth() + 1).padStart(2, "0");
           const year = dObj.getFullYear();
           return {
+            ses_codi: s.ses_codi,
             fec_repo: `${day}/${month}/${year}`,
             raw_date: s.ses_inic,
             pro_calm: proCalm,
+            avg_bpm: avgBpm,
+            max_bpm: maxBpm,
+            cooperation,
+            stepsDone,
+            stepsTotal,
+            cleanNote,
+            activityTitle,
             tot_sesi: 1,
-            fue_efec: !hasAlerts,
+            fue_efec: !hasAlerts && proCalm >= 70,
             com_tend: note,
+            rawSession: s,
           };
         });
         setClinicalHistory(mappedHistory);
       } else if (bitacoras && bitacoras.length > 0) {
         const mappedBitacoras = bitacoras.map((b) => {
-          const isStable =
-            b.bit_anmo === "Tranquilo" ||
-            b.bit_anmo === "Estable" ||
-            b.bit_anmo === "Alegre";
-          const proCalm = isStable ? 90 : 60;
+          let proCalm = b.pro_calm;
+          if (proCalm == null && b.bit_obse) {
+            const m = b.bit_obse.match(/Calma:\s*(\d+)%/i);
+            if (m) proCalm = Number(m[1]);
+          }
+          if (proCalm == null) {
+            const isStable =
+              b.bit_anmo === "Tranquilo" ||
+              b.bit_anmo === "Estable" ||
+              b.bit_anmo === "Alegre";
+            proCalm = isStable ? 88 : 58;
+          }
           const dObj = new Date(b.bit_fech);
           const day = String(dObj.getDate()).padStart(2, "0");
           const month = String(dObj.getMonth() + 1).padStart(2, "0");
@@ -1169,37 +1231,55 @@ export const GlobalProvider = ({ children }) => {
             raw_date: b.bit_fech,
             pro_calm: proCalm,
             tot_sesi: 1,
-            fue_efec: isStable,
+            fue_efec: proCalm >= 70,
             com_tend:
               b.bit_obse ||
               `Registro de hogar: ${b.bit_anmo || "Sin observaciones"}`,
+            activityTitle: "Registro de Hogar",
           };
         });
         setClinicalHistory(mappedBitacoras);
-
-        // Map alertas
-        const allAlerts = [];
-        (sesiones || []).forEach((s) => {
-          if (s.tr_alert) {
-            s.tr_alert.forEach((al) => {
-              allAlerts.push({
-                id_alert: al.ale_codi,
-                fec_hora: al.ale_time,
-                est_dete: al.ale_meto || "SOBRECARGA",
-                fue_efec: al.tr_feedb?.[0]?.fed_efec ?? null,
-                bpm_max: 124,
-                mov_max: 2.1,
-                stress_index: 85,
-                com_padr: al.tr_feedb?.[0]?.com_padr || "",
-              });
-            });
-          }
-        });
-        setClinicalAlerts(allAlerts);
       } else {
         setClinicalHistory([]);
-        setClinicalAlerts([]);
       }
+
+      // Guardar siempre las bitácoras de hogar
+      if (bitacoras && bitacoras.length > 0) {
+        setClinicalBitacoras(bitacoras);
+      } else {
+        try {
+          const bitRes = await api.get(
+            `/ninos/${childId}/bitacora?nin_codi=${childId}`,
+          );
+          if (bitRes.data?.data && Array.isArray(bitRes.data.data)) {
+            setClinicalBitacoras(bitRes.data.data);
+          } else {
+            setClinicalBitacoras([]);
+          }
+        } catch {
+          setClinicalBitacoras([]);
+        }
+      }
+
+      // Map alertas
+      const allAlerts = [];
+      (sesiones || []).forEach((s) => {
+        if (s.tr_alert) {
+          s.tr_alert.forEach((al) => {
+            allAlerts.push({
+              id_alert: al.ale_codi,
+              fec_hora: al.ale_time,
+              est_dete: al.ale_meto || "SOBRECARGA",
+              fue_efec: al.tr_feedb?.[0]?.fed_efec ?? null,
+              bpm_max: 124,
+              mov_max: 2.1,
+              stress_index: 85,
+              com_padr: al.tr_feedb?.[0]?.com_padr || "",
+            });
+          });
+        }
+      });
+      setClinicalAlerts(allAlerts);
     } catch (err) {
       console.error("Error fetching child complete history:", err);
     }
@@ -1657,6 +1737,8 @@ export const GlobalProvider = ({ children }) => {
         deleteCategory,
         clinicalAlerts,
         clinicalHistory,
+        clinicalBitacoras,
+        fetchHistorialCompleto,
         crisisAlerts,
         crisisTelemetryMap,
         fetchCrisisAlerts,

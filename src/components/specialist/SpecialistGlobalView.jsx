@@ -44,12 +44,12 @@ export default function SpecialistGlobalView({
         data-tour="sp-global-kpis"
         className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 animate-in fade-in duration-300"
       >
-        <div className="bg-gradient-to-br from-blue-50/90 via-slate-50/80 to-blue-50/30 dark:bg-[#1E293B] rounded-xl p-4 md:p-5 shadow-sm border border-blue-200/90 dark:border-slate-800/60 relative overflow-hidden flex items-center gap-4">
-          <div className="p-2.5 md:p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-lg">
+        <div className="bg-gradient-to-br from-blue-50/80 via-slate-50/70 to-blue-50/20 dark:bg-none dark:bg-[#162032] rounded-xl p-4 md:p-5 shadow-sm border border-blue-200/80 dark:border-slate-800/80 relative overflow-hidden flex items-center gap-4 group">
+          <div className="p-2.5 md:p-3 bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-200/50 dark:border-blue-900/50 group-hover:scale-105 transition-transform">
             <UserCircle2 className="w-5 h-5 md:w-6 md:h-6" />
           </div>
           <div>
-            <p className="text-[11px] md:text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <p className="text-[11px] md:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
               Pacientes Activos
             </p>
             <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
@@ -58,12 +58,12 @@ export default function SpecialistGlobalView({
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-indigo-50/90 via-slate-50/80 to-indigo-50/30 dark:bg-[#1E293B] rounded-xl p-4 md:p-5 shadow-sm border border-indigo-200/90 dark:border-slate-800/60 relative overflow-hidden flex items-center gap-4">
-          <div className="p-2.5 md:p-3 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 rounded-lg">
+        <div className="bg-gradient-to-br from-indigo-50/80 via-slate-50/70 to-indigo-50/20 dark:bg-none dark:bg-[#162032] rounded-xl p-4 md:p-5 shadow-sm border border-indigo-200/80 dark:border-slate-800/80 relative overflow-hidden flex items-center gap-4 group">
+          <div className="p-2.5 md:p-3 bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-200/50 dark:border-indigo-900/50 group-hover:scale-105 transition-transform">
             <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" />
           </div>
           <div>
-            <p className="text-[11px] md:text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <p className="text-[11px] md:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
               Cumplimiento PEI (Promedio)
             </p>
             <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">
@@ -72,17 +72,42 @@ export default function SpecialistGlobalView({
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl p-3 md:p-5 shadow-sm border border-rose-500/20 relative overflow-hidden text-white flex items-center gap-4 animate-pulse col-span-2 md:col-span-1">
-          <div className="p-2 md:p-3 bg-white/20 text-white rounded-lg backdrop-blur-sm">
+        <div
+          className={`rounded-xl p-3 md:p-5 shadow-sm border relative overflow-hidden flex items-center gap-4 col-span-2 md:col-span-1 transition-all ${
+            Number(globalStats.alertasPendientes) > 0
+              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 animate-pulse"
+              : "bg-gradient-to-br from-slate-50/80 via-white to-slate-50/30 dark:bg-none dark:bg-[#162032] border-slate-200/80 dark:border-slate-800/80 text-slate-900 dark:text-white"
+          }`}
+        >
+          <div
+            className={`p-2 md:p-3 rounded-xl border ${
+              Number(globalStats.alertasPendientes) > 0
+                ? "bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 border-rose-200 dark:border-rose-700/60"
+                : "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-900/50"
+            }`}
+          >
             <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
           </div>
           <div>
-            <p className="text-[11px] md:text-xs font-semibold text-rose-100 uppercase tracking-wide">
+            <p className="text-[11px] md:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
               Alertas (24h)
             </p>
-            <h3 className="text-xl md:text-2xl font-bold text-white">
-              {globalStats.alertasPendientes}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3
+                className={`text-xl md:text-2xl font-bold ${
+                  Number(globalStats.alertasPendientes) > 0
+                    ? "text-rose-600 dark:text-rose-400"
+                    : "text-slate-900 dark:text-white"
+                }`}
+              >
+                {globalStats.alertasPendientes}
+              </h3>
+              {Number(globalStats.alertasPendientes) === 0 && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-900/40">
+                  Todo en orden
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

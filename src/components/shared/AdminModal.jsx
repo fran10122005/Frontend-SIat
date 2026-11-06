@@ -2,6 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 
+const MODAL_WIDTHS = {
+  "max-w-sm": "sm:max-w-sm",
+  "max-w-md": "sm:max-w-md",
+  "max-w-lg": "sm:max-w-lg",
+  "max-w-xl": "sm:max-w-xl",
+  "max-w-2xl": "sm:max-w-2xl",
+  "max-w-3xl": "sm:max-w-3xl",
+  "max-w-4xl": "sm:max-w-4xl",
+  "max-w-5xl": "sm:max-w-5xl",
+};
+
 export default function AdminModal({
   open,
   onClose,
@@ -39,7 +50,7 @@ export default function AdminModal({
 
   if (!open) return null;
 
-  const widthClass = maxWidth.replace(/^max-w-/, "sm:max-w-");
+  const widthClass = MODAL_WIDTHS[maxWidth] || "sm:max-w-xl";
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {

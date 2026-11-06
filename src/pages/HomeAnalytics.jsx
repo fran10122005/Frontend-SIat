@@ -330,17 +330,17 @@ export default function HomeAnalytics() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl p-4 md:p-5 border border-rose-500/20 shadow-sm flex items-center gap-4 text-white col-span-2 md:col-span-1">
-                <div className="p-3 bg-white/20 rounded-lg">
-                  <TrendingDown className="w-5 h-5 md:w-6 md:h-6 text-white" />
+              <div className="bg-rose-50/70 dark:bg-[#162032] rounded-xl p-4 md:p-5 border border-rose-200/70 dark:border-rose-900/40 shadow-sm flex items-center gap-4 col-span-2 md:col-span-1">
+                <div className="p-3 bg-rose-100 dark:bg-rose-950/60 rounded-xl text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/40">
+                  <TrendingDown className="w-5 h-5 md:w-6 md:h-6" />
                 </div>
                 <div>
-                  <p className="text-[11px] md:text-xs font-semibold text-rose-100 uppercase tracking-wide">
+                  <p className="text-[11px] md:text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     Peor Día (Más Crisis)
                   </p>
-                  <p className="text-lg md:text-2xl font-bold">
+                  <p className="text-lg md:text-2xl font-bold text-slate-900 dark:text-white">
                     {worstDay.dia}{" "}
-                    <span className="text-xs md:text-sm font-medium text-rose-200">
+                    <span className="text-xs md:text-sm font-semibold text-rose-600 dark:text-rose-400">
                       ({worstDay.sobrecarga}% sobrecarga)
                     </span>
                   </p>

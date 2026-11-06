@@ -20,6 +20,23 @@ import {
   AlertCircle,
   Clock,
   ShieldAlert,
+  Heart,
+  Activity,
+  Star,
+  Calendar,
+  Moon,
+  Utensils,
+  AlertTriangle,
+  NotebookPen,
+  Eye,
+  CheckCircle2,
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  Smile,
+  Frown,
+  Meh,
+  Search,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
@@ -27,17 +44,88 @@ import { exportHistoryToPDF } from "../utils/pdfExporter";
 import Pagination from "../components/shared/Pagination";
 import FilterBar from "../components/shared/FilterBar";
 import Button from "../components/ui/Button";
-
+import AdminModal from "../components/shared/AdminModal";
 import PageTitle from "../components/ui/PageTitle";
 
+const moodConfig = {
+  "Muy Calmo": {
+    emoji: "😊",
+    label: "Muy Calmo",
+    bg: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40",
+  },
+  Alegre: {
+    emoji: "😄",
+    label: "Alegre",
+    bg: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40",
+  },
+  Tranquilo: {
+    emoji: "😌",
+    label: "Tranquilo",
+    bg: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/40",
+  },
+  Estable: {
+    emoji: "🙂",
+    label: "Estable",
+    bg: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/40",
+  },
+  Ansioso: {
+    emoji: "😰",
+    label: "Ansioso",
+    bg: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40",
+  },
+  Irritable: {
+    emoji: "😤",
+    label: "Irritable",
+    bg: "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/40",
+  },
+  Triste: {
+    emoji: "😢",
+    label: "Triste",
+    bg: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/40",
+  },
+};
+
+function formatBitacoraDate(str) {
+  if (!str) return "—";
+  try {
+    const parsed = new Date(str);
+    if (isNaN(parsed.getTime())) return String(str);
+    return parsed.toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return String(str);
+  }
+}
+
 export default function HistoryProgress() {
-  const { historicalData, globalPeiGoals, userRole, nomNino, selectedChildId } =
-    useGlobalContext();
+  const {
+    historicalData,
+    clinicalBitacoras,
+    globalPeiGoals,
+    userRole,
+    nomNino,
+    selectedChildId,
+    fetchHistorialCompleto,
+  } = useGlobalContext();
   const isRepresentante = userRole === "REPRESENTANTE";
-  const [activeTab, setActiveTab] = useState("evolucion"); // "evolucion" | "incidentes"
-  const [dateRange, setDateRange] = useState("all"); // Mostrar todo el historial por defecto
+  const [activeTab, setActiveTab] = useState("evolucion"); // "evolucion" | "bitacoras" | "incidentes"
+  const [dateRange, setDateRange] = useState("all");
   const [searchNotes, setSearchNotes] = useState("");
   const [filterEfectividad, setFilterEfectividad] = useState("TODOS");
+
+  // Modales de detalle clínico
+  const [selectedSessionDetail, setSelectedSessionDetail] = useState(null);
+  const [selectedBitacoraDetail, setSelectedBitacoraDetail] = useState(null);
+  const [selectedIncidenteDetail, setSelectedIncidenteDetail] = useState(null);
+
+  // Bitácoras de hogar state y filtros
+  const [bitacoraPage, setBitacoraPage] = useState(0);
+  const [searchBitacora, setSearchBitacora] = useState("");
+  const [filterMood, setFilterMood] = useState("TODOS");
+  const [filterCrisis, setFilterCrisis] = useState("TODAS");
 
   // Incidentes conductuales state
   const [incidentes, setIncidentes] = useState([]);
@@ -99,6 +187,62 @@ export default function HistoryProgress() {
   const pagedIncidentes = filteredIncidentes.slice(
     incidentePage * INC_PAGE_SIZE,
     (incidentePage + 1) * INC_PAGE_SIZE,
+  );
+
+  // Bitácoras de hogar: filtrado y KPIs
+  const filteredBitacoras = useMemo(() => {
+    let list = Array.isArray(clinicalBitacoras) ? clinicalBitacoras : [];
+    if (filterMood !== "TODOS") {
+      list = list.filter((b) => (b.bit_anim || b.bit_anmo) === filterMood);
+    }
+    if (filterCrisis === "CON_CRISIS") {
+      list = list.filter((b) => Number(b.bit_crisi || b.bit_cris) > 0);
+    }
+    if (filterCrisis === "SIN_CRISIS") {
+      list = list.filter((b) => !Number(b.bit_crisi || b.bit_cris));
+    }
+    if (searchBitacora) {
+      const q = searchBitacora.toLowerCase();
+      list = list.filter((b) =>
+        (b.bit_obse || b.bit_deto || b.bit_algo || "")
+          .toLowerCase()
+          .includes(q),
+      );
+    }
+    return list;
+  }, [clinicalBitacoras, filterMood, filterCrisis, searchBitacora]);
+
+  const bitacoraKpis = useMemo(() => {
+    const list = Array.isArray(clinicalBitacoras) ? clinicalBitacoras : [];
+    const totalReports = list.length;
+    const totalCrisis = list.reduce(
+      (sum, b) => sum + (Number(b.bit_crisi || b.bit_cris) || 0),
+      0,
+    );
+    const validSleepHours = list
+      .map((b) => Number(b.bit_suen || b.bit_sueñ))
+      .filter((h) => !isNaN(h) && h > 0);
+    const avgSleep =
+      validSleepHours.length > 0
+        ? (
+            validSleepHours.reduce((a, b) => a + b, 0) / validSleepHours.length
+          ).toFixed(1)
+        : "—";
+    const stableCount = list.filter(
+      (b) =>
+        (b.bit_anim || b.bit_anmo) === "Estable" ||
+        (b.bit_anim || b.bit_anmo) === "Muy Calmo",
+    ).length;
+    const stablePct =
+      totalReports > 0 ? Math.round((stableCount / totalReports) * 100) : 0;
+    return { totalReports, totalCrisis, avgSleep, stablePct };
+  }, [clinicalBitacoras]);
+
+  const BIT_PAGE_SIZE = 8;
+  const totalBitPages = Math.ceil(filteredBitacoras.length / BIT_PAGE_SIZE);
+  const pagedBitacoras = filteredBitacoras.slice(
+    bitacoraPage * BIT_PAGE_SIZE,
+    (bitacoraPage + 1) * BIT_PAGE_SIZE,
   );
 
   function parseFecRepo(str) {
@@ -245,42 +389,69 @@ export default function HistoryProgress() {
               )}
             </div>
 
-            {/* Tabs de Navegación: Evolución vs Incidentes */}
-            {!isRepresentante && (
-              <div className="flex border-b border-slate-200 dark:border-slate-700/80 gap-6">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("evolucion")}
-                  className={`pb-3 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 ${
-                    activeTab === "evolucion"
-                      ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                      : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  }`}
-                >
-                  <TrendingUp className="w-4 h-4" />
-                  Evolución y Sesiones
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("incidentes")}
-                  className={`pb-3 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 ${
-                    activeTab === "incidentes"
-                      ? "border-rose-600 text-rose-600 dark:border-rose-400 dark:text-rose-400"
-                      : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  }`}
-                >
-                  <AlertCircle className="w-4 h-4" />
-                  Incidentes Conductuales (Bitácora A-B-C)
-                  {incidentes.length > 0 && (
-                    <span className="text-[10px] font-bold bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 px-1.5 py-0.5 rounded-full">
-                      {incidentes.length}
-                    </span>
-                  )}
-                </button>
-              </div>
-            )}
+            {/* Tabs de Navegación: Evolución vs Bitácoras vs Incidentes */}
+            <div className="flex border-b border-slate-200 dark:border-slate-700/80 gap-3 sm:gap-6 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setActiveTab("evolucion")}
+                className={`pb-3 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === "evolucion"
+                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                }`}
+              >
+                <TrendingUp className="w-4 h-4" />
+                {isRepresentante
+                  ? "Evolución y Terapias"
+                  : "Evolución y Sesiones"}
+                {filteredData?.length > 0 && (
+                  <span className="text-[10px] font-bold bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                    {filteredData.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("bitacoras")}
+                className={`pb-3 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === "bitacoras"
+                    ? "border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                }`}
+              >
+                <NotebookPen className="w-4 h-4" />
+                {isRepresentante
+                  ? "Bitácoras del Hogar"
+                  : "Bitácoras de Hogar (Diario)"}
+                {clinicalBitacoras?.length > 0 && (
+                  <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-full">
+                    {clinicalBitacoras.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("incidentes")}
+                className={`pb-3 text-sm font-bold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === "incidentes"
+                    ? "border-rose-600 text-rose-600 dark:border-rose-400 dark:text-rose-400"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                }`}
+              >
+                <AlertCircle className="w-4 h-4" />
+                {isRepresentante
+                  ? "Registro de Episodios"
+                  : "Incidentes Conductuales (A-B-C)"}
+                {incidentes.length > 0 && (
+                  <span className="text-[10px] font-bold bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 px-1.5 py-0.5 rounded-full">
+                    {incidentes.length}
+                  </span>
+                )}
+              </button>
+            </div>
 
-            {activeTab === "evolucion" ? (
+            {/* TAB 1: EVOLUCIÓN Y SESIONES */}
+            {activeTab === "evolucion" && (
               <div className="flex flex-col gap-6">
                 {/* KPIs */}
                 <div
@@ -290,19 +461,7 @@ export default function HistoryProgress() {
                   <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-brand-500 dark:text-blue-400">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                          />
-                        </svg>
+                        <TrendingUp className="w-4 h-4" />
                       </div>
                       <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                         Promedio de Calma
@@ -323,19 +482,7 @@ export default function HistoryProgress() {
                   <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-8 h-8 shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                          />
-                        </svg>
+                        <Activity className="w-4 h-4" />
                       </div>
                       <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                         Sesiones Totales
@@ -354,19 +501,7 @@ export default function HistoryProgress() {
                   <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 col-span-2 md:col-span-1 flex flex-col justify-center min-w-0">
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500 dark:text-emerald-400">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
+                        <CheckCircle2 className="w-4 h-4" />
                       </div>
                       <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                         Alertas Efectivas
@@ -428,10 +563,13 @@ export default function HistoryProgress() {
                               border: "none",
                               boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                             }}
-                            formatter={(value) => [
-                              `${value}% en calma`,
-                              "Tiempo Promedio",
-                            ]}
+                            formatter={(value, name, item) => {
+                              const bpm = item?.payload?.avg_bpm;
+                              return [
+                                `${value}% en calma${bpm ? ` · Pulso: ${bpm} BPM` : ""}`,
+                                "Tiempo Promedio",
+                              ];
+                            }}
                             labelFormatter={(label) => `Fecha: ${label}`}
                           />
                           <Bar
@@ -519,18 +657,26 @@ export default function HistoryProgress() {
                           <tr>
                             <th className="px-4 py-3 font-medium">Fecha</th>
                             <th className="px-4 py-3 font-medium">
+                              Terapia / Actividad
+                            </th>
+                            <th className="px-4 py-3 font-medium">
                               Tiempo Calma
                             </th>
-                            <th className="px-4 py-3 font-medium">Sesiones</th>
+                            <th className="px-4 py-3 font-medium">
+                              Cooperación
+                            </th>
                             <th className="px-4 py-3 font-medium">Efectiva</th>
                             <th className="px-4 py-3 font-medium">Notas</th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              Bitácora
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                           {pagedData.length === 0 ? (
                             <tr>
                               <td
-                                colSpan={5}
+                                colSpan={7}
                                 className="px-4 py-8 text-center text-gray-400"
                               >
                                 No se encontraron registros de evolución.
@@ -542,8 +688,20 @@ export default function HistoryProgress() {
                                 key={idx}
                                 className="hover:bg-gray-50/50 dark:hover:bg-slate-750 transition-colors"
                               >
-                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                                   {row.fec_repo}
+                                </td>
+                                <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
+                                  <div className="flex items-center gap-1.5">
+                                    <Activity className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                    <span
+                                      className="truncate max-w-[180px]"
+                                      title={row.activityTitle}
+                                    >
+                                      {row.activityTitle ||
+                                        "Sesión Terapéutica"}
+                                    </span>
+                                  </div>
                                 </td>
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-2">
@@ -552,9 +710,31 @@ export default function HistoryProgress() {
                                         ? `${row.pro_calm}%`
                                         : "—"}
                                     </span>
+                                    {row.avg_bpm && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200/60 dark:border-rose-900/40">
+                                        <Heart className="w-2.5 h-2.5 fill-current text-rose-500" />
+                                        {row.avg_bpm} bpm
+                                      </span>
+                                    )}
                                   </div>
                                 </td>
-                                <td className="px-4 py-3">{row.tot_sesi}</td>
+                                <td className="px-4 py-3">
+                                  <div
+                                    className="flex items-center gap-0.5"
+                                    title={`Cooperación: ${row.cooperation || 4}/5`}
+                                  >
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`w-3.5 h-3.5 ${
+                                          star <= (row.cooperation || 4)
+                                            ? "fill-amber-400 text-amber-400"
+                                            : "text-slate-200 dark:text-slate-700"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </td>
                                 <td className="px-4 py-3">
                                   <span
                                     className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${row.fue_efec ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"}`}
@@ -567,6 +747,19 @@ export default function HistoryProgress() {
                                   title={row.com_tend}
                                 >
                                   {row.com_tend || "Sin notas"}
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setSelectedSessionDetail(row)
+                                    }
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50 transition-colors"
+                                    title="Ver bitácora detallada de sesión"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>Ver Ficha</span>
+                                  </button>
                                 </td>
                               </tr>
                             ))
@@ -601,9 +794,17 @@ export default function HistoryProgress() {
                                         {row.pro_calm}% calma
                                       </span>
                                     )}
+                                    {row.avg_bpm && (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 flex items-center gap-0.5 border border-rose-200/60 dark:border-rose-900/40">
+                                        <Heart className="w-2.5 h-2.5 fill-current text-rose-500" />
+                                        {row.avg_bpm} bpm
+                                      </span>
+                                    )}
                                   </div>
                                   <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[220px]">
-                                    {row.com_tend || "Sin notas"}
+                                    {row.activityTitle ||
+                                      row.com_tend ||
+                                      "Sesión Terapéutica"}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -622,13 +823,32 @@ export default function HistoryProgress() {
                               {isExpanded && (
                                 <div className="px-4 pb-4 pt-1 bg-gray-50/50 dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-700/50">
                                   <div className="grid grid-cols-2 gap-3 text-xs">
+                                    <div className="col-span-2">
+                                      <span className="text-gray-500 dark:text-gray-400 font-medium">
+                                        Actividad Terapéutica
+                                      </span>
+                                      <p className="text-gray-900 dark:text-gray-100 mt-0.5 font-bold flex items-center gap-1.5">
+                                        <Activity className="w-3.5 h-3.5 text-blue-500" />
+                                        {row.activityTitle ||
+                                          "Sesión Terapéutica Regular"}
+                                      </p>
+                                    </div>
                                     <div>
                                       <span className="text-gray-500 dark:text-gray-400 font-medium">
-                                        Sesiones
+                                        Cooperación
                                       </span>
-                                      <p className="text-gray-900 dark:text-gray-100 mt-0.5 font-semibold">
-                                        {row.tot_sesi}
-                                      </p>
+                                      <div className="flex items-center gap-0.5 mt-0.5">
+                                        {[1, 2, 3, 4, 5].map((s) => (
+                                          <Star
+                                            key={s}
+                                            className={`w-3.5 h-3.5 ${
+                                              s <= (row.cooperation || 4)
+                                                ? "fill-amber-400 text-amber-400"
+                                                : "text-slate-300 dark:text-slate-600"
+                                            }`}
+                                          />
+                                        ))}
+                                      </div>
                                     </div>
                                     <div>
                                       <span className="text-gray-500 dark:text-gray-400 font-medium">
@@ -640,6 +860,20 @@ export default function HistoryProgress() {
                                           : "—"}
                                       </p>
                                     </div>
+                                    {row.avg_bpm && (
+                                      <div className="col-span-2">
+                                        <span className="text-gray-500 dark:text-gray-400 font-medium">
+                                          Biometría Cardíaca
+                                        </span>
+                                        <p className="text-rose-600 dark:text-rose-400 mt-0.5 font-bold flex items-center gap-1.5">
+                                          <Heart className="w-3.5 h-3.5 fill-current" />
+                                          {row.avg_bpm} BPM Promedio
+                                          {row.max_bpm
+                                            ? ` · Pico Máx: ${row.max_bpm} BPM`
+                                            : ""}
+                                        </p>
+                                      </div>
+                                    )}
                                     {row.com_tend && (
                                       <div className="col-span-2">
                                         <span className="text-gray-500 dark:text-gray-400 font-medium">
@@ -650,6 +884,18 @@ export default function HistoryProgress() {
                                         </p>
                                       </div>
                                     )}
+                                    <div className="col-span-2 pt-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedSessionDetail(row)
+                                        }
+                                        className="w-full py-2 px-3 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                        Ver Bitácora Completa de Sesión
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -668,8 +914,356 @@ export default function HistoryProgress() {
                   />
                 </div>
               </div>
-            ) : (
-              /* TAB: BITÁCORA DE INCIDENTES CONDUCTUALES (MODELO ABC) */
+            )}
+
+            {/* TAB 2: BITÁCORAS DE HOGAR (DIARIO FAMILIAR) */}
+            {activeTab === "bitacoras" && (
+              <div className="flex flex-col gap-6">
+                {/* KPIs de Bitácoras de Hogar */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                        <NotebookPen className="w-4 h-4" />
+                      </div>
+                      <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Reportes de Hogar
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                        {bitacoraKpis.totalReports}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        registros
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                        <Smile className="w-4 h-4" />
+                      </div>
+                      <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Clima Emocional
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-2xl md:text-3xl font-semibold tracking-tight text-blue-600 dark:text-blue-400">
+                        {bitacoraKpis.stablePct}%
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        calmo / estable
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <Moon className="w-4 h-4" />
+                      </div>
+                      <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Sueño Promedio
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+                        {bitacoraKpis.avgSleep}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        horas / noche
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                        <AlertTriangle className="w-4 h-4" />
+                      </div>
+                      <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Crisis en Casa
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-2xl md:text-3xl font-semibold tracking-tight text-rose-600 dark:text-rose-400">
+                        {bitacoraKpis.totalCrisis}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        reportadas
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filtros de Bitácora */}
+                <FilterBar
+                  searchPlaceholder="Buscar por observación, detonante, positivo..."
+                  searchValue={searchBitacora}
+                  onSearchChange={setSearchBitacora}
+                  filters={[
+                    {
+                      key: "animo",
+                      label: "Estado de Ánimo",
+                      value: filterMood,
+                      onChange: setFilterMood,
+                      options: [
+                        { value: "TODOS", label: "Todos los estados" },
+                        { value: "Muy Calmo", label: "😊 Muy Calmo" },
+                        { value: "Estable", label: "🙂 Estable" },
+                        { value: "Irritable", label: "😤 Irritable" },
+                        { value: "Ansioso", label: "😰 Ansioso" },
+                        { value: "Triste", label: "😢 Triste" },
+                      ],
+                    },
+                    {
+                      key: "crisis",
+                      label: "Episodios / Crisis",
+                      value: filterCrisis,
+                      onChange: setFilterCrisis,
+                      options: [
+                        { value: "TODAS", label: "Todas las bitácoras" },
+                        { value: "CON_CRISIS", label: "⚠️ Con Crisis" },
+                        { value: "SIN_CRISIS", label: "✅ Sin Crisis" },
+                      ],
+                    },
+                  ]}
+                  resultsCount={filteredBitacoras.length}
+                  totalCount={clinicalBitacoras?.length || 0}
+                  onClearFilters={() => {
+                    setSearchBitacora("");
+                    setFilterMood("TODOS");
+                    setFilterCrisis("TODAS");
+                  }}
+                />
+
+                {/* Tabla y cards de bitácoras de hogar */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+                  <div className="p-4 md:p-6">
+                    {/* Desktop table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                        <thead className="text-xs text-gray-400 uppercase bg-gray-50 dark:bg-slate-700/50">
+                          <tr>
+                            <th className="px-4 py-3 font-medium">Fecha</th>
+                            <th className="px-4 py-3 font-medium">
+                              Estado de Ánimo
+                            </th>
+                            <th className="px-4 py-3 font-medium">Sueño</th>
+                            <th className="px-4 py-3 font-medium">Apetito</th>
+                            <th className="px-4 py-3 font-medium">Crisis</th>
+                            <th className="px-4 py-3 font-medium">
+                              Resumen / Lo Positivo
+                            </th>
+                            <th className="px-4 py-3 font-medium text-right">
+                              Acción
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                          {pagedBitacoras.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={7}
+                                className="px-4 py-10 text-center text-gray-400"
+                              >
+                                <NotebookPen className="w-8 h-8 opacity-30 mx-auto mb-2" />
+                                No se encontraron registros de bitácora
+                                familiar.
+                              </td>
+                            </tr>
+                          ) : (
+                            pagedBitacoras.map((b, idx) => {
+                              const mood =
+                                b.bit_anim || b.bit_anmo || "Estable";
+                              const cfg =
+                                moodConfig[mood] || moodConfig["Estable"];
+                              const crisisCount =
+                                Number(b.bit_crisi || b.bit_cris) || 0;
+                              return (
+                                <tr
+                                  key={b.bit_codi || idx}
+                                  className="hover:bg-gray-50/50 dark:hover:bg-slate-750 transition-colors"
+                                >
+                                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                                    {formatBitacoraDate(b.bit_fech)}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border ${cfg.bg}`}
+                                    >
+                                      <span>{cfg.emoji}</span>
+                                      <span>{mood}</span>
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200">
+                                      <Moon className="w-3.5 h-3.5 text-indigo-500" />
+                                      <span>
+                                        {b.bit_suen || b.bit_sueñ || "—"} hrs
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200">
+                                      <Utensils className="w-3.5 h-3.5 text-amber-500" />
+                                      <span>{b.bit_apet || "Normal"}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {crisisCount > 0 ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
+                                        <AlertTriangle className="w-3 h-3" />
+                                        {crisisCount} crisis
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                                        Sin crisis
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td
+                                    className="px-4 py-3 max-w-xs truncate"
+                                    title={
+                                      b.bit_algo || b.bit_obse || b.bit_text
+                                    }
+                                  >
+                                    {b.bit_algo ? (
+                                      <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3 shrink-0" />
+                                        <span className="truncate">
+                                          {b.bit_algo}
+                                        </span>
+                                      </span>
+                                    ) : (
+                                      <span>
+                                        {b.bit_obse ||
+                                          b.bit_text ||
+                                          "Sin observaciones"}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setSelectedBitacoraDetail(b)
+                                      }
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50 transition-colors"
+                                      title="Ver detalle del reporte de hogar"
+                                    >
+                                      <Eye className="w-3.5 h-3.5" />
+                                      <span>Ver Ficha</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile cards para bitácoras */}
+                    <div className="md:hidden divide-y divide-gray-100 dark:divide-slate-700 -mx-4 -my-4">
+                      {pagedBitacoras.length === 0 ? (
+                        <div className="p-6 text-center text-gray-400 text-sm">
+                          No se encontraron registros de bitácora familiar.
+                        </div>
+                      ) : (
+                        pagedBitacoras.map((b, idx) => {
+                          const mood = b.bit_anim || b.bit_anmo || "Estable";
+                          const cfg = moodConfig[mood] || moodConfig["Estable"];
+                          const crisisCount =
+                            Number(b.bit_crisi || b.bit_cris) || 0;
+                          return (
+                            <div
+                              key={b.bit_codi || idx}
+                              className="p-4 space-y-3 hover:bg-gray-50/50 dark:hover:bg-slate-750 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                  {formatBitacoraDate(b.bit_fech)}
+                                </span>
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${cfg.bg}`}
+                                >
+                                  <span>{cfg.emoji}</span>
+                                  <span>{mood}</span>
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 text-xs">
+                                <div className="p-2 rounded bg-slate-50 dark:bg-slate-700/50 text-center">
+                                  <span className="text-[10px] text-gray-400 block">
+                                    Sueño
+                                  </span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {b.bit_suen || b.bit_sueñ || "—"} hrs
+                                  </span>
+                                </div>
+                                <div className="p-2 rounded bg-slate-50 dark:bg-slate-700/50 text-center">
+                                  <span className="text-[10px] text-gray-400 block">
+                                    Apetito
+                                  </span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                                    {b.bit_apet || "Normal"}
+                                  </span>
+                                </div>
+                                <div className="p-2 rounded bg-slate-50 dark:bg-slate-700/50 text-center">
+                                  <span className="text-[10px] text-gray-400 block">
+                                    Crisis
+                                  </span>
+                                  <span
+                                    className={`font-bold ${crisisCount > 0 ? "text-rose-600" : "text-emerald-600"}`}
+                                  >
+                                    {crisisCount > 0
+                                      ? `${crisisCount} crisis`
+                                      : "Sin crisis"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {b.bit_algo && (
+                                <p className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 p-2 rounded-lg flex items-start gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                  <span>{b.bit_algo}</span>
+                                </p>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => setSelectedBitacoraDetail(b)}
+                                className="w-full py-2 px-3 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Ver Ficha Completa del Hogar
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Paginación de Bitácoras */}
+                {totalBitPages > 1 && (
+                  <div className="pt-2">
+                    <Pagination
+                      currentPage={bitacoraPage}
+                      totalPages={totalBitPages}
+                      onPageChange={setBitacoraPage}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: REGISTRO DE INCIDENTES CONDUCTUALES (MODELO ABC) */}
+            {activeTab === "incidentes" && (
               <div className="flex flex-col gap-6">
                 {/* KPIs de Incidentes */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
@@ -858,6 +1452,20 @@ export default function HistoryProgress() {
                                     )}
                                   </span>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedIncidenteDetail(inc);
+                                  }}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 transition-colors flex items-center gap-1"
+                                  title="Ver Ficha Clínica A-B-C"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">
+                                    Ver Ficha
+                                  </span>
+                                </button>
                                 {isExp ? (
                                   <ChevronUp className="w-5 h-5 text-slate-400" />
                                 ) : (
@@ -957,6 +1565,413 @@ export default function HistoryProgress() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* MODAL 1: DETALLE CLÍNICO DE SESIÓN TERAPÉUTICA */}
+            {selectedSessionDetail && (
+              <AdminModal
+                isOpen={!!selectedSessionDetail}
+                onClose={() => setSelectedSessionDetail(null)}
+                title="Bitácora de Sesión Terapéutica"
+                subtitle={`${selectedSessionDetail.activityTitle || "Actividad Terapéutica"} · Fecha: ${selectedSessionDetail.fec_repo}`}
+                maxWidth="max-w-2xl"
+              >
+                <div className="space-y-5">
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                        <Activity className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-slate-900 dark:text-white truncate text-base">
+                          {selectedSessionDetail.activityTitle ||
+                            "Sesión Terapéutica"}
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Registrado en el historial clínico del paciente
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${
+                        selectedSessionDetail.fue_efec
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                          : "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
+                      }`}
+                    >
+                      {selectedSessionDetail.fue_efec
+                        ? "Sesión Efectiva"
+                        : "Requiere Ajuste"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30">
+                      <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide block mb-1">
+                        Tiempo en Calma
+                      </span>
+                      <p className="text-xl font-bold text-slate-900 dark:text-white">
+                        {selectedSessionDetail.pro_calm != null
+                          ? `${selectedSessionDetail.pro_calm}%`
+                          : "—"}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30">
+                      <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wide block mb-1">
+                        Biometría Cardíaca
+                      </span>
+                      <p className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                        <Heart className="w-4 h-4 text-rose-500 fill-current" />
+                        {selectedSessionDetail.avg_bpm
+                          ? `${selectedSessionDetail.avg_bpm} BPM`
+                          : "—"}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30">
+                      <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide block mb-1">
+                        Cooperación
+                      </span>
+                      <div className="flex items-center gap-0.5 mt-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-3.5 h-3.5 ${
+                              s <= (selectedSessionDetail.cooperation || 4)
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-slate-300 dark:text-slate-600"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30">
+                      <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide block mb-1">
+                        Progreso
+                      </span>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">
+                        {selectedSessionDetail.stepsDone != null &&
+                        selectedSessionDetail.stepsTotal != null
+                          ? `${selectedSessionDetail.stepsDone}/${selectedSessionDetail.stepsTotal} pasos`
+                          : "Completada"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
+                    <h5 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                      <NotebookPen className="w-4 h-4 text-blue-500" />
+                      Notas y Observaciones Clínicas
+                    </h5>
+                    <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                      {selectedSessionDetail.cleanNote ||
+                        selectedSessionDetail.com_tend ||
+                        "Sin notas adicionales registradas para esta sesión."}
+                    </p>
+                  </div>
+
+                  {selectedSessionDetail.rawSession?.tr_alert?.length > 0 && (
+                    <div className="p-4 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-2">
+                      <h5 className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        Alertas Sensoriales Detectadas (
+                        {selectedSessionDetail.rawSession.tr_alert.length})
+                      </h5>
+                      <div className="space-y-1.5">
+                        {selectedSessionDetail.rawSession.tr_alert.map(
+                          (al, idx) => (
+                            <div
+                              key={idx}
+                              className="text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between"
+                            >
+                              <span>
+                                • {al.ale_meto || "Sobrecarga Sensorial"}
+                              </span>
+                              <span className="text-[11px] text-rose-500">
+                                {new Date(al.ale_time).toLocaleTimeString(
+                                  "es-ES",
+                                  { hour: "2-digit", minute: "2-digit" },
+                                )}
+                              </span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setSelectedSessionDetail(null)}
+                    >
+                      Cerrar Bitácora
+                    </Button>
+                  </div>
+                </div>
+              </AdminModal>
+            )}
+
+            {/* MODAL 2: FICHA DE BITÁCORA DEL HOGAR */}
+            {selectedBitacoraDetail && (
+              <AdminModal
+                isOpen={!!selectedBitacoraDetail}
+                onClose={() => setSelectedBitacoraDetail(null)}
+                title="Ficha de Bitácora del Hogar"
+                subtitle={`Reporte familiar del paciente · Fecha: ${formatBitacoraDate(selectedBitacoraDetail.bit_fech)}`}
+                maxWidth="max-w-2xl"
+              >
+                <div className="space-y-5">
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">
+                        {moodConfig[
+                          selectedBitacoraDetail.bit_anim ||
+                            selectedBitacoraDetail.bit_anmo
+                        ]?.emoji || "🙂"}
+                      </span>
+                      <div>
+                        <h4 className="font-bold text-slate-900 dark:text-white text-base">
+                          Estado de Ánimo:{" "}
+                          {selectedBitacoraDetail.bit_anim ||
+                            selectedBitacoraDetail.bit_anmo ||
+                            "Estable"}
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Registrado por el representante en el Diario Familiar
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${
+                        Number(
+                          selectedBitacoraDetail.bit_crisi ||
+                            selectedBitacoraDetail.bit_cris,
+                        ) > 0
+                          ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
+                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      }`}
+                    >
+                      {Number(
+                        selectedBitacoraDetail.bit_crisi ||
+                          selectedBitacoraDetail.bit_cris,
+                      ) > 0
+                        ? `${selectedBitacoraDetail.bit_crisi || selectedBitacoraDetail.bit_cris} crisis reportada(s)`
+                        : "Jornada sin crisis"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30">
+                      <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide block mb-1 flex items-center gap-1">
+                        <Moon className="w-3.5 h-3.5" /> Horas de Sueño
+                      </span>
+                      <p className="text-xl font-bold text-slate-900 dark:text-white">
+                        {selectedBitacoraDetail.bit_suen ||
+                          selectedBitacoraDetail.bit_sueñ ||
+                          "—"}{" "}
+                        hrs
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30">
+                      <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide block mb-1 flex items-center gap-1">
+                        <Utensils className="w-3.5 h-3.5" /> Apetito
+                      </span>
+                      <p className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                        {selectedBitacoraDetail.bit_apet || "Normal"}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30">
+                      <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wide block mb-1 flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5" /> Crisis /
+                        Episodios
+                      </span>
+                      <p className="text-xl font-bold text-slate-900 dark:text-white">
+                        {selectedBitacoraDetail.bit_crisi ||
+                          selectedBitacoraDetail.bit_cris ||
+                          0}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
+                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide block mb-1 flex items-center gap-1">
+                        <Heart className="w-3.5 h-3.5" /> Pulso Reposo
+                      </span>
+                      <p className="text-base font-bold text-slate-900 dark:text-white mt-1">
+                        {selectedBitacoraDetail.bit_bpm
+                          ? `${selectedBitacoraDetail.bit_bpm} BPM`
+                          : "No medido"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedBitacoraDetail.bit_algo && (
+                    <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 space-y-1.5">
+                      <h5 className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                        Lo Positivo del Día / Logro Destacado
+                      </h5>
+                      <p className="text-sm text-emerald-900 dark:text-emerald-100 leading-relaxed">
+                        {selectedBitacoraDetail.bit_algo}
+                      </p>
+                    </div>
+                  )}
+
+                  {(selectedBitacoraDetail.bit_deto ||
+                    selectedBitacoraDetail.bit_dese) && (
+                    <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 space-y-1.5">
+                      <h5 className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                        Detonante o Desencadenante Observado en Casa
+                      </h5>
+                      <p className="text-sm text-amber-900 dark:text-amber-100 leading-relaxed">
+                        {selectedBitacoraDetail.bit_deto ||
+                          selectedBitacoraDetail.bit_dese}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5">
+                    <h5 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                      <NotebookPen className="w-4 h-4 text-blue-500" />
+                      Observaciones y Comentarios de la Familia
+                    </h5>
+                    <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                      {selectedBitacoraDetail.bit_obse ||
+                        selectedBitacoraDetail.bit_text ||
+                        "Sin observaciones adicionales reportadas."}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setSelectedBitacoraDetail(null)}
+                    >
+                      Cerrar Detalle
+                    </Button>
+                  </div>
+                </div>
+              </AdminModal>
+            )}
+
+            {/* MODAL 3: AUDITORÍA DE INCIDENTE CONDUCTUAL A-B-C */}
+            {selectedIncidenteDetail && (
+              <AdminModal
+                isOpen={!!selectedIncidenteDetail}
+                onClose={() => setSelectedIncidenteDetail(null)}
+                title="Auditoría de Incidente Conductual (Modelo A-B-C)"
+                subtitle={`${selectedIncidenteDetail.inc_tipo} · Registrado el ${new Date(selectedIncidenteDetail.inc_time).toLocaleString("es-ES")}`}
+                maxWidth="max-w-2xl"
+              >
+                <div className="space-y-5">
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                        <AlertCircle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 dark:text-white text-base">
+                          {selectedIncidenteDetail.inc_tipo}
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Duración estimada:{" "}
+                          {selectedIncidenteDetail.inc_dura ||
+                            "No especificada"}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${
+                        selectedIncidenteDetail.inc_seve === "Severa" ||
+                        selectedIncidenteDetail.inc_seve === "Grave"
+                          ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
+                          : selectedIncidenteDetail.inc_seve === "Moderada"
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                      }`}
+                    >
+                      Severidad {selectedIncidenteDetail.inc_seve}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">
+                        A — Antecedente / Detonante
+                      </span>
+                      <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                        {selectedIncidenteDetail.inc_deto || "No especificado"}
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                      <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block mb-1">
+                        B & C — Conducta Observada y Consecuencia
+                      </span>
+                      <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                        {selectedIncidenteDetail.inc_conse || "No especificado"}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block mb-1">
+                          Intervención Aplicada
+                        </span>
+                        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                          {selectedIncidenteDetail.inc_inter ||
+                            "No especificada"}
+                        </p>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-1">
+                          Resultado Obtenido
+                        </span>
+                        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                          {selectedIncidenteDetail.inc_resu ||
+                            "No especificado"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedIncidenteDetail.inc_obse && (
+                      <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                          Observaciones Clínicas del Especialista
+                        </span>
+                        <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                          {selectedIncidenteDetail.inc_obse}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedIncidenteDetail.tm_espec && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400 pt-1">
+                      Especialista que documentó:{" "}
+                      <strong className="text-slate-700 dark:text-slate-200">
+                        {selectedIncidenteDetail.tm_espec.esp_nomb}{" "}
+                        {selectedIncidenteDetail.tm_espec.esp_apel}
+                      </strong>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setSelectedIncidenteDetail(null)}
+                    >
+                      Cerrar
+                    </Button>
+                  </div>
+                </div>
+              </AdminModal>
             )}
           </div>
         </div>
