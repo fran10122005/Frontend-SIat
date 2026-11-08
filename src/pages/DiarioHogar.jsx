@@ -77,6 +77,7 @@ export default function DiarioHogar() {
   const [reportDate, setReportDate] = useState(localDate);
   const [mood, setMood] = useState("Estable");
   const [crisisCount, setCrisisCount] = useState(0);
+  const [bpmValue, setBpmValue] = useState(liveBpm || "");
   const [sleepHours, setSleepHours] = useState(8);
   const [appetite, setAppetite] = useState("");
   const [notes, setNotes] = useState("");
@@ -84,6 +85,29 @@ export default function DiarioHogar() {
   const [positiveNote, setPositiveNote] = useState("");
   const [therapyDone, setTherapyDone] = useState("");
   const [showExtra, setShowExtra] = useState(false);
+
+  // Sincronizar automáticamente pulso live del reloj
+  useEffect(() => {
+    if (liveBpm) {
+      setBpmValue(liveBpm);
+    }
+  }, [liveBpm]);
+
+  // Listener para auto-incrementar crisis y actualizar pulso cuando el smartwatch detecte una sobrecarga
+  useEffect(() => {
+    const handleLocalCrisis = (e) => {
+      setCrisisCount((prev) => (Number(prev) || 0) + 1);
+      if (e.detail?.bpm_max) {
+        setBpmValue(e.detail.bpm_max);
+      }
+      showToast(
+        "🚨 Crisis detectada por el sensor. Se ha sumado al reporte de hoy.",
+      );
+    };
+    window.addEventListener("siat:crisis_alert", handleLocalCrisis);
+    return () =>
+      window.removeEventListener("siat:crisis_alert", handleLocalCrisis);
+  }, [showToast]);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -255,22 +279,28 @@ export default function DiarioHogar() {
   const handleReportSubmit = async (e) => {
     e.preventDefault();
     try {
+      const bpmToSave = bpmValue
+        ? Number(bpmValue)
+        : liveBpm
+          ? Number(liveBpm)
+          : null;
       const payload = {
         nin_codi: selectedChildId,
         date: reportDate,
         mood,
-        crisisCount: Number(crisisCount),
+        crisisCount: Number(crisisCount) || 0,
         sleepHours: sleepHours ? parseFloat(sleepHours) : null,
         appetite: appetite || null,
         text: notes || null,
         triggers: triggers || null,
         positiveNote: positiveNote || null,
         therapyDone: therapyDone || null,
-        bpm: liveBpm ? liveBpm : null,
+        bpm: bpmToSave,
       };
       await api.post("/ninos/bitacora", payload);
       showToast("✅ Reporte guardado");
       setCrisisCount(0);
+      setBpmValue(liveBpm || "");
       setMood("Estable");
       setNotes("");
       setTriggers("");
@@ -443,7 +473,7 @@ export default function DiarioHogar() {
                 onSubmit={handleReportSubmit}
                 className="p-5 md:p-8 space-y-5"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
                       Fecha
@@ -453,7 +483,7 @@ export default function DiarioHogar() {
                       data-tour="dh-date"
                       value={reportDate}
                       onChange={(e) => setReportDate(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-800 dark:text-white"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -464,7 +494,7 @@ export default function DiarioHogar() {
                       data-tour="dh-mood"
                       value={mood}
                       onChange={(e) => setMood(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-800 dark:text-white"
                     >
                       <option>Muy Calmo</option>
                       <option>Estable</option>
@@ -474,21 +504,79 @@ export default function DiarioHogar() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                      Crisis hoy
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      data-tour="dh-crisis"
-                      value={crisisCount}
-                      readOnly
-                      title="Las crisis son detectadas automáticamente por la pulsera IoT"
-                      className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none cursor-not-allowed text-slate-500 transition-all"
-                    />
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 mt-1">
-                      <Watch className="w-3 h-3" /> Sincronizado vía IoT
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        Crisis hoy
+                      </label>
+                      <span className="text-[9px] text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
+                        <Watch className="w-3 h-3" /> IoT
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCrisisCount((prev) =>
+                            Math.max(0, (Number(prev) || 0) - 1),
+                          )
+                        }
+                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-l-lg border border-r-0 border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors"
+                        title="Restar crisis"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        data-tour="dh-crisis"
+                        value={crisisCount}
+                        onChange={(e) =>
+                          setCrisisCount(
+                            Math.max(0, parseInt(e.target.value, 10) || 0),
+                          )
+                        }
+                        className="w-full text-center bg-slate-50 dark:bg-slate-900 border-y border-slate-200 dark:border-slate-700 py-2 text-sm font-bold text-rose-600 dark:text-rose-400 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCrisisCount((prev) => (Number(prev) || 0) + 1)
+                        }
+                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-r-lg border border-l-0 border-slate-200 dark:border-slate-700 text-sm font-bold text-rose-600 dark:text-rose-400 transition-colors"
+                        title="Sumar crisis"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        Pulso (BPM)
+                      </label>
+                      {liveBpm ? (
+                        <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                          <Heart className="w-2.5 h-2.5 fill-emerald-500 animate-pulse text-emerald-500" />{" "}
+                          En vivo
+                        </span>
+                      ) : (
+                        <span className="text-[9px] text-slate-400 font-medium">
+                          Smartwatch / Manual
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="30"
+                        max="240"
+                        placeholder={liveBpm ? String(liveBpm) : "Ej. 78"}
+                        value={bpmValue}
+                        onChange={(e) => setBpmValue(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold text-slate-800 dark:text-white"
+                      />
+                      <Heart className="w-4 h-4 text-rose-500 absolute right-3 top-2.5 pointer-events-none fill-rose-500/20" />
+                    </div>
                   </div>
                 </div>
 
@@ -803,18 +891,26 @@ export default function DiarioHogar() {
                                   {fechaTexto}
                                 </span>
                               </div>
-                              <span
-                                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap shrink-0 ${crisisColor}`}
-                              >
-                                <AlertTriangle className="w-3 h-3" />{" "}
-                                {bitacora.bit_crisi || 0} crisis
-                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {bitacora.bit_bpm && (
+                                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40">
+                                    <Heart className="w-2.5 h-2.5 fill-current text-rose-500" />
+                                    {bitacora.bit_bpm} BPM
+                                  </span>
+                                )}
+                                <span
+                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap shrink-0 ${crisisColor}`}
+                                >
+                                  <AlertTriangle className="w-3 h-3" />{" "}
+                                  {bitacora.bit_crisi || 0} crisis
+                                </span>
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-4 gap-1.5">
                               <div
                                 className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
-                                title={bitacora.bit_anim}
+                                title={`Ánimo: ${bitacora.bit_anim || "—"}`}
                               >
                                 <span className="text-sm shrink-0">
                                   {animoIconos[bitacora.bit_anim] || "😐"}
@@ -826,8 +922,23 @@ export default function DiarioHogar() {
                               <div
                                 className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
                                 title={
+                                  bitacora.bit_bpm
+                                    ? `Pulso registrado: ${bitacora.bit_bpm} BPM`
+                                    : "Sin registro de pulso"
+                                }
+                              >
+                                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/20 shrink-0" />
+                                <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                  {bitacora.bit_bpm
+                                    ? `${bitacora.bit_bpm} BPM`
+                                    : "—"}
+                                </span>
+                              </div>
+                              <div
+                                className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                                title={
                                   bitacora.bit_suen
-                                    ? `${bitacora.bit_suen}h`
+                                    ? `Sueño: ${bitacora.bit_suen}h`
                                     : "—"
                                 }
                               >
@@ -840,29 +951,23 @@ export default function DiarioHogar() {
                               </div>
                               <div
                                 className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
-                                title={bitacora.bit_apet || "—"}
+                                title={`Apetito: ${bitacora.bit_apet || "—"}`}
                               >
                                 <Utensils className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                                 <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
                                   {bitacora.bit_apet || "—"}
                                 </span>
                               </div>
-                              <div
-                                className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
-                                title={
-                                  bitacora.positiveNote ||
-                                  bitacora.bit_algo ||
-                                  "—"
-                                }
-                              >
-                                <Heart className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                                <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
-                                  {bitacora.positiveNote ||
-                                    bitacora.bit_algo ||
-                                    "—"}
-                                </span>
-                              </div>
                             </div>
+
+                            {(bitacora.positiveNote || bitacora.bit_algo) && (
+                              <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 truncate mt-1.5 flex items-center gap-1">
+                                <span>⭐</span>
+                                <span>
+                                  {bitacora.positiveNote || bitacora.bit_algo}
+                                </span>
+                              </p>
+                            )}
 
                             {(bitacora.bit_dese || bitacora.bit_obse) && (
                               <div className="mt-1.5 space-y-0.5">

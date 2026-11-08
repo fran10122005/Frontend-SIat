@@ -9,20 +9,28 @@ export default function AlertCenter() {
 
   // Formatting date for display
   const formatDate = (isoString) => {
-    const d = new Date(isoString);
-    return d.toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    try {
+      const d = new Date(isoString || Date.now());
+      return d.toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "Fecha no disponible";
+    }
   };
 
   const formatTime = (isoString) => {
-    const d = new Date(isoString);
-    return d.toLocaleTimeString("es-ES", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      const d = new Date(isoString || Date.now());
+      return d.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "—";
+    }
   };
 
   const displayedAlerts = alertas || [];
@@ -30,8 +38,9 @@ export default function AlertCenter() {
   // Filtering
   const filteredAlerts = displayedAlerts.filter((alert) => {
     let matchDate = true;
+    const dateStr = alert.fec_hora || alert.time || "";
     if (dateFilter) {
-      matchDate = alert.fec_hora.startsWith(dateFilter);
+      matchDate = dateStr.startsWith(dateFilter);
     }
 
     let matchStatus = true;
@@ -46,7 +55,8 @@ export default function AlertCenter() {
 
   // Group by date for the timeline
   const groupedAlerts = filteredAlerts.reduce((groups, alert) => {
-    const date = alert.fec_hora.split("T")[0];
+    const rawDate = alert.fec_hora || alert.time || new Date().toISOString();
+    const date = String(rawDate).split("T")[0];
     if (!groups[date]) groups[date] = [];
     groups[date].push(alert);
     return groups;
@@ -150,16 +160,20 @@ export default function AlertCenter() {
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-gray-900 dark:text-white">
-                              {formatTime(alert.fec_hora)}
+                              {formatTime(alert.fec_hora || alert.time)}
                             </span>
                             <span
                               className={`px-2 py-0.5 text-[10px] font-semibold rounded border uppercase tracking-wide ${
-                                alert.est_dete === "SOBRECARGA"
+                                String(alert.est_dete || "").includes(
+                                  "SOBRECARGA",
+                                )
                                   ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400"
                                   : "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-400"
                               }`}
                             >
-                              {alert.est_dete === "SOBRECARGA"
+                              {String(alert.est_dete || "").includes(
+                                "SOBRECARGA",
+                              )
                                 ? "Crisis"
                                 : "Precrisis"}
                             </span>

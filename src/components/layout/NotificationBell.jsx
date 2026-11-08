@@ -202,7 +202,7 @@ export default function NotificationBell() {
     }
   }, [userRole, addNotification]);
 
-  // WebSocket en tiempo real
+  // WebSocket y eventos de crisis en tiempo real
   useEffect(() => {
     getSocket();
     const unsubscribe = subscribeToSocket("new_alert", (data) => {
@@ -215,7 +215,18 @@ export default function NotificationBell() {
       };
       triggerAlert(notif);
     });
-    return unsubscribe;
+
+    const handleLocalCrisis = (e) => {
+      if (e.detail) {
+        triggerAlert(e.detail);
+      }
+    };
+    window.addEventListener("siat:crisis_alert", handleLocalCrisis);
+
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+      window.removeEventListener("siat:crisis_alert", handleLocalCrisis);
+    };
   }, [triggerAlert]);
 
   // Cerrar dropdown al hacer clic fuera

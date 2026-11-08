@@ -272,7 +272,8 @@ export default function App() {
       return <HardwareInventory />;
     if (safeView === "historial")
       return <HistoryProgress onNavigate={navigate} />;
-    if (safeView === "home_analytics") return <HomeAnalytics />;
+    if (safeView === "home_analytics")
+      return <HistoryProgress initialTab="bitacoras" onNavigate={navigate} />;
 
     return <Auth currentView="login" onNavigate={navigate} />;
   };

@@ -15,6 +15,7 @@ const MODAL_WIDTHS = {
 
 export default function AdminModal({
   open,
+  isOpen,
   onClose,
   title,
   subtitle,
@@ -24,6 +25,7 @@ export default function AdminModal({
   hasUnsavedChanges = false,
   closeOnBackdrop = false,
 }) {
+  const isModalOpen = open !== undefined ? open : Boolean(isOpen);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
 
@@ -37,7 +39,7 @@ export default function AdminModal({
 
   // Manejo de la tecla Escape con protección de datos
   useEffect(() => {
-    if (!open) return;
+    if (!isModalOpen) return;
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -46,9 +48,9 @@ export default function AdminModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, handleCloseAttempt]);
+  }, [isModalOpen, handleCloseAttempt]);
 
-  if (!open) return null;
+  if (!isModalOpen) return null;
 
   const widthClass = MODAL_WIDTHS[maxWidth] || "sm:max-w-xl";
 

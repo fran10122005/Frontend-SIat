@@ -4,6 +4,9 @@ import { useGlobalContext } from "../context/GlobalState";
 import {
   BarChart,
   Bar,
+  AreaChart,
+  Area,
+  ReferenceLine,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -37,6 +40,9 @@ import {
   Frown,
   Meh,
   Search,
+  LineChart as LineChartIcon,
+  BarChart3,
+  Info,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
@@ -100,7 +106,10 @@ function formatBitacoraDate(str) {
   }
 }
 
-export default function HistoryProgress() {
+export default function HistoryProgress({
+  initialTab = "evolucion",
+  onNavigate,
+}) {
   const {
     historicalData,
     clinicalBitacoras,
@@ -109,12 +118,22 @@ export default function HistoryProgress() {
     nomNino,
     selectedChildId,
     fetchHistorialCompleto,
+    showToast,
+    userName,
+    isDark,
   } = useGlobalContext();
   const isRepresentante = userRole === "REPRESENTANTE";
-  const [activeTab, setActiveTab] = useState("evolucion"); // "evolucion" | "bitacoras" | "incidentes"
+  const [activeTab, setActiveTab] = useState(initialTab || "evolucion"); // "evolucion" | "bitacoras" | "incidentes"
   const [dateRange, setDateRange] = useState("all");
   const [searchNotes, setSearchNotes] = useState("");
   const [filterEfectividad, setFilterEfectividad] = useState("TODOS");
+  const [chartViewMode, setChartViewMode] = useState("area"); // "area" | "bar"
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Modales de detalle clínico
   const [selectedSessionDetail, setSelectedSessionDetail] = useState(null);
@@ -300,6 +319,64 @@ export default function HistoryProgress() {
     return data;
   }, [historicalData, dateRange, searchNotes, filterEfectividad]);
 
+  // Datos ordenados cronológicamente (antiguo -> reciente) con etiquetas amigables no repetidas
+  const chartChronologicalData = useMemo(() => {
+    if (!filteredData || filteredData.length === 0) return [];
+    const sorted = [...filteredData].sort((a, b) => {
+      const dateA = a.raw_date
+        ? new Date(a.raw_date).getTime()
+        : parseFecRepo(a.fec_repo)?.getTime() || 0;
+      const dateB = b.raw_date
+        ? new Date(b.raw_date).getTime()
+        : parseFecRepo(b.fec_repo)?.getTime() || 0;
+      return dateA - dateB;
+    });
+
+    // Controlar fechas duplicadas para generar etiquetas claras ("05 Nov (S1)", "05 Nov (S2)")
+    const dateCounts = {};
+    sorted.forEach((item) => {
+      const d = item.raw_date
+        ? new Date(item.raw_date)
+        : parseFecRepo(item.fec_repo);
+      const dateKey =
+        d && !isNaN(d.getTime())
+          ? d.toLocaleDateString("es-ES", { day: "numeric", month: "short" })
+          : item.fec_repo || "Sesión";
+      dateCounts[dateKey] = (dateCounts[dateKey] || 0) + 1;
+    });
+
+    const dateIndices = {};
+    return sorted.map((item, idx) => {
+      const d = item.raw_date
+        ? new Date(item.raw_date)
+        : parseFecRepo(item.fec_repo);
+      const dateKey =
+        d && !isNaN(d.getTime())
+          ? d.toLocaleDateString("es-ES", { day: "numeric", month: "short" })
+          : item.fec_repo || `S-${idx + 1}`;
+
+      let label = dateKey;
+      if (dateCounts[dateKey] > 1) {
+        dateIndices[dateKey] = (dateIndices[dateKey] || 0) + 1;
+        label = `${dateKey} (S${dateIndices[dateKey]})`;
+      }
+
+      return {
+        ...item,
+        chartLabel: label,
+        fullFormattedDate:
+          d && !isNaN(d.getTime())
+            ? d.toLocaleDateString("es-ES", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
+            : item.fec_repo,
+      };
+    });
+  }, [filteredData]);
+
   const PAGE_SIZE = 8;
   const [page, setPage] = useState(0);
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -347,8 +424,104 @@ export default function HistoryProgress() {
     return { avgCalm, totalSessions, effectivePercentage };
   }, [filteredData]);
 
-  const handleExportPDF = () => {
-    exportHistoryToPDF(filteredData || []);
+  const homeWeeklyChartData = useMemo(() => {
+    const list = Array.isArray(clinicalBitacoras) ? clinicalBitacoras : [];
+    if (list.length === 0) return [];
+    const grouped = {};
+    list.forEach((bit) => {
+      const d = new Date(bit.bit_fech || bit.bit_crea);
+      if (isNaN(d.getTime())) return;
+      const localDate = new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+      const diaSemana = localDate.toLocaleDateString("es-ES", {
+        weekday: "short",
+      });
+      const diaFormato = localDate.toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "short",
+      });
+      const key = `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)} ${diaFormato}`;
+      let calma = 70;
+      if (bit.bit_anim === "Muy Calmo") calma = 95;
+      else if (bit.bit_anim === "Estable") calma = 80;
+      else if (bit.bit_anim === "Irritable") calma = 45;
+      else if (
+        bit.bit_anim === "Crisis / Sobrecarga" ||
+        bit.bit_anim === "Ansioso"
+      )
+        calma = 25;
+      if (!grouped[key]) {
+        grouped[key] = {
+          dia: key,
+          rawDate: localDate.getTime(),
+          calma,
+          sobrecarga: 100 - calma,
+          count: 1,
+        };
+      } else {
+        grouped[key].calma += calma;
+        grouped[key].sobrecarga += 100 - calma;
+        grouped[key].count += 1;
+      }
+    });
+    return Object.values(grouped)
+      .map((g) => ({
+        dia: g.dia,
+        rawDate: g.rawDate,
+        calma: Math.round(g.calma / g.count),
+        sobrecarga: Math.round(g.sobrecarga / g.count),
+      }))
+      .sort((a, b) => a.rawDate - b.rawDate)
+      .slice(-7);
+  }, [clinicalBitacoras]);
+
+  const handleExportPDF = async () => {
+    if (activeTab === "bitacoras") {
+      try {
+        const { exportHomeWeeklyToPDF } = await import("../utils/pdfExporter");
+        const list = Array.isArray(clinicalBitacoras) ? clinicalBitacoras : [];
+        const mappedNotes = list.map((bit) => {
+          const d = new Date(bit.bit_fech || bit.bit_crea);
+          const localDate = new Date(
+            d.getTime() + d.getTimezoneOffset() * 60000,
+          );
+          const diaSemana = localDate.toLocaleDateString("es-ES", {
+            weekday: "short",
+          });
+          const diaFormato = localDate.toLocaleDateString("es-ES", {
+            day: "numeric",
+            month: "short",
+          });
+          const dia = `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)} ${diaFormato}`;
+          return {
+            dia,
+            time: new Date(bit.bit_crea || bit.bit_fech).toLocaleTimeString(
+              "es-ES",
+              { hour: "2-digit", minute: "2-digit" },
+            ),
+            bpm: bit.bit_bpm,
+            anim: bit.bit_anim || "Estable",
+            suen: `${bit.bit_suen || bit.bit_sueñ || 0}h`,
+            apet: bit.bit_apet || "Normal",
+            crisi: Number(bit.bit_crisi || bit.bit_cris) || 0,
+            obse: bit.bit_obse,
+            summaryText: `Sueño: ${bit.bit_suen || bit.bit_sueñ || 0}h | Ánimo: ${bit.bit_anim || "Estable"} | Apetito: ${bit.bit_apet || "Normal"}`,
+          };
+        });
+
+        await exportHomeWeeklyToPDF({
+          paciente: nomNino || "Paciente",
+          generadoPor: userName || "Especialista SIAT",
+          resumenDiario: homeWeeklyChartData,
+          notas: mappedNotes,
+        });
+        showToast("✅ Reporte del hogar exportado en PDF exitosamente");
+      } catch (err) {
+        console.error(err);
+        showToast("❌ Error al exportar el reporte del hogar");
+      }
+    } else {
+      exportHistoryToPDF(filteredData || []);
+    }
   };
 
   return (
@@ -453,141 +626,504 @@ export default function HistoryProgress() {
             {/* TAB 1: EVOLUCIÓN Y SESIONES */}
             {activeTab === "evolucion" && (
               <div className="flex flex-col gap-6">
-                {/* KPIs */}
+                {/* KPIs Rediseñados */}
                 <div
                   data-tour="hp-kpis"
-                  className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4"
+                  className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4"
                 >
-                  <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-brand-500 dark:text-blue-400">
-                        <TrendingUp className="w-4 h-4" />
+                  {/* Card 1: Promedio de Calma */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 relative overflow-hidden flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                          <TrendingUp className="w-4.5 h-4.5" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          Promedio de Calma
+                        </span>
                       </div>
-                      <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        Promedio de Calma
+                      <span
+                        className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                          kpis.avgCalm >= 75
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                        }`}
+                      >
+                        {kpis.avgCalm >= 80
+                          ? "Óptimo"
+                          : kpis.avgCalm >= 65
+                            ? "Estable"
+                            : "En Progreso"}
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                         {kpis.avgCalm}%
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {filteredData?.length > 0
-                          ? "en período activo"
-                          : "sin registros"}
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        en terapias
                       </span>
                     </div>
+
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      {kpis.avgCalm >= 80
+                        ? "Excelente autorregulación del paciente"
+                        : "Comportamiento en rango de estabilidad"}
+                    </p>
                   </div>
 
-                  <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-center min-w-0">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <div className="w-8 h-8 shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
-                        <Activity className="w-4 h-4" />
+                  {/* Card 2: Sesiones Totales */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 relative overflow-hidden flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/60 dark:border-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                          <Activity className="w-4.5 h-4.5" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          Sesiones Realizadas
+                        </span>
                       </div>
-                      <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        Sesiones Totales
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300">
+                        Al Día
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                         {kpis.totalSessions}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        sesiones
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        completadas
                       </span>
                     </div>
+
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
+                      Con el equipo multidisciplinario
+                    </p>
                   </div>
 
-                  <div className="bg-white dark:bg-slate-800 rounded-xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-slate-700 col-span-2 md:col-span-1 flex flex-col justify-center min-w-0">
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500 dark:text-emerald-400">
-                        <CheckCircle2 className="w-4 h-4" />
+                  {/* Card 3: Alertas / Efectividad */}
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 relative overflow-hidden flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/60 dark:border-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                          <CheckCircle2 className="w-4.5 h-4.5" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                          Efectividad Terapéutica
+                        </span>
                       </div>
-                      <span className="text-[11px] md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        Alertas Efectivas
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        {kpis.effectivePercentage === 100
+                          ? "100% Éxito"
+                          : "Controlado"}
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">
                         {kpis.effectivePercentage}%
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        efectividad
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        sin sobrecarga
                       </span>
                     </div>
+
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
+                      Sesiones finalizadas en calma sin desregulación
+                    </p>
                   </div>
                 </div>
 
-                {/* Gráfico */}
+                {/* Gráfico Rediseñado */}
                 <div
                   data-tour="hp-chart"
-                  className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col min-h-[300px] lg:h-[400px]"
+                  className="bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 dark:border-slate-700 flex flex-col min-h-[350px] lg:h-[420px]"
                 >
-                  <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-6 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-brand-500 dark:text-blue-400" />
-                    Evolución del Tiempo en Calma (pro_calm)
-                  </h3>
-                  <div className="flex-1 w-full min-h-0">
-                    {filteredData && filteredData.length > 0 ? (
-                      <ResponsiveContainer
-                        width="100%"
-                        height="100%"
-                        minWidth={0}
-                        minHeight={0}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                    <div>
+                      <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        Evolución de Autorregulación y Calma en Terapias
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Registro cronológico de estabilidad emocional del menor
+                        en sesiones con el especialista
+                      </p>
+                    </div>
+
+                    {/* Selector de Tipo de Gráfica: Área / Curva vs Barras */}
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-900/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700 self-start sm:self-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setChartViewMode("area")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                          chartViewMode === "area"
+                            ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                        }`}
+                        title="Ver como curva de tendencia continua"
                       >
-                        <BarChart
-                          data={filteredData}
-                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                        >
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            vertical={false}
-                            stroke="#E5E7EB"
-                          />
-                          <XAxis
-                            dataKey="fec_repo"
-                            tick={{ fontSize: 12 }}
-                            tickMargin={10}
-                            stroke="#9CA3AF"
-                          />
-                          <YAxis
-                            domain={[0, 100]}
-                            tick={{ fontSize: 12 }}
-                            stroke="#9CA3AF"
-                            tickFormatter={(val) => `${val}%`}
-                          />
-                          <Tooltip
-                            cursor={{ fill: "rgba(0,0,0,0.05)" }}
-                            contentStyle={{
-                              borderRadius: "8px",
-                              border: "none",
-                              boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                        <LineChartIcon className="w-3.5 h-3.5" />
+                        <span>Curva de Progreso</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setChartViewMode("bar")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                          chartViewMode === "bar"
+                            ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                        }`}
+                        title="Ver como barras por sesión"
+                      >
+                        <BarChart3 className="w-3.5 h-3.5" />
+                        <span>Barras por Sesión</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Leyenda de Zonas de Estabilidad */}
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-semibold mb-3 px-1">
+                    <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      Zona Óptima (≥ 75%)
+                    </span>
+                    <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      En Adaptación (55% - 74%)
+                    </span>
+                    <span className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 ml-auto text-[11px] font-normal">
+                      Cronología: Pasado → Presente
+                    </span>
+                  </div>
+
+                  <div className="flex-1 w-full min-h-0">
+                    {chartChronologicalData &&
+                    chartChronologicalData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        {chartViewMode === "area" ? (
+                          <AreaChart
+                            data={chartChronologicalData}
+                            margin={{
+                              top: 10,
+                              right: 15,
+                              left: -20,
+                              bottom: 0,
                             }}
-                            formatter={(value, name, item) => {
-                              const bpm = item?.payload?.avg_bpm;
-                              return [
-                                `${value}% en calma${bpm ? ` · Pulso: ${bpm} BPM` : ""}`,
-                                "Tiempo Promedio",
-                              ];
-                            }}
-                            labelFormatter={(label) => `Fecha: ${label}`}
-                          />
-                          <Bar
-                            dataKey="pro_calm"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={50}
-                            animationDuration={1000}
                           >
-                            {filteredData.map((entry, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={
-                                  entry.pro_calm > 75 ? "#034EA1" : "#94A3B8"
+                            <defs>
+                              <linearGradient
+                                id="calmAreaGradient"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                              >
+                                <stop
+                                  offset="5%"
+                                  stopColor="#3B82F6"
+                                  stopOpacity={0.4}
+                                />
+                                <stop
+                                  offset="95%"
+                                  stopColor="#3B82F6"
+                                  stopOpacity={0.02}
+                                />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              vertical={false}
+                              stroke={isDark ? "#334155" : "#E2E8F0"}
+                            />
+                            <XAxis
+                              dataKey="chartLabel"
+                              tick={{
+                                fontSize: 11,
+                                fill: isDark ? "#94A3B8" : "#64748B",
+                              }}
+                              tickMargin={10}
+                              stroke={isDark ? "#475569" : "#CBD5E1"}
+                            />
+                            <YAxis
+                              domain={[0, 100]}
+                              tick={{
+                                fontSize: 11,
+                                fill: isDark ? "#94A3B8" : "#64748B",
+                              }}
+                              stroke={isDark ? "#475569" : "#CBD5E1"}
+                              tickFormatter={(val) => `${val}%`}
+                            />
+                            <ReferenceLine
+                              y={75}
+                              stroke="#10B981"
+                              strokeDasharray="4 4"
+                            />
+                            <Tooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  const val = data.pro_calm ?? 0;
+                                  const isOptimal = val >= 75;
+                                  const isModerate = val >= 55 && val < 75;
+
+                                  return (
+                                    <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 text-xs min-w-[210px]">
+                                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
+                                        <span className="font-bold text-slate-900 dark:text-white capitalize">
+                                          {data.fullFormattedDate ||
+                                            data.chartLabel}
+                                        </span>
+                                        <span
+                                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                                            isOptimal
+                                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                              : isModerate
+                                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                                                : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                          }`}
+                                        >
+                                          {isOptimal
+                                            ? "Óptimo"
+                                            : isModerate
+                                              ? "En Progreso"
+                                              : "Requiere Apoyo"}
+                                        </span>
+                                      </div>
+
+                                      <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-slate-500 dark:text-slate-400">
+                                            Autorregulación:
+                                          </span>
+                                          <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
+                                            {val}% en calma
+                                          </span>
+                                        </div>
+
+                                        {data.activityTitle && (
+                                          <div className="flex items-center justify-between gap-2">
+                                            <span className="text-slate-500 dark:text-slate-400 truncate max-w-[90px]">
+                                              Actividad:
+                                            </span>
+                                            <span
+                                              className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]"
+                                              title={data.activityTitle}
+                                            >
+                                              {data.activityTitle}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {data.avg_bpm && (
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-slate-500 dark:text-slate-400">
+                                              Pulso Cardíaco:
+                                            </span>
+                                            <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                                              <Heart className="w-3 h-3 fill-current" />
+                                              {data.avg_bpm} BPM
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {data.cooperation && (
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-slate-500 dark:text-slate-400">
+                                              Cooperación:
+                                            </span>
+                                            <div className="flex items-center gap-0.5">
+                                              {[1, 2, 3, 4, 5].map((star) => (
+                                                <Star
+                                                  key={star}
+                                                  className={`w-3 h-3 ${
+                                                    star <= data.cooperation
+                                                      ? "fill-amber-400 text-amber-400"
+                                                      : "text-slate-200 dark:text-slate-700"
+                                                  }`}
+                                                />
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
                                 }
-                              />
-                            ))}
-                          </Bar>
-                        </BarChart>
+                                return null;
+                              }}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="pro_calm"
+                              stroke="#2563EB"
+                              strokeWidth={3}
+                              fillOpacity={1}
+                              fill="url(#calmAreaGradient)"
+                              activeDot={{
+                                r: 6,
+                                fill: "#2563EB",
+                                stroke: "#fff",
+                                strokeWidth: 2,
+                              }}
+                            />
+                          </AreaChart>
+                        ) : (
+                          <BarChart
+                            data={chartChronologicalData}
+                            margin={{
+                              top: 10,
+                              right: 15,
+                              left: -20,
+                              bottom: 0,
+                            }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              vertical={false}
+                              stroke={isDark ? "#334155" : "#E2E8F0"}
+                            />
+                            <XAxis
+                              dataKey="chartLabel"
+                              tick={{
+                                fontSize: 11,
+                                fill: isDark ? "#94A3B8" : "#64748B",
+                              }}
+                              tickMargin={10}
+                              stroke={isDark ? "#475569" : "#CBD5E1"}
+                            />
+                            <YAxis
+                              domain={[0, 100]}
+                              tick={{
+                                fontSize: 11,
+                                fill: isDark ? "#94A3B8" : "#64748B",
+                              }}
+                              stroke={isDark ? "#475569" : "#CBD5E1"}
+                              tickFormatter={(val) => `${val}%`}
+                            />
+                            <ReferenceLine
+                              y={75}
+                              stroke="#10B981"
+                              strokeDasharray="4 4"
+                            />
+                            <Tooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  const val = data.pro_calm ?? 0;
+                                  const isOptimal = val >= 75;
+                                  const isModerate = val >= 55 && val < 75;
+
+                                  return (
+                                    <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 text-xs min-w-[210px]">
+                                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
+                                        <span className="font-bold text-slate-900 dark:text-white capitalize">
+                                          {data.fullFormattedDate ||
+                                            data.chartLabel}
+                                        </span>
+                                        <span
+                                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                                            isOptimal
+                                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                              : isModerate
+                                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                                                : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                          }`}
+                                        >
+                                          {isOptimal
+                                            ? "Óptimo"
+                                            : isModerate
+                                              ? "En Progreso"
+                                              : "Requiere Apoyo"}
+                                        </span>
+                                      </div>
+
+                                      <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-slate-500 dark:text-slate-400">
+                                            Autorregulación:
+                                          </span>
+                                          <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
+                                            {val}% en calma
+                                          </span>
+                                        </div>
+
+                                        {data.activityTitle && (
+                                          <div className="flex items-center justify-between gap-2">
+                                            <span className="text-slate-500 dark:text-slate-400 truncate max-w-[90px]">
+                                              Actividad:
+                                            </span>
+                                            <span
+                                              className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]"
+                                              title={data.activityTitle}
+                                            >
+                                              {data.activityTitle}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {data.avg_bpm && (
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-slate-500 dark:text-slate-400">
+                                              Pulso Cardíaco:
+                                            </span>
+                                            <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                                              <Heart className="w-3 h-3 fill-current" />
+                                              {data.avg_bpm} BPM
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {data.cooperation && (
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-slate-500 dark:text-slate-400">
+                                              Cooperación:
+                                            </span>
+                                            <div className="flex items-center gap-0.5">
+                                              {[1, 2, 3, 4, 5].map((star) => (
+                                                <Star
+                                                  key={star}
+                                                  className={`w-3 h-3 ${
+                                                    star <= data.cooperation
+                                                      ? "fill-amber-400 text-amber-400"
+                                                      : "text-slate-200 dark:text-slate-700"
+                                                  }`}
+                                                />
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Bar
+                              dataKey="pro_calm"
+                              radius={[6, 6, 0, 0]}
+                              maxBarSize={40}
+                              animationDuration={1000}
+                            >
+                              {chartChronologicalData.map((entry, index) => {
+                                const fill =
+                                  entry.pro_calm >= 75
+                                    ? "#3B82F6"
+                                    : entry.pro_calm >= 55
+                                      ? "#F59E0B"
+                                      : "#EF4444";
+                                return (
+                                  <Cell key={`cell-${index}`} fill={fill} />
+                                );
+                              })}
+                            </Bar>
+                          </BarChart>
+                        )}
                       </ResponsiveContainer>
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-12">
@@ -596,8 +1132,8 @@ export default function HistoryProgress() {
                           Sin registros históricos disponibles
                         </p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm text-center">
-                          Las sesiones registradas por el especialista o el
-                          representante aparecerán graficadas aquí.
+                          Las sesiones registradas por el especialista
+                          aparecerán graficadas aquí.
                         </p>
                       </div>
                     )}
@@ -997,6 +1533,91 @@ export default function HistoryProgress() {
                     </div>
                   </div>
                 </div>
+
+                {/* Gráfica de Tendencia de Calma y Sobrecarga del Hogar */}
+                {homeWeeklyChartData.length > 0 && (
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200/80 dark:border-slate-700 shadow-sm flex flex-col min-h-[280px]">
+                    <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          Balance Emocional en Casa (Últimos Días Registrados)
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Evolución del estado de calma vs sobrecarga sensorial
+                          reportado por los padres
+                        </p>
+                      </div>
+                      <div className="flex gap-4 text-xs font-semibold">
+                        <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                          Calma (%)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-rose-500 dark:text-rose-400">
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                          Sobrecarga (%)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full h-48 sm:h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={homeWeeklyChartData}
+                          margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            vertical={false}
+                            stroke={isDark ? "#334155" : "#E2E8F0"}
+                          />
+                          <XAxis
+                            dataKey="dia"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{
+                              fill: isDark ? "#94A3B8" : "#64748B",
+                              fontSize: 11,
+                            }}
+                          />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{
+                              fill: isDark ? "#94A3B8" : "#64748B",
+                              fontSize: 11,
+                            }}
+                            tickFormatter={(v) => `${v}%`}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              borderRadius: "8px",
+                              border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
+                              backgroundColor: isDark ? "#0F172A" : "#fff",
+                              color: isDark ? "#f8fafc" : "#0f172a",
+                              fontSize: "12px",
+                            }}
+                            formatter={(value, name) => [
+                              `${value}%`,
+                              name === "calma" ? "Calma" : "Sobrecarga",
+                            ]}
+                          />
+                          <Bar
+                            dataKey="calma"
+                            fill="#3B82F6"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={32}
+                          />
+                          <Bar
+                            dataKey="sobrecarga"
+                            fill="#F43F5E"
+                            radius={[4, 4, 0, 0]}
+                            maxBarSize={32}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
 
                 {/* Filtros de Bitácora */}
                 <FilterBar
@@ -1570,6 +2191,7 @@ export default function HistoryProgress() {
             {/* MODAL 1: DETALLE CLÍNICO DE SESIÓN TERAPÉUTICA */}
             {selectedSessionDetail && (
               <AdminModal
+                open={!!selectedSessionDetail}
                 isOpen={!!selectedSessionDetail}
                 onClose={() => setSelectedSessionDetail(null)}
                 title="Bitácora de Sesión Terapéutica"
@@ -1717,6 +2339,7 @@ export default function HistoryProgress() {
             {/* MODAL 2: FICHA DE BITÁCORA DEL HOGAR */}
             {selectedBitacoraDetail && (
               <AdminModal
+                open={!!selectedBitacoraDetail}
                 isOpen={!!selectedBitacoraDetail}
                 onClose={() => setSelectedBitacoraDetail(null)}
                 title="Ficha de Bitácora del Hogar"
@@ -1862,6 +2485,7 @@ export default function HistoryProgress() {
             {/* MODAL 3: AUDITORÍA DE INCIDENTE CONDUCTUAL A-B-C */}
             {selectedIncidenteDetail && (
               <AdminModal
+                open={!!selectedIncidenteDetail}
                 isOpen={!!selectedIncidenteDetail}
                 onClose={() => setSelectedIncidenteDetail(null)}
                 title="Auditoría de Incidente Conductual (Modelo A-B-C)"

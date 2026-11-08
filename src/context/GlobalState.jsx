@@ -1003,6 +1003,16 @@ export const GlobalProvider = ({ children }) => {
     });
   }, []);
 
+  const unregisterConnectedDevice = useCallback((deviceName) => {
+    setGlobalHardware((prev) =>
+      prev.map((d) =>
+        !deviceName || d.name === deviceName || d.type?.includes("Smartwatch")
+          ? { ...d, est_disp: "Offline" }
+          : d,
+      ),
+    );
+  }, []);
+
   const [globalAlertas, setGlobalAlertas] = useState([]);
 
   // Telemetría de alta resolución (segundo a segundo) durante la ventana de la crisis (5 min aprox)
@@ -1080,7 +1090,14 @@ export const GlobalProvider = ({ children }) => {
 
   const [clinicalHistory, setClinicalHistory] = useState([]);
   const [clinicalReports, setClinicalReports] = useState([]);
-  const [clinicalAlerts, setClinicalAlerts] = useState([]);
+  const [clinicalAlerts, setClinicalAlerts] = useState(() => {
+    try {
+      const raw = localStorage.getItem("siat_local_alerts");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
   const [clinicalBitacoras, setClinicalBitacoras] = useState([]);
 
   const fetchHistorialCompleto = async (childId) => {
@@ -1279,11 +1296,45 @@ export const GlobalProvider = ({ children }) => {
           });
         }
       });
+
+      // Sincronizar alertas locales de crisis en tiempo real
+      try {
+        const raw = localStorage.getItem("siat_local_alerts");
+        const locals = raw ? JSON.parse(raw) : [];
+        const existingIds = new Set(allAlerts.map((a) => a.id_alert));
+        locals.forEach((l) => {
+          if (!existingIds.has(l.id_alert)) allAlerts.push(l);
+        });
+      } catch {}
+
       setClinicalAlerts(allAlerts);
     } catch (err) {
       console.error("Error fetching child complete history:", err);
     }
   };
+
+  // Listener para alertas de crisis emitidas por smartwatch o simulación
+  useEffect(() => {
+    const handleLocalCrisis = (e) => {
+      if (e.detail) {
+        setClinicalAlerts((prev) => {
+          const exists = prev.some((a) => a.id_alert === e.detail.id_alert);
+          if (exists) return prev;
+          const updated = [e.detail, ...prev];
+          try {
+            localStorage.setItem(
+              "siat_local_alerts",
+              JSON.stringify(updated.slice(0, 50)),
+            );
+          } catch {}
+          return updated;
+        });
+      }
+    };
+    window.addEventListener("siat:crisis_alert", handleLocalCrisis);
+    return () =>
+      window.removeEventListener("siat:crisis_alert", handleLocalCrisis);
+  }, []);
 
   const [globalPeiGoals, setGlobalPeiGoals] = useState([]);
 
@@ -1523,6 +1574,32 @@ export const GlobalProvider = ({ children }) => {
 
   const evaluateAlert = async (id_alert, fue_efec, com_padr = "") => {
     try {
+      if (
+        String(id_alert).startsWith("crisis_") ||
+        String(id_alert).startsWith("alert_")
+      ) {
+        setClinicalAlerts((prev) =>
+          prev.map((a) =>
+            a.id_alert === id_alert ? { ...a, fue_efec, com_padr } : a,
+          ),
+        );
+        try {
+          const raw = localStorage.getItem("siat_local_alerts");
+          if (raw) {
+            const arr = JSON.parse(raw);
+            const upd = arr.map((a) =>
+              a.id_alert === id_alert ? { ...a, fue_efec, com_padr } : a,
+            );
+            localStorage.setItem("siat_local_alerts", JSON.stringify(upd));
+          }
+        } catch {}
+        showToast(
+          fue_efec
+            ? "✅ Efectividad registrada exitosamente"
+            : "⚠️ Registrado como no efectivo",
+        );
+        return;
+      }
       await api.post(`/reportes/alertas/${id_alert}/feedback`, {
         fed_efec: fue_efec,
         com_padr: com_padr,
@@ -1704,6 +1781,7 @@ export const GlobalProvider = ({ children }) => {
         hardware,
         addHardware,
         registerConnectedDevice,
+        unregisterConnectedDevice,
         reports,
         isOnline,
         setIsOnline,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSmartwatch } from "../../context/SmartwatchContext";
 import { useGlobalContext } from "../../context/GlobalState";
 import {
@@ -26,6 +26,10 @@ import {
   Clock,
   Settings2,
   Sliders,
+  Sparkles,
+  ShieldCheck,
+  Check,
+  ChevronRight,
 } from "lucide-react";
 
 // Formateador amigable de hora relativa para padres (ej: "Hace 3 min")
@@ -77,16 +81,19 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     fetchHealthConnectHeartRate,
     openHealthConnectSettings,
     simulateHealthConnectBatch,
+    isSimulating,
+    toggleRealisticSimulation,
+    stopSimulation,
   } = useSmartwatch();
 
-  const { registerConnectedDevice } = useGlobalContext();
+  const { registerConnectedDevice, unregisterConnectedDevice } =
+    useGlobalContext();
 
   // Estados locales UI
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const [guideTab, setGuideTab] = useState("pc");
+  const [guideTab, setGuideTab] = useState("bluetooth"); // 'bluetooth' | 'health_connect' | 'faq'
   const [activeFaq, setActiveFaq] = useState(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [advancedTab, setAdvancedTab] = useState("health_connect"); // 'health_connect' | 'diagnostics'
   const [isActivating, setIsActivating] = useState(false);
   const [isSyncingHc, setIsSyncingHc] = useState(false);
   const [syncBatchInfo, setSyncBatchInfo] = useState(null);
@@ -128,6 +135,21 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     }
   };
 
+  const handleDisconnect = async () => {
+    try {
+      if (typeof unregisterConnectedDevice === "function") {
+        unregisterConnectedDevice(deviceName);
+      }
+      setSyncBatchInfo(null);
+      if (typeof stopSimulation === "function") {
+        stopSimulation();
+      }
+      await disconnectSmartwatch();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleTriggerSensor = async () => {
     setIsActivating(true);
     try {
@@ -145,54 +167,50 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     setIsSyncingHc(true);
     setSyncBatchInfo({ status: "syncing" });
     try {
-      const res = await fetchHealthConnectHeartRate(30);
+      // Buscar en las últimas 12 horas (720 min) para capturar cualquier sincronización reciente
+      const res = await fetchHealthConnectHeartRate(720);
       const newCount = res?.newReadings?.length || 0;
       const last = res?.lastSample;
-      if (newCount > 0 && last) {
+      if (last && last.bpm) {
         setSyncBatchInfo({
           status: "success",
           newCount,
           lastBpm: last.bpm,
           sampleTime: formatSampleTime(last.timestamp),
-          sourceName: last.sourceName || "Health Connect (Smartwatch)",
-        });
-      } else if (res?.totalSamplesFound > 0 && last) {
-        setSyncBatchInfo({
-          status: "success",
-          newCount: 0,
-          lastBpm: last.bpm,
-          sampleTime: formatSampleTime(last.timestamp),
-          sourceName: last.sourceName || "Health Connect (Smartwatch)",
-          alreadySynced: true,
+          sourceName: last.sourceName || "Google Health",
         });
       } else {
-        setSyncBatchInfo({ status: "empty", newCount: 0 });
+        setSyncBatchInfo({
+          status: "empty",
+          newCount: 0,
+        });
       }
     } catch (e) {
       setSyncBatchInfo({
         status: "error",
-        error: e.message || "Error al sincronizar con Health Connect.",
+        error: e.message || "Error al sincronizar con Google Health.",
       });
     } finally {
-      setTimeout(() => setIsSyncingHc(false), 600);
+      setIsSyncingHc(false);
     }
   };
 
-  const handleSimulateHealthConnect = () => {
+  // Simulación oculta de desarrollo (exclusiva al pulsar la tecla 's' en teclado)
+  const handleSimulateHealthConnect = useCallback(() => {
     setIsSyncingHc(true);
     setSyncBatchInfo({ status: "syncing" });
     setTimeout(() => {
       try {
         const res = simulateHealthConnectBatch(
           [78, 85, 92],
-          "Samsung Galaxy Watch (Simulado)",
+          "Reloj de Prueba (Simulado)",
         );
         setSyncBatchInfo({
           status: "success",
           newCount: res.newReadings.length,
           lastBpm: res.lastSample.bpm,
           sampleTime: formatSampleTime(res.lastSample.timestamp),
-          sourceName: "Samsung Galaxy Watch (Simulado)",
+          sourceName: "Reloj de Prueba (Simulado)",
           isSimulated: true,
         });
       } catch (e) {
@@ -203,8 +221,60 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
       } finally {
         setIsSyncingHc(false);
       }
-    }, 450);
-  };
+    }, 400);
+  }, [simulateHealthConnectBatch]);
+
+  // Atajos de teclado para demostración / pruebas clínicas:
+  // 'S': Simula pulso normal y estado de calma (72 - 88 BPM)
+  // 'C': Simula crisis fisiológica / sobrecarga (118 - 144 BPM)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target?.tagName?.toLowerCase();
+      if (
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        e.target?.isContentEditable
+      ) {
+        return;
+      }
+      if (e.key === "s" || e.key === "S") {
+        if (typeof toggleRealisticSimulation === "function") {
+          const started = toggleRealisticSimulation("normal");
+          if (started) {
+            setSyncBatchInfo({
+              status: "success",
+              newCount: 1,
+              lastBpm: 78,
+              sampleTime: "En vivo",
+              sourceName: "Simulación Normal",
+              isSimulated: true,
+            });
+          } else {
+            setSyncBatchInfo(null);
+          }
+        }
+      } else if (e.key === "c" || e.key === "C") {
+        if (typeof toggleRealisticSimulation === "function") {
+          const started = toggleRealisticSimulation("crisis");
+          if (started) {
+            setSyncBatchInfo({
+              status: "success",
+              newCount: 1,
+              lastBpm: 128,
+              sampleTime: "En vivo",
+              sourceName: "Simulación Crisis",
+              isSimulated: true,
+            });
+          } else {
+            setSyncBatchInfo(null);
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleRealisticSimulation]);
 
   const isBleActive = telemetrySource === "BLE_DIRECT" || isConnected;
   const isHcActive = telemetrySource === "HEALTH_CONNECT";
@@ -331,7 +401,7 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
             {isDeviceActive && (
               <button
                 type="button"
-                onClick={disconnectSmartwatch}
+                onClick={handleDisconnect}
                 className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors flex items-center gap-1.5"
               >
                 <BluetoothOff className="w-3.5 h-3.5" />
@@ -342,33 +412,177 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
         </div>
 
         {/* ============================================================== */}
-        {/* CUERPO DEL WIDGET: EXPERIENCIA LIMPIA POR ESTADO               */}
+        {/* CUERPO DEL WIDGET: EXPERIENCIA CLARA Y SIMPLE PARA EL USUARIO   */}
         {/* ============================================================== */}
-        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-          {/* ESTADO 1: DESCONECTADO (Llamado a la acción claro y elegante) */}
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-3.5">
+          {/* ESTADO 1: DESCONECTADO (DOS OPCIONES CLARAS) */}
           {!isDeviceActive && !isConnecting && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="space-y-1 text-center sm:text-left">
-                <h5 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                  ¿Listo para comenzar la sesión?
-                </h5>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
-                  Asegúrate de que el reloj esté encendido y colocado en la
-                  muñeca del menor.
-                </p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Opción A: Conexión Bluetooth Directa */}
+                <div className="p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-3 transition-all hover:border-blue-400/50">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                        <Bluetooth className="w-4 h-4" />
+                      </div>
+                      <h5 className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                        Conexión Bluetooth en Vivo
+                      </h5>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                      Mide el pulso segundo a segundo durante la terapia.
+                      Requiere tener el Bluetooth y Ubicación activos.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!isSupported}
+                    onClick={handleConnect}
+                    className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <BluetoothConnected className="w-3.5 h-3.5" />
+                    <span>Vincular por Bluetooth</span>
+                  </button>
+                </div>
+
+                {/* Opción B: Sincronizar vía Google Health Connect */}
+                <div className="p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-3 transition-all hover:border-emerald-400/50">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                          <Smartphone className="w-4 h-4" />
+                        </div>
+                        <h5 className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                          Google Health (Salud de Android)
+                        </h5>
+                      </div>
+
+                      {healthConnectAuthorized && (
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Conectado</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                      Ideal para relojes Samsung, Xiaomi, Huawei, Da Fit o
+                      Amazfit que ya sincronizan con tu teléfono.
+                    </p>
+                  </div>
+
+                  {!healthConnectAuthorized ? (
+                    <button
+                      type="button"
+                      onClick={requestHealthConnectPermissions}
+                      className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Conectar con Google Health</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isSyncingHc}
+                        onClick={handleManualHealthConnectSync}
+                        className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      >
+                        <RefreshCw
+                          className={`w-3.5 h-3.5 ${isSyncingHc ? "animate-spin" : ""}`}
+                        />
+                        <span>
+                          {isSyncingHc ? "Buscando..." : "Actualizar Lecturas"}
+                        </span>
+                      </button>
+
+                      {!healthConnectPolling ? (
+                        <button
+                          type="button"
+                          onClick={() => startHealthConnectPolling(30)}
+                          className="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all shrink-0"
+                          title="Actualizar periódicamente cada 30 segundos"
+                        >
+                          Auto
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={stopHealthConnectPolling}
+                          className="px-3 py-2.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 text-rose-600 text-xs font-semibold transition-all shrink-0"
+                          title="Detener actualización automática"
+                        >
+                          Detener
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                <button
-                  type="button"
-                  disabled={!isSupported}
-                  onClick={handleConnect}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                >
-                  <BluetoothConnected className="w-4 h-4" />
-                  <span>Vincular Reloj Bluetooth</span>
-                </button>
-              </div>
+              {/* Mensajes Informativos Claros sobre Google Health */}
+              {syncBatchInfo?.status === "syncing" && (
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 text-xs flex items-center gap-2.5 animate-in fade-in">
+                  <RefreshCw className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
+                  <span>
+                    Buscando lecturas recientes de tu smartwatch en Google
+                    Health...
+                  </span>
+                </div>
+              )}
+
+              {syncBatchInfo?.status === "success" && (
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between gap-2.5 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>
+                      Última lectura sincronizada:{" "}
+                      <strong>{syncBatchInfo.lastBpm} BPM</strong>
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 font-medium shrink-0">
+                    {syncBatchInfo.sampleTime}
+                  </span>
+                </div>
+              )}
+
+              {syncBatchInfo?.status === "empty" && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs space-y-2 animate-in fade-in">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <div className="space-y-1">
+                      <p className="font-bold text-amber-800 dark:text-amber-300">
+                        No se encontraron lecturas de pulso en Google Health en
+                        las últimas horas.
+                      </p>
+                      <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+                        Asegúrate de que la app de tu reloj (como{" "}
+                        <strong>Da Fit</strong>, <strong>Samsung Health</strong>{" "}
+                        o <strong>Mi Fitness</strong>) esté abierta y tenga
+                        permiso para compartir datos con Salud de Android.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pt-1 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={openHealthConnectSettings}
+                      className="px-3 py-1.5 rounded-lg bg-amber-200/80 dark:bg-amber-900/50 hover:bg-amber-300 dark:hover:bg-amber-900 text-amber-900 dark:text-amber-100 text-[11px] font-bold transition-colors"
+                    >
+                      Abrir Ajustes de Salud de Android
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {syncBatchInfo?.status === "error" && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{syncBatchInfo.error}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -384,7 +598,7 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
                 </h5>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
                   Selecciona el nombre de tu reloj en la ventana emergente que
-                  abrió tu navegador.
+                  abrió tu sistema.
                 </p>
               </div>
             </div>
@@ -392,92 +606,111 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
 
           {/* ESTADO 3: CONECTADO (Cockpit Clínico Limpio) */}
           {isDeviceActive && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              {/* Card 1: Pulso en Vivo */}
-              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Ritmo Cardíaco
-                  </span>
-                  <div className="flex items-baseline gap-1 mt-0.5">
-                    <span className="text-2xl font-black text-rose-600 dark:text-rose-400">
-                      {lastBpm || "--"}
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Card 1: Pulso en Vivo */}
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Ritmo Cardíaco
                     </span>
-                    <span className="text-xs font-semibold text-slate-500">
-                      BPM
-                    </span>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-2xl font-black text-rose-600 dark:text-rose-400">
+                        {lastBpm || "--"}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-500">
+                        BPM
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 flex items-center justify-center text-rose-500 shrink-0">
+                    <Heart
+                      className={`w-5 h-5 ${lastBpm ? "animate-pulse" : ""}`}
+                    />
                   </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40 flex items-center justify-center text-rose-500 shrink-0">
-                  <Heart
-                    className={`w-5 h-5 ${lastBpm ? "animate-pulse" : ""}`}
-                  />
-                </div>
-              </div>
 
-              {/* Card 2: Estado del Sensor */}
-              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Estado Fisiológico
-                  </span>
-                  <div className="mt-1">
-                    {lastBpm ? (
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Lectura Estable
-                      </span>
-                    ) : (
-                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                        Ajustando a la piel...
-                      </span>
-                    )}
+                {/* Card 2: Estado del Sensor */}
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Estado del Sensor
+                    </span>
+                    <div className="mt-1">
+                      {lastBpm ? (
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Lectura Estable
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                          Esperando muñeca...
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                {/* Botón rápido de forzar activación si el sensor está en reposo */}
-                <button
-                  type="button"
-                  onClick={handleTriggerSensor}
-                  disabled={isActivating}
-                  title="Enviar pulso de activación al sensor"
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 transition-all active:scale-95"
-                >
-                  <Zap
-                    className={`w-3.5 h-3.5 text-amber-500 ${isActivating ? "animate-spin" : ""}`}
-                  />
-                  <span>{isActivating ? "Enviando..." : "Despertar"}</span>
-                </button>
-              </div>
-
-              {/* Card 3: Transmisión y Nube */}
-              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Telemetría Cloud
-                  </span>
-                  <div className="mt-1 flex items-center gap-2">
-                    <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200">
-                      <input
-                        type="checkbox"
-                        checked={streamToCloud}
-                        onChange={(e) => setStreamToCloud(e.target.checked)}
-                        className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                  {isBleActive && (
+                    <button
+                      type="button"
+                      onClick={handleTriggerSensor}
+                      disabled={isActivating}
+                      title="Enviar señal de activación al sensor"
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 transition-all active:scale-95"
+                    >
+                      <Zap
+                        className={`w-3.5 h-3.5 text-amber-500 ${isActivating ? "animate-spin" : ""}`}
                       />
-                      <span>En vivo</span>
-                    </label>
+                      <span>{isActivating ? "Activando..." : "Despertar"}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Card 3: Método de Transmisión */}
+                <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Canal de Telemetría
+                    </span>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                        {isBleActive
+                          ? "Bluetooth (Tiempo Real)"
+                          : "Google Health Connect"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center text-blue-500 shrink-0">
+                    <Activity className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 flex items-center justify-center text-blue-500 shrink-0">
-                  <Activity className="w-5 h-5" />
-                </div>
               </div>
+
+              {/* Si está en modo Google Health, ofrecer botón rápido de actualizar */}
+              {isHcActive && (
+                <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 text-xs">
+                  <span className="text-slate-600 dark:text-slate-300">
+                    Datos obtenidos mediante Google Health.
+                  </span>
+                  <button
+                    type="button"
+                    disabled={isSyncingHc}
+                    onClick={handleManualHealthConnectSync}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 transition-all text-[11px]"
+                  >
+                    <RefreshCw
+                      className={`w-3 h-3 ${isSyncingHc ? "animate-spin" : ""}`}
+                    />
+                    <span>Actualizar Ahora</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {/* MENSAJE DE ERROR AMIGABLE (SI OCURRE UNO) */}
           {errorMsg && (
-            <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs flex items-start justify-between gap-2.5 animate-in fade-in">
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs flex items-start justify-between gap-2.5 animate-in fade-in">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-500" />
                 <p className="font-semibold">{errorMsg}</p>
@@ -493,208 +726,72 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
           )}
 
           {/* ============================================================== */}
-          {/* PANEL PLEGABLE: AJUSTES Y HERRAMIENTAS AVANZADAS (TÉCNICO)    */}
+          {/* DETALLES TÉCNICOS Y DIAGNÓSTICO (DISCRETO Y OPCIONAL)          */}
           {/* ============================================================== */}
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60">
             <button
               type="button"
               onClick={() => setShowAdvanced((prev) => !prev)}
-              className="w-full flex items-center justify-between text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors py-1 group"
+              className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors py-0.5"
             >
-              <span className="flex items-center gap-1.5 font-medium">
-                <Settings2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200" />
-                <span>
-                  Opciones avanzadas y métodos alternativos (Health Connect /
-                  Diagnóstico)
-                </span>
+              <Settings2 className="w-3 h-3 text-slate-400" />
+              <span>
+                {showAdvanced
+                  ? "Ocultar diagnóstico técnico"
+                  : "Ver diagnóstico técnico"}
               </span>
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400">
-                <span>{showAdvanced ? "Ocultar" : "Mostrar"}</span>
-                {showAdvanced ? (
-                  <ChevronUp className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                )}
-              </div>
+              {showAdvanced ? (
+                <ChevronUp className="w-3 h-3" />
+              ) : (
+                <ChevronDown className="w-3 h-3" />
+              )}
             </button>
 
-            {/* Contenido Avanzado Plegable */}
+            {/* Consola Técnica Plegable */}
             {showAdvanced && (
-              <div className="mt-3 p-3.5 sm:p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-4 animate-in fade-in duration-200">
-                {/* Selector de sub-panel avanzado */}
-                <div className="flex p-1 bg-slate-200/60 dark:bg-slate-800 rounded-xl gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setAdvancedTab("health_connect")}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                      advancedTab === "health_connect"
-                        ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-                    }`}
-                  >
-                    <Smartphone className="w-3.5 h-3.5" />
-                    <span>Android Health Connect</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setAdvancedTab("diagnostics")}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                      advancedTab === "diagnostics"
-                        ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-                    }`}
-                  >
-                    <Terminal className="w-3.5 h-3.5" />
-                    <span>Diagnóstico BLE & Paquetes</span>
-                  </button>
+              <div className="mt-2.5 p-3 rounded-xl bg-slate-900 text-slate-200 border border-slate-800 font-mono text-[11px] space-y-2 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between text-slate-400 font-sans text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-blue-400" />
+                    Dispositivo: <strong>{deviceName || "Ninguno"}</strong>
+                  </span>
+                  <span>
+                    Canales BLE: <strong>{subscribedChars.length}</strong>
+                  </span>
                 </div>
 
-                {/* Sub-panel 1: Health Connect */}
-                {advancedTab === "health_connect" && (
-                  <div className="space-y-3 animate-in fade-in">
-                    <p className="text-xs text-slate-600 dark:text-slate-300">
-                      Útil para relojes vinculados a sus apps oficiales (Samsung
-                      Health, Mi Fitness, Zepp, Da Fit).
+                <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
+                  {rawPacketsHistory.length === 0 ? (
+                    <p className="text-slate-500 text-center py-2 font-sans text-[11px]">
+                      No hay tramas crudas registradas aún.
                     </p>
-
-                    <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800 text-xs">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                        <CheckCircle2
-                          className={`w-4 h-4 ${healthConnectAuthorized ? "text-emerald-500" : "text-amber-500"}`}
-                        />
-                        <span>
-                          Permisos de lectura:{" "}
-                          <strong>
-                            {healthConnectAuthorized
-                              ? "Autorizado"
-                              : "No autorizado"}
-                          </strong>
-                        </span>
-                      </span>
-
-                      {!healthConnectAuthorized ? (
-                        <button
-                          type="button"
-                          onClick={requestHealthConnectPermissions}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold"
-                        >
-                          Solicitar Permiso
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={isSyncingHc}
-                            onClick={handleManualHealthConnectSync}
-                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1.5"
-                          >
-                            <RefreshCw
-                              className={`w-3 h-3 ${isSyncingHc ? "animate-spin" : ""}`}
-                            />
-                            <span>Sincronizar Lote</span>
-                          </button>
-
-                          {!healthConnectPolling ? (
-                            <button
-                              type="button"
-                              onClick={() => startHealthConnectPolling(25)}
-                              className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-semibold"
-                            >
-                              Activar Auto (25s)
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={stopHealthConnectPolling}
-                              className="px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-800 text-rose-600 text-[11px] font-semibold"
-                            >
-                              Detener Auto
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Botón de prueba simulada */}
-                    <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-[11px] text-slate-500">
-                        Pruebas en desarrollo / demostración:
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleSimulateHealthConnect}
-                        disabled={isSyncingHc}
-                        className="px-3 py-1.5 rounded-lg border border-purple-300 dark:border-purple-800/80 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-[11px] font-bold flex items-center gap-1.5"
+                  ) : (
+                    rawPacketsHistory.slice(0, 8).map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between gap-2 border-b border-slate-800/60 py-0.5"
                       >
-                        <FlaskConical className="w-3.5 h-3.5" />
-                        <span>Simular Lectura de Prueba</span>
-                      </button>
-                    </div>
-
-                    {/* Resumen de última sincronización */}
-                    {syncBatchInfo?.status === "success" && (
-                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-                        <span>
-                          Último pulso Health Connect:{" "}
-                          <strong>{syncBatchInfo.lastBpm} BPM</strong>
+                        <span className="text-slate-500">{p.time}</span>
+                        <span className="text-emerald-400 truncate max-w-[170px]">
+                          [{p.hex}]
                         </span>
-                        <span className="text-[11px] text-slate-500">
-                          {syncBatchInfo.sampleTime}
-                        </span>
+                        {p.parsedBpm && (
+                          <span className="text-rose-400 font-bold bg-rose-950/60 px-1 rounded">
+                            {p.parsedBpm} BPM
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )}
+                    ))
+                  )}
+                </div>
 
-                {/* Sub-panel 2: Diagnóstico BLE */}
-                {advancedTab === "diagnostics" && (
-                  <div className="space-y-3 font-mono text-[11px] animate-in fade-in">
-                    <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-sans">
-                      <span className="flex items-center gap-1.5">
-                        <Cpu className="w-3.5 h-3.5 text-blue-500" />
-                        Dispositivo: <strong>{deviceName || "Ninguno"}</strong>
-                      </span>
-                      <span>
-                        Canales suscritos:{" "}
-                        <strong>{subscribedChars.length}</strong>
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-slate-900 text-slate-200 border border-slate-800 max-h-36 overflow-y-auto space-y-1">
-                      {rawPacketsHistory.length === 0 ? (
-                        <p className="text-slate-500 text-center py-2 font-sans text-xs">
-                          No hay paquetes recientes en el búfer.
-                        </p>
-                      ) : (
-                        rawPacketsHistory.slice(0, 10).map((p) => (
-                          <div
-                            key={p.id}
-                            className="flex items-center justify-between gap-2 border-b border-slate-800/50 py-0.5"
-                          >
-                            <span className="text-slate-500">{p.time}</span>
-                            <span className="text-emerald-400 truncate max-w-[180px]">
-                              [{p.hex}]
-                            </span>
-                            {p.parsedBpm && (
-                              <span className="text-rose-400 font-bold bg-rose-950/60 px-1 rounded">
-                                {p.parsedBpm} BPM
-                              </span>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    {syncStatus && (
-                      <div className="text-[11px] font-sans text-slate-500 flex items-center justify-between">
-                        <span>Persistencia local: IndexedDB</span>
-                        <span>
-                          Sincronizados: {syncStatus.syncedCount} | En cola:{" "}
-                          {syncStatus.remainingUnsynced}
-                        </span>
-                      </div>
-                    )}
+                {syncStatus && (
+                  <div className="text-[10px] font-sans text-slate-400 flex items-center justify-between border-t border-slate-800/60 pt-1.5">
+                    <span>Base local: IndexedDB</span>
+                    <span>
+                      Sincronizados: {syncStatus.syncedCount} | En cola:{" "}
+                      {syncStatus.remainingUnsynced}
+                    </span>
                   </div>
                 )}
               </div>
@@ -704,211 +801,460 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
       </div>
 
       {/* ============================================================== */}
-      {/* MODAL / GUÍA PASO A PASO PARA PADRES                          */}
+      {/* MODAL / GUÍA PASO A PASO PARA PADRES Y ESPECIALISTAS           */}
       {/* ============================================================== */}
       {showGuideModal && (
-        <div className="fixed inset-0 z-[120] bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[120] bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white dark:bg-[#1E293B] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/50 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center">
-                  <Watch className="w-4 h-4" />
+            {/* Modal Header con Estilo Clínico y Cálido */}
+            <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-blue-50/70 via-slate-50 to-transparent dark:from-blue-950/20 dark:via-slate-900/40 dark:to-transparent shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
+                  <Watch className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Guía Rápida de Vinculación
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Pasos sencillos para conectar cualquier reloj inteligente
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Centro de Ayuda y Vinculación
+                    </h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                      Guía Rápida
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Aprende a conectar cualquier smartwatch fácilmente en
+                    simples pasos
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowGuideModal(false)}
-                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6 text-slate-700 dark:text-slate-200">
-              {/* Selector de Dispositivo: PC vs Celular */}
-              <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-xl gap-1">
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-slate-700 dark:text-slate-200">
+              {/* Selector de Pestañas Moderno */}
+              <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl gap-1">
                 <button
                   type="button"
-                  onClick={() => setGuideTab("pc")}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    guideTab === "pc"
+                  onClick={() => setGuideTab("bluetooth")}
+                  className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    guideTab === "bluetooth"
                       ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
                       : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                   }`}
                 >
-                  <Radio className="w-3.5 h-3.5" />
-                  Desde Computadora / Laptop
+                  <Bluetooth className="w-3.5 h-3.5" />
+                  <span>Bluetooth en Vivo</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setGuideTab("mobile")}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    guideTab === "mobile"
-                      ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                  onClick={() => setGuideTab("health_connect")}
+                  className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    guideTab === "health_connect"
+                      ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm"
                       : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                   }`}
                 >
                   <Smartphone className="w-3.5 h-3.5" />
-                  Desde Teléfono Celular / Tablet
+                  <span>Google Health</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGuideTab("faq")}
+                  className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    guideTab === "faq"
+                      ? "bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span>Preguntas & Soluciones</span>
                 </button>
               </div>
 
-              {/* 4 Pasos Visuales */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                    1
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase">
-                      {guideTab === "pc"
-                        ? "Desconectar del Celular"
-                        : "Cerrar App Oficial"}
-                    </h5>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      {guideTab === "pc"
-                        ? "Apaga el Bluetooth de tu teléfono temporalmente para que el reloj quede libre y visible para tu computadora."
-                        : "Cierra o minimiza la app oficial de tu reloj (Da Fit, Fitpro, etc.) para que no monopolice el sensor."}
+              {/* CONTENIDO PESTAÑA 1: BLUETOOTH DIRECTO */}
+              {guideTab === "bluetooth" && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/25 border border-blue-100 dark:border-blue-900/40 flex items-start gap-2.5">
+                    <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                      La <strong>Conexión Bluetooth Directa</strong> transmite
+                      el pulso segundo a segundo durante la terapia. Asegúrate
+                      de tener el reloj encendido cerca.
                     </p>
                   </div>
-                </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                    2
+                  {/* 4 Pasos Visuales para Bluetooth */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                        1
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                          Activa Bluetooth y GPS
+                        </h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          En tu teléfono Android enciende el{" "}
+                          <strong>Bluetooth</strong> y la{" "}
+                          <strong>Ubicación (GPS)</strong>. En computadoras, usa
+                          Google Chrome o Microsoft Edge.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                        2
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                          Libera la Señal del Reloj
+                        </h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Si tu reloj está vinculado a otra app (Da Fit, Fitpro,
+                          etc.) en otro teléfono, ciérrala temporalmente para
+                          que no bloquee el sensor.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                        3
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                          Elige el Dispositivo
+                        </h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Presiona <em>"Vincular por Bluetooth"</em> y
+                          selecciona el nombre de tu reloj. Evita las opciones
+                          que digan <em>"Audio"</em> o <em>"Call"</em>.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-rose-500 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                        4
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                          Contacto con la Muñeca
+                        </h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Coloca el reloj firme contra la piel del menor. El
+                          sensor óptico (luz verde) detectará el pulso y lo
+                          mostrará en vivo.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase">
-                      {guideTab === "pc"
-                        ? "Bluetooth Activo"
-                        : "Bluetooth y Ubicación"}
-                    </h5>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      {guideTab === "pc"
-                        ? "Verifica que el Bluetooth de tu PC esté encendido y que uses Google Chrome o Microsoft Edge."
-                        : "En Android, activa el Bluetooth y la Ubicación/GPS para permitir el escaneo de sensores."}
+
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/25 border border-amber-200/60 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>
+                      <strong>
+                        ¿Tu reloj usa Da Fit, Samsung o Mi Fitness?
+                      </strong>{" "}
+                      Si el Bluetooth directo no es compatible con el modelo, te
+                      recomendamos usar la pestaña{" "}
+                      <strong>Google Health</strong>.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* CONTENIDO PESTAÑA 2: GOOGLE HEALTH CONNECT */}
+              {guideTab === "health_connect" && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/25 border border-emerald-100 dark:border-emerald-900/40 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-emerald-800 dark:text-emerald-200 leading-relaxed">
+                      <strong>Google Health (Salud de Android)</strong> es la
+                      forma más fácil y universal para conectar relojes{" "}
+                      <strong>Samsung Galaxy Watch</strong>,{" "}
+                      <strong>Xiaomi / Mi Band</strong>,{" "}
+                      <strong>Amazfit</strong>, <strong>Da Fit</strong> y{" "}
+                      <strong>Huawei</strong>.
                     </p>
                   </div>
-                </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                    3
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase">
-                      Seleccionar en la Lista
-                    </h5>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      En el aviso emergente, elige el nombre de tu reloj o
-                      pulsera. Evita las opciones que digan <em>"Audio"</em> o{" "}
-                      <em>"Call"</em>.
-                    </p>
-                  </div>
-                </div>
+                  {/* Pasos para Google Health */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                        1
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                          Usa la App de tu Reloj
+                        </h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Asegúrate de que tu reloj esté vinculado a su app
+                          habitual (como <em>Samsung Health</em>,{" "}
+                          <em>Da Fit</em>, <em>Mi Fitness</em> o <em>Zepp</em>).
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                    4
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase">
-                      Colocar en la Muñeca
-                    </h5>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      El sensor óptico trasero (luz verde) detectará el pulso
-                      una vez colocado firmemente en contacto con la piel.
-                    </p>
-                  </div>
-                </div>
-              </div>
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                        2
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                          Comparte con Health Connect
+                        </h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          En los ajustes de la app de tu reloj, activa la opción{" "}
+                          <em>
+                            "Sincronizar con Health Connect / Salud de Android"
+                          </em>
+                          .
+                        </p>
+                      </div>
+                    </div>
 
-              {/* Preguntas Frecuentes Desplegables */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-blue-500" />
-                  Preguntas Frecuentes
-                </h4>
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-purple-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                        3
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                          Autoriza a SIAT
+                        </h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          En SIAT presiona el botón verde{" "}
+                          <em>"Conectar con Google Health"</em> y concede el
+                          permiso de lectura de ritmo cardíaco.
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden bg-slate-50/50 dark:bg-slate-900/30">
-                  <div className="p-3.5">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                        4
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wide">
+                          Actualiza y Listo
+                        </h5>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          Presiona <em>"Actualizar Lecturas"</em>. SIAT leerá el
+                          último pulso registrado por tu reloj y lo mantendrá
+                          sincronizado.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs text-slate-500">
+                      ¿Necesitas configurar los permisos de Salud en tu
+                      teléfono?
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setActiveFaq(activeFaq === 1 ? null : 1)}
-                      className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-800 dark:text-white"
+                      onClick={openHealthConnectSettings}
+                      className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                     >
-                      <span>
-                        ¿Por qué algunos nombres dicen "Dispositivo no
-                        compatible"?
-                      </span>
-                      <span className="text-slate-400 text-sm">
-                        {activeFaq === 1 ? "−" : "+"}
-                      </span>
+                      <Settings2 className="w-3.5 h-3.5 text-blue-500" />
+                      <span>Abrir Ajustes de Salud de Android</span>
                     </button>
-                    {activeFaq === 1 && (
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                        Los relojes emiten dos señales: una de llamadas/audio
-                        (que Chrome descarta) y otra de sensores biológicos
-                        (BLE). Debes seleccionar la señal de sensores.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="p-3.5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveFaq(activeFaq === 2 ? null : 2)}
-                      className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-800 dark:text-white"
-                    >
-                      <span>¿Qué marcas y modelos son compatibles?</span>
-                      <span className="text-slate-400 text-sm">
-                        {activeFaq === 2 ? "−" : "+"}
-                      </span>
-                    </button>
-                    {activeFaq === 2 && (
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                        Cualquier reloj o pulsera con sensor óptico BLE:
-                        Smartbands económicas (Da Fit, Fitpro, Wearfit,
-                        VeryFit), bandas deportivas (Polar, Garmin) y relojes
-                        Samsung o Wear OS vía Health Connect.
-                      </p>
-                    )}
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* CONTENIDO PESTAÑA 3: PREGUNTAS FRECUENTES Y SOLUCIÓN DE PROBLEMAS */}
+              {guideTab === "faq" && (
+                <div className="space-y-3 animate-in fade-in duration-200">
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden bg-slate-50/50 dark:bg-slate-900/30">
+                    {/* FAQ 1 */}
+                    <div className="p-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveFaq(activeFaq === 1 ? null : 1)}
+                        className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-800 dark:text-white cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px] shrink-0">
+                            ?
+                          </span>
+                          ¿Por qué mi reloj no aparece en la ventana de
+                          Bluetooth?
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-slate-400 transition-transform ${activeFaq === 1 ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                      {activeFaq === 1 && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2.5 pl-7 leading-relaxed">
+                          Ocurre comúnmente si la{" "}
+                          <strong>Ubicación (GPS)</strong> está apagada en tu
+                          teléfono (Android la exige para escanear Bluetooth), o
+                          si el reloj está enlazado a otra app en segundo plano.
+                          Cierra las demás aplicaciones y vuelve a presionar
+                          Vincular.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* FAQ 2 */}
+                    <div className="p-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveFaq(activeFaq === 2 ? null : 2)}
+                        className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-800 dark:text-white cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[10px] shrink-0">
+                            ?
+                          </span>
+                          ¿Por qué no carga lecturas en Google Health?
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-slate-400 transition-transform ${activeFaq === 2 ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                      {activeFaq === 2 && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2.5 pl-7 leading-relaxed">
+                          Para que Google Health tenga datos, la app oficial de
+                          tu smartwatch (como Da Fit o Samsung Health) debe
+                          haber tomado una medición reciente y tener permiso
+                          para transferirla a Salud de Android. Abre la app de
+                          tu reloj, verifica tu pulso actual y regresa a SIAT
+                          para pulsar <em>"Actualizar Lecturas"</em>.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* FAQ 3 */}
+                    <div className="p-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveFaq(activeFaq === 3 ? null : 3)}
+                        className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-800 dark:text-white cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center text-[10px] shrink-0">
+                            ?
+                          </span>
+                          ¿Qué modelos de smartwatches son compatibles?
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-slate-400 transition-transform ${activeFaq === 3 ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                      {activeFaq === 3 && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2.5 pl-7 leading-relaxed">
+                          SIAT admite prácticamente cualquier reloj o pulsera
+                          del mercado: smartbands económicas (Da Fit, Fitpro,
+                          Wearfit, Qwatch, Moyoung), relojes de alta gama
+                          (Samsung Galaxy Watch, Google Pixel Watch), pulseras
+                          Xiaomi/Amazfit, y bandas de pecho deportivas (Polar,
+                          Garmin).
+                        </p>
+                      )}
+                    </div>
+
+                    {/* FAQ 4 */}
+                    <div className="p-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveFaq(activeFaq === 4 ? null : 4)}
+                        className="w-full flex items-center justify-between text-left text-xs font-bold text-slate-800 dark:text-white cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] shrink-0">
+                            ?
+                          </span>
+                          ¿Se pierden las lecturas si se cae el internet?
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-slate-400 transition-transform ${activeFaq === 4 ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                      {activeFaq === 4 && (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2.5 pl-7 leading-relaxed">
+                          <strong>No.</strong> SIAT cuenta con memoria clínica
+                          local (IndexedDB). Si la conexión a internet se
+                          interrumpe, las constantes vitales se siguen
+                          registrando de forma segura en tu dispositivo y se
+                          sincronizan automáticamente con el servidor cuando la
+                          conexión vuelva.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Modal Footer */}
+            {/* Modal Footer con Acciones Claras */}
             <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowGuideModal(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold"
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer transition-colors"
               >
-                Cerrar
+                Cerrar Guía
               </button>
-              <button
-                type="button"
-                disabled={isConnecting}
-                onClick={() => {
-                  setShowGuideModal(false);
-                  handleConnect();
-                }}
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-2"
-              >
-                <BluetoothConnected className="w-4 h-4" />
-                Vincular Reloj Ahora
-              </button>
+
+              {guideTab === "bluetooth" && (
+                <button
+                  type="button"
+                  disabled={isConnecting}
+                  onClick={() => {
+                    setShowGuideModal(false);
+                    handleConnect();
+                  }}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                >
+                  <BluetoothConnected className="w-4 h-4" />
+                  <span>Vincular por Bluetooth</span>
+                </button>
+              )}
+
+              {guideTab === "health_connect" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowGuideModal(false);
+                    if (!healthConnectAuthorized) {
+                      requestHealthConnectPermissions();
+                    } else {
+                      handleManualHealthConnectSync();
+                    }
+                  }}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  <span>
+                    {healthConnectAuthorized
+                      ? "Actualizar Lecturas"
+                      : "Conectar Google Health"}
+                  </span>
+                </button>
+              )}
+
+              {guideTab === "faq" && (
+                <button
+                  type="button"
+                  onClick={() => setShowGuideModal(false)}
+                  className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold cursor-pointer transition-all"
+                >
+                  <span>Entendido</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

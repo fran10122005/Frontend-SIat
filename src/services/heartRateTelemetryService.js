@@ -813,12 +813,13 @@ class HeartRateTelemetryServiceImpl {
 
     try {
       const auth = await Health.requestAuthorization({
-        read: ["heartRate"],
+        read: ["heartRate", "restingHeartRate"],
       });
 
       const granted =
         Array.isArray(auth.readAuthorized) &&
-        auth.readAuthorized.includes("heartRate");
+        (auth.readAuthorized.includes("heartRate") ||
+          auth.readAuthorized.includes("restingHeartRate"));
 
       this.healthConnectAuthorized = granted;
       this.notifyStatus();
@@ -838,11 +839,12 @@ class HeartRateTelemetryServiceImpl {
     if (!Capacitor.isNativePlatform()) return false;
     try {
       const auth = await Health.checkAuthorization({
-        read: ["heartRate"],
+        read: ["heartRate", "restingHeartRate"],
       });
       const isGranted =
         Array.isArray(auth.readAuthorized) &&
-        auth.readAuthorized.includes("heartRate");
+        (auth.readAuthorized.includes("heartRate") ||
+          auth.readAuthorized.includes("restingHeartRate"));
       this.healthConnectAuthorized = isGranted;
       this.notifyStatus();
       return isGranted;
@@ -853,11 +855,11 @@ class HeartRateTelemetryServiceImpl {
   }
 
   /**
-   * Consulta los registros de HeartRateRecord de los últimos minutos en Health Connect
-   * y los extrae deduplicando contra lecturas ya procesadas.
-   * Retorna objeto con { newReadings, totalSamplesFound, lastSample }
+   * Consulta los registros de HeartRateRecord en Health Connect.
+   * Por defecto busca en las últimas 12 horas (720 min) para capturar cualquier sincronización previa.
+   * Retorna objeto con { newReadings, totalSamplesFound, lastSample, error }
    */
-  async fetchHealthConnectHeartRate(minutesBack = 20) {
+  async fetchHealthConnectHeartRate(minutesBack = 720) {
     if (!Capacitor.isNativePlatform()) {
       return {
         newReadings: [],
@@ -873,39 +875,66 @@ class HeartRateTelemetryServiceImpl {
       ).toISOString();
       const endDate = now.toISOString();
 
-      const result = await Health.readSamples({
-        dataType: "heartRate",
-        startDate,
-        endDate,
-        limit: 50,
-        ascending: true,
-      });
+      let result = null;
+      try {
+        result = await Health.readSamples({
+          dataType: "heartRate",
+          startDate,
+          endDate,
+          limit: 100,
+          ascending: false,
+        });
+      } catch (readErr) {
+        console.warn("Error leyendo heartRate de Health Connect:", readErr);
+      }
 
-      const samples = result?.samples || [];
+      let samples = result?.samples || [];
+
+      // Fallback a restingHeartRate si no hay heartRate continuo
+      if (samples.length === 0) {
+        try {
+          const restingResult = await Health.readSamples({
+            dataType: "restingHeartRate",
+            startDate,
+            endDate,
+            limit: 50,
+            ascending: false,
+          });
+          if (restingResult?.samples?.length > 0) {
+            samples = restingResult.samples;
+          }
+        } catch {}
+      }
+
       const newReadings = [];
 
       for (const sample of samples) {
-        const uniqueKey = `${sample.platformId || ""}_${sample.startDate}_${sample.value}`;
+        const val = Number(sample?.value);
+        if (isNaN(val) || val < 35 || val > 230) continue;
 
-        if (!this.processedSampleTimestamps.has(uniqueKey)) {
+        const uniqueKey = `${sample.platformId || ""}_${sample.startDate}_${val}`;
+        const isNew = !this.processedSampleTimestamps.has(uniqueKey);
+
+        if (isNew) {
           this.processedSampleTimestamps.add(uniqueKey);
 
-          // Limitar tamaño del cache de deduplicación
           if (this.processedSampleTimestamps.size > 2000) {
             const arr = Array.from(this.processedSampleTimestamps);
             this.processedSampleTimestamps = new Set(
               arr.slice(arr.length - 1000),
             );
           }
+        }
 
-          const reading = {
-            bpm: Math.round(sample.value),
-            timestamp: sample.startDate,
-            source: "HEALTH_CONNECT",
-            deviceName: sample.sourceName || "Health Connect (Smartwatch)",
-            mov: 1.0,
-          };
+        const reading = {
+          bpm: Math.round(val),
+          timestamp: sample.startDate,
+          source: "HEALTH_CONNECT",
+          deviceName: sample.sourceName || "Google Health",
+          mov: 1.0,
+        };
 
+        if (isNew) {
           newReadings.push(reading);
           this.dispatchReading(reading);
         }
@@ -922,8 +951,20 @@ class HeartRateTelemetryServiceImpl {
         latestSample = {
           bpm: Math.round(s.value),
           timestamp: s.startDate,
-          sourceName: s.sourceName || "Health Connect",
+          sourceName: s.sourceName || "Google Health",
         };
+
+        // Si ya todos habían sido guardados previamente, igualmente despachamos la última lectura
+        // para que la interfaz se actualice de inmediato con los datos del reloj
+        if (newReadings.length === 0 && latestSample) {
+          this.dispatchReading({
+            bpm: latestSample.bpm,
+            timestamp: latestSample.timestamp,
+            source: "HEALTH_CONNECT",
+            deviceName: latestSample.sourceName,
+            mov: 1.0,
+          });
+        }
       }
 
       return {

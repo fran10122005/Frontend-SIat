@@ -13,7 +13,6 @@ import {
   UserCircle,
   LogOut,
   Lock,
-  LineChart,
   CheckSquare,
   NotebookPen,
   BookOpen,
@@ -41,7 +40,6 @@ export default function Sidebar() {
     { id: "patients", icon: Users, label: "Pacientes" },
     { id: "student", icon: UserCircle, label: "Ficha del Paciente" },
     { id: "historial", icon: TrendingUp, label: "Historial de Evolución" },
-    { id: "home_analytics", icon: LineChart, label: "Análisis en Casa" },
     { id: "rutinas", icon: Puzzle, label: "Terapias y Actividades" },
     { id: "inventario", icon: Cpu, label: "Seguimiento en Vivo" },
     { id: "manual_especialista", icon: BookOpen, label: "Manual de Usuario" },
@@ -118,13 +116,9 @@ export default function Sidebar() {
             const isBlocked =
               (userRole === "ESPECIALISTA" &&
                 !selectedChildId &&
-                [
-                  "rutinas",
-                  "historial",
-                  "home_analytics",
-                  "inventario",
-                  "student",
-                ].includes(item.id)) ||
+                ["rutinas", "historial", "inventario", "student"].includes(
+                  item.id,
+                )) ||
               (userRole !== "ESPECIALISTA" &&
                 item.requiresChild &&
                 !selectedChildId);

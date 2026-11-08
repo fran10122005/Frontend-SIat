@@ -105,6 +105,7 @@ function AdminDashboard({ onNavigate }) {
   const [representantes, setRepresentantes] = useState([]);
   const [editingRep, setEditingRep] = useState(null);
   const [incidentes, setIncidentes] = useState([]);
+  const [bitacorasAdmin, setBitacorasAdmin] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
 
   // UX State
@@ -298,7 +299,36 @@ function AdminDashboard({ onNavigate }) {
           setUsuarios(users.data.data);
           setRepresentantes(deriveRepresentantes(users.data.data));
         },
-        historial_clinico: async () => {},
+        historial_clinico: async () => {
+          try {
+            const [incRes, bitRes, ninosRes, espRes] = await Promise.allSettled(
+              [
+                api.get("/admin/incidentes"),
+                api.get("/admin/bitacoras"),
+                api.get("/admin/ninos"),
+                api.get("/admin/especialistas"),
+              ],
+            );
+            if (!mountedRef.current) return;
+            if (incRes.status === "fulfilled" && incRes.value?.data?.data) {
+              setIncidentes(incRes.value.data.data);
+            }
+            if (bitRes.status === "fulfilled" && bitRes.value?.data?.data) {
+              setBitacorasAdmin(bitRes.value.data.data);
+            }
+            if (ninosRes.status === "fulfilled" && ninosRes.value?.data?.data) {
+              setNinos(ninosRes.value.data.data);
+            }
+            if (espRes.status === "fulfilled" && espRes.value?.data?.data) {
+              setEspecialistas(espRes.value.data.data);
+            }
+          } catch (err) {
+            console.error(
+              "Error al cargar datos de historial clínico admin:",
+              err,
+            );
+          }
+        },
         asignaciones: async () => {
           const [asign, ninos, esp] = await Promise.all([
             api.get("/admin/asignaciones"),
@@ -1091,6 +1121,9 @@ function AdminDashboard({ onNavigate }) {
               <div data-tour="admin-historial_clinico">
                 <HistorialClinicoTab
                   incidentesData={incidentes}
+                  bitacorasData={bitacorasAdmin}
+                  ninosData={ninos}
+                  especialistasData={especialistas}
                   loading={loading}
                 />
               </div>

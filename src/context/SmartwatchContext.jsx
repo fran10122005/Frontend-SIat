@@ -146,8 +146,11 @@ export function SmartwatchProvider({ children }) {
   const writeCharRef = useRef(null);
   const writeCharsRef = useRef([]);
   const pingTimerRef = useRef(null);
+  const simulationTimerRef = useRef(null);
   const lastProcessedTimeRef = useRef(0);
   const activeSessionIdRef = useRef(null);
+  const lastCrisisBroadcastRef = useRef(0);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   const setActiveSessionId = useCallback((id) => {
     setActiveSessionIdState(id);
@@ -252,6 +255,73 @@ export function SmartwatchProvider({ children }) {
     };
   }, [appendTelemetryRecord]);
 
+  // Difundir alerta de crisis en todo el sistema (Notificaciones, Diario de Hogar y Registro de Alertas)
+  const broadcastCrisisAlert = useCallback((data) => {
+    const alertId = `crisis_${Date.now()}`;
+    const timestamp = new Date().toISOString();
+    const bpm = data.bpm || 128;
+    const stress = data.stress || 88;
+    const child = getSavedSelectedChild();
+    const childName = child?.name || "el paciente";
+
+    const notif = {
+      id: alertId,
+      id_alert: alertId,
+      type: "crisis",
+      message: `🚨 Crisis de sobrecarga sensorial detectada (${bpm} BPM, ${stress}% estrés)`,
+      time: timestamp,
+      fec_hora: timestamp,
+      est_dete: "SOBRECARGA_SENSORIAL",
+      ale_meto: "SOBRECARGA_SENSORIAL",
+      bpm_max: bpm,
+      mov_max: data.mov || 3.4,
+      stress_index: stress,
+      fue_efec: null,
+      read: false,
+    };
+
+    // 1. Guardar en notificaciones persistentes
+    try {
+      const raw = localStorage.getItem("siat_notifications");
+      const list = raw ? JSON.parse(raw) : [];
+      const updated = [notif, ...list.filter((n) => n.id !== alertId)].slice(
+        0,
+        30,
+      );
+      localStorage.setItem("siat_notifications", JSON.stringify(updated));
+    } catch {}
+
+    // 2. Guardar en alertas locales para Registro de Alertas (AlertCenter / ParentProfile)
+    try {
+      const raw = localStorage.getItem("siat_local_alerts");
+      const list = raw ? JSON.parse(raw) : [];
+      const updated = [
+        notif,
+        ...list.filter((a) => a.id_alert !== alertId),
+      ].slice(0, 50);
+      localStorage.setItem("siat_local_alerts", JSON.stringify(updated));
+    } catch {}
+
+    // 3. Emitir evento global en el navegador
+    window.dispatchEvent(
+      new CustomEvent("siat:crisis_alert", { detail: notif }),
+    );
+
+    // 4. Emitir por WebSocket si está conectado
+    try {
+      const socket = getSocket();
+      if (socket && socket.connected) {
+        socket.emit("telemetry_data", {
+          nin_codi: child?.id || null,
+          bpm,
+          stress,
+          mov: data.mov || 3.4,
+          time: new Date().toLocaleTimeString("es-ES"),
+        });
+      }
+    } catch {}
+  }, []);
+
   // Publicar y procesar telemetría real recibida
   const processTelemetryData = useCallback(
     (data, source = "internal") => {
@@ -276,6 +346,14 @@ export function SmartwatchProvider({ children }) {
           minute: "2-digit",
           second: "2-digit",
         });
+
+      // Detección automática de crisis por umbral fisiológico
+      if (bpm >= 115 && stress >= 75) {
+        if (nowTs - lastCrisisBroadcastRef.current > 25000) {
+          lastCrisisBroadcastRef.current = nowTs;
+          broadcastCrisisAlert({ bpm, stress, mov });
+        }
+      }
 
       setLiveBpm(bpm);
       setLastBpm(bpm);
@@ -370,6 +448,11 @@ export function SmartwatchProvider({ children }) {
       clearInterval(pingTimerRef.current);
       pingTimerRef.current = null;
     }
+    if (simulationTimerRef.current) {
+      clearInterval(simulationTimerRef.current);
+      simulationTimerRef.current = null;
+    }
+    setIsSimulating(false);
     setIsConnected(false);
     setIsConnecting(false);
     setDeviceName("");
@@ -384,11 +467,15 @@ export function SmartwatchProvider({ children }) {
     setSubscribedChars([]);
     setSensorStatus("idle");
     setConnectionStage(null);
+    setTelemetrySource("NONE");
     deviceRef.current = null;
     notifyCharRef.current = null;
     notifyCharsRef.current = [];
     writeCharRef.current = null;
     writeCharsRef.current = [];
+    try {
+      HeartRateTelemetryService.disconnectBle().catch(() => {});
+    } catch {}
   }, []);
 
   // Parser Universal para paquetes de bytes BLE (GATT estándar, IDW13, Fitpro, Wearfit Pro, Da Fit, Aiwa, Jieli, Qwatch/Umeox)
@@ -571,42 +658,24 @@ export function SmartwatchProvider({ children }) {
         setDeviceName(device.name || "Smartwatch BLE");
         setConnectedDeviceId(device.deviceId || "");
 
-        // 4. Vincular a nivel de sistema Android (Bonding opcional)
+        // Conectar GATT directamente sin forzar bonding que provoca rechazos en smartwatches OEM
         setConnectionStage("connecting_gatt");
-        try {
-          const isBonded = await BleClient.isBonded(device.deviceId);
-          if (!isBonded) {
-            await BleClient.createBond(device.deviceId);
-          }
-        } catch (bondErr) {
-          console.warn("Aviso al vincular (bonding):", bondErr);
-        }
-
-        // 5. Pre-desconectar para limpiar cualquier socket anterior y evitar GATT 133
         try {
           await BleClient.disconnect(device.deviceId);
         } catch {}
-        await new Promise((r) => setTimeout(r, 350));
+        await new Promise((r) => setTimeout(r, 200));
 
-        // 6. Conectar GATT con reintento automático si Android reporta colisión
-        try {
-          await BleClient.connect(device.deviceId, () => {
-            handleDisconnected();
-          });
-        } catch (firstErr) {
-          console.warn("Reintentando conexión tras reset de GATT...", firstErr);
-          await new Promise((r) => setTimeout(r, 700));
-          await BleClient.connect(device.deviceId, () => {
-            handleDisconnected();
-          });
-        }
+        await BleClient.connect(device.deviceId, () => {
+          console.log("[BLE] Desconexión detectada a nivel de hardware");
+          handleDisconnected();
+        });
 
         setConnectionStage("discovering_services");
         const services = await BleClient.getServices(device.deviceId);
         setDiscoveredServices(services || []);
         console.log("Servicios BLE descubiertos en dispositivo:", services);
 
-        // 7. Intentar leer nivel de batería
+        // Intentar leer nivel de batería
         try {
           const bat = await BleClient.read(
             device.deviceId,
@@ -621,7 +690,7 @@ export function SmartwatchProvider({ children }) {
         const nativeWriteChars = [];
         const subs = [];
 
-        // 8. Verificar si existe la característica estándar de ritmo cardíaco (0x2A37)
+        // Verificar si existe la característica estándar de ritmo cardíaco (0x2A37)
         let foundStandardHr = false;
         for (const s of services) {
           if (!s.characteristics) continue;
@@ -663,7 +732,7 @@ export function SmartwatchProvider({ children }) {
                   char: c.uuid,
                   type: c.properties?.notify ? "notify" : "indicate",
                 });
-                await new Promise((r) => setTimeout(r, 50));
+                await new Promise((r) => setTimeout(r, 40));
               } catch (subErr) {
                 console.warn(`No se pudo suscribir a ${c.uuid}:`, subErr);
               }
@@ -683,9 +752,21 @@ export function SmartwatchProvider({ children }) {
           }
         }
 
+        // VALIDACIÓN CRUCIAL: Si no se logró suscribir a ninguna característica de telemetría,
+        // no marcar el reloj como conectado. Desconectar y guiar al usuario hacia Google Health.
+        if (subs.length === 0) {
+          try {
+            await BleClient.disconnect(device.deviceId);
+          } catch {}
+          handleDisconnected();
+          throw new Error(
+            "El dispositivo no expone lecturas de ritmo cardíaco accesibles por Bluetooth directo. Te sugerimos sincronizarlo mediante la opción de Google Health.",
+          );
+        }
+
         setSubscribedChars(subs);
 
-        // 9. Enviar activación únicamente en relojes OEM propietarios (no estándar SIG)
+        // Enviar activación únicamente en relojes OEM propietarios (no estándar SIG)
         if (!foundStandardHr && nativeWriteChars.length > 0) {
           setConnectionStage("activating_sensor");
           const safeTriggers = [
@@ -736,11 +817,13 @@ export function SmartwatchProvider({ children }) {
 
         setConnectionStage("ready");
         setIsConnected(true);
+        setTelemetrySource("BLE_DIRECT");
         setIsConnecting(false);
         setSensorStatus("waiting_skin");
         return;
       } catch (nativeErr) {
         console.error("Error BLE nativo:", nativeErr);
+        handleDisconnected();
         setIsConnecting(false);
         setIsConnected(false);
         setConnectionStage(null);
@@ -891,12 +974,25 @@ export function SmartwatchProvider({ children }) {
         }
       }
 
+      // Validación Web Bluetooth: asegurar que al menos un canal notifique lecturas
+      if (!notifyCharRef.current && notifyChars.length === 0) {
+        if (device.gatt?.connected) {
+          device.gatt.disconnect();
+        }
+        handleDisconnected();
+        throw new Error(
+          "No se detectó un canal de ritmo cardíaco compatible en este reloj por Bluetooth Web. Te sugerimos sincronizarlo mediante la app móvil con Google Health.",
+        );
+      }
+
       setConnectionStage("ready");
       setIsConnected(true);
+      setTelemetrySource("BLE_DIRECT");
       setIsConnecting(false);
       setSensorStatus("waiting_skin");
     } catch (err) {
       console.error("Error al conectar Smartwatch BLE:", err);
+      handleDisconnected();
       setIsConnecting(false);
       setIsConnected(false);
       setConnectionStage(null);
@@ -914,6 +1010,13 @@ export function SmartwatchProvider({ children }) {
       clearInterval(pingTimerRef.current);
       pingTimerRef.current = null;
     }
+    if (simulationTimerRef.current) {
+      clearInterval(simulationTimerRef.current);
+      simulationTimerRef.current = null;
+    }
+    setIsSimulating(false);
+    setSimulationModeState(null);
+
     try {
       await HeartRateTelemetryService.disconnectBle();
     } catch {}
@@ -930,10 +1033,13 @@ export function SmartwatchProvider({ children }) {
       deviceRef.current.gatt.disconnect();
     }
     handleDisconnected();
-    if (telemetrySource === "BLE_DIRECT") {
-      setTelemetrySource("NONE");
-    }
-  }, [handleDisconnected, telemetrySource]);
+    setTelemetrySource("NONE");
+    setLiveBpm(null);
+    setLastBpm(null);
+    setLiveStress(null);
+    setLiveMov(null);
+    setSensorStatus("idle");
+  }, [handleDisconnected]);
 
   // Métodos de Control para Android Health Connect
   const requestHealthConnectPermissions = useCallback(async () => {
@@ -1001,14 +1107,201 @@ export function SmartwatchProvider({ children }) {
     [],
   );
 
-  // Control de modo de simulación clínica (solo si el especialista lo activa explícitamente)
+  // Simulación Fisiológica Dinámica y Realista:
+  // mode = "normal" (pulso normal 72-88 BPM) | "crisis" (taquicardia / crisis 118-144 BPM)
+  const toggleRealisticSimulation = useCallback(
+    (mode = "normal") => {
+      const isCrisis = mode === "crisis";
+
+      // Si ya está corriendo en este mismo modo, lo apagamos (toggle)
+      if (simulationTimerRef.current && simulationMode === mode) {
+        clearInterval(simulationTimerRef.current);
+        simulationTimerRef.current = null;
+        setIsSimulating(false);
+        setSimulationModeState(null);
+        handleDisconnected();
+        setTelemetrySource("NONE");
+        setLiveBpm(null);
+        setLastBpm(null);
+        setLiveStress(null);
+        setLiveMov(null);
+        setSensorStatus("idle");
+        return false; // se apagó
+      }
+
+      // Si había un timer previo corriendo (ej. cambiando entre normal y crisis), limpiarlo
+      if (simulationTimerRef.current) {
+        clearInterval(simulationTimerRef.current);
+        simulationTimerRef.current = null;
+      }
+
+      setIsSimulating(true);
+      setSimulationModeState(mode);
+      setIsConnected(true);
+      setTelemetrySource("HEALTH_CONNECT");
+      setDeviceName(
+        isCrisis
+          ? "Smartwatch (Simulación Crisis)"
+          : "Smartwatch (Simulación Normal)",
+      );
+      setSensorStatus("streaming");
+
+      let currentBpm = isCrisis ? 128 : 78;
+      let breathPhase = 0;
+      let trend = 0;
+
+      const emitNextSample = () => {
+        if (isCrisis) {
+          // Crisis de sobrecarga: Taquicardia, hiperventilación, estrés alto y agitación motora
+          breathPhase += 0.55;
+          const respiratoryEffect = Math.sin(breathPhase) * 4.2;
+          if (Math.random() > 0.45) {
+            trend = Math.max(
+              -5,
+              Math.min(6, trend + (Math.random() > 0.48 ? 1 : -1)),
+            );
+          }
+          const microJitter = (Math.random() - 0.5) * 3.0;
+          const rawBpm = Math.round(
+            128 + respiratoryEffect + trend + microJitter,
+          );
+          currentBpm = Math.max(118, Math.min(145, rawBpm));
+
+          const mov = parseFloat((2.8 + Math.random() * 1.6).toFixed(2));
+          const stress = Math.max(
+            82,
+            Math.min(
+              98,
+              Math.round(85 + (currentBpm - 120) * 0.4 + Math.random() * 3),
+            ),
+          );
+
+          const timeStr = new Date().toLocaleTimeString("es-ES", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+
+          HeartRateTelemetryService.dispatchReading({
+            bpm: currentBpm,
+            timestamp: new Date().toISOString(),
+            source: "HEALTH_CONNECT",
+            deviceName: "Smartwatch (Simulación Crisis)",
+            mov,
+            stress,
+            time: timeStr,
+          });
+
+          processTelemetryData(
+            {
+              bpm: currentBpm,
+              stress,
+              mov,
+              time: timeStr,
+              source: "HEALTH_CONNECT",
+            },
+            "simulation",
+          );
+
+          const nowSample = Date.now();
+          if (nowSample - lastCrisisBroadcastRef.current > 25000) {
+            lastCrisisBroadcastRef.current = nowSample;
+            broadcastCrisisAlert({ bpm: currentBpm, stress, mov });
+          }
+        } else {
+          // Pulso normal: Calma, respiración sinusal suave, estrés bajo y reposo motor
+          breathPhase += 0.38;
+          const respiratoryEffect = Math.sin(breathPhase) * 2.2;
+          if (Math.random() > 0.55) {
+            trend = Math.max(
+              -3,
+              Math.min(3, trend + (Math.random() > 0.5 ? 1 : -1)),
+            );
+          }
+          const microJitter = (Math.random() - 0.5) * 1.6;
+          const rawBpm = Math.round(
+            79 + respiratoryEffect + trend + microJitter,
+          );
+          currentBpm = Math.max(72, Math.min(88, rawBpm));
+
+          const mov = parseFloat((0.95 + Math.random() * 0.35).toFixed(2));
+          const stress = Math.max(
+            16,
+            Math.min(34, Math.round(((currentBpm - 65) / 55) * 55)),
+          );
+
+          const timeStr = new Date().toLocaleTimeString("es-ES", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+
+          HeartRateTelemetryService.dispatchReading({
+            bpm: currentBpm,
+            timestamp: new Date().toISOString(),
+            source: "HEALTH_CONNECT",
+            deviceName: "Smartwatch (Simulación Normal)",
+            mov,
+            stress,
+            time: timeStr,
+          });
+
+          processTelemetryData(
+            {
+              bpm: currentBpm,
+              stress,
+              mov,
+              time: timeStr,
+              source: "HEALTH_CONNECT",
+            },
+            "simulation",
+          );
+        }
+      };
+
+      if (isCrisis) {
+        lastCrisisBroadcastRef.current = Date.now();
+        broadcastCrisisAlert({ bpm: currentBpm, stress: 92, mov: 3.2 });
+      }
+
+      // Emitir primera muestra de inmediato
+      emitNextSample();
+
+      // Actualizar continuamente: cada 1200ms en crisis, cada 1600ms en normal
+      simulationTimerRef.current = setInterval(
+        emitNextSample,
+        isCrisis ? 1200 : 1600,
+      );
+      return true; // se encendió
+    },
+    [
+      simulationMode,
+      handleDisconnected,
+      processTelemetryData,
+      broadcastCrisisAlert,
+    ],
+  );
+
+  // Control de modo de simulación clínica
   const setSimulationMode = useCallback((mode) => {
     setSimulationModeState(mode);
   }, []);
 
   const stopSimulation = useCallback(() => {
+    if (simulationTimerRef.current) {
+      clearInterval(simulationTimerRef.current);
+      simulationTimerRef.current = null;
+    }
+    setIsSimulating(false);
     setSimulationModeState(null);
-  }, []);
+    handleDisconnected();
+    setTelemetrySource("NONE");
+    setLiveBpm(null);
+    setLastBpm(null);
+    setLiveStress(null);
+    setLiveMov(null);
+    setSensorStatus("idle");
+  }, [handleDisconnected]);
 
   // Escuchar stream WebSocket del servidor SIAT
   useEffect(() => {
@@ -1156,6 +1449,8 @@ export function SmartwatchProvider({ children }) {
     sendManualBleCommand,
     setSimulationMode,
     stopSimulation,
+    isSimulating,
+    toggleRealisticSimulation,
   };
 
   return (
