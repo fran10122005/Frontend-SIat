@@ -22,7 +22,10 @@ import {
   BleClient,
   numbersToDataView,
 } from "@capacitor-community/bluetooth-le";
-import HeartRateTelemetryService from "../services/heartRateTelemetryService";
+import HeartRateTelemetryService, {
+  parseBluetoothSigHeartRate,
+  parseOemHeartRateBytes,
+} from "../services/heartRateTelemetryService";
 
 const SmartwatchContext = createContext();
 
@@ -390,7 +393,7 @@ export function SmartwatchProvider({ children }) {
 
   // Parser Universal para paquetes de bytes BLE (GATT estándar, IDW13, Fitpro, Wearfit Pro, Da Fit, Aiwa, Jieli, Qwatch/Umeox)
   const handleBleRawData = useCallback(
-    (event) => {
+    (event, characteristicUuid = "") => {
       let dataView = null;
       if (event instanceof DataView) {
         dataView = event;
@@ -412,6 +415,21 @@ export function SmartwatchProvider({ children }) {
 
       if (!dataView || dataView.byteLength === 0) return;
 
+      const charUuid = (
+        characteristicUuid ||
+        event?.target?.uuid ||
+        ""
+      ).toLowerCase();
+
+      // Si es paquete de nivel de batería (0x2A19), actualizar batería y terminar sin procesar como pulso
+      if (charUuid.includes("2a19")) {
+        const bat = dataView.getUint8(0);
+        if (bat >= 0 && bat <= 100) {
+          setBatteryLevel(bat);
+        }
+        return;
+      }
+
       const bytes = new Uint8Array(
         dataView.buffer,
         dataView.byteOffset || 0,
@@ -423,79 +441,20 @@ export function SmartwatchProvider({ children }) {
 
       let parsedBpm = null;
 
-      // 1. Caso Estándar SIG 0x2A37 (Heart Rate Measurement)
-      try {
-        const flags = dataView.getUint8(0);
-        const is16Bit = flags & 0x01;
-        if (is16Bit && dataView.byteLength >= 3) {
-          parsedBpm = dataView.getUint16(1, true);
-        } else if (dataView.byteLength >= 2) {
-          parsedBpm = dataView.getUint8(1);
+      // 1. Si proviene de la característica oficial 0x2A37, procesar con parser Bluetooth SIG estricto
+      if (charUuid.includes("2a37")) {
+        parsedBpm = parseBluetoothSigHeartRate(dataView);
+      } else if (charUuid) {
+        // Característica OEM o genérica: intentar primero parser adaptativo OEM para evitar falsos positivos de cabecera
+        parsedBpm = parseOemHeartRateBytes(dataView);
+        if (!parsedBpm) {
+          parsedBpm = parseBluetoothSigHeartRate(dataView);
         }
-      } catch {
-        // Ignorar si no es estructura estándar
-      }
-
-      // 2. Patrones específicos de fabricantes (Aiwa / Umeox, Da Fit, Fitpro, Wearfit, Jieli, Qwatch)
-      if (!parsedBpm || parsedBpm < 35 || parsedBpm > 240) {
-        // Da Fit / MoYoung / Oplayer: [0x04, 0x01, bpm, ...] o [0x05, 0x01, bpm, ...]
-        if ((bytes[0] === 0x04 || bytes[0] === 0x05) && bytes.length >= 3) {
-          if (bytes[2] >= 45 && bytes[2] <= 215) parsedBpm = bytes[2];
-          else if (bytes[1] >= 45 && bytes[1] <= 215) parsedBpm = bytes[1];
-        }
-        // Fitpro / HryFine: [0xCD, 0x00, 0x02, bpm, ...]
-        else if (bytes[0] === 0xcd && bytes.length >= 4) {
-          if (bytes[3] >= 45 && bytes[3] <= 215) parsedBpm = bytes[3];
-          else if (bytes[2] >= 45 && bytes[2] <= 215) parsedBpm = bytes[2];
-        }
-        // Wearfit / Wearfit Pro: [0xAB, len, ..., bpm]
-        else if (bytes[0] === 0xab && bytes.length >= 4) {
-          for (let i = 2; i < bytes.length; i++) {
-            if (
-              bytes[i] >= 45 &&
-              bytes[i] <= 215 &&
-              bytes[i] !== 0x31 &&
-              bytes[i] !== 0x32
-            ) {
-              parsedBpm = bytes[i];
-              break;
-            }
-          }
-        }
-        // Qwatch / Umeox: [0xBA, len, ..., bpm]
-        else if (bytes[0] === 0xba && bytes.length >= 3) {
-          for (let i = 2; i < bytes.length; i++) {
-            if (bytes[i] >= 45 && bytes[i] <= 215) {
-              parsedBpm = bytes[i];
-              break;
-            }
-          }
-        }
-
-        // Búsqueda adaptativa en payload fisiológico (omitiendo encabezados de control comunes)
-        if (!parsedBpm || parsedBpm < 35 || parsedBpm > 240) {
-          const startIdx = bytes.length > 2 ? 1 : 0;
-          for (let i = startIdx; i < bytes.length; i++) {
-            const b = bytes[i];
-            if (
-              b >= 45 &&
-              b <= 210 &&
-              b !== 0xcd &&
-              b !== 0xab &&
-              b !== 0xba &&
-              b !== 0xd0 &&
-              b !== 0xd1 &&
-              b !== 0xff &&
-              b !== 0x31 &&
-              b !== 0x32 &&
-              b !== 0x5a &&
-              b !== 0xaa &&
-              b !== 0x55
-            ) {
-              parsedBpm = b;
-              break;
-            }
-          }
+      } else {
+        // Sin UUID específico: primero SIG si cumple formato estricto, luego OEM
+        parsedBpm = parseBluetoothSigHeartRate(dataView);
+        if (!parsedBpm) {
+          parsedBpm = parseOemHeartRateBytes(dataView);
         }
       }
 
@@ -662,10 +621,33 @@ export function SmartwatchProvider({ children }) {
         const nativeWriteChars = [];
         const subs = [];
 
-        // 8. Suscribir ordenadamente a todas las características notificables (con delay para evitar colisiones CCCD)
+        // 8. Verificar si existe la característica estándar de ritmo cardíaco (0x2A37)
+        let foundStandardHr = false;
         for (const s of services) {
           if (!s.characteristics) continue;
           for (const c of s.characteristics) {
+            if (c.uuid.toLowerCase().includes("2a37")) {
+              foundStandardHr = true;
+              break;
+            }
+          }
+          if (foundStandardHr) break;
+        }
+
+        // Suscribir ordenadamente a las características necesarias
+        for (const s of services) {
+          if (!s.characteristics) continue;
+          for (const c of s.characteristics) {
+            const cUuid = c.uuid.toLowerCase();
+            const isHrChar = cUuid.includes("2a37");
+            const isBatteryChar = cUuid.includes("2a19");
+
+            // Si el reloj soporta 0x2A37 estándar, SOLO suscribirse a 2A37 y 2A19 (batería)
+            // Evitamos suscribir a canales de control/UART que emiten respuestas ACK (0x81 = 129)
+            if (foundStandardHr && !isHrChar && !isBatteryChar) {
+              continue;
+            }
+
             if (c.properties?.notify || c.properties?.indicate) {
               try {
                 await BleClient.startNotifications(
@@ -673,7 +655,7 @@ export function SmartwatchProvider({ children }) {
                   s.uuid,
                   c.uuid,
                   (value) => {
-                    handleBleRawData(value);
+                    handleBleRawData(value, c.uuid);
                   },
                 );
                 subs.push({
@@ -687,8 +669,11 @@ export function SmartwatchProvider({ children }) {
               }
             }
 
-            // Registrar canales de escritura para activación
-            if (c.properties?.write || c.properties?.writeWithoutResponse) {
+            // Registrar canales de escritura para activación (únicamente para relojes OEM no estándar)
+            if (
+              !foundStandardHr &&
+              (c.properties?.write || c.properties?.writeWithoutResponse)
+            ) {
               nativeWriteChars.push({
                 service: s.uuid,
                 char: c.uuid,
@@ -700,14 +685,13 @@ export function SmartwatchProvider({ children }) {
 
         setSubscribedChars(subs);
 
-        // 9. Enviar un pulso inicial suave de activación a características de escritura rápida
-        if (nativeWriteChars.length > 0) {
+        // 9. Enviar activación únicamente en relojes OEM propietarios (no estándar SIG)
+        if (!foundStandardHr && nativeWriteChars.length > 0) {
           setConnectionStage("activating_sensor");
           const safeTriggers = [
             [0x04, 0x01, 0x01], // Da Fit / Linwear
             [0xcd, 0x00, 0x01, 0x01], // Fitpro
             [0xba, 0x01, 0x01], // Qwatch / Umeox
-            [0x01], // SIG Control Point
           ];
           for (const wc of nativeWriteChars) {
             if (wc.properties.writeWithoutResponse) {
@@ -725,6 +709,29 @@ export function SmartwatchProvider({ children }) {
               }
             }
           }
+
+          // Ping suave solo si no se reciben lecturas por más de 15 segundos
+          pingTimerRef.current = setInterval(() => {
+            const timeSinceLast =
+              Date.now() - (lastProcessedTimeRef.current || 0);
+            if (timeSinceLast > 15000 && nativeWriteChars.length > 0) {
+              for (const wc of nativeWriteChars) {
+                if (wc.properties.writeWithoutResponse) {
+                  for (const cmdNums of safeTriggers) {
+                    try {
+                      const cmdDataView = numbersToDataView(cmdNums);
+                      BleClient.writeWithoutResponse(
+                        device.deviceId,
+                        wc.service,
+                        wc.char,
+                        cmdDataView,
+                      ).catch(() => {});
+                    } catch {}
+                  }
+                }
+              }
+            }
+          }, 12000);
         }
 
         setConnectionStage("ready");
@@ -795,9 +802,8 @@ export function SmartwatchProvider({ children }) {
             "00002a37-0000-1000-8000-00805f9b34fb",
           );
           await hrChar.startNotifications();
-          hrChar.addEventListener(
-            "characteristicvaluechanged",
-            handleBleRawData,
+          hrChar.addEventListener("characteristicvaluechanged", (e) =>
+            handleBleRawData(e, "00002a37"),
           );
           notifyCharRef.current = hrChar;
           notifyChars.push(hrChar);
@@ -808,73 +814,81 @@ export function SmartwatchProvider({ children }) {
           );
         }
 
+        // Batería en modo estándar
         try {
-          const hrCtrl = await hrService.getCharacteristic(
-            "heart_rate_control_point",
+          const batService = await server.getPrimaryService("battery_service");
+          const batChar = await batService.getCharacteristic("battery_level");
+          await batChar.startNotifications();
+          batChar.addEventListener("characteristicvaluechanged", (e) =>
+            handleBleRawData(e, "00002a19"),
           );
-          writeChars.push(hrCtrl);
-        } catch {
-          // Opcional en el perfil Heart Rate
-        }
+        } catch {}
       } catch {
         // Servicio Heart Rate estándar no presente
       }
 
-      // 2. Descubrir TODOS los servicios primarios para capturar canales propietarios (Fitpro, IDO, Da Fit, Wearfit)
-      try {
-        const services = await server.getPrimaryServices();
-        for (const service of services) {
-          try {
-            const characteristics = await service.getCharacteristics();
-            for (const char of characteristics) {
-              if (char.properties.notify || char.properties.indicate) {
-                if (!notifyChars.includes(char)) {
-                  try {
-                    await char.startNotifications();
-                    char.addEventListener(
-                      "characteristicvaluechanged",
-                      handleBleRawData,
-                    );
-                    notifyChars.push(char);
-                    if (!notifyCharRef.current) notifyCharRef.current = char;
-                  } catch {
-                    // Característica no suscriptible
+      // 2. Si no es estándar SIG, descubrir servicios primarios para capturar canales propietarios (Fitpro, IDO, Da Fit, Wearfit)
+      if (!notifyCharRef.current) {
+        try {
+          const services = await server.getPrimaryServices();
+          for (const service of services) {
+            try {
+              const characteristics = await service.getCharacteristics();
+              for (const char of characteristics) {
+                if (char.properties.notify || char.properties.indicate) {
+                  if (!notifyChars.includes(char)) {
+                    try {
+                      await char.startNotifications();
+                      char.addEventListener("characteristicvaluechanged", (e) =>
+                        handleBleRawData(e, char.uuid),
+                      );
+                      notifyChars.push(char);
+                      if (!notifyCharRef.current) notifyCharRef.current = char;
+                    } catch {
+                      // Característica no suscriptible
+                    }
+                  }
+                }
+                if (
+                  char.properties.write ||
+                  char.properties.writeWithoutResponse
+                ) {
+                  if (!writeChars.includes(char)) {
+                    writeChars.push(char);
                   }
                 }
               }
-              if (
-                char.properties.write ||
-                char.properties.writeWithoutResponse
-              ) {
-                if (!writeChars.includes(char)) {
-                  writeChars.push(char);
-                }
-              }
+            } catch (svcCharErr) {
+              console.warn("Error leyendo características:", svcCharErr);
             }
-          } catch (svcCharErr) {
-            console.warn("Error leyendo características:", svcCharErr);
           }
+        } catch (allSvcErr) {
+          console.warn("Error consultando servicios primarios:", allSvcErr);
         }
-      } catch (allSvcErr) {
-        console.warn("Error consultando servicios primarios:", allSvcErr);
-      }
 
-      writeCharsRef.current = writeChars;
-      notifyCharsRef.current = notifyChars;
-      if (writeChars.length > 0) {
-        writeCharRef.current = writeChars[0];
-      }
+        writeCharsRef.current = writeChars;
+        notifyCharsRef.current = notifyChars;
+        if (writeChars.length > 0) {
+          writeCharRef.current = writeChars[0];
+        }
 
-      // Enviar comando para activar el sensor óptico en el reloj
-      setConnectionStage("activating_sensor");
-      if (writeChars.length > 0) {
-        await sendAllActivationCommands(writeChars);
-        // Enviar ping cada 12 segundos para mantener el sensor activo
-        pingTimerRef.current = setInterval(() => {
-          if (writeCharsRef.current && writeCharsRef.current.length > 0) {
-            sendAllActivationCommands(writeCharsRef.current).catch(() => {});
-          }
-        }, 12000);
+        // Enviar comando para activar el sensor óptico en el reloj OEM
+        setConnectionStage("activating_sensor");
+        if (writeChars.length > 0) {
+          await sendAllActivationCommands(writeChars);
+          // Enviar ping cada 12 segundos SOLO si no se reciben lecturas por más de 15s
+          pingTimerRef.current = setInterval(() => {
+            const timeSinceLast =
+              Date.now() - (lastProcessedTimeRef.current || 0);
+            if (
+              timeSinceLast > 15000 &&
+              writeCharsRef.current &&
+              writeCharsRef.current.length > 0
+            ) {
+              sendAllActivationCommands(writeCharsRef.current).catch(() => {});
+            }
+          }, 12000);
+        }
       }
 
       setConnectionStage("ready");

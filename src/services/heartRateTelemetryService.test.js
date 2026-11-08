@@ -41,9 +41,40 @@ describe("HeartRateTelemetryService & SIG 0x2A37 Parser", () => {
     const daFitBuffer = new Uint8Array([0x04, 0x01, 82]);
     expect(parseOemHeartRateBytes(new DataView(daFitBuffer.buffer))).toBe(82);
 
+    // Da Fit lectura real 89 BPM cuando el reloj muestra 89
+    const daFit89 = new Uint8Array([0x04, 0x01, 89]);
+    expect(parseOemHeartRateBytes(new DataView(daFit89.buffer))).toBe(89);
+
+    // Da Fit respuesta ACK [0x04, 0x81, 0x01] NO debe confundirse con 129 BPM (0x81 = 129)
+    const daFitAck = new Uint8Array([0x04, 0x81, 0x01]);
+    expect(parseOemHeartRateBytes(new DataView(daFitAck.buffer))).toBeNull();
+    expect(
+      parseBluetoothSigHeartRate(new DataView(daFitAck.buffer)),
+    ).toBeNull();
+
     // Fitpro: [0xCD, 0x00, 0x02, bpm]
     const fitproBuffer = new Uint8Array([0xcd, 0x00, 0x02, 90]);
     expect(parseOemHeartRateBytes(new DataView(fitproBuffer.buffer))).toBe(90);
+
+    // Fitpro ACK [0xCD, 0x81, 0x01] NO debe confundirse con 129 BPM
+    const fitproAck = new Uint8Array([0xcd, 0x81, 0x01]);
+    expect(parseOemHeartRateBytes(new DataView(fitproAck.buffer))).toBeNull();
+    expect(
+      parseBluetoothSigHeartRate(new DataView(fitproAck.buffer)),
+    ).toBeNull();
+
+    // Paquete corto ACK genérico [0x81, 0x01] NO debe confundirse con 129 BPM
+    const genericAck = new Uint8Array([0x81, 0x01]);
+    expect(parseOemHeartRateBytes(new DataView(genericAck.buffer))).toBeNull();
+    expect(
+      parseBluetoothSigHeartRate(new DataView(genericAck.buffer)),
+    ).toBeNull();
+
+    // Pulso real de 129 BPM en formato estándar Bluetooth SIG 0x2A37 debe ser aceptado
+    const legitimate129Sig = new Uint8Array([0x06, 129]);
+    expect(
+      parseBluetoothSigHeartRate(new DataView(legitimate129Sig.buffer)),
+    ).toBe(129);
   });
 
   it("debe emitir lecturas bajo la interfaz estandarizada con source BLE_DIRECT y HEALTH_CONNECT", () => {

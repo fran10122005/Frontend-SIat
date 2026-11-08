@@ -55,6 +55,19 @@ export function parseBluetoothSigHeartRate(dataView) {
 
   try {
     const flags = dataView.getUint8(0);
+
+    // En Bluetooth SIG 0x2A37 los bits 5, 6 y 7 están reservados y DEBEN ser 0.
+    // Si están activos (ej: 0x81, 0xCD, 0xAB, 0xBA, 0x80), NO es un paquete 0x2A37.
+    if ((flags & 0xe0) !== 0) {
+      return null;
+    }
+
+    // Cabeceras de paquetes de control OEM (Da Fit: 0x04, 0x05) con longitud corta (<= 4 bytes)
+    // corresponden a respuestas de comando/ACK propietarias y no deben confundirse con 0x2A37.
+    if ((flags === 0x04 || flags === 0x05) && dataView.byteLength <= 4) {
+      return null;
+    }
+
     // Bit 0: 0 = UINT8 (1 byte en offset 1), 1 = UINT16 (2 bytes Little-Endian en offset 1 y 2)
     const is16Bit = (flags & 0x01) !== 0;
 
@@ -69,6 +82,11 @@ export function parseBluetoothSigHeartRate(dataView) {
       bpm = dataView.getUint8(1);
     }
 
+    // Si el sensor reporta contacto con la piel soportado (bit 2 = 1) pero no detectado (bit 1 = 0), el reloj no está en la muñeca
+    if ((flags & 0x04) !== 0 && (flags & 0x02) === 0) {
+      return null;
+    }
+
     if (bpm >= 35 && bpm <= 240) {
       return bpm;
     }
@@ -79,7 +97,7 @@ export function parseBluetoothSigHeartRate(dataView) {
   }
 }
 
-// Parser adaptativo secundario para relojes OEM (Da Fit, Fitpro, Aiwa, Wearfit) cuando el paquete no es 0x2A37 estándar
+// Parser adaptativo secundario para relojes OEM (Da Fit, Fitpro, Aiwa, Wearfit, Qwatch) cuando el paquete no es 0x2A37 estándar
 export function parseOemHeartRateBytes(dataView) {
   if (!dataView || dataView.byteLength < 2) return null;
   const bytes = new Uint8Array(
@@ -88,36 +106,94 @@ export function parseOemHeartRateBytes(dataView) {
     dataView.byteLength,
   );
 
-  // Da Fit / Moyoung / Oplayer
+  // Filtrar respuestas ACK cortas (0x80..0x8F, especialmente 0x81 = 129 que es ACK para cmd 0x01)
+  if (bytes.length <= 4 && bytes.some((b) => b >= 0x80 && b <= 0x8f)) {
+    return null;
+  }
+
+  // Da Fit / Moyoung / Oplayer: [0x04/0x05, cmd, bpm, ...]
   if ((bytes[0] === 0x04 || bytes[0] === 0x05) && bytes.length >= 3) {
-    if (bytes[2] >= 45 && bytes[2] <= 215) return bytes[2];
-    if (bytes[1] >= 45 && bytes[1] <= 215) return bytes[1];
+    // Si bytes[1] es código ACK (0x80..0x8F, ej: 0x81 = 129), NO es telemetría de pulso
+    if (bytes[1] >= 0x80 && bytes[1] <= 0x8f) return null;
+
+    // Lectura real de pulso: bytes[2] contiene el pulso real (ej: 89)
+    if (bytes[2] >= 35 && bytes[2] <= 220) return bytes[2];
+    if (bytes.length >= 4 && bytes[3] >= 35 && bytes[3] <= 220) return bytes[3];
+    return null;
   }
 
   // Fitpro / HryFine: [0xCD, 0x00, 0x02, bpm, ...]
   if (bytes[0] === 0xcd && bytes.length >= 4) {
-    if (bytes[3] >= 45 && bytes[3] <= 215) return bytes[3];
-    if (bytes[2] >= 45 && bytes[2] <= 215) return bytes[2];
+    if (bytes[1] >= 0x80 || bytes[2] >= 0x80) return null;
+    if (bytes[3] >= 35 && bytes[3] <= 220) return bytes[3];
+    if (bytes[2] >= 35 && bytes[2] <= 220) return bytes[2];
+    return null;
   }
 
   // Wearfit / Wearfit Pro
   if (bytes[0] === 0xab && bytes.length >= 4) {
-    for (let i = 2; i < bytes.length; i++) {
-      if (
-        bytes[i] >= 45 &&
-        bytes[i] <= 215 &&
-        bytes[i] !== 0x31 &&
-        bytes[i] !== 0x32
-      ) {
-        return bytes[i];
+    if (bytes[1] >= 0x80 || bytes[2] >= 0x80) return null;
+    for (let i = 2; i < bytes.length - 1; i++) {
+      if (bytes[i] === 0x09 && bytes[i + 1] === 0x01 && i + 2 < bytes.length) {
+        const val = bytes[i + 2];
+        if (val >= 35 && val <= 220) return val;
       }
     }
+    for (let i = 2; i < bytes.length; i++) {
+      const val = bytes[i];
+      if (
+        val >= 35 &&
+        val <= 220 &&
+        val !== 0x31 &&
+        val !== 0x32 &&
+        val !== 0x51 &&
+        val !== 0x09 &&
+        val !== 0x01 &&
+        !(val >= 0x80 && val <= 0x8f)
+      ) {
+        return val;
+      }
+    }
+    return null;
   }
 
   // Qwatch / Umeox: [0xBA, ...]
   if (bytes[0] === 0xba && bytes.length >= 3) {
-    for (let i = 2; i < bytes.length; i++) {
-      if (bytes[i] >= 45 && bytes[i] <= 215) return bytes[i];
+    if (bytes[1] >= 0x80 && bytes[1] <= 0x8f) return null;
+    if (bytes[2] >= 35 && bytes[2] <= 220) return bytes[2];
+    return null;
+  }
+
+  // IDO / VeryFit: [0xD0, 0x01, bpm, ...]
+  if (bytes[0] === 0xd0 && bytes.length >= 3) {
+    if (bytes[1] >= 0x80 && bytes[1] <= 0x8f) return null;
+    if (bytes[2] >= 35 && bytes[2] <= 220) return bytes[2];
+    return null;
+  }
+
+  // Fallback adaptativo: buscar byte fisiológico en paquetes de al menos 4 bytes, ignorando encabezados y ACKs
+  if (bytes.length >= 4) {
+    for (let i = 1; i < bytes.length; i++) {
+      const b = bytes[i];
+      if (
+        b >= 40 &&
+        b <= 210 &&
+        !(b >= 0x80 && b <= 0x8f) && // Jamás confundir bytes de ACK (0x81 = 129) con BPM
+        b !== 0xcd &&
+        b !== 0xab &&
+        b !== 0xba &&
+        b !== 0xd0 &&
+        b !== 0xd1 &&
+        b !== 0xff &&
+        b !== 0x00 &&
+        b !== 0x31 &&
+        b !== 0x32 &&
+        b !== 0x5a &&
+        b !== 0xaa &&
+        b !== 0x55
+      ) {
+        return b;
+      }
     }
   }
 
