@@ -758,7 +758,12 @@ export default function AgendaDiaria() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto no-scrollbar max-h-[460px]">
-                      {routines.map((routine) => (
+                      {(userRole === "REPRESENTANTE"
+                        ? routines.filter(
+                            (r) => r.visibility !== "ESPECIALISTA",
+                          )
+                        : routines
+                      ).map((routine) => (
                         <div
                           key={routine.id}
                           onClick={() => setPreviewRoutine(routine)}

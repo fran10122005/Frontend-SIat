@@ -22,6 +22,8 @@ import {
   X,
   Loader2,
   ExternalLink,
+  Lock,
+  Users,
 } from "lucide-react";
 
 import {
@@ -43,6 +45,7 @@ const EMPTY_FORM = {
   category: "",
   durationStr: "15 min",
   difficulty: "Baja",
+  visibility: "AMBOS",
   description: "",
   materials: "",
   steps: [{ id: Date.now(), text: "", time: "5 min" }],
@@ -202,6 +205,7 @@ export default function Routines() {
     cat_codi: "",
     dificultad: "",
     estado: "",
+    visibilidad: "",
   });
 
   const filteredRoutines = useMemo(() => {
@@ -216,12 +220,23 @@ export default function Routines() {
       if (filters.dificultad && r.difficulty !== filters.dificultad)
         return false;
       if (filters.estado && r.status !== filters.estado) return false;
+      if (
+        filters.visibilidad &&
+        (r.visibility || "AMBOS") !== filters.visibilidad
+      )
+        return false;
       return true;
     });
   }, [routines, filters]);
 
   const clearFilters = () =>
-    setFilters({ busqueda: "", cat_codi: "", dificultad: "", estado: "" });
+    setFilters({
+      busqueda: "",
+      cat_codi: "",
+      dificultad: "",
+      estado: "",
+      visibilidad: "",
+    });
 
   // --- Category management modal ---
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
@@ -346,6 +361,7 @@ export default function Routines() {
       category: routine.category || categoryOptions[0] || "Higiene",
       durationStr: routine.act_time ? `${routine.act_time} min` : "15 min",
       difficulty: routine.difficulty || "Baja",
+      visibility: routine.visibility || "AMBOS",
       description: routine.description || "",
       materials: routine.materials || "",
       steps:
@@ -618,7 +634,8 @@ export default function Routines() {
                       (filters.busqueda ? 1 : 0) +
                       (filters.cat_codi ? 1 : 0) +
                       (filters.dificultad ? 1 : 0) +
-                      (filters.estado ? 1 : 0)
+                      (filters.estado ? 1 : 0) +
+                      (filters.visibilidad ? 1 : 0)
                     }
                     onClearAll={clearFilters}
                     chips={[
@@ -641,6 +658,15 @@ export default function Routines() {
                         key: "estado",
                         label: `Estado: ${filters.estado}`,
                         onRemove: () => setFilters({ ...filters, estado: "" }),
+                      },
+                      filters.visibilidad && {
+                        key: "visibilidad",
+                        label:
+                          filters.visibilidad === "ESPECIALISTA"
+                            ? "Solo Especialista"
+                            : "Especialista y Representante",
+                        onRemove: () =>
+                          setFilters({ ...filters, visibilidad: "" }),
                       },
                     ].filter(Boolean)}
                   >
@@ -683,6 +709,25 @@ export default function Routines() {
                       <option value="Activa">Activas</option>
                       <option value="Inactiva">Inactivas</option>
                     </select>
+
+                    {isGestion && (
+                      <select
+                        value={filters.visibilidad}
+                        onChange={(e) =>
+                          setFilters({
+                            ...filters,
+                            visibilidad: e.target.value,
+                          })
+                        }
+                        className="w-full sm:w-auto px-2 py-1.5 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                      >
+                        <option value="">Toda visibilidad</option>
+                        <option value="AMBOS">
+                          Especialista y Representante
+                        </option>
+                        <option value="ESPECIALISTA">Solo Especialista</option>
+                      </select>
+                    )}
                   </FilterBar>
                 </div>
 
@@ -793,6 +838,15 @@ export default function Routines() {
                           <h3 className="text-base font-black text-slate-800 dark:text-white leading-tight line-clamp-2 flex-1 min-w-0">
                             {routine.title}
                           </h3>
+                          {isGestion &&
+                            routine.visibility === "ESPECIALISTA" && (
+                              <span
+                                title="Visible solo para el especialista (oculta al representante)"
+                                className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-800/50 px-1.5 py-0.5 rounded-md shrink-0 mt-0.5"
+                              >
+                                <Lock className="w-2.5 h-2.5" /> Solo Esp.
+                              </span>
+                            )}
                           {routine.status === "Inactiva" && (
                             <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md shrink-0 mt-0.5">
                               Inactiva
@@ -1082,6 +1136,67 @@ export default function Routines() {
                                   {diff}
                                 </button>
                               ))}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-xs font-black uppercase tracking-widest text-slate-500">
+                              Destinatario / Visibilidad
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {[
+                                {
+                                  id: "ESPECIALISTA",
+                                  title: "Solo Especialista",
+                                  desc: "Uso interno en consulta; oculta para el representante.",
+                                  icon: Lock,
+                                },
+                                {
+                                  id: "AMBOS",
+                                  title: "Especialista y Representante",
+                                  desc: "Disponible en consulta y en el portal Día a Día.",
+                                  icon: Users,
+                                },
+                              ].map((opt) => {
+                                const Icon = opt.icon;
+                                const active =
+                                  (formData.visibility || "AMBOS") === opt.id;
+                                return (
+                                  <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() =>
+                                      setFormData({
+                                        ...formData,
+                                        visibility: opt.id,
+                                      })
+                                    }
+                                    className={`text-left p-3.5 rounded-2xl border transition-all flex items-start gap-3 ${
+                                      active
+                                        ? "bg-blue-50/90 border-blue-500 text-blue-900 dark:bg-blue-900/30 dark:border-blue-500 dark:text-blue-200 ring-2 ring-blue-500/15"
+                                        : "bg-white border-slate-200 text-slate-600 dark:bg-[#1E293B] dark:border-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                    }`}
+                                  >
+                                    <div
+                                      className={`p-2 rounded-xl shrink-0 ${
+                                        active
+                                          ? "bg-blue-600 text-white"
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                      }`}
+                                    >
+                                      <Icon className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-black leading-tight">
+                                        {opt.title}
+                                      </p>
+                                      <p className="text-[11px] opacity-75 mt-1 leading-snug">
+                                        {opt.desc}
+                                      </p>
+                                    </div>
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>

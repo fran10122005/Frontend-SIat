@@ -11,7 +11,6 @@ import {
   Users,
   BookOpen,
   UserRound,
-  Activity,
   Settings2,
 } from "lucide-react";
 
@@ -24,7 +23,7 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
     isSidebarOpen,
     setIsSidebarOpen,
     showToast,
-    setCurrentView,
+    navigate,
     logout,
   } = useGlobalContext();
 
@@ -46,12 +45,6 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
       icon: UserRound,
       label: "Representantes",
       count: counts.representantes,
-    },
-    {
-      id: "historial_clinico",
-      icon: Activity,
-      label: "Historial Clínico",
-      count: counts.incidentes || null,
     },
     {
       id: "asignaciones",
@@ -139,8 +132,13 @@ export default function AdminSidebar({ activeTab, setActiveTab, counts = {} }) {
                     exportManualPDF();
                     return;
                   }
+                  if (item.id === "profile") {
+                    navigate("profile");
+                    setIsSidebarOpen(false);
+                    return;
+                  }
                   if (item.id === "settings") {
-                    setCurrentView("settings");
+                    navigate("settings");
                     setIsSidebarOpen(false);
                     return;
                   }

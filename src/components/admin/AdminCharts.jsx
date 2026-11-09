@@ -51,7 +51,7 @@ export default function AdminCharts({ metricas, isDark }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-slate-50/90 dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200/90 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px] transition-all duration-200 hover:shadow-md">
+      <div className="bg-slate-50/90 dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200/90 dark:border-slate-800/60 flex flex-col min-w-0 h-auto lg:h-[400px] transition-all duration-200 hover:shadow-md">
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">
@@ -67,9 +67,14 @@ export default function AdminCharts({ metricas, isDark }) {
             </span>
           )}
         </div>
-        <div className="flex-1 w-full min-h-0">
+        <div className="w-full h-[250px] sm:h-[290px] lg:flex-1 lg:h-auto lg:min-h-[240px]">
           {activityData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={0}
+              minHeight={220}
+            >
               <AreaChart
                 data={activityData}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -125,7 +130,7 @@ export default function AdminCharts({ metricas, isDark }) {
         </div>
       </div>
 
-      <div className="bg-slate-50/90 dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200/90 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px] transition-all duration-200 hover:shadow-md">
+      <div className="bg-slate-50/90 dark:bg-[#1E293B] rounded-xl p-6 shadow-sm border border-slate-200/90 dark:border-slate-800/60 flex flex-col min-w-0 h-auto lg:h-[400px] transition-all duration-200 hover:shadow-md">
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">
@@ -142,9 +147,14 @@ export default function AdminCharts({ metricas, isDark }) {
             </span>
           )}
         </div>
-        <div className="flex-1 w-full min-h-0">
+        <div className="w-full h-[250px] sm:h-[290px] lg:flex-1 lg:h-auto lg:min-h-[240px]">
           {activityData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={0}
+              minHeight={220}
+            >
               <BarChart
                 data={activityData}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

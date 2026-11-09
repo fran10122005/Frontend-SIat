@@ -29,7 +29,7 @@ export default function TelemetryChart({ telemetryHistory, isDark }) {
   };
 
   return (
-    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-xl border border-slate-200 dark:border-slate-800/60 flex flex-col min-h-[300px] lg:h-[400px] animate-in slide-in-from-top-4 duration-300">
+    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-xl border border-slate-200 dark:border-slate-800/60 flex flex-col min-w-0 h-auto lg:h-[400px] animate-in slide-in-from-top-4 duration-300">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h3 className="text-sm font-extrabold text-brand-700 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2">
@@ -43,8 +43,13 @@ export default function TelemetryChart({ telemetryHistory, isDark }) {
         </div>
       </div>
 
-      <div className="flex-1 w-full min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full h-[250px] sm:h-[290px] lg:flex-1 lg:h-auto lg:min-h-[240px]">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          minWidth={0}
+          minHeight={220}
+        >
           <AreaChart
             data={telemetryHistory}
             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

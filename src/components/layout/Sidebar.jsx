@@ -37,7 +37,7 @@ export default function Sidebar() {
 
   const specialistItems = [
     { id: "dashboard", icon: LayoutDashboard, label: "Panel Principal" },
-    { id: "patients", icon: Users, label: "Pacientes" },
+    { id: "patients", icon: Users, label: "Selección de Pacientes" },
     { id: "student", icon: UserCircle, label: "Ficha del Paciente" },
     { id: "historial", icon: TrendingUp, label: "Historial de Evolución" },
     { id: "rutinas", icon: Puzzle, label: "Terapias y Actividades" },
@@ -58,7 +58,7 @@ export default function Sidebar() {
     },
     { id: "diario_hogar", icon: NotebookPen, label: "Diario de Hogar" },
     { id: "herramientas", icon: Puzzle, label: "Herramientas de Apoyo" },
-    { id: "perfil_padre", icon: UserCircle, label: "Mi Perfil" },
+    { id: "perfil_padre", icon: UserCircle, label: "Expediente Clínico" },
     { id: "manual_repre", icon: BookOpen, label: "Manual de Usuario" },
     { id: "settings", icon: Settings2, label: "Configuración" },
   ];

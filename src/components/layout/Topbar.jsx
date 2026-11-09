@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useGlobalContext } from "../../context/GlobalState";
 import { useTourContext } from "../../context/TourContext";
 import { Sun, Moon, Menu, HelpCircle, Baby } from "lucide-react";
@@ -12,7 +12,7 @@ export default function Topbar() {
     userName,
     userFoto,
     currentView,
-    setCurrentView,
+    navigate,
     isSidebarOpen,
     setIsSidebarOpen,
     isDark,
@@ -24,6 +24,10 @@ export default function Topbar() {
   } = useGlobalContext();
   const { startContextualTour } = useTourContext();
   const [fotoError, setFotoError] = useState(false);
+
+  useEffect(() => {
+    setFotoError(false);
+  }, [userFoto]);
 
   const initials = userName
     ? userName
@@ -128,9 +132,15 @@ export default function Topbar() {
             )}
           </button>
 
-          <div
-            onClick={() => setCurrentView("profile")}
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors sm:pl-4 sm:border-l border-slate-200 dark:border-slate-700"
+          <button
+            type="button"
+            onClick={() => navigate("profile")}
+            title="Ir a Mi Perfil y Configuración de Cuenta"
+            className={`flex items-center gap-2 sm:gap-3 cursor-pointer p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors sm:pl-4 sm:border-l border-slate-200 dark:border-slate-700 text-left ${
+              currentView === "profile"
+                ? "bg-blue-50/70 dark:bg-slate-800/80 ring-1 ring-blue-200 dark:ring-blue-800/60"
+                : ""
+            }`}
           >
             <div className="flex flex-col items-end hidden sm:flex">
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
@@ -163,7 +173,7 @@ export default function Topbar() {
                 initials
               )}
             </div>
-          </div>
+          </button>
         </div>
       </header>
     </>

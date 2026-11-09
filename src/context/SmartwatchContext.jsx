@@ -11,7 +11,11 @@ import {
   subscribeToSocket,
   getSocketConnectionState,
 } from "../hooks/socket";
-import { getSavedSelectedChild } from "../utils/authStorage";
+import { getSavedSelectedChild, getValidSession } from "../utils/authStorage";
+import {
+  appendUserNotification,
+  appendUserLocalAlert,
+} from "../utils/notificationStorage";
 import { saveTelemetry } from "../services/indexedDb";
 import {
   startTelemetrySync,
@@ -43,6 +47,7 @@ const STORAGE_KEY_DEVICE = "siat_smartwatch_device";
 const STORAGE_KEY_CONNECTED = "siat_smartwatch_connected";
 const STORAGE_KEY_BATTERY = "siat_smartwatch_battery";
 const STORAGE_KEY_STREAM = "siat_smartwatch_stream";
+const MAX_SIMULATION_MS = 5 * 60 * 1000; // 5 minutos de límite máximo de simulación
 
 // Helper robusto para convertir hex string a DataView
 function hexStringToDataView(hexString) {
@@ -147,10 +152,35 @@ export function SmartwatchProvider({ children }) {
   const writeCharsRef = useRef([]);
   const pingTimerRef = useRef(null);
   const simulationTimerRef = useRef(null);
+  const simulationTimeoutRef = useRef(null);
+  const simulationCountdownRef = useRef(null);
+  const simulationChildIdRef = useRef(null);
+  const deviceNameRef = useRef("");
   const lastProcessedTimeRef = useRef(0);
   const activeSessionIdRef = useRef(null);
   const lastCrisisBroadcastRef = useRef(0);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationRemainingSec, setSimulationRemainingSec] = useState(0);
+
+  useEffect(() => {
+    deviceNameRef.current = deviceName;
+  }, [deviceName]);
+
+  const clearSimulationTimers = useCallback(() => {
+    if (simulationTimerRef.current) {
+      clearInterval(simulationTimerRef.current);
+      simulationTimerRef.current = null;
+    }
+    if (simulationTimeoutRef.current) {
+      clearTimeout(simulationTimeoutRef.current);
+      simulationTimeoutRef.current = null;
+    }
+    if (simulationCountdownRef.current) {
+      clearInterval(simulationCountdownRef.current);
+      simulationCountdownRef.current = null;
+    }
+    simulationChildIdRef.current = null;
+  }, []);
 
   const setActiveSessionId = useCallback((id) => {
     setActiveSessionIdState(id);
@@ -256,71 +286,72 @@ export function SmartwatchProvider({ children }) {
   }, [appendTelemetryRecord]);
 
   // Difundir alerta de crisis en todo el sistema (Notificaciones, Diario de Hogar y Registro de Alertas)
-  const broadcastCrisisAlert = useCallback((data) => {
-    const alertId = `crisis_${Date.now()}`;
-    const timestamp = new Date().toISOString();
-    const bpm = data.bpm || 128;
-    const stress = data.stress || 88;
-    const child = getSavedSelectedChild();
-    const childName = child?.name || "el paciente";
-
-    const notif = {
-      id: alertId,
-      id_alert: alertId,
-      type: "crisis",
-      message: `🚨 Crisis de sobrecarga sensorial detectada (${bpm} BPM, ${stress}% estrés)`,
-      time: timestamp,
-      fec_hora: timestamp,
-      est_dete: "SOBRECARGA_SENSORIAL",
-      ale_meto: "SOBRECARGA_SENSORIAL",
-      bpm_max: bpm,
-      mov_max: data.mov || 3.4,
-      stress_index: stress,
-      fue_efec: null,
-      read: false,
-    };
-
-    // 1. Guardar en notificaciones persistentes
-    try {
-      const raw = localStorage.getItem("siat_notifications");
-      const list = raw ? JSON.parse(raw) : [];
-      const updated = [notif, ...list.filter((n) => n.id !== alertId)].slice(
-        0,
-        30,
-      );
-      localStorage.setItem("siat_notifications", JSON.stringify(updated));
-    } catch {}
-
-    // 2. Guardar en alertas locales para Registro de Alertas (AlertCenter / ParentProfile)
-    try {
-      const raw = localStorage.getItem("siat_local_alerts");
-      const list = raw ? JSON.parse(raw) : [];
-      const updated = [
-        notif,
-        ...list.filter((a) => a.id_alert !== alertId),
-      ].slice(0, 50);
-      localStorage.setItem("siat_local_alerts", JSON.stringify(updated));
-    } catch {}
-
-    // 3. Emitir evento global en el navegador
-    window.dispatchEvent(
-      new CustomEvent("siat:crisis_alert", { detail: notif }),
-    );
-
-    // 4. Emitir por WebSocket si está conectado
-    try {
-      const socket = getSocket();
-      if (socket && socket.connected) {
-        socket.emit("telemetry_data", {
-          nin_codi: child?.id || null,
-          bpm,
-          stress,
-          mov: data.mov || 3.4,
-          time: new Date().toLocaleTimeString("es-ES"),
-        });
+  const broadcastCrisisAlert = useCallback(
+    (data) => {
+      const session = getValidSession();
+      const isClinical =
+        session.isValid &&
+        (session.role === "ESPECIALISTA" || session.role === "REPRESENTANTE");
+      if (!isClinical) {
+        clearSimulationTimers();
+        setIsSimulating(false);
+        setSimulationModeState(null);
+        setSimulationRemainingSec(0);
+        return;
       }
-    } catch {}
-  }, []);
+
+      const alertId = `crisis_${Date.now()}`;
+      const timestamp = new Date().toISOString();
+      const bpm = data.bpm || 128;
+      const stress = data.stress || 88;
+      const child = getSavedSelectedChild();
+      const usuCodi = session.decoded?.usu_codi || null;
+
+      const notif = {
+        id: alertId,
+        id_alert: alertId,
+        type: "crisis",
+        nin_codi: child?.id || null,
+        nin_nomb: child?.name || null,
+        message: `🚨 Crisis de sobrecarga sensorial detectada${child?.name ? ` en ${child.name}` : ""} (${bpm} BPM, ${stress}% estrés)`,
+        time: timestamp,
+        fec_hora: timestamp,
+        est_dete: "SOBRECARGA_SENSORIAL",
+        ale_meto: "SOBRECARGA_SENSORIAL",
+        bpm_max: bpm,
+        mov_max: data.mov || 3.4,
+        stress_index: stress,
+        fue_efec: null,
+        read: false,
+      };
+
+      // 1. Guardar en notificaciones persistentes aisladas por usuario
+      appendUserNotification(notif, usuCodi);
+
+      // 2. Guardar en alertas locales aisladas por usuario (AlertCenter / ParentProfile)
+      appendUserLocalAlert(notif, usuCodi);
+
+      // 3. Emitir evento global en el navegador
+      window.dispatchEvent(
+        new CustomEvent("siat:crisis_alert", { detail: notif }),
+      );
+
+      // 4. Emitir por WebSocket si está conectado
+      try {
+        const socket = getSocket();
+        if (socket && socket.connected && child?.id) {
+          socket.emit("telemetry_data", {
+            nin_codi: child.id,
+            bpm,
+            stress,
+            mov: data.mov || 3.4,
+            time: new Date().toLocaleTimeString("es-ES"),
+          });
+        }
+      } catch {}
+    },
+    [clearSimulationTimers],
+  );
 
   // Publicar y procesar telemetría real recibida
   const processTelemetryData = useCallback(
@@ -439,7 +470,7 @@ export function SmartwatchProvider({ children }) {
         } catch {}
       }
     },
-    [streamToCloud, deviceName, appendTelemetryRecord],
+    [streamToCloud, deviceName, appendTelemetryRecord, broadcastCrisisAlert],
   );
 
   // Manejar desconexión física del dispositivo
@@ -448,11 +479,10 @@ export function SmartwatchProvider({ children }) {
       clearInterval(pingTimerRef.current);
       pingTimerRef.current = null;
     }
-    if (simulationTimerRef.current) {
-      clearInterval(simulationTimerRef.current);
-      simulationTimerRef.current = null;
-    }
+    clearSimulationTimers();
     setIsSimulating(false);
+    setSimulationModeState(null);
+    setSimulationRemainingSec(0);
     setIsConnected(false);
     setIsConnecting(false);
     setDeviceName("");
@@ -476,7 +506,7 @@ export function SmartwatchProvider({ children }) {
     try {
       HeartRateTelemetryService.disconnectBle().catch(() => {});
     } catch {}
-  }, []);
+  }, [clearSimulationTimers]);
 
   // Parser Universal para paquetes de bytes BLE (GATT estándar, IDW13, Fitpro, Wearfit Pro, Da Fit, Aiwa, Jieli, Qwatch/Umeox)
   const handleBleRawData = useCallback(
@@ -1006,16 +1036,15 @@ export function SmartwatchProvider({ children }) {
 
   // Desconectar dispositivo Bluetooth y detener telemetría
   const disconnectSmartwatch = useCallback(async () => {
+    const prevDevice = deviceNameRef.current;
     if (pingTimerRef.current) {
       clearInterval(pingTimerRef.current);
       pingTimerRef.current = null;
     }
-    if (simulationTimerRef.current) {
-      clearInterval(simulationTimerRef.current);
-      simulationTimerRef.current = null;
-    }
+    clearSimulationTimers();
     setIsSimulating(false);
     setSimulationModeState(null);
+    setSimulationRemainingSec(0);
 
     try {
       await HeartRateTelemetryService.disconnectBle();
@@ -1039,7 +1068,12 @@ export function SmartwatchProvider({ children }) {
     setLiveStress(null);
     setLiveMov(null);
     setSensorStatus("idle");
-  }, [handleDisconnected]);
+    window.dispatchEvent(
+      new CustomEvent("siat:simulation-stopped", {
+        detail: { deviceName: prevDevice },
+      }),
+    );
+  }, [clearSimulationTimers, handleDisconnected]);
 
   // Métodos de Control para Android Health Connect
   const requestHealthConnectPermissions = useCallback(async () => {
@@ -1107,6 +1141,24 @@ export function SmartwatchProvider({ children }) {
     [],
   );
 
+  // Control de modo de simulación clínica
+  const setSimulationMode = useCallback((mode) => {
+    setSimulationModeState(mode);
+  }, []);
+
+  const stopSimulation = useCallback(() => {
+    const prevDevice = deviceNameRef.current;
+    clearSimulationTimers();
+    setSimulationModeState(null);
+    setSimulationRemainingSec(0);
+    handleDisconnected();
+    window.dispatchEvent(
+      new CustomEvent("siat:simulation-stopped", {
+        detail: { deviceName: prevDevice },
+      }),
+    );
+  }, [clearSimulationTimers, handleDisconnected]);
+
   // Simulación Fisiológica Dinámica y Realista:
   // mode = "normal" (pulso normal 72-88 BPM) | "crisis" (taquicardia / crisis 118-144 BPM)
   const toggleRealisticSimulation = useCallback(
@@ -1115,28 +1167,46 @@ export function SmartwatchProvider({ children }) {
 
       // Si ya está corriendo en este mismo modo, lo apagamos (toggle)
       if (simulationTimerRef.current && simulationMode === mode) {
-        clearInterval(simulationTimerRef.current);
-        simulationTimerRef.current = null;
-        setIsSimulating(false);
-        setSimulationModeState(null);
-        handleDisconnected();
-        setTelemetrySource("NONE");
-        setLiveBpm(null);
-        setLastBpm(null);
-        setLiveStress(null);
-        setLiveMov(null);
-        setSensorStatus("idle");
+        stopSimulation();
         return false; // se apagó
       }
 
-      // Si había un timer previo corriendo (ej. cambiando entre normal y crisis), limpiarlo
-      if (simulationTimerRef.current) {
-        clearInterval(simulationTimerRef.current);
-        simulationTimerRef.current = null;
+      // Validar sesión clínica vigente y paciente activo antes de iniciar simulación
+      const session = getValidSession();
+      const isClinical =
+        session.isValid &&
+        (session.role === "ESPECIALISTA" || session.role === "REPRESENTANTE");
+      if (!isClinical) {
+        stopSimulation();
+        window.dispatchEvent(
+          new CustomEvent("global-toast", {
+            detail:
+              "⚠️ La simulación de pulso solo está disponible en sesiones clínicas.",
+          }),
+        );
+        return false;
       }
+
+      const savedChild = getSavedSelectedChild();
+      if (!savedChild?.id) {
+        window.dispatchEvent(
+          new CustomEvent("global-toast", {
+            detail: "👆 Selecciona un paciente antes de iniciar la simulación.",
+          }),
+        );
+        return false;
+      }
+
+      // Si había timers previos corriendo (ej. cambiando entre normal y crisis), limpiarlos
+      clearSimulationTimers();
+      simulationChildIdRef.current = String(savedChild.id);
+
+      const startedAt = Date.now();
+      const expiresAt = startedAt + MAX_SIMULATION_MS;
 
       setIsSimulating(true);
       setSimulationModeState(mode);
+      setSimulationRemainingSec(Math.ceil(MAX_SIMULATION_MS / 1000));
       setIsConnected(true);
       setTelemetrySource("HEALTH_CONNECT");
       setDeviceName(
@@ -1146,11 +1216,46 @@ export function SmartwatchProvider({ children }) {
       );
       setSensorStatus("streaming");
 
+      // Temporizador de apagado automático por seguridad (5 minutos)
+      simulationTimeoutRef.current = setTimeout(() => {
+        stopSimulation();
+        window.dispatchEvent(
+          new CustomEvent("global-toast", {
+            detail:
+              "⏱️ Simulación de pulso detenida automáticamente tras 5 minutos.",
+          }),
+        );
+      }, MAX_SIMULATION_MS);
+
+      // Cuenta regresiva visible en el banner flotante
+      simulationCountdownRef.current = setInterval(() => {
+        const remaining = Math.max(
+          0,
+          Math.ceil((expiresAt - Date.now()) / 1000),
+        );
+        setSimulationRemainingSec(remaining);
+      }, 1000);
+
       let currentBpm = isCrisis ? 128 : 78;
       let breathPhase = 0;
       let trend = 0;
 
       const emitNextSample = () => {
+        const currentSession = getValidSession();
+        const stillClinical =
+          currentSession.isValid &&
+          (currentSession.role === "ESPECIALISTA" ||
+            currentSession.role === "REPRESENTANTE");
+        const activeChild = getSavedSelectedChild();
+        if (
+          !stillClinical ||
+          !activeChild?.id ||
+          String(activeChild.id) !== String(simulationChildIdRef.current || "")
+        ) {
+          stopSimulation();
+          return;
+        }
+
         if (isCrisis) {
           // Crisis de sobrecarga: Taquicardia, hiperventilación, estrés alto y agitación motora
           breathPhase += 0.55;
@@ -1276,36 +1381,74 @@ export function SmartwatchProvider({ children }) {
     },
     [
       simulationMode,
-      handleDisconnected,
+      stopSimulation,
+      clearSimulationTimers,
       processTelemetryData,
       broadcastCrisisAlert,
     ],
   );
 
-  // Control de modo de simulación clínica
-  const setSimulationMode = useCallback((mode) => {
-    setSimulationModeState(mode);
-  }, []);
+  // Detener simulación y limpiar estado ante cierre de sesión, cambio/salida de paciente o cambio de pestaña
+  useEffect(() => {
+    const handleSessionEnded = () => {
+      stopSimulation();
+      try {
+        HeartRateTelemetryService.stopHealthConnectPolling();
+      } catch {}
+      setHealthConnectPolling(false);
+      setTelemetryHistory([]);
+    };
 
-  const stopSimulation = useCallback(() => {
-    if (simulationTimerRef.current) {
-      clearInterval(simulationTimerRef.current);
-      simulationTimerRef.current = null;
-    }
-    setIsSimulating(false);
-    setSimulationModeState(null);
-    handleDisconnected();
-    setTelemetrySource("NONE");
-    setLiveBpm(null);
-    setLastBpm(null);
-    setLiveStress(null);
-    setLiveMov(null);
-    setSensorStatus("idle");
-  }, [handleDisconnected]);
+    const handleChildChanged = (e) => {
+      if (!simulationTimerRef.current) return;
+      const nextChildId = e?.detail?.childId ? String(e.detail.childId) : null;
+      const activeSimChildId = simulationChildIdRef.current
+        ? String(simulationChildIdRef.current)
+        : null;
+      if (nextChildId !== activeSimChildId) {
+        stopSimulation();
+      }
+    };
+
+    const handleStorage = (event) => {
+      if (event.key === "token") {
+        if (!event.newValue || event.newValue !== event.oldValue) {
+          handleSessionEnded();
+        }
+      } else if (
+        event.key === "userRole" &&
+        event.newValue === "ADMIN_INSTITUCION"
+      ) {
+        handleSessionEnded();
+      }
+    };
+
+    window.addEventListener("siat:session-ended", handleSessionEnded);
+    window.addEventListener("siat:child-changed", handleChildChanged);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("siat:session-ended", handleSessionEnded);
+      window.removeEventListener("siat:child-changed", handleChildChanged);
+      window.removeEventListener("storage", handleStorage);
+      clearSimulationTimers();
+    };
+  }, [stopSimulation, clearSimulationTimers]);
 
   // Escuchar stream WebSocket del servidor SIAT
   useEffect(() => {
-    getSocket();
+    const connectIfValid = () => {
+      const session = getValidSession();
+      if (
+        session.isValid &&
+        (session.role === "ESPECIALISTA" || session.role === "REPRESENTANTE")
+      ) {
+        getSocket();
+      }
+    };
+
+    connectIfValid();
+    window.addEventListener("siat:session-started", connectIfValid);
 
     const unsubConnect = subscribeToSocket("connect", () => {
       setIsWebSocketActive(true);
@@ -1316,6 +1459,21 @@ export function SmartwatchProvider({ children }) {
     });
 
     const handleIncomingSocketData = (data) => {
+      const session = getValidSession();
+      if (
+        !session.isValid ||
+        (session.role !== "ESPECIALISTA" && session.role !== "REPRESENTANTE")
+      ) {
+        return;
+      }
+      const savedChild = getSavedSelectedChild();
+      if (
+        data?.nin_codi &&
+        savedChild?.id &&
+        String(data.nin_codi) !== String(savedChild.id)
+      ) {
+        return;
+      }
       if (data && data.bpm) {
         processTelemetryData(data, "socket");
       }
@@ -1335,6 +1493,7 @@ export function SmartwatchProvider({ children }) {
     }
 
     return () => {
+      window.removeEventListener("siat:session-started", connectIfValid);
       unsubConnect();
       unsubDisconnect();
       unsubTelemetry();
@@ -1450,6 +1609,7 @@ export function SmartwatchProvider({ children }) {
     setSimulationMode,
     stopSimulation,
     isSimulating,
+    simulationRemainingSec,
     toggleRealisticSimulation,
   };
 

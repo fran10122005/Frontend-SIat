@@ -18,7 +18,6 @@ import {
 } from "../utils/pdfExporter";
 import {
   Building2,
-  FileText,
   Users,
   Stethoscope,
   Link2,
@@ -30,6 +29,7 @@ import {
   CheckSquare,
   Sparkles,
 } from "lucide-react";
+import pdfIcon from "../assets/pdf.png";
 
 import AdminKPIs from "../components/admin/AdminKPIs";
 import AdminCharts from "../components/admin/AdminCharts";
@@ -38,7 +38,6 @@ import InfraestructuraTab from "../components/admin/InfraestructuraTab";
 
 import EspecialistasTab from "../components/admin/EspecialistasTab";
 import RepresentantesTab from "../components/admin/RepresentantesTab";
-import HistorialClinicoTab from "../components/admin/HistorialClinicoTab";
 import AsignacionesTab from "../components/admin/AsignacionesTab";
 import CatalogosTab from "../components/admin/CatalogosTab";
 import UsuariosTab from "../components/admin/UsuariosTab";
@@ -104,8 +103,6 @@ function AdminDashboard({ onNavigate }) {
   const [usuarios, setUsuarios] = useState([]);
   const [representantes, setRepresentantes] = useState([]);
   const [editingRep, setEditingRep] = useState(null);
-  const [incidentes, setIncidentes] = useState([]);
-  const [bitacorasAdmin, setBitacorasAdmin] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
 
   // UX State
@@ -119,7 +116,7 @@ function AdminDashboard({ onNavigate }) {
 
   // Forms state
   const [newEsp, setNewEsp] = useState({
-    esp_codi: "",
+    esp_cedu: "",
     esp_nomb: "",
     esp_apel: "",
     usu_crro: "",
@@ -174,7 +171,12 @@ function AdminDashboard({ onNavigate }) {
   const [sendingTest, setSendingTest] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState("");
+  const [generatedInvite, setGeneratedInvite] = useState({
+    link: "",
+    usu_crro: "",
+    passwordGenerada: "",
+    emailSent: false,
+  });
 
   const handleOpenScheduleModal = async () => {
     setShowScheduleModal(true);
@@ -299,36 +301,6 @@ function AdminDashboard({ onNavigate }) {
           setUsuarios(users.data.data);
           setRepresentantes(deriveRepresentantes(users.data.data));
         },
-        historial_clinico: async () => {
-          try {
-            const [incRes, bitRes, ninosRes, espRes] = await Promise.allSettled(
-              [
-                api.get("/admin/incidentes"),
-                api.get("/admin/bitacoras"),
-                api.get("/admin/ninos"),
-                api.get("/admin/especialistas"),
-              ],
-            );
-            if (!mountedRef.current) return;
-            if (incRes.status === "fulfilled" && incRes.value?.data?.data) {
-              setIncidentes(incRes.value.data.data);
-            }
-            if (bitRes.status === "fulfilled" && bitRes.value?.data?.data) {
-              setBitacorasAdmin(bitRes.value.data.data);
-            }
-            if (ninosRes.status === "fulfilled" && ninosRes.value?.data?.data) {
-              setNinos(ninosRes.value.data.data);
-            }
-            if (espRes.status === "fulfilled" && espRes.value?.data?.data) {
-              setEspecialistas(espRes.value.data.data);
-            }
-          } catch (err) {
-            console.error(
-              "Error al cargar datos de historial clínico admin:",
-              err,
-            );
-          }
-        },
         asignaciones: async () => {
           const [asign, ninos, esp] = await Promise.all([
             api.get("/admin/asignaciones"),
@@ -370,6 +342,7 @@ function AdminDashboard({ onNavigate }) {
     try {
       // Mapear los campos del formulario a los que espera el backend
       const payload = {
+        esp_cedu: newEsp.esp_cedu ? String(newEsp.esp_cedu).trim() : undefined,
         nombre: newEsp.esp_nomb,
         apellido: newEsp.esp_apel,
         email: newEsp.usu_crro,
@@ -395,7 +368,7 @@ function AdminDashboard({ onNavigate }) {
         esp_nomb: "",
         esp_apel: "",
         usu_clve: "",
-        esp_codi: "",
+        esp_cedu: "",
         esp_licencia: "",
         esp_telf: "",
         esc_codi: "",
@@ -451,7 +424,16 @@ function AdminDashboard({ onNavigate }) {
       fetchData();
       return;
     }
-    setGeneratedLink(data.invitationUrl || "");
+    const fallbackLogin =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/auth/login`
+        : "";
+    setGeneratedInvite({
+      link: data.invitationUrl || data.loginUrl || fallbackLogin,
+      usu_crro: data.usu_crro || "",
+      passwordGenerada: data.passwordGenerada || "",
+      emailSent: Boolean(data.emailSent),
+    });
     setShowLinkModal(true);
     fetchData();
   };
@@ -569,6 +551,10 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
     try {
       await api.put(`/admin/especialistas/${editingEsp.esp_codi}`, {
+        esp_tdoc: editingEsp.esp_tdoc || "V",
+        esp_cedu: editingEsp.esp_cedu
+          ? String(editingEsp.esp_cedu).trim()
+          : undefined,
         esp_nomb: editingEsp.esp_nomb,
         esp_apel: editingEsp.esp_apel,
         usu_crro: editingEsp.usu_crro,
@@ -698,6 +684,7 @@ function AdminDashboard({ onNavigate }) {
   const exportEspecialistasToExcel = () => {
     const data = especialistas.map((esp) => ({
       Código: esp.esp_codi,
+      Cédula: esp.esp_cedu ? `${esp.esp_tdoc || "V"}-${esp.esp_cedu}` : "-",
       Nombre: `${esp.esp_gner === "M" ? "Dr." : "Dra."} ${esp.esp_nomb} ${esp.esp_apel}`,
       Especialidad: esp.tm_especi?.esc_nomb || "General",
       Clínica: esp.tm_insti?.ins_nomb || "-",
@@ -846,7 +833,6 @@ function AdminDashboard({ onNavigate }) {
         counts={{
           especialistas: especialistas.length,
           representantes: representantes.length,
-          incidentes: incidentes.length || 5,
           asignaciones: asignaciones.filter((a) => a.asi_stdo === "Activo")
             .length,
           usuarios: usuarios.length,
@@ -868,8 +854,6 @@ function AdminDashboard({ onNavigate }) {
                     "Directorio de Especialistas"}
                   {activeTab === "representantes" &&
                     "Gestión de Representantes Legales"}
-                  {activeTab === "historial_clinico" &&
-                    "Historial Clínico Global"}
                   {activeTab === "asignaciones" &&
                     "Control de Casos y Asignaciones"}
                   {activeTab === "catalogos" && "Configuración de Mi Fundación"}
@@ -895,8 +879,6 @@ function AdminDashboard({ onNavigate }) {
                     "Personal clínico y especialidades."}
                   {activeTab === "representantes" &&
                     "Listado de padres y tutores legales."}
-                  {activeTab === "historial_clinico" &&
-                    "Incidentes, crisis y alertas globales."}
                   {activeTab === "asignaciones" &&
                     "Pacientes asignados por especialista."}
                   {activeTab === "catalogos" && "Datos de la institución."}
@@ -966,9 +948,14 @@ function AdminDashboard({ onNavigate }) {
                         console.error("Error al exportar:", err);
                       }
                     }}
-                    className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg shadow-sm border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center gap-2 text-sm shrink-0"
+                    className="px-4 py-2.5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 font-semibold rounded-lg shadow-sm border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all flex items-center gap-2 text-sm shrink-0"
                   >
-                    <FileText className="w-4 h-4" /> Exportar
+                    <img
+                      src={pdfIcon}
+                      alt="PDF"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />{" "}
+                    Exportar
                   </button>
                   <button
                     data-tour="admin-dash-schedule"
@@ -1116,19 +1103,6 @@ function AdminDashboard({ onNavigate }) {
               </div>
             )}
 
-            {/* HISTORIAL CLINICO TAB */}
-            {activeTab === "historial_clinico" && (
-              <div data-tour="admin-historial_clinico">
-                <HistorialClinicoTab
-                  incidentesData={incidentes}
-                  bitacorasData={bitacorasAdmin}
-                  ninosData={ninos}
-                  especialistasData={especialistas}
-                  loading={loading}
-                />
-              </div>
-            )}
-
             {/* ASIGNACIONES TAB */}
             {activeTab === "asignaciones" && (
               <div data-tour="admin-asignaciones">
@@ -1230,29 +1204,58 @@ function AdminDashboard({ onNavigate }) {
               </div>
             </div>
             <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Se ha generado el token de activación clínico. Copie el
-                siguiente enlace y envíelo al representante para que configure
-                su cuenta:
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Se ha generado el enlace de activación clínico. Cópielo y
+                envíelo al representante para que configure su cuenta:
               </p>
 
-              <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border-2 border-slate-200 dark:border-slate-600 font-mono text-xs select-all break-all text-left max-h-[80px] overflow-y-auto">
-                {generatedLink}
+              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border-2 border-slate-300 dark:border-slate-600 font-mono text-xs text-slate-900 dark:text-slate-100 select-all break-all text-left max-h-[96px] overflow-y-auto">
+                {generatedInvite.link || "Enlace no disponible"}
               </div>
+
+              {generatedInvite.passwordGenerada && (
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-xs text-slate-700 dark:text-slate-200 space-y-1">
+                  <p className="font-semibold text-blue-800 dark:text-blue-300">
+                    Credenciales provisionales
+                  </p>
+                  {generatedInvite.usu_crro && (
+                    <p>
+                      Correo:{" "}
+                      <span className="font-mono font-semibold select-all">
+                        {generatedInvite.usu_crro}
+                      </span>
+                    </p>
+                  )}
+                  <p>
+                    Contraseña:{" "}
+                    <span className="font-mono font-semibold select-all">
+                      {generatedInvite.passwordGenerada}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
+                    {generatedInvite.emailSent
+                      ? "También se envió el enlace por correo electrónico."
+                      : "Comparte este enlace manualmente con el representante."}
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-3 justify-end pt-2">
                 <button
                   onClick={() => setShowLinkModal(false)}
-                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 rounded-xl text-sm font-semibold transition-colors"
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-semibold transition-colors"
                 >
                   Cerrar
                 </button>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(generatedLink);
-                    showToast("📋 Enlace copiado al portapapeles");
+                    if (generatedInvite.link) {
+                      navigator.clipboard.writeText(generatedInvite.link);
+                      showToast("📋 Enlace copiado al portapapeles");
+                    }
                   }}
-                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm shadow-blue-600/25 transition-all"
+                  disabled={!generatedInvite.link}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold shadow-sm shadow-blue-600/25 transition-all"
                 >
                   Copiar Enlace
                 </button>
@@ -1332,18 +1335,18 @@ function AdminDashboard({ onNavigate }) {
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {[
-                  { key: "metricas", label: "📊 Indicadores Generales (KPIs)" },
+                  { key: "metricas", label: "Indicadores Generales (KPIs)" },
                   {
                     key: "pacientes",
-                    label: "👶 Resumen Clínico de Pacientes",
+                    label: "Resumen Clínico de Pacientes",
                   },
                   {
                     key: "especialistas",
-                    label: "🩺 Estado de Personal Médico",
+                    label: "Estado de Personal Médico",
                   },
                   {
                     key: "auditoria",
-                    label: "🚨 Bitácora de Alertas del Sistema",
+                    label: "Bitácora de Alertas del Sistema",
                   },
                 ].map((item) => (
                   <label

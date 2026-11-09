@@ -113,6 +113,13 @@ export default function SmartwatchConnectWidget({ embedded = false }) {
     }
   }, [isConnected, deviceName, batteryLevel, registerConnectedDevice]);
 
+  // Limpiar badge simulado si la simulación se detuvo externamente (banner, cambio de niño, logout o timeout)
+  useEffect(() => {
+    if (!isSimulating) {
+      setSyncBatchInfo((prev) => (prev?.isSimulated ? null : prev));
+    }
+  }, [isSimulating]);
+
   // Escuchar estado de sincronización offline con IndexedDB
   useEffect(() => {
     const handleSyncStatus = (e) => {

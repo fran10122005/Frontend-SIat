@@ -113,7 +113,12 @@ export default function PatientManagement() {
   // States for Registration Modal
   const [showRegModal, setShowRegModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState("");
+  const [generatedInvite, setGeneratedInvite] = useState({
+    link: "",
+    usu_crro: "",
+    passwordGenerada: "",
+    emailSent: false,
+  });
   const [previewNino, setPreviewNino] = useState(null);
 
   const handleManagePatient = (nino) => {
@@ -137,7 +142,16 @@ export default function PatientManagement() {
       fetchNinos();
       return;
     }
-    setGeneratedLink(data.invitationUrl || "");
+    const fallbackLogin =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/auth/login`
+        : "";
+    setGeneratedInvite({
+      link: data.invitationUrl || data.loginUrl || fallbackLogin,
+      usu_crro: data.usu_crro || "",
+      passwordGenerada: data.passwordGenerada || "",
+      emailSent: Boolean(data.emailSent),
+    });
     setShowLinkModal(true);
     fetchNinos();
   };
@@ -190,10 +204,11 @@ export default function PatientManagement() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
                 <PageTitle icon={Users} data-tour="pm-header">
-                  Gestión de Pacientes
+                  Selección de Pacientes
                 </PageTitle>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Directorio de pacientes asignados al especialista
+                  Selecciona un paciente asignado para abrir su panel clínico o
+                  gestiona nuevas admisiones
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -679,29 +694,59 @@ export default function PatientManagement() {
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 ¡Invitación Clínica Creada!
               </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Se ha generado el token de activación clínico. Copie el
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Se ha generado el enlace de activación clínico. Copie el
                 siguiente enlace y envíelo al representante para que configure
                 su cuenta:
               </p>
 
-              <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 font-mono text-xs select-all break-all text-left max-h-[80px] overflow-y-auto">
-                {generatedLink}
+              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg border-2 border-slate-300 dark:border-slate-600 font-mono text-xs text-slate-900 dark:text-slate-100 select-all break-all text-left max-h-[96px] overflow-y-auto">
+                {generatedInvite.link || "Enlace no disponible"}
               </div>
+
+              {generatedInvite.passwordGenerada && (
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-xs text-slate-700 dark:text-slate-200 text-left space-y-1">
+                  <p className="font-semibold text-blue-800 dark:text-blue-300">
+                    Credenciales provisionales
+                  </p>
+                  {generatedInvite.usu_crro && (
+                    <p>
+                      Correo:{" "}
+                      <span className="font-mono font-semibold select-all">
+                        {generatedInvite.usu_crro}
+                      </span>
+                    </p>
+                  )}
+                  <p>
+                    Contraseña:{" "}
+                    <span className="font-mono font-semibold select-all">
+                      {generatedInvite.passwordGenerada}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
+                    {generatedInvite.emailSent
+                      ? "También se envió el enlace por correo electrónico."
+                      : "Comparte este enlace manualmente con el representante."}
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-2 justify-center pt-2">
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(generatedLink);
-                    showToast("📋 Enlace copiado al portapapeles");
+                    if (generatedInvite.link) {
+                      navigator.clipboard.writeText(generatedInvite.link);
+                      showToast("📋 Enlace copiado al portapapeles");
+                    }
                   }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+                  disabled={!generatedInvite.link}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold"
                 >
                   Copiar Enlace
                 </button>
                 <button
                   onClick={() => setShowLinkModal(false)}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 rounded-lg text-sm font-semibold"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm font-semibold"
                 >
                   Cerrar
                 </button>

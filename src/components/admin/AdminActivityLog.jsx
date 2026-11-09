@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
-import { Download, FileText, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import pdfIcon from "../../assets/pdf.png";
+import excelIcon from "../../assets/excel.png";
 import useExpandableRows from "../../hooks/useExpandableRows";
 import useMediaQuery from "../../hooks/useMediaQuery";
 import FilterBar from "../shared/FilterBar";
@@ -192,14 +194,22 @@ export default function AdminActivityLog({ userName, logs = [] }) {
             onClick={exportExcel}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 rounded-lg transition-colors shrink-0"
           >
-            <Download className="w-4 h-4" />
+            <img
+              src={excelIcon}
+              alt="Excel"
+              className="w-4 h-4 object-contain shrink-0"
+            />
             Excel
           </button>
           <button
             onClick={exportPDF}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50 rounded-lg transition-colors shrink-0"
           >
-            <FileText className="w-4 h-4" />
+            <img
+              src={pdfIcon}
+              alt="PDF"
+              className="w-4 h-4 object-contain shrink-0"
+            />
             PDF
           </button>
         </div>

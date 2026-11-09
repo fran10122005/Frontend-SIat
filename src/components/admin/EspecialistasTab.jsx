@@ -23,10 +23,10 @@ import {
   X,
   CalendarDays,
   Award,
-  FileText,
-  Download,
   UserRound,
 } from "lucide-react";
+import pdfIcon from "../../assets/pdf.png";
+import excelIcon from "../../assets/excel.png";
 import {
   uploadToCloudinary,
   isCloudinaryReady,
@@ -193,10 +193,13 @@ export default function EspecialistasTab({
 
   const filteredEspecialistas = useMemo(() => {
     return especialistas.filter((esp) => {
-      const nombre =
-        `${esp.esp_nomb} ${esp.esp_apel} ${esp.tm_usuar?.usu_crro || ""}`.toLowerCase();
+      const docFull = esp.esp_cedu
+        ? `${esp.esp_tdoc || "V"}-${esp.esp_cedu}`
+        : "";
+      const searchable =
+        `${esp.esp_nomb} ${esp.esp_apel} ${docFull} ${esp.esp_cedu || ""} ${esp.esp_codi || ""} ${esp.esp_licencia || ""} ${esp.tm_usuar?.usu_crro || ""}`.toLowerCase();
       const q = searchEsp.toLowerCase();
-      if (searchEsp && !nombre.includes(q)) return false;
+      if (searchEsp && !searchable.includes(q)) return false;
       if (
         filterEspecialidad !== "TODAS" &&
         esp.tm_especi?.esc_codi !== filterEspecialidad
@@ -324,30 +327,38 @@ export default function EspecialistasTab({
     },
   ].filter(Boolean);
 
-  const validarCampo = (campo) => {
-    const valor = newEsp[campo];
-    if (campo === "esp_codi")
-      return VALIDACIONES.documento(valor, newEsp.esp_tdoc);
-    if (campo === "esp_telf") return VALIDACIONES.telefono(valor);
-    if (campo === "esp_licencia") return VALIDACIONES.licencia(valor);
-    if (campo === "esp_fnac") return VALIDACIONES.fecha(valor);
+  const validarCampo = (
+    campo,
+    nextValue = newEsp[campo],
+    nextTdoc = newEsp.esp_tdoc,
+  ) => {
+    if (campo === "esp_cedu")
+      return VALIDACIONES.documento(nextValue, nextTdoc);
+    if (campo === "esp_telf") return VALIDACIONES.telefono(nextValue);
+    if (campo === "esp_licencia") return VALIDACIONES.licencia(nextValue);
+    if (campo === "esp_fnac") return VALIDACIONES.fecha(nextValue);
     return "";
   };
 
-  const validarCampoEdit = (campo) => {
-    const valor = editingEsp?.[campo];
-    if (campo === "esp_telf") return VALIDACIONES.telefono(valor);
-    if (campo === "esp_licencia") return VALIDACIONES.licencia(valor);
+  const validarCampoEdit = (
+    campo,
+    nextValue = editingEsp?.[campo],
+    nextTdoc = editingEsp?.esp_tdoc || "V",
+  ) => {
+    if (campo === "esp_cedu")
+      return VALIDACIONES.documento(nextValue, nextTdoc);
+    if (campo === "esp_telf") return VALIDACIONES.telefono(nextValue);
+    if (campo === "esp_licencia") return VALIDACIONES.licencia(nextValue);
     return "";
   };
 
   const validarTodo = () => {
     const nuevos = {};
-    if (!newEsp.esp_codi)
-      nuevos.esp_codi = "El número de documento es requerido";
+    if (!newEsp.esp_cedu?.trim())
+      nuevos.esp_cedu = "El número de documento es requerido";
     else {
-      const doc = VALIDACIONES.documento(newEsp.esp_codi, newEsp.esp_tdoc);
-      if (doc) nuevos.esp_codi = doc;
+      const doc = VALIDACIONES.documento(newEsp.esp_cedu, newEsp.esp_tdoc);
+      if (doc) nuevos.esp_cedu = doc;
     }
     const telf = VALIDACIONES.telefono(newEsp.esp_telf);
     if (telf) nuevos.esp_telf = telf;
@@ -361,6 +372,13 @@ export default function EspecialistasTab({
 
   const validarTodoEdit = () => {
     const nuevos = {};
+    if (editingEsp?.esp_cedu?.trim()) {
+      const doc = VALIDACIONES.documento(
+        editingEsp.esp_cedu,
+        editingEsp.esp_tdoc || "V",
+      );
+      if (doc) nuevos.esp_cedu = doc;
+    }
     const telf = VALIDACIONES.telefono(editingEsp?.esp_telf);
     if (telf) nuevos.esp_telf = telf;
     const lic = VALIDACIONES.licencia(editingEsp?.esp_licencia);
@@ -442,7 +460,7 @@ export default function EspecialistasTab({
               newEsp?.esp_nomb?.trim() ||
               newEsp?.esp_apel?.trim() ||
               newEsp?.esp_cedu?.trim() ||
-              newEsp?.esp_corr?.trim() ||
+              newEsp?.usu_crro?.trim() ||
               newEsp?.esp_telf?.trim(),
             )}
           >
@@ -483,9 +501,20 @@ export default function EspecialistasTab({
                     <select
                       required
                       value={newEsp.esp_tdoc}
-                      onChange={(e) =>
-                        setNewEsp({ ...newEsp, esp_tdoc: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const nextTdoc = e.target.value;
+                        setNewEsp({ ...newEsp, esp_tdoc: nextTdoc });
+                        if (newEsp.esp_cedu) {
+                          setErrores((prev) => ({
+                            ...prev,
+                            esp_cedu: validarCampo(
+                              "esp_cedu",
+                              newEsp.esp_cedu,
+                              nextTdoc,
+                            ),
+                          }));
+                        }
+                      }}
                       className="form-select"
                     >
                       <option value="V">Venezolano (V)</option>
@@ -494,26 +523,29 @@ export default function EspecialistasTab({
                     </select>
                   </div>
                   <div>
-                    <label className="form-label">Número de Documento</label>
+                    <label className="form-label">
+                      Cédula / Documento de Identidad
+                    </label>
                     <input
                       required
-                      maxLength={11}
+                      maxLength={12}
                       type="text"
-                      value={newEsp.esp_codi}
+                      value={newEsp.esp_cedu || ""}
                       onChange={(e) => {
-                        setNewEsp({ ...newEsp, esp_codi: e.target.value });
+                        const nextVal = e.target.value;
+                        setNewEsp({ ...newEsp, esp_cedu: nextVal });
                         setErrores((prev) => ({
                           ...prev,
-                          esp_codi: validarCampo("esp_codi"),
+                          esp_cedu: validarCampo("esp_cedu", nextVal),
                         }));
                       }}
-                      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${errores.esp_codi ? "form-input-invalid" : ""}`}
+                      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${errores.esp_cedu ? "form-input-invalid" : ""}`}
                       placeholder="Ej. 12345678"
                     />
-                    {errores.esp_codi && (
+                    {errores.esp_cedu && (
                       <p className="form-error">
                         <AlertCircle className="w-3.5 h-3.5" />{" "}
-                        {errores.esp_codi}
+                        {errores.esp_cedu}
                       </p>
                     )}
                   </div>
@@ -718,7 +750,14 @@ export default function EspecialistasTab({
             open={showEditEsp}
             onClose={() => setShowEditEsp(false)}
             title="Editar Especialista"
-            subtitle={`${editingEsp?.esp_nomb || ""} ${editingEsp?.esp_apel || ""}`.trim()}
+            subtitle={[
+              `${editingEsp?.esp_nomb || ""} ${editingEsp?.esp_apel || ""}`.trim(),
+              editingEsp?.esp_codi
+                ? `Cód. Interno: ${editingEsp.esp_codi}`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
             icon={Pencil}
             maxWidth="max-w-xl"
           >
@@ -745,6 +784,62 @@ export default function EspecialistasTab({
                     <AlertCircle className="w-3.5 h-3.5" /> {fotoError}
                   </p>
                 )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="form-label">Tipo de Documento</label>
+                  <select
+                    value={editingEsp?.esp_tdoc || "V"}
+                    onChange={(e) => {
+                      const nextTdoc = e.target.value;
+                      setEditingEsp({ ...editingEsp, esp_tdoc: nextTdoc });
+                      if (editingEsp?.esp_cedu) {
+                        setEditErrores((prev) => ({
+                          ...prev,
+                          esp_cedu: validarCampoEdit(
+                            "esp_cedu",
+                            editingEsp.esp_cedu,
+                            nextTdoc,
+                          ),
+                        }));
+                      }
+                    }}
+                    className="form-select"
+                  >
+                    <option value="V">Venezolano (V)</option>
+                    <option value="E">Extranjero (E)</option>
+                    <option value="P">Pasaporte (P)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">
+                    Cédula / Documento de Identidad
+                  </label>
+                  <input
+                    maxLength={12}
+                    type="text"
+                    value={editingEsp?.esp_cedu || ""}
+                    onChange={(e) => {
+                      const nextVal = e.target.value;
+                      setEditingEsp({
+                        ...editingEsp,
+                        esp_cedu: nextVal,
+                      });
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_cedu: validarCampoEdit("esp_cedu", nextVal),
+                      }));
+                    }}
+                    className={`form-input ${editErrores.esp_cedu ? "form-input-invalid" : ""}`}
+                    placeholder="Ej. 12345678"
+                  />
+                  {editErrores.esp_cedu && (
+                    <p className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {editErrores.esp_cedu}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
@@ -1030,7 +1125,11 @@ export default function EspecialistasTab({
                   title="Exportar a PDF"
                   className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
                 >
-                  <FileText className="w-4 h-4" />
+                  <img
+                    src={pdfIcon}
+                    alt="PDF"
+                    className="w-4 h-4 object-contain shrink-0"
+                  />
                 </button>
                 <button
                   type="button"
@@ -1039,11 +1138,18 @@ export default function EspecialistasTab({
                   title="Exportar a Excel"
                   className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
                 >
-                  <Download className="w-4 h-4" />
+                  <img
+                    src={excelIcon}
+                    alt="Excel"
+                    className="w-4 h-4 object-contain shrink-0"
+                  />
                 </button>
                 <button
                   data-tour="admin-esp-register-btn"
-                  onClick={() => setShowRegistro(true)}
+                  onClick={() => {
+                    setErrores({});
+                    setShowRegistro(true);
+                  }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
                 >
                   <Plus className="w-4 h-4" />
@@ -1166,8 +1272,11 @@ export default function EspecialistasTab({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                setEditErrores({});
                                 setEditingEsp({
                                   esp_codi: esp.esp_codi,
+                                  esp_tdoc: esp.esp_tdoc || "V",
+                                  esp_cedu: esp.esp_cedu || "",
                                   esp_nomb: esp.esp_nomb,
                                   esp_apel: esp.esp_apel,
                                   usu_crro: esp.tm_usuar?.usu_crro || "",
@@ -1281,9 +1390,12 @@ export default function EspecialistasTab({
                         "Sin especialidad asignada"}
                     </p>
                     <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                      Código: {previewEsp.esp_codi}{" "}
+                      Cód. Interno: {previewEsp.esp_codi}
+                      {previewEsp.esp_cedu
+                        ? ` · Cédula: ${previewEsp.esp_tdoc || "V"}-${previewEsp.esp_cedu}`
+                        : ""}
                       {previewEsp.esp_licencia
-                        ? `· Licencia: ${previewEsp.esp_licencia}`
+                        ? ` · Licencia: ${previewEsp.esp_licencia}`
                         : ""}
                     </p>
                   </div>
@@ -1295,6 +1407,16 @@ export default function EspecialistasTab({
                     Información Profesional y de Contacto
                   </h4>
                   <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60 divide-y divide-slate-200/60 dark:divide-slate-700/60 text-xs">
+                    <div className="flex justify-between items-center px-4 py-2.5">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">
+                        Cédula / Documento
+                      </span>
+                      <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        {previewEsp.esp_cedu
+                          ? `${previewEsp.esp_tdoc || "V"}-${previewEsp.esp_cedu}`
+                          : "No registrada"}
+                      </span>
+                    </div>
                     <div className="flex justify-between items-center px-4 py-2.5">
                       <span className="text-slate-500 dark:text-slate-400 font-medium">
                         Correo Electrónico

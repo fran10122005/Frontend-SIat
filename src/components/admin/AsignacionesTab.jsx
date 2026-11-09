@@ -9,9 +9,9 @@ import {
   User,
   Stethoscope,
   CalendarDays,
-  FileText,
-  Download,
 } from "lucide-react";
+import pdfIcon from "../../assets/pdf.png";
+import excelIcon from "../../assets/excel.png";
 import StatusBadge from "../shared/StatusBadge";
 import FilterBar from "../shared/FilterBar";
 import Pagination from "../shared/Pagination";
@@ -283,7 +283,11 @@ export default function AsignacionesTab({
                 title="Exportar a PDF"
                 className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
               >
-                <FileText className="w-4 h-4" />
+                <img
+                  src={pdfIcon}
+                  alt="PDF"
+                  className="w-4 h-4 object-contain shrink-0"
+                />
               </button>
               <button
                 type="button"
@@ -292,7 +296,11 @@ export default function AsignacionesTab({
                 title="Exportar a Excel"
                 className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 transition-colors flex items-center justify-center min-w-[36px] min-h-[36px]"
               >
-                <Download className="w-4 h-4" />
+                <img
+                  src={excelIcon}
+                  alt="Excel"
+                  className="w-4 h-4 object-contain shrink-0"
+                />
               </button>
             </div>
           </div>

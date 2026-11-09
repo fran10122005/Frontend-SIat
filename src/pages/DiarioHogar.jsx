@@ -13,34 +13,84 @@ import {
   Heart,
   Watch,
   Search,
+  Sparkles,
+  Pencil,
+  Pill,
+  Flame,
 } from "lucide-react";
 import LoadingState from "../components/dashboard/LoadingState";
 import Topbar from "../components/layout/Topbar";
 import Pagination from "../components/shared/Pagination";
-import FilterBar from "../components/shared/FilterBar";
 import { useConsentimiento } from "../hooks/useConsentimiento";
 import ConsentimientoModal from "../components/shared/ConsentimientoModal";
 import { useSmartwatch } from "../context/SmartwatchContext";
+import {
+  parseCalendarDate,
+  toLocalYmd,
+  isDateInRange,
+  calculateConsecutiveStreak,
+} from "../utils/dateRanges";
 
 import PageTitle from "../components/ui/PageTitle";
 
+const MOOD_OPTIONS = [
+  {
+    value: "Muy Calmo",
+    emoji: "😌",
+    label: "Muy Calmo",
+    activeClass:
+      "bg-emerald-50 border-emerald-400 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-600 dark:text-emerald-300 shadow-sm",
+  },
+  {
+    value: "Estable",
+    emoji: "😊",
+    label: "Estable",
+    activeClass:
+      "bg-blue-50 border-blue-400 text-blue-700 dark:bg-blue-950/40 dark:border-blue-600 dark:text-blue-300 shadow-sm",
+  },
+  {
+    value: "Irritable",
+    emoji: "😠",
+    label: "Irritable",
+    activeClass:
+      "bg-orange-50 border-orange-400 text-orange-700 dark:bg-orange-950/40 dark:border-orange-600 dark:text-orange-300 shadow-sm",
+  },
+  {
+    value: "Ansioso",
+    emoji: "😟",
+    label: "Ansioso",
+    activeClass:
+      "bg-amber-50 border-amber-400 text-amber-700 dark:bg-amber-950/40 dark:border-amber-600 dark:text-amber-300 shadow-sm",
+  },
+  {
+    value: "Triste",
+    emoji: "😢",
+    label: "Triste",
+    activeClass:
+      "bg-purple-50 border-purple-400 text-purple-700 dark:bg-purple-950/40 dark:border-purple-600 dark:text-purple-300 shadow-sm",
+  },
+];
+
+const THERAPY_LABELS = {
+  si: "Terapia completa",
+  parcial: "Terapia parcial",
+  no: "Sin terapia",
+};
+
 // Helper para parsear fechas sin desfase horario UTC
 const parseLocalDate = (dateInput) => {
-  if (!dateInput) return new Date();
-  if (dateInput instanceof Date) return dateInput;
-  const str = String(dateInput);
-  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    const [, y, m, d] = match;
-    return new Date(Number(y), Number(m) - 1, Number(d), 12, 0, 0);
-  }
-  const d = new Date(str);
-  return new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+  return parseCalendarDate(dateInput) || new Date();
 };
 
 export default function DiarioHogar() {
-  const { userRole, selectedChildId, navigate, showToast, listaNinos } =
-    useGlobalContext();
+  const {
+    userRole,
+    selectedChildId,
+    navigate,
+    showToast,
+    listaNinos,
+    fetchHistorialCompleto,
+  } = useGlobalContext();
   const { liveBpm, isConnected } = useSmartwatch();
 
   const genero = useMemo(() => {
@@ -74,17 +124,99 @@ export default function DiarioHogar() {
   )
     .toISOString()
     .split("T")[0];
+  const [editingBitacoraId, setEditingBitacoraId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [reportDate, setReportDate] = useState(localDate);
   const [mood, setMood] = useState("Estable");
   const [crisisCount, setCrisisCount] = useState(0);
   const [bpmValue, setBpmValue] = useState(liveBpm || "");
   const [sleepHours, setSleepHours] = useState(8);
+  const [sleepQuality, setSleepQuality] = useState("");
   const [appetite, setAppetite] = useState("");
+  const [medicationTaken, setMedicationTaken] = useState("");
+  const [sensoryIssues, setSensoryIssues] = useState("");
+  const [digestion, setDigestion] = useState("");
   const [notes, setNotes] = useState("");
   const [triggers, setTriggers] = useState("");
   const [positiveNote, setPositiveNote] = useState("");
   const [therapyDone, setTherapyDone] = useState("");
   const [showExtra, setShowExtra] = useState(false);
+
+  const existingEntryForDate = useMemo(() => {
+    if (!reportDate || !Array.isArray(bitacorasList)) return null;
+    return (
+      bitacorasList.find((b) => toLocalYmd(b.bit_fech) === reportDate) || null
+    );
+  }, [bitacorasList, reportDate]);
+
+  const resetForm = useCallback(() => {
+    setEditingBitacoraId(null);
+    setCrisisCount(0);
+    setBpmValue(liveBpm || "");
+    setMood("Estable");
+    setNotes("");
+    setTriggers("");
+    setAppetite("");
+    setSleepQuality("");
+    setMedicationTaken("");
+    setSensoryIssues("");
+    setDigestion("");
+    setPositiveNote("");
+    setTherapyDone("");
+    setSleepHours(8);
+    setShowExtra(false);
+  }, [liveBpm]);
+
+  const loadBitacoraIntoForm = useCallback(
+    (bitacora) => {
+      if (!bitacora) return;
+      setEditingBitacoraId(bitacora.bit_codi);
+      setReportDate(toLocalYmd(bitacora.bit_fech) || localDate);
+      setMood(bitacora.bit_anim || "Estable");
+      setCrisisCount(Number(bitacora.bit_crisi) || 0);
+      setBpmValue(bitacora.bit_bpm ?? (liveBpm || ""));
+      setSleepHours(
+        bitacora.bit_suen !== undefined && bitacora.bit_suen !== null
+          ? bitacora.bit_suen
+          : 8,
+      );
+      setSleepQuality(
+        bitacora.bit_cali && bitacora.bit_cali !== "Normal"
+          ? bitacora.bit_cali
+          : "",
+      );
+      setAppetite(
+        bitacora.bit_apet && bitacora.bit_apet !== "Normal"
+          ? bitacora.bit_apet
+          : "",
+      );
+      setMedicationTaken(
+        bitacora.bit_medi === true
+          ? "SI"
+          : bitacora.bit_medi === false
+            ? "NO"
+            : "",
+      );
+      setSensoryIssues(bitacora.bit_senso || "");
+      setDigestion(bitacora.bit_diges || "");
+      setNotes(bitacora.bit_obse || "");
+      setTriggers(bitacora.bit_dese || "");
+      setPositiveNote(
+        bitacora.bit_logro || bitacora.positiveNote || bitacora.bit_algo || "",
+      );
+      setTherapyDone(bitacora.bit_terap || "");
+      if (
+        bitacora.bit_terap ||
+        bitacora.bit_dese ||
+        bitacora.bit_senso ||
+        bitacora.bit_diges
+      ) {
+        setShowExtra(true);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [liveBpm, localDate],
+  );
 
   // Sincronizar automáticamente pulso live del reloj
   useEffect(() => {
@@ -96,6 +228,13 @@ export default function DiarioHogar() {
   // Listener para auto-incrementar crisis y actualizar pulso cuando el smartwatch detecte una sobrecarga
   useEffect(() => {
     const handleLocalCrisis = (e) => {
+      if (!selectedChildId) return;
+      if (
+        e.detail?.nin_codi &&
+        String(e.detail.nin_codi) !== String(selectedChildId)
+      ) {
+        return;
+      }
       setCrisisCount((prev) => (Number(prev) || 0) + 1);
       if (e.detail?.bpm_max) {
         setBpmValue(e.detail.bpm_max);
@@ -107,7 +246,7 @@ export default function DiarioHogar() {
     window.addEventListener("siat:crisis_alert", handleLocalCrisis);
     return () =>
       window.removeEventListener("siat:crisis_alert", handleLocalCrisis);
-  }, [showToast]);
+  }, [showToast, selectedChildId]);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -126,7 +265,11 @@ export default function DiarioHogar() {
         (b) =>
           (b.bit_text && b.bit_text.toLowerCase().includes(q)) ||
           (b.bit_algo && b.bit_algo.toLowerCase().includes(q)) ||
+          (b.bit_logro && b.bit_logro.toLowerCase().includes(q)) ||
+          (b.bit_terap && b.bit_terap.toLowerCase().includes(q)) ||
           (b.bit_dese && b.bit_dese.toLowerCase().includes(q)) ||
+          (b.bit_senso && b.bit_senso.toLowerCase().includes(q)) ||
+          (b.bit_diges && b.bit_diges.toLowerCase().includes(q)) ||
           (b.bit_anim && b.bit_anim.toLowerCase().includes(q)) ||
           (b.bit_obse && b.bit_obse.toLowerCase().includes(q)),
       );
@@ -143,38 +286,18 @@ export default function DiarioHogar() {
     }
 
     if (filterDateRange === "HOY") {
-      const todayStr = new Date().toISOString().split("T")[0];
-      data = data.filter((b) => {
-        const dStr = b.bit_fech ? String(b.bit_fech).substring(0, 10) : "";
-        return dStr === todayStr;
-      });
-    } else if (filterDateRange === "7DIAS") {
-      const now = new Date();
-      const cutoff = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() - 7,
+      const todayYmd = toLocalYmd(new Date());
+      data = data.filter((b) => toLocalYmd(b.bit_fech) === todayYmd);
+    } else if (filterDateRange !== "TODOS") {
+      const rangeMap = {
+        "7DIAS": "7days",
+        "30DIAS": "30days",
+        CUSTOM: "custom",
+      };
+      const mappedKey = rangeMap[filterDateRange] || filterDateRange;
+      data = data.filter((b) =>
+        isDateInRange(b.bit_fech, mappedKey, filterDateFrom, filterDateTo),
       );
-      data = data.filter((b) => parseLocalDate(b.bit_fech) >= cutoff);
-    } else if (filterDateRange === "30DIAS") {
-      const now = new Date();
-      const cutoff = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() - 30,
-      );
-      data = data.filter((b) => parseLocalDate(b.bit_fech) >= cutoff);
-    } else if (filterDateRange === "CUSTOM") {
-      if (filterDateFrom) {
-        const from = parseLocalDate(filterDateFrom);
-        from.setHours(0, 0, 0, 0);
-        data = data.filter((b) => parseLocalDate(b.bit_fech) >= from);
-      }
-      if (filterDateTo) {
-        const to = parseLocalDate(filterDateTo);
-        to.setHours(23, 59, 59, 999);
-        data = data.filter((b) => parseLocalDate(b.bit_fech) <= to);
-      }
     }
 
     return data;
@@ -214,6 +337,10 @@ export default function DiarioHogar() {
     if (filterDateRange !== "TODOS") {
       const labels = {
         HOY: "Hoy",
+        this_week: "Esta semana",
+        last_week: "Semana pasada",
+        this_month: "Este mes",
+        last_month: "Mes pasado",
         "7DIAS": "Últimos 7 días",
         "30DIAS": "Últimos 30 días",
         CUSTOM: `Rango: ${filterDateFrom || "..."} - ${filterDateTo || "..."}`,
@@ -278,7 +405,9 @@ export default function DiarioHogar() {
 
   const handleReportSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     try {
+      setIsSubmitting(true);
       const bpmToSave = bpmValue
         ? Number(bpmValue)
         : liveBpm
@@ -289,32 +418,46 @@ export default function DiarioHogar() {
         date: reportDate,
         mood,
         crisisCount: Number(crisisCount) || 0,
-        sleepHours: sleepHours ? parseFloat(sleepHours) : null,
+        sleepHours:
+          sleepHours !== "" && sleepHours !== null
+            ? parseFloat(sleepHours)
+            : null,
+        sleepQuality: sleepQuality || null,
         appetite: appetite || null,
+        medicationTaken:
+          medicationTaken === "SI"
+            ? true
+            : medicationTaken === "NO"
+              ? false
+              : null,
+        sensoryIssues: sensoryIssues || null,
+        digestion: digestion || null,
         text: notes || null,
         triggers: triggers || null,
         positiveNote: positiveNote || null,
         therapyDone: therapyDone || null,
         bpm: bpmToSave,
       };
-      await api.post("/ninos/bitacora", payload);
-      showToast("✅ Reporte guardado");
-      setCrisisCount(0);
-      setBpmValue(liveBpm || "");
-      setMood("Estable");
-      setNotes("");
-      setTriggers("");
-      setAppetite("");
-      setPositiveNote("");
-      setTherapyDone("");
-      setSleepHours(8);
-      fetchBitacoras();
+      if (editingBitacoraId) {
+        await api.put(`/ninos/bitacora/${editingBitacoraId}`, payload);
+        showToast("✅ Reporte actualizado correctamente");
+      } else {
+        await api.post("/ninos/bitacora", payload);
+        showToast("✅ Reporte guardado");
+      }
+      resetForm();
+      await fetchBitacoras();
+      if (selectedChildId && fetchHistorialCompleto) {
+        await fetchHistorialCompleto(selectedChildId);
+      }
     } catch (err) {
       console.error(err);
       showToast(
         "❌ Error al registrar la bitácora: " +
           (err.response?.data?.message || err.message),
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -323,6 +466,11 @@ export default function DiarioHogar() {
       fetchBitacoras();
     }
   }, [userRole, fetchBitacoras, selectedChildId]);
+
+  const streakDays = useMemo(
+    () => calculateConsecutiveStreak(bitacorasList),
+    [bitacorasList],
+  );
 
   // Security Guard
   if (userRole !== "REPRESENTANTE") {
@@ -443,16 +591,16 @@ export default function DiarioHogar() {
               </div>
               <div className="bg-white dark:bg-[#1E293B] rounded-xl p-3 md:p-5 border border-slate-200 dark:border-slate-800/60 shadow-sm flex items-center gap-3 md:gap-4">
                 <div className="p-2.5 md:p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                  <Calendar className="w-4 h-4 md:w-5 md:h-5 text-indigo-600 dark:text-indigo-400" />
+                  <Flame className="w-4 h-4 md:w-5 md:h-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[9px] md:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Racha
+                    Racha Actual
                   </p>
                   <p className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">
-                    {bitacorasList.length > 0
-                      ? `${Math.min(bitacorasList.length, 7)} días`
-                      : "—"}
+                    {streakDays > 0
+                      ? `${streakDays} ${streakDays === 1 ? "día" : "días"}`
+                      : "0 días"}
                   </p>
                 </div>
               </div>
@@ -463,19 +611,55 @@ export default function DiarioHogar() {
               data-tour="dh-form"
               className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden mb-6 md:mb-8"
             >
-              <div className="p-5 md:p-8 border-b border-gray-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="p-5 md:p-8 border-b border-gray-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <NotebookPen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  Registrar Nuevo Reporte Diario
+                  {editingBitacoraId
+                    ? "Editando Reporte Diario"
+                    : "Registrar Nuevo Reporte Diario"}
                 </h3>
+                {editingBitacoraId && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Cancelar edición
+                  </button>
+                )}
               </div>
+
+              {existingEntryForDate && !editingBitacoraId && (
+                <div className="mx-5 md:mx-8 mt-5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-800 dark:text-amber-300">
+                  <span>
+                    Ya existe una bitácora registrada para el{" "}
+                    <strong>
+                      {parseLocalDate(
+                        existingEntryForDate.bit_fech,
+                      ).toLocaleDateString("es-ES")}
+                    </strong>{" "}
+                    (Ánimo: {existingEntryForDate.bit_anim}).
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => loadBitacoraIntoForm(existingEntryForDate)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors shrink-0"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Cargar para editar
+                  </button>
+                </div>
+              )}
+
               <form
                 onSubmit={handleReportSubmit}
                 className="p-5 md:p-8 space-y-5"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Fila 1: Fecha, Crisis y Pulso */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       Fecha
                     </label>
                     <input
@@ -487,25 +671,8 @@ export default function DiarioHogar() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                      Ánimo de {art} {ninoLabel}
-                    </label>
-                    <select
-                      data-tour="dh-mood"
-                      value={mood}
-                      onChange={(e) => setMood(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-800 dark:text-white"
-                    >
-                      <option>Muy Calmo</option>
-                      <option>Estable</option>
-                      <option>Irritable</option>
-                      <option>Ansioso</option>
-                      <option>Triste</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         Crisis hoy
                       </label>
                       <span className="text-[9px] text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
@@ -551,7 +718,7 @@ export default function DiarioHogar() {
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         Pulso (BPM)
                       </label>
                       {liveBpm ? (
@@ -580,9 +747,115 @@ export default function DiarioHogar() {
                   </div>
                 </div>
 
+                {/* Fila 2: Selector visual de Ánimo */}
+                <div className="space-y-2" data-tour="dh-mood">
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 block">
+                    Ánimo de {art} {ninoLabel}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {MOOD_OPTIONS.map((opt) => {
+                      const active = mood === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setMood(opt.value)}
+                          className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                            active
+                              ? opt.activeClass
+                              : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          }`}
+                        >
+                          <span className="text-base">{opt.emoji}</span>
+                          <span className="truncate">{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Fila 3: Sueño, Calidad de Sueño, Apetito y Medicación (visibles por defecto) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-700/70">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Horas de sueño
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="24"
+                      step="0.5"
+                      value={sleepHours}
+                      onChange={(e) => setSleepHours(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Calidad del sueño
+                    </label>
+                    <select
+                      value={sleepQuality}
+                      onChange={(e) => setSleepQuality(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                    >
+                      <option value="">Normal</option>
+                      <option value="Profundo / Reparador">
+                        Profundo / Reparador
+                      </option>
+                      <option value="Intermitente">Intermitente</option>
+                      <option value="Inquieto">Inquieto</option>
+                      <option value="Insomnio">Dificultad / Insomnio</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Apetito
+                    </label>
+                    <select
+                      value={appetite}
+                      onChange={(e) => setAppetite(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                    >
+                      <option value="">Normal</option>
+                      <option value="Bueno">Bueno</option>
+                      <option value="Regular">Regular</option>
+                      <option value="Selectivo">Selectivo</option>
+                      <option value="Rechazó alimentos">
+                        Rechazó alimentos
+                      </option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 block">
+                      Medicación hoy
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { val: "SI", label: "Sí" },
+                        { val: "NO", label: "No" },
+                        { val: "", label: "N/A" },
+                      ].map((item) => (
+                        <button
+                          key={item.val || "na"}
+                          type="button"
+                          onClick={() => setMedicationTaken(item.val)}
+                          className={`py-2 rounded-lg text-xs font-bold border transition-all ${
+                            medicationTaken === item.val
+                              ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                    Algo positivo de hoy
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Algo positivo de hoy / Logro destacado
                   </label>
                   <input
                     type="text"
@@ -594,24 +867,20 @@ export default function DiarioHogar() {
                     }
                     value={positiveNote}
                     onChange={(e) => setPositiveNote(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                    Notas (opcional)
+                  <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Notas del día (opcional)
                   </label>
                   <textarea
                     rows="2"
-                    placeholder={
-                      genero === "femenino"
-                        ? "Cómo fue el día, eventos importantes..."
-                        : "Cómo fue el día, eventos importantes..."
-                    }
+                    placeholder="Cómo fue el día, eventos importantes..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-slate-800 dark:text-white"
                   ></textarea>
                 </div>
 
@@ -622,58 +891,29 @@ export default function DiarioHogar() {
                     onClick={() => setShowExtra(!showExtra)}
                     className="text-xs font-semibold text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1.5 transition-colors"
                   >
-                    {showExtra ? "− Ocultar" : "+ Más detalles"} (sueño,
-                    apetito, terapia...)
+                    {showExtra ? "− Ocultar" : "+ Más detalles"} (terapia,
+                    desencadenantes, sensorial, digestión)
                   </button>
 
                   {showExtra && (
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                          Horas de sueño
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="24"
-                          value={sleepHours}
-                          onChange={(e) => setSleepHours(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                          Apetito
-                        </label>
-                        <select
-                          value={appetite}
-                          onChange={(e) => setAppetite(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        >
-                          <option value="">—</option>
-                          <option>Bueno</option>
-                          <option>Regular</option>
-                          <option>Selectivo</option>
-                          <option>Rechazó alimentos</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                          Terapia hoy
+                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Terapia en casa hoy
                         </label>
                         <select
                           value={therapyDone}
                           onChange={(e) => setTherapyDone(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
                         >
                           <option value="">—</option>
                           <option value="si">Sí, completa</option>
                           <option value="parcial">Sí, parcial</option>
-                          <option value="no">No</option>
+                          <option value="no">No se realizó</option>
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           Desencadenantes
                         </label>
                         <input
@@ -681,8 +921,39 @@ export default function DiarioHogar() {
                           placeholder="Ej: Ruido, cambio de rutina"
                           value={triggers}
                           onChange={(e) => setTriggers(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
                         />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Sensibilidad sensorial
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Luces fuertes, texturas"
+                          value={sensoryIssues}
+                          onChange={(e) => setSensoryIssues(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Digestión
+                        </label>
+                        <select
+                          value={digestion}
+                          onChange={(e) => setDigestion(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                        >
+                          <option value="">Normal / Sin novedades</option>
+                          <option value="Normal">Normal</option>
+                          <option value="Estreñimiento">Estreñimiento</option>
+                          <option value="Malestar estomacal">
+                            Malestar estomacal
+                          </option>
+                          <option value="Reflujo">Reflujo</option>
+                          <option value="Diarrea">Diarrea</option>
+                        </select>
                       </div>
                     </div>
                   )}
@@ -701,11 +972,16 @@ export default function DiarioHogar() {
                 <div className="flex justify-end pt-2">
                   <button
                     type="submit"
+                    disabled={isSubmitting}
                     data-tour="dh-save"
-                    className="w-full sm:w-auto px-5 py-2.5 bg-brand-500 hover:bg-blue-600 text-white font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-brand-500 hover:bg-blue-600 disabled:opacity-60 text-white font-bold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    Guardar Reporte
+                    {isSubmitting
+                      ? "Guardando..."
+                      : editingBitacoraId
+                        ? "Actualizar Reporte"
+                        : "Guardar Reporte"}
                   </button>
                 </div>
               </form>
@@ -734,7 +1010,7 @@ export default function DiarioHogar() {
                       <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Buscar en notas o bitácoras..."
+                        placeholder="Buscar en notas, logros o detonantes..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-3.5 pr-9 py-2 h-10 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
@@ -776,6 +1052,10 @@ export default function DiarioHogar() {
                       >
                         <option value="TODOS">Todo el historial</option>
                         <option value="HOY">Hoy</option>
+                        <option value="this_week">Esta semana</option>
+                        <option value="last_week">Semana pasada</option>
+                        <option value="this_month">Este mes</option>
+                        <option value="last_month">Mes pasado</option>
                         <option value="7DIAS">Últimos 7 días</option>
                         <option value="30DIAS">Últimos 30 días</option>
                         <option value="CUSTOM">Rango personalizado...</option>
@@ -856,7 +1136,7 @@ export default function DiarioHogar() {
                       </span>
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {pagedBitacoras.map((bitacora, idx) => {
                         const dateObj = parseLocalDate(bitacora.bit_fech);
                         const diaSemana = dateObj.toLocaleDateString("es-ES", {
@@ -878,49 +1158,65 @@ export default function DiarioHogar() {
                           (bitacora.bit_crisi || 0) > 0
                             ? "text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-900/20 border-rose-200 dark:border-rose-900/30"
                             : "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/30";
+                        const positiveText =
+                          bitacora.bit_logro ||
+                          bitacora.positiveNote ||
+                          bitacora.bit_algo;
 
                         return (
                           <div
                             key={bitacora.bit_codi || idx}
-                            className="px-3 py-2.5 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800/60"
+                            className="px-3.5 py-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800/60 space-y-2"
                           >
-                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate">
+                                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">
                                   {fechaTexto}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
                                 {bitacora.bit_bpm && (
-                                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40">
+                                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/40">
                                     <Heart className="w-2.5 h-2.5 fill-current text-rose-500" />
                                     {bitacora.bit_bpm} BPM
                                   </span>
                                 )}
                                 <span
-                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap shrink-0 ${crisisColor}`}
+                                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap shrink-0 ${crisisColor}`}
                                 >
                                   <AlertTriangle className="w-3 h-3" />{" "}
                                   {bitacora.bit_crisi || 0} crisis
                                 </span>
+                                {bitacora.bit_codi && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      loadBitacoraIntoForm(bitacora)
+                                    }
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-950/40 transition-colors"
+                                    title="Editar este reporte"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-4 gap-1.5">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                               <div
-                                className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                                className="flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
                                 title={`Ánimo: ${bitacora.bit_anim || "—"}`}
                               >
                                 <span className="text-sm shrink-0">
                                   {animoIconos[bitacora.bit_anim] || "😐"}
                                 </span>
-                                <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
                                   {bitacora.bit_anim}
                                 </span>
                               </div>
                               <div
-                                className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                                className="flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
                                 title={
                                   bitacora.bit_bpm
                                     ? `Pulso registrado: ${bitacora.bit_bpm} BPM`
@@ -928,56 +1224,88 @@ export default function DiarioHogar() {
                                 }
                               >
                                 <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/20 shrink-0" />
-                                <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
                                   {bitacora.bit_bpm
                                     ? `${bitacora.bit_bpm} BPM`
                                     : "—"}
                                 </span>
                               </div>
                               <div
-                                className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                                className="flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
                                 title={
                                   bitacora.bit_suen
-                                    ? `Sueño: ${bitacora.bit_suen}h`
+                                    ? `Sueño: ${bitacora.bit_suen}h${bitacora.bit_cali ? ` (${bitacora.bit_cali})` : ""}`
                                     : "—"
                                 }
                               >
                                 <Moon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                                <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
                                   {bitacora.bit_suen
-                                    ? `${bitacora.bit_suen}h`
+                                    ? `${bitacora.bit_suen}h${bitacora.bit_cali && bitacora.bit_cali !== "Normal" ? ` · ${bitacora.bit_cali}` : ""}`
                                     : "—"}
                                 </span>
                               </div>
                               <div
-                                className="flex items-center justify-center gap-1 px-1 py-1 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
+                                className="flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-md bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 min-w-0 overflow-hidden"
                                 title={`Apetito: ${bitacora.bit_apet || "—"}`}
                               >
                                 <Utensils className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
                                   {bitacora.bit_apet || "—"}
                                 </span>
                               </div>
                             </div>
 
-                            {(bitacora.positiveNote || bitacora.bit_algo) && (
-                              <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 truncate mt-1.5 flex items-center gap-1">
-                                <span>⭐</span>
-                                <span>
-                                  {bitacora.positiveNote || bitacora.bit_algo}
-                                </span>
+                            {positiveText && (
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/30 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">{positiveText}</span>
                               </p>
                             )}
 
+                            {(bitacora.bit_medi !== null &&
+                              bitacora.bit_medi !== undefined) ||
+                            bitacora.bit_terap ||
+                            bitacora.bit_diges ||
+                            bitacora.bit_senso ? (
+                              <div className="flex flex-wrap gap-1.5 text-[10px]">
+                                {bitacora.bit_medi !== null &&
+                                  bitacora.bit_medi !== undefined && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold">
+                                      <Pill className="w-2.5 h-2.5" />
+                                      Medicación:{" "}
+                                      {bitacora.bit_medi ? "Sí" : "No"}
+                                    </span>
+                                  )}
+                                {bitacora.bit_terap && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold">
+                                    ✓{" "}
+                                    {THERAPY_LABELS[bitacora.bit_terap] ||
+                                      bitacora.bit_terap}
+                                  </span>
+                                )}
+                                {bitacora.bit_diges && (
+                                  <span className="inline-flex px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium">
+                                    Digestión: {bitacora.bit_diges}
+                                  </span>
+                                )}
+                                {bitacora.bit_senso && (
+                                  <span className="inline-flex px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 font-medium">
+                                    Sensorial: {bitacora.bit_senso}
+                                  </span>
+                                )}
+                              </div>
+                            ) : null}
+
                             {(bitacora.bit_dese || bitacora.bit_obse) && (
-                              <div className="mt-1.5 space-y-0.5">
+                              <div className="space-y-0.5 pt-0.5">
                                 {bitacora.bit_dese && (
-                                  <p className="text-[10px] text-amber-700 dark:text-amber-300 truncate">
+                                  <p className="text-[11px] text-amber-700 dark:text-amber-300 truncate">
                                     🧩 {bitacora.bit_dese}
                                   </p>
                                 )}
                                 {bitacora.bit_obse && (
-                                  <p className="text-[10px] text-blue-700 dark:text-blue-300 truncate">
+                                  <p className="text-[11px] text-blue-700 dark:text-blue-300">
                                     💬 {bitacora.bit_obse}
                                   </p>
                                 )}

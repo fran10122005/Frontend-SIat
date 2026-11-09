@@ -21,11 +21,9 @@ import {
   TrendingDown,
   TrendingUp,
   AlertCircle,
-  Moon,
-  Sun,
   ChevronDown,
-  FileText,
 } from "lucide-react";
+import pdfIcon from "../assets/pdf.png";
 import Topbar from "../components/layout/Topbar";
 
 // Eliminamos el array vacío mockBpmHistory porque ahora usaremos la data real de la DB
@@ -130,8 +128,25 @@ export default function HomeAnalytics() {
             hour: "2-digit",
             minute: "2-digit",
           });
-          const summaryText = `[Sueño: ${bit.bit_suen}h - ${bit.bit_cali}] [Estado de Ánimo: ${bit.bit_anim}] [Apetito: ${bit.bit_apet}] [Crisis: ${bit.bit_crisi || 0}] [Digestión: ${bit.bit_diges || "N/A"}] [Medicación: ${bit.bit_medi ? "Sí" : "No"}]`;
+          const mediStr =
+            bit.bit_medi === true
+              ? "Sí"
+              : bit.bit_medi === false
+                ? "No"
+                : "No reg.";
+          const logro = bit.bit_logro || bit.bit_algo || null;
+          const therapyLabelMap = {
+            si: "Completa",
+            parcial: "Parcial",
+            no: "No realizada",
+          };
+          const terap = bit.bit_terap
+            ? therapyLabelMap[bit.bit_terap] || bit.bit_terap
+            : null;
+          const summaryText = `[Sueño: ${bit.bit_suen}h - ${bit.bit_cali}] [Estado de Ánimo: ${bit.bit_anim}] [Apetito: ${bit.bit_apet}] [Crisis: ${bit.bit_crisi || 0}] [Digestión: ${bit.bit_diges || "N/A"}] [Medicación: ${mediStr}]`;
           const extrasText = [
+            logro ? `Logro: ${logro}` : null,
+            terap ? `Terapia en casa: ${terap}` : null,
             bit.bit_dese ? `Desencadenantes: ${bit.bit_dese}` : null,
             bit.bit_senso ? `Sensibilidad: ${bit.bit_senso}` : null,
             bit.bit_obse,
@@ -148,7 +163,9 @@ export default function HomeAnalytics() {
             apet: bit.bit_apet,
             crisi: bit.bit_crisi || 0,
             diges: bit.bit_diges || "N/A",
-            medi: bit.bit_medi ? "Sí" : "No",
+            medi: mediStr,
+            logro,
+            terap,
             dese: bit.bit_dese,
             senso: bit.bit_senso,
             obse: bit.bit_obse,
@@ -183,7 +200,7 @@ export default function HomeAnalytics() {
       }
     };
     fetchData();
-  }, [selectedChildId]);
+  }, [selectedChildId, userRole]);
 
   const effectiveHomeData = homeHistoricalData || [];
   const avgCalma =
@@ -246,7 +263,7 @@ export default function HomeAnalytics() {
               onClick={() => navigate("patients")}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
             >
-              Ir al Gestor de Pacientes
+              Ir a Selección de Pacientes
             </button>
           </div>
         </main>
@@ -282,7 +299,11 @@ export default function HomeAnalytics() {
                   title="Exportar reporte semanal (PDF)"
                   className="shrink-0 p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                 >
-                  <FileText className="w-4 h-4" />
+                  <img
+                    src={pdfIcon}
+                    alt="PDF"
+                    className="w-4 h-4 object-contain shrink-0"
+                  />
                 </button>
               )}
             </div>
@@ -353,7 +374,7 @@ export default function HomeAnalytics() {
               {/* Balance Calma/Sobrecarga por día */}
               <div
                 data-tour="ha-balance"
-                className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col min-h-[300px] lg:h-[400px]"
+                className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col min-w-0 h-auto lg:h-[400px]"
               >
                 <div className="mb-4 flex justify-between items-start">
                   <div>
@@ -375,13 +396,13 @@ export default function HomeAnalytics() {
                     </span>
                   </div>
                 </div>
-                <div className="flex-1 w-full min-h-0">
+                <div className="w-full h-[250px] sm:h-[290px] lg:flex-1 lg:h-auto lg:min-h-[240px]">
                   {displayHistoricalData && displayHistoricalData.length > 0 ? (
                     <ResponsiveContainer
                       width="100%"
                       height="100%"
                       minWidth={0}
-                      minHeight={0}
+                      minHeight={220}
                     >
                       <BarChart
                         data={displayHistoricalData}
@@ -480,7 +501,7 @@ export default function HomeAnalytics() {
               {/* BPM a lo largo del día seleccionado */}
               <div
                 data-tour="ha-bpm"
-                className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col min-h-[300px] lg:h-[400px]"
+                className="bg-white dark:bg-[#1E293B] rounded-xl p-6 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col min-w-0 h-auto lg:h-[400px]"
               >
                 <div className="mb-4">
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide">
@@ -490,13 +511,13 @@ export default function HomeAnalytics() {
                     Distribución de BPM durante el día seleccionado en casa
                   </p>
                 </div>
-                <div className="flex-1 w-full min-h-0">
+                <div className="w-full h-[250px] sm:h-[290px] lg:flex-1 lg:h-auto lg:min-h-[240px]">
                   {displayBpmData && displayBpmData.length > 0 ? (
                     <ResponsiveContainer
                       width="100%"
                       height="100%"
                       minWidth={0}
-                      minHeight={0}
+                      minHeight={220}
                     >
                       <AreaChart
                         data={displayBpmData}
@@ -651,6 +672,12 @@ export default function HomeAnalytics() {
                     ];
 
                     const extras = [
+                      note.logro
+                        ? { label: "Logro / Positivo", value: note.logro }
+                        : null,
+                      note.terap
+                        ? { label: "Terapia en casa", value: note.terap }
+                        : null,
                       note.dese
                         ? { label: "Desencadenantes", value: note.dese }
                         : null,

@@ -187,7 +187,7 @@ export default function StudentRecord({ onNavigate }) {
     gen === "M" ? "Masculino" : gen === "F" ? "Femenino" : "No especificado";
 
   return (
-    <div className="flex h-[100dvh] w-full bg-[#F4F7F9] dark:bg-slate-900 font-sans overflow-hidden transition-colors duration-200">
+    <div className="flex h-[100dvh] w-full bg-[#F4F7F9] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
       {/* Menú Lateral Izquierdo */}
       <Sidebar />
 
@@ -272,7 +272,7 @@ export default function StudentRecord({ onNavigate }) {
                         </span>
                       )}
                     </div>
-                    <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
                       {extraInfo.nin_ingr && (
                         <>Ingreso: {formatIngreso(extraInfo.nin_ingr)}</>
                       )}
@@ -434,7 +434,7 @@ export default function StudentRecord({ onNavigate }) {
                       {extraInfo.institucion?.ins_nomb || "No registrada"}
                     </p>
                     {extraInfo.institucion?.ins_telf && (
-                      <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
                         <Phone className="w-3 h-3" />
                         {extraInfo.institucion.ins_telf}
                       </p>
@@ -451,7 +451,7 @@ export default function StudentRecord({ onNavigate }) {
                           {extraInfo.representante.rep_nomb}{" "}
                           {extraInfo.representante.rep_apel}
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                           {extraInfo.representante.rep_rela} · Tel:{" "}
                           {extraInfo.representante.rep_telf}
                         </p>
@@ -466,8 +466,8 @@ export default function StudentRecord({ onNavigate }) {
 
                 {/* Diagnóstico */}
                 <div className="px-4 md:px-5 pb-4">
-                  <div className="p-4 rounded-xl border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/20">
-                    <div className="flex items-center gap-1.5 text-brand-600 dark:text-brand-300 text-xs font-bold uppercase tracking-wider mb-1.5">
+                  <div className="p-4 rounded-xl border border-brand-200 dark:border-blue-800/60 bg-brand-50 dark:bg-blue-950/40">
+                    <div className="flex items-center gap-1.5 text-brand-600 dark:text-blue-300 text-xs font-bold uppercase tracking-wider mb-1.5">
                       <ClipboardList className="w-3.5 h-3.5" /> Diagnóstico
                       Clínico
                     </div>
@@ -479,7 +479,7 @@ export default function StudentRecord({ onNavigate }) {
                         onChange={handleChange}
                         rows={2}
                         placeholder="Ej. Trastorno del Espectro Autista (TEA) — Nivel 2"
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none text-sm text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 resize-none"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none text-sm text-gray-800 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 resize-none"
                       />
                     ) : (
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200">

@@ -200,6 +200,18 @@ export function clearAuthSession() {
 }
 
 /**
+ * Determina si un rol autenticado debe conservar y restaurar su niño seleccionado
+ * al recargar la página (F5). Al cerrar sesión o iniciar una nueva sesión, el valor
+ * guardado se limpia explícitamente.
+ * @param {string|null} role
+ * @returns {boolean}
+ */
+export function shouldRestoreSavedChild(role) {
+  const normalized = normalizeRole(role);
+  return normalized === "REPRESENTANTE" || normalized === "ESPECIALISTA";
+}
+
+/**
  * Helpers para persistencia de la selección del niño (para que no se pierda al recargar)
  */
 export function getSavedSelectedChild() {

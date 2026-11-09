@@ -12,9 +12,9 @@ import {
   Wind,
   Grid,
   LayoutDashboard,
-  Download,
   Settings2,
 } from "lucide-react";
+import pdfIcon from "../assets/pdf.png";
 import Footer from "../components/layout/Footer";
 import { exportDashboardReport } from "../utils/pdfExporter";
 
@@ -188,9 +188,13 @@ export default function MainDashboard() {
                   onClick={handleExportDashboard}
                   disabled={exporting}
                   data-tour="parent-dash-export"
-                  className="px-3 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center gap-1.5 text-xs disabled:opacity-50"
+                  className="px-3 py-2 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 font-semibold rounded-lg border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all flex items-center gap-1.5 text-xs disabled:opacity-50"
                 >
-                  <Download className="w-3.5 h-3.5" />{" "}
+                  <img
+                    src={pdfIcon}
+                    alt="PDF"
+                    className="w-4 h-4 object-contain shrink-0"
+                  />{" "}
                   {exporting ? "Generando..." : "Reporte"}
                 </button>
                 <button

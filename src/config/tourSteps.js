@@ -80,7 +80,7 @@ export const specialistTourSteps = [
   {
     element: "#tour-sidebar-patients",
     popover: {
-      title: "👥 Directorio y Admisión de Pacientes",
+      title: "👥 Selección y Admisión de Pacientes",
       description:
         "🎯 Propósito: Nómina de niños asignados bajo tu supervisión profesional.\n⚡ Acción: Busca por nombre, filtra por nivel TEA, verifica conexión del reloj o admite un nuevo paciente.\n💡 Clave: Genera invitaciones digitales para que los representantes activen su acceso familiar.",
       side: "right",
@@ -343,9 +343,9 @@ const specialistModuleTours = {
     {
       element: '[data-tour="sp-feed-tabs"]',
       popover: {
-        title: "🔔 Feed de Alertas e Indicaciones",
+        title: "📋 Indicaciones Clínicas Prescritas",
         description:
-          "🎯 Propósito: Bitácora interactiva de avisos automáticos del sensor y pautas clínicas prescritas.\n⚡ Acción: Alterna entre pestañas para verificar si los padres confirmaron la lectura de tus pautas.\n💡 Clave: Canal de comunicación con acuse de recibo y trazabilidad total.",
+          "🎯 Propósito: Resumen rápido de las pautas terapéuticas y recomendaciones enviadas a la familia.\n⚡ Acción: Consulta las indicaciones recientes prescritas para el paciente.\n💡 Clave: Las alertas en tiempo real llegan directamente a tu campana de notificaciones.",
         side: "left",
         align: "center",
       },
@@ -357,7 +357,7 @@ const specialistModuleTours = {
     {
       element: '[data-tour="pm-header"]',
       popover: {
-        title: "👥 Directorio de Pacientes Asignados",
+        title: "👥 Selección de Pacientes",
         description:
           "🎯 Propósito: Nómina activa de niños bajo tu cuidado clínico.\n⚡ Acción: Gestiona admisiones, revisa clasificaciones TEA y genera enlaces de invitación familiar.\n💡 Clave: Solo muestra pacientes formalmente vinculados a tu usuario.",
         side: "bottom",
@@ -1177,30 +1177,6 @@ const adminModuleTours = {
         description:
           "🎯 Propósito: Formalizar la asociación jurídica entre el tutor legal y el niño.\n⚡ Acción: Abre el formulario de vinculación familiar bajo los requerimientos del Art. 65 LOPNNA.\n💡 Clave: Habilita el acceso del representante al portal de seguimiento y diario del hogar.",
         side: "left",
-        align: "center",
-      },
-    },
-  ],
-
-  // HISTORIAL CLÍNICO INSTITUCIONAL (HistorialClinicoTab.jsx)
-  historial_clinico: [
-    {
-      element: '[data-tour="admin-historial_clinico"]',
-      popover: {
-        title: "📈 Auditoría Clínica Institucional",
-        description:
-          "🎯 Propósito: Bitácora centralizada de todos los incidentes conductuales y crisis reportadas.\n⚡ Acción: Revisa la trazabilidad de eventos desreguladores en toda la población atendida.\n💡 Clave: Herramienta de supervisión para la dirección médica de FUNAUTA.",
-        side: "top",
-        align: "center",
-      },
-    },
-    {
-      element: '[data-tour="admin-hist-filtros"]',
-      popover: {
-        title: "🎯 Filtros por Paciente, Severidad y Fecha",
-        description:
-          "🎯 Propósito: Segmentación focalizada de crisis para análisis clínicos específicos.\n⚡ Acción: Aísla incidentes severos o consulta un rango de fechas para evaluar períodos críticos.\n💡 Clave: Permite auditorías rápidas ante consultas médicas externas o requerimientos legales.",
-        side: "bottom",
         align: "center",
       },
     },

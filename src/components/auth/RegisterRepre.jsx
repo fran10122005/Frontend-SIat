@@ -5,6 +5,7 @@ import api from "../../api/axios";
 import { KeyRound, Phone, UserCheck, AlertCircle } from "lucide-react";
 import LoadingState from "../dashboard/LoadingState";
 import { getErrorMessage } from "../../utils/errorHandler";
+import { setAuthSession } from "../../utils/authStorage";
 import FormAlert from "../shared/FormAlert";
 
 export default function RegisterRepre({ onNavigate }) {
@@ -38,7 +39,12 @@ export default function RegisterRepre({ onNavigate }) {
   const validateToken = async (tok) => {
     try {
       const res = await api.get(`/auth/invitation-details?token=${tok}`);
-      setInvData(res.data.data);
+      const details = res.data?.data || {};
+      setInvData(details);
+      if (details.rep_rela) setRelation(details.rep_rela);
+      if (details.rep_telf && details.rep_telf !== "No especificado") {
+        setPhone(details.rep_telf);
+      }
     } catch (err) {
       console.error(err);
       setError(
@@ -71,7 +77,7 @@ export default function RegisterRepre({ onNavigate }) {
       });
 
       const { token: sessionToken, user } = res.data.data;
-      localStorage.setItem("token", sessionToken);
+      setAuthSession({ token: sessionToken, user });
 
       // Establecer estados globales
       setUserName(user.nombre || "Representante");
@@ -80,8 +86,8 @@ export default function RegisterRepre({ onNavigate }) {
       // Intentar refrescar la información del niño en el contexto
       showToast("🎉 Cuenta activada correctamente. ¡Bienvenido a SIAT!");
 
-      // Forzar recarga tras registrarse
-      window.location.href = "/";
+      // Redirigir al portal familiar
+      window.location.href = "/portal/overview";
     } catch (err) {
       console.error(err);
       setError(

@@ -2,8 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import {
-  BarChart,
-  Bar,
   AreaChart,
   Area,
   ReferenceLine,
@@ -12,12 +10,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 import {
   TrendingUp,
-  Download,
-  FileText,
   ChevronDown,
   ChevronUp,
   AlertCircle,
@@ -34,24 +29,30 @@ import {
   Eye,
   CheckCircle2,
   Sparkles,
-  ShieldCheck,
-  Zap,
   Smile,
-  Frown,
-  Meh,
-  Search,
-  LineChart as LineChartIcon,
-  BarChart3,
-  Info,
+  Pill,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
+import pdfIcon from "../assets/pdf.png";
 import { exportHistoryToPDF } from "../utils/pdfExporter";
 import Pagination from "../components/shared/Pagination";
 import FilterBar from "../components/shared/FilterBar";
 import Button from "../components/ui/Button";
 import AdminModal from "../components/shared/AdminModal";
 import PageTitle from "../components/ui/PageTitle";
+import {
+  DATE_RANGE_OPTIONS,
+  parseCalendarDate,
+  isDateInRange,
+  formatRangeSubtitle,
+} from "../utils/dateRanges";
+
+const THERAPY_STATUS_LABELS = {
+  si: "Terapia completa",
+  parcial: "Terapia parcial",
+  no: "Sin terapia en casa",
+};
 
 const moodConfig = {
   "Muy Calmo": {
@@ -106,18 +107,13 @@ function formatBitacoraDate(str) {
   }
 }
 
-export default function HistoryProgress({
-  initialTab = "evolucion",
-  onNavigate,
-}) {
+export default function HistoryProgress({ initialTab = "evolucion" }) {
   const {
     historicalData,
     clinicalBitacoras,
-    globalPeiGoals,
     userRole,
     nomNino,
     selectedChildId,
-    fetchHistorialCompleto,
     showToast,
     userName,
     isDark,
@@ -125,9 +121,10 @@ export default function HistoryProgress({
   const isRepresentante = userRole === "REPRESENTANTE";
   const [activeTab, setActiveTab] = useState(initialTab || "evolucion"); // "evolucion" | "bitacoras" | "incidentes"
   const [dateRange, setDateRange] = useState("all");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [searchNotes, setSearchNotes] = useState("");
   const [filterEfectividad, setFilterEfectividad] = useState("TODOS");
-  const [chartViewMode, setChartViewMode] = useState("area"); // "area" | "bar"
 
   useEffect(() => {
     if (initialTab) {
@@ -179,6 +176,10 @@ export default function HistoryProgress({
 
   const filteredIncidentes = useMemo(() => {
     return incidentes.filter((inc) => {
+      if (
+        !isDateInRange(inc.inc_time, dateRange, customStartDate, customEndDate)
+      )
+        return false;
       if (filterSeveridad !== "TODAS" && inc.inc_seve !== filterSeveridad)
         return false;
       if (
@@ -199,7 +200,26 @@ export default function HistoryProgress({
       }
       return true;
     });
-  }, [incidentes, filterSeveridad, filterTipoIncidente, searchIncidente]);
+  }, [
+    incidentes,
+    dateRange,
+    customStartDate,
+    customEndDate,
+    filterSeveridad,
+    filterTipoIncidente,
+    searchIncidente,
+  ]);
+
+  useEffect(() => {
+    setIncidentePage(0);
+  }, [
+    dateRange,
+    customStartDate,
+    customEndDate,
+    filterSeveridad,
+    filterTipoIncidente,
+    searchIncidente,
+  ]);
 
   const INC_PAGE_SIZE = 8;
   const totalIncPages = Math.ceil(filteredIncidentes.length / INC_PAGE_SIZE);
@@ -211,6 +231,14 @@ export default function HistoryProgress({
   // Bitácoras de hogar: filtrado y KPIs
   const filteredBitacoras = useMemo(() => {
     let list = Array.isArray(clinicalBitacoras) ? clinicalBitacoras : [];
+    list = list.filter((b) =>
+      isDateInRange(
+        b.bit_fech || b.bit_crea,
+        dateRange,
+        customStartDate,
+        customEndDate,
+      ),
+    );
     if (filterMood !== "TODOS") {
       list = list.filter((b) => (b.bit_anim || b.bit_anmo) === filterMood);
     }
@@ -223,16 +251,47 @@ export default function HistoryProgress({
     if (searchBitacora) {
       const q = searchBitacora.toLowerCase();
       list = list.filter((b) =>
-        (b.bit_obse || b.bit_deto || b.bit_algo || "")
+        [
+          b.bit_obse,
+          b.bit_deto,
+          b.bit_dese,
+          b.bit_algo,
+          b.bit_logro,
+          b.bit_terap,
+          b.bit_senso,
+          b.bit_diges,
+          b.bit_text,
+        ]
+          .filter(Boolean)
+          .join(" ")
           .toLowerCase()
           .includes(q),
       );
     }
     return list;
-  }, [clinicalBitacoras, filterMood, filterCrisis, searchBitacora]);
+  }, [
+    clinicalBitacoras,
+    dateRange,
+    customStartDate,
+    customEndDate,
+    filterMood,
+    filterCrisis,
+    searchBitacora,
+  ]);
+
+  useEffect(() => {
+    setBitacoraPage(0);
+  }, [
+    dateRange,
+    customStartDate,
+    customEndDate,
+    filterMood,
+    filterCrisis,
+    searchBitacora,
+  ]);
 
   const bitacoraKpis = useMemo(() => {
-    const list = Array.isArray(clinicalBitacoras) ? clinicalBitacoras : [];
+    const list = filteredBitacoras;
     const totalReports = list.length;
     const totalCrisis = list.reduce(
       (sum, b) => sum + (Number(b.bit_crisi || b.bit_cris) || 0),
@@ -255,7 +314,7 @@ export default function HistoryProgress({
     const stablePct =
       totalReports > 0 ? Math.round((stableCount / totalReports) * 100) : 0;
     return { totalReports, totalCrisis, avgSleep, stablePct };
-  }, [clinicalBitacoras]);
+  }, [filteredBitacoras]);
 
   const BIT_PAGE_SIZE = 8;
   const totalBitPages = Math.ceil(filteredBitacoras.length / BIT_PAGE_SIZE);
@@ -265,50 +324,31 @@ export default function HistoryProgress({
   );
 
   function parseFecRepo(str) {
-    if (!str) return null;
-    try {
-      if (str instanceof Date) return isNaN(str.getTime()) ? null : str;
-      const parsedIso = new Date(str);
-      if (!isNaN(parsedIso.getTime()) && String(str).includes("-")) {
-        return parsedIso;
-      }
-      if (typeof str === "string" && str.includes("/")) {
-        const parts = str.split("/");
-        if (parts.length === 3) {
-          let [day, month, year] = parts;
-          if (+year < 100) year = 2000 + +year;
-          const d = new Date(+year, +month - 1, +day);
-          return isNaN(d.getTime()) ? null : d;
-        }
-      }
-      return isNaN(parsedIso.getTime()) ? null : parsedIso;
-    } catch (e) {
-      console.error("Error parsing date:", e);
-      return null;
-    }
+    return parseCalendarDate(str);
   }
 
   const filteredData = useMemo(() => {
     let data = historicalData || [];
 
-    // Fecha range
     if (dateRange !== "all" && data.length > 0) {
-      const now = new Date();
-      const limit = dateRange === "7days" ? 7 : 30;
-      const cutoff = new Date(now.getTime() - limit * 24 * 60 * 60 * 1000);
-      data = data.filter((d) => {
-        const dDate = d.raw_date
-          ? new Date(d.raw_date)
-          : parseFecRepo(d.fec_repo);
-        if (!dDate || isNaN(dDate.getTime())) return true;
-        return dDate >= cutoff;
-      });
+      data = data.filter((d) =>
+        isDateInRange(
+          d.raw_date || d.fec_repo,
+          dateRange,
+          customStartDate,
+          customEndDate,
+        ),
+      );
     }
 
-    // Búsqueda en notas
+    // Búsqueda en notas o actividad
     if (searchNotes) {
       const q = searchNotes.toLowerCase();
-      data = data.filter((d) => (d.com_tend || "").toLowerCase().includes(q));
+      data = data.filter(
+        (d) =>
+          (d.com_tend || "").toLowerCase().includes(q) ||
+          (d.activityTitle || "").toLowerCase().includes(q),
+      );
     }
 
     // Efectividad
@@ -317,7 +357,14 @@ export default function HistoryProgress({
       data = data.filter((d) => !d.fue_efec);
 
     return data;
-  }, [historicalData, dateRange, searchNotes, filterEfectividad]);
+  }, [
+    historicalData,
+    dateRange,
+    customStartDate,
+    customEndDate,
+    searchNotes,
+    filterEfectividad,
+  ]);
 
   // Datos ordenados cronológicamente (antiguo -> reciente) con etiquetas amigables no repetidas
   const chartChronologicalData = useMemo(() => {
@@ -398,7 +445,13 @@ export default function HistoryProgress({
   useEffect(() => {
     setPage(0);
     setExpandedRows(new Set());
-  }, [dateRange, searchNotes, filterEfectividad]);
+  }, [
+    dateRange,
+    customStartDate,
+    customEndDate,
+    searchNotes,
+    filterEfectividad,
+  ]);
 
   const kpis = useMemo(() => {
     if (!filteredData || filteredData.length === 0) {
@@ -429,9 +482,18 @@ export default function HistoryProgress({
     if (list.length === 0) return [];
     const grouped = {};
     list.forEach((bit) => {
-      const d = new Date(bit.bit_fech || bit.bit_crea);
-      if (isNaN(d.getTime())) return;
-      const localDate = new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+      if (
+        !isDateInRange(
+          bit.bit_fech || bit.bit_crea,
+          dateRange,
+          customStartDate,
+          customEndDate,
+        )
+      ) {
+        return;
+      }
+      const localDate = parseCalendarDate(bit.bit_fech || bit.bit_crea);
+      if (!localDate || isNaN(localDate.getTime())) return;
       const diaSemana = localDate.toLocaleDateString("es-ES", {
         weekday: "short",
       });
@@ -441,14 +503,12 @@ export default function HistoryProgress({
       });
       const key = `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)} ${diaFormato}`;
       let calma = 70;
-      if (bit.bit_anim === "Muy Calmo") calma = 95;
-      else if (bit.bit_anim === "Estable") calma = 80;
-      else if (bit.bit_anim === "Irritable") calma = 45;
-      else if (
-        bit.bit_anim === "Crisis / Sobrecarga" ||
-        bit.bit_anim === "Ansioso"
-      )
-        calma = 25;
+      const anim = bit.bit_anim || bit.bit_anmo;
+      if (anim === "Muy Calmo") calma = 95;
+      else if (anim === "Estable") calma = 80;
+      else if (anim === "Irritable") calma = 45;
+      else if (anim === "Triste") calma = 35;
+      else if (anim === "Crisis / Sobrecarga" || anim === "Ansioso") calma = 25;
       if (!grouped[key]) {
         grouped[key] = {
           dia: key,
@@ -463,16 +523,129 @@ export default function HistoryProgress({
         grouped[key].count += 1;
       }
     });
-    return Object.values(grouped)
+    const sorted = Object.values(grouped)
       .map((g) => ({
         dia: g.dia,
         rawDate: g.rawDate,
         calma: Math.round(g.calma / g.count),
         sobrecarga: Math.round(g.sobrecarga / g.count),
       }))
-      .sort((a, b) => a.rawDate - b.rawDate)
-      .slice(-7);
-  }, [clinicalBitacoras]);
+      .sort((a, b) => a.rawDate - b.rawDate);
+    return dateRange === "all" ? sorted.slice(-30) : sorted;
+  }, [clinicalBitacoras, dateRange, customStartDate, customEndDate]);
+
+  const dateRangeChipLabel = useMemo(() => {
+    if (dateRange === "all") return null;
+    if (dateRange === "custom") {
+      return `Período: ${customStartDate || "..."} a ${customEndDate || "..."}`;
+    }
+    const opt = DATE_RANGE_OPTIONS.find((o) => o.value === dateRange);
+    return opt ? `Período: ${opt.label}` : null;
+  }, [dateRange, customStartDate, customEndDate]);
+
+  const clearDateRange = () => {
+    setDateRange("all");
+    setCustomStartDate("");
+    setCustomEndDate("");
+  };
+
+  const tab1FilterChips = useMemo(() => {
+    const chips = [];
+    if (dateRangeChipLabel) {
+      chips.push({
+        key: "dateRange",
+        label: dateRangeChipLabel,
+        onRemove: clearDateRange,
+      });
+    }
+    if (filterEfectividad !== "TODOS") {
+      chips.push({
+        key: "efectividad",
+        label:
+          filterEfectividad === "EFECTIVA" ? "Solo efectivas" : "No efectivas",
+        onRemove: () => setFilterEfectividad("TODOS"),
+      });
+    }
+    if (searchNotes) {
+      chips.push({
+        key: "search",
+        label: `Búsqueda: "${searchNotes}"`,
+        onRemove: () => setSearchNotes(""),
+      });
+    }
+    return chips;
+  }, [dateRangeChipLabel, filterEfectividad, searchNotes]);
+
+  const tab2FilterChips = useMemo(() => {
+    const chips = [];
+    if (dateRangeChipLabel) {
+      chips.push({
+        key: "dateRange",
+        label: dateRangeChipLabel,
+        onRemove: clearDateRange,
+      });
+    }
+    if (filterMood !== "TODOS") {
+      chips.push({
+        key: "mood",
+        label: `Ánimo: ${filterMood}`,
+        onRemove: () => setFilterMood("TODOS"),
+      });
+    }
+    if (filterCrisis !== "TODAS") {
+      chips.push({
+        key: "crisis",
+        label: filterCrisis === "CON_CRISIS" ? "Con crisis" : "Sin crisis",
+        onRemove: () => setFilterCrisis("TODAS"),
+      });
+    }
+    if (searchBitacora) {
+      chips.push({
+        key: "search",
+        label: `Búsqueda: "${searchBitacora}"`,
+        onRemove: () => setSearchBitacora(""),
+      });
+    }
+    return chips;
+  }, [dateRangeChipLabel, filterMood, filterCrisis, searchBitacora]);
+
+  const tab3FilterChips = useMemo(() => {
+    const chips = [];
+    if (dateRangeChipLabel) {
+      chips.push({
+        key: "dateRange",
+        label: dateRangeChipLabel,
+        onRemove: clearDateRange,
+      });
+    }
+    if (filterSeveridad !== "TODAS") {
+      chips.push({
+        key: "severidad",
+        label: `Severidad: ${filterSeveridad}`,
+        onRemove: () => setFilterSeveridad("TODAS"),
+      });
+    }
+    if (filterTipoIncidente !== "TODOS") {
+      chips.push({
+        key: "tipo",
+        label: `Tipo: ${filterTipoIncidente}`,
+        onRemove: () => setFilterTipoIncidente("TODOS"),
+      });
+    }
+    if (searchIncidente) {
+      chips.push({
+        key: "search",
+        label: `Búsqueda: "${searchIncidente}"`,
+        onRemove: () => setSearchIncidente(""),
+      });
+    }
+    return chips;
+  }, [
+    dateRangeChipLabel,
+    filterSeveridad,
+    filterTipoIncidente,
+    searchIncidente,
+  ]);
 
   const handleExportPDF = async () => {
     if (activeTab === "bitacoras") {
@@ -556,7 +729,11 @@ export default function HistoryProgress({
                     title="Exportar a PDF"
                     className="p-2.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 transition-colors flex items-center justify-center min-w-[38px] min-h-[38px]"
                   >
-                    <FileText className="w-4 h-4" />
+                    <img
+                      src={pdfIcon}
+                      alt="PDF"
+                      className="w-4 h-4 object-contain shrink-0"
+                    />
                   </button>
                 </div>
               )}
@@ -737,52 +914,70 @@ export default function HistoryProgress({
                   </div>
                 </div>
 
-                {/* Gráfico Rediseñado */}
+                {/* Gráfico de Tendencia de Calma */}
                 <div
                   data-tour="hp-chart"
-                  className="bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 dark:border-slate-700 flex flex-col min-h-[350px] lg:h-[420px]"
+                  className="bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 dark:border-slate-700 flex flex-col min-w-0 h-auto lg:h-[440px]"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
                       <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         Evolución de Autorregulación y Calma en Terapias
                       </h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Registro cronológico de estabilidad emocional del menor
-                        en sesiones con el especialista
+                        {formatRangeSubtitle(
+                          dateRange,
+                          customStartDate,
+                          customEndDate,
+                          filteredData.length,
+                          "sesión",
+                          "sesiones",
+                        )}
                       </p>
                     </div>
 
-                    {/* Selector de Tipo de Gráfica: Área / Curva vs Barras */}
-                    <div className="flex items-center bg-slate-100 dark:bg-slate-900/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700 self-start sm:self-auto shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setChartViewMode("area")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                          chartViewMode === "area"
-                            ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-                        }`}
-                        title="Ver como curva de tendencia continua"
-                      >
-                        <LineChartIcon className="w-3.5 h-3.5" />
-                        <span>Curva de Progreso</span>
-                      </button>
+                    {/* Selector de Período Histórico (Point 6) */}
+                    <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto shrink-0">
+                      <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/70 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <select
+                          aria-label="Seleccionar período de la gráfica"
+                          value={dateRange}
+                          onChange={(e) => setDateRange(e.target.value)}
+                          className="text-xs font-bold bg-transparent text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                        >
+                          {DATE_RANGE_OPTIONS.map((opt) => (
+                            <option
+                              key={opt.value}
+                              value={opt.value}
+                              className="bg-white dark:bg-slate-900"
+                            >
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setChartViewMode("bar")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
-                          chartViewMode === "bar"
-                            ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-                        }`}
-                        title="Ver como barras por sesión"
-                      >
-                        <BarChart3 className="w-3.5 h-3.5" />
-                        <span>Barras por Sesión</span>
-                      </button>
+                      {dateRange === "custom" && (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="date"
+                            aria-label="Fecha desde"
+                            value={customStartDate}
+                            onChange={(e) => setCustomStartDate(e.target.value)}
+                            className="h-8 px-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <span className="text-xs text-slate-400">a</span>
+                          <input
+                            type="date"
+                            aria-label="Fecha hasta"
+                            value={customEndDate}
+                            onChange={(e) => setCustomEndDate(e.target.value)}
+                            className="h-8 px-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -801,339 +996,191 @@ export default function HistoryProgress({
                     </span>
                   </div>
 
-                  <div className="flex-1 w-full min-h-0">
+                  <div className="w-full h-[250px] sm:h-[290px] lg:flex-1 lg:h-auto lg:min-h-[240px]">
                     {chartChronologicalData &&
                     chartChronologicalData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        {chartViewMode === "area" ? (
-                          <AreaChart
-                            data={chartChronologicalData}
-                            margin={{
-                              top: 10,
-                              right: 15,
-                              left: -20,
-                              bottom: 0,
-                            }}
-                          >
-                            <defs>
-                              <linearGradient
-                                id="calmAreaGradient"
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                              >
-                                <stop
-                                  offset="5%"
-                                  stopColor="#3B82F6"
-                                  stopOpacity={0.4}
-                                />
-                                <stop
-                                  offset="95%"
-                                  stopColor="#3B82F6"
-                                  stopOpacity={0.02}
-                                />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid
-                              strokeDasharray="3 3"
-                              vertical={false}
-                              stroke={isDark ? "#334155" : "#E2E8F0"}
-                            />
-                            <XAxis
-                              dataKey="chartLabel"
-                              tick={{
-                                fontSize: 11,
-                                fill: isDark ? "#94A3B8" : "#64748B",
-                              }}
-                              tickMargin={10}
-                              stroke={isDark ? "#475569" : "#CBD5E1"}
-                            />
-                            <YAxis
-                              domain={[0, 100]}
-                              tick={{
-                                fontSize: 11,
-                                fill: isDark ? "#94A3B8" : "#64748B",
-                              }}
-                              stroke={isDark ? "#475569" : "#CBD5E1"}
-                              tickFormatter={(val) => `${val}%`}
-                            />
-                            <ReferenceLine
-                              y={75}
-                              stroke="#10B981"
-                              strokeDasharray="4 4"
-                            />
-                            <Tooltip
-                              content={({ active, payload }) => {
-                                if (active && payload && payload.length) {
-                                  const data = payload[0].payload;
-                                  const val = data.pro_calm ?? 0;
-                                  const isOptimal = val >= 75;
-                                  const isModerate = val >= 55 && val < 75;
-
-                                  return (
-                                    <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 text-xs min-w-[210px]">
-                                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
-                                        <span className="font-bold text-slate-900 dark:text-white capitalize">
-                                          {data.fullFormattedDate ||
-                                            data.chartLabel}
-                                        </span>
-                                        <span
-                                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                                            isOptimal
-                                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                                              : isModerate
-                                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
-                                                : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
-                                          }`}
-                                        >
-                                          {isOptimal
-                                            ? "Óptimo"
-                                            : isModerate
-                                              ? "En Progreso"
-                                              : "Requiere Apoyo"}
-                                        </span>
-                                      </div>
-
-                                      <div className="space-y-1.5">
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-slate-500 dark:text-slate-400">
-                                            Autorregulación:
-                                          </span>
-                                          <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
-                                            {val}% en calma
-                                          </span>
-                                        </div>
-
-                                        {data.activityTitle && (
-                                          <div className="flex items-center justify-between gap-2">
-                                            <span className="text-slate-500 dark:text-slate-400 truncate max-w-[90px]">
-                                              Actividad:
-                                            </span>
-                                            <span
-                                              className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]"
-                                              title={data.activityTitle}
-                                            >
-                                              {data.activityTitle}
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {data.avg_bpm && (
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-slate-500 dark:text-slate-400">
-                                              Pulso Cardíaco:
-                                            </span>
-                                            <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                                              <Heart className="w-3 h-3 fill-current" />
-                                              {data.avg_bpm} BPM
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {data.cooperation && (
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-slate-500 dark:text-slate-400">
-                                              Cooperación:
-                                            </span>
-                                            <div className="flex items-center gap-0.5">
-                                              {[1, 2, 3, 4, 5].map((star) => (
-                                                <Star
-                                                  key={star}
-                                                  className={`w-3 h-3 ${
-                                                    star <= data.cooperation
-                                                      ? "fill-amber-400 text-amber-400"
-                                                      : "text-slate-200 dark:text-slate-700"
-                                                  }`}
-                                                />
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              }}
-                            />
-                            <Area
-                              type="monotone"
-                              dataKey="pro_calm"
-                              stroke="#2563EB"
-                              strokeWidth={3}
-                              fillOpacity={1}
-                              fill="url(#calmAreaGradient)"
-                              activeDot={{
-                                r: 6,
-                                fill: "#2563EB",
-                                stroke: "#fff",
-                                strokeWidth: 2,
-                              }}
-                            />
-                          </AreaChart>
-                        ) : (
-                          <BarChart
-                            data={chartChronologicalData}
-                            margin={{
-                              top: 10,
-                              right: 15,
-                              left: -20,
-                              bottom: 0,
-                            }}
-                          >
-                            <CartesianGrid
-                              strokeDasharray="3 3"
-                              vertical={false}
-                              stroke={isDark ? "#334155" : "#E2E8F0"}
-                            />
-                            <XAxis
-                              dataKey="chartLabel"
-                              tick={{
-                                fontSize: 11,
-                                fill: isDark ? "#94A3B8" : "#64748B",
-                              }}
-                              tickMargin={10}
-                              stroke={isDark ? "#475569" : "#CBD5E1"}
-                            />
-                            <YAxis
-                              domain={[0, 100]}
-                              tick={{
-                                fontSize: 11,
-                                fill: isDark ? "#94A3B8" : "#64748B",
-                              }}
-                              stroke={isDark ? "#475569" : "#CBD5E1"}
-                              tickFormatter={(val) => `${val}%`}
-                            />
-                            <ReferenceLine
-                              y={75}
-                              stroke="#10B981"
-                              strokeDasharray="4 4"
-                            />
-                            <Tooltip
-                              content={({ active, payload }) => {
-                                if (active && payload && payload.length) {
-                                  const data = payload[0].payload;
-                                  const val = data.pro_calm ?? 0;
-                                  const isOptimal = val >= 75;
-                                  const isModerate = val >= 55 && val < 75;
-
-                                  return (
-                                    <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 text-xs min-w-[210px]">
-                                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
-                                        <span className="font-bold text-slate-900 dark:text-white capitalize">
-                                          {data.fullFormattedDate ||
-                                            data.chartLabel}
-                                        </span>
-                                        <span
-                                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                                            isOptimal
-                                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                                              : isModerate
-                                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
-                                                : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
-                                          }`}
-                                        >
-                                          {isOptimal
-                                            ? "Óptimo"
-                                            : isModerate
-                                              ? "En Progreso"
-                                              : "Requiere Apoyo"}
-                                        </span>
-                                      </div>
-
-                                      <div className="space-y-1.5">
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-slate-500 dark:text-slate-400">
-                                            Autorregulación:
-                                          </span>
-                                          <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
-                                            {val}% en calma
-                                          </span>
-                                        </div>
-
-                                        {data.activityTitle && (
-                                          <div className="flex items-center justify-between gap-2">
-                                            <span className="text-slate-500 dark:text-slate-400 truncate max-w-[90px]">
-                                              Actividad:
-                                            </span>
-                                            <span
-                                              className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]"
-                                              title={data.activityTitle}
-                                            >
-                                              {data.activityTitle}
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {data.avg_bpm && (
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-slate-500 dark:text-slate-400">
-                                              Pulso Cardíaco:
-                                            </span>
-                                            <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                                              <Heart className="w-3 h-3 fill-current" />
-                                              {data.avg_bpm} BPM
-                                            </span>
-                                          </div>
-                                        )}
-
-                                        {data.cooperation && (
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-slate-500 dark:text-slate-400">
-                                              Cooperación:
-                                            </span>
-                                            <div className="flex items-center gap-0.5">
-                                              {[1, 2, 3, 4, 5].map((star) => (
-                                                <Star
-                                                  key={star}
-                                                  className={`w-3 h-3 ${
-                                                    star <= data.cooperation
-                                                      ? "fill-amber-400 text-amber-400"
-                                                      : "text-slate-200 dark:text-slate-700"
-                                                  }`}
-                                                />
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              }}
-                            />
-                            <Bar
-                              dataKey="pro_calm"
-                              radius={[6, 6, 0, 0]}
-                              maxBarSize={40}
-                              animationDuration={1000}
+                      <ResponsiveContainer
+                        width="100%"
+                        height="100%"
+                        minWidth={0}
+                        minHeight={220}
+                      >
+                        <AreaChart
+                          data={chartChronologicalData}
+                          margin={{
+                            top: 10,
+                            right: 15,
+                            left: -20,
+                            bottom: 0,
+                          }}
+                        >
+                          <defs>
+                            <linearGradient
+                              id="calmAreaGradient"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
                             >
-                              {chartChronologicalData.map((entry, index) => {
-                                const fill =
-                                  entry.pro_calm >= 75
-                                    ? "#3B82F6"
-                                    : entry.pro_calm >= 55
-                                      ? "#F59E0B"
-                                      : "#EF4444";
+                              <stop
+                                offset="5%"
+                                stopColor="#3B82F6"
+                                stopOpacity={0.4}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="#3B82F6"
+                                stopOpacity={0.02}
+                              />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            vertical={false}
+                            stroke={isDark ? "#334155" : "#E2E8F0"}
+                          />
+                          <XAxis
+                            dataKey="chartLabel"
+                            tick={{
+                              fontSize: 11,
+                              fill: isDark ? "#94A3B8" : "#64748B",
+                            }}
+                            tickMargin={10}
+                            stroke={isDark ? "#475569" : "#CBD5E1"}
+                          />
+                          <YAxis
+                            domain={[0, 100]}
+                            tick={{
+                              fontSize: 11,
+                              fill: isDark ? "#94A3B8" : "#64748B",
+                            }}
+                            stroke={isDark ? "#475569" : "#CBD5E1"}
+                            tickFormatter={(val) => `${val}%`}
+                          />
+                          <ReferenceLine
+                            y={75}
+                            stroke="#10B981"
+                            strokeDasharray="4 4"
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                const val = data.pro_calm ?? 0;
+                                const isOptimal = val >= 75;
+                                const isModerate = val >= 55 && val < 75;
+
                                 return (
-                                  <Cell key={`cell-${index}`} fill={fill} />
+                                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 text-xs min-w-[210px]">
+                                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
+                                      <span className="font-bold text-slate-900 dark:text-white capitalize">
+                                        {data.fullFormattedDate ||
+                                          data.chartLabel}
+                                      </span>
+                                      <span
+                                        className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                                          isOptimal
+                                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                            : isModerate
+                                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                                              : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                        }`}
+                                      >
+                                        {isOptimal
+                                          ? "Óptimo"
+                                          : isModerate
+                                            ? "En Progreso"
+                                            : "Requiere Apoyo"}
+                                      </span>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-slate-500 dark:text-slate-400">
+                                          Autorregulación:
+                                        </span>
+                                        <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm">
+                                          {val}% en calma
+                                        </span>
+                                      </div>
+
+                                      {data.activityTitle && (
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="text-slate-500 dark:text-slate-400 truncate max-w-[90px]">
+                                            Actividad:
+                                          </span>
+                                          <span
+                                            className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]"
+                                            title={data.activityTitle}
+                                          >
+                                            {data.activityTitle}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {data.avg_bpm && (
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-slate-500 dark:text-slate-400">
+                                            Pulso Cardíaco:
+                                          </span>
+                                          <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                                            <Heart className="w-3 h-3 fill-current" />
+                                            {data.avg_bpm} BPM
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {data.cooperation && (
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-slate-500 dark:text-slate-400">
+                                            Cooperación:
+                                          </span>
+                                          <div className="flex items-center gap-0.5">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                              <Star
+                                                key={star}
+                                                className={`w-3 h-3 ${
+                                                  star <= data.cooperation
+                                                    ? "fill-amber-400 text-amber-400"
+                                                    : "text-slate-200 dark:text-slate-700"
+                                                }`}
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 );
-                              })}
-                            </Bar>
-                          </BarChart>
-                        )}
+                              }
+                              return null;
+                            }}
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="pro_calm"
+                            stroke="#2563EB"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#calmAreaGradient)"
+                            activeDot={{
+                              r: 6,
+                              fill: "#2563EB",
+                              stroke: "#fff",
+                              strokeWidth: 2,
+                            }}
+                          />
+                        </AreaChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-12">
                         <TrendingUp className="w-12 h-12 mb-3 opacity-30 stroke-1" />
                         <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-                          Sin registros históricos disponibles
+                          Sin registros históricos disponibles para este período
                         </p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm text-center">
-                          Las sesiones registradas por el especialista
-                          aparecerán graficadas aquí.
+                          Prueba seleccionando otro rango de fechas o revisa los
+                          filtros activos.
                         </p>
                       </div>
                     )}
@@ -1141,44 +1188,78 @@ export default function HistoryProgress({
                 </div>
 
                 {/* Filtros */}
-                <div data-tour="hp-filters">
-                  <FilterBar
-                    searchPlaceholder="Buscar por notas de sesión..."
-                    searchValue={searchNotes}
-                    onSearchChange={setSearchNotes}
-                    filters={[
-                      {
-                        key: "rango",
-                        label: "Rango",
-                        value: dateRange,
-                        onChange: setDateRange,
-                        options: [
-                          { value: "7days", label: "Últimos 7 días" },
-                          { value: "month", label: "Este Mes" },
-                          { value: "all", label: "Todo el historial" },
-                        ],
-                      },
-                      {
-                        key: "efectividad",
-                        label: "Efectividad",
-                        value: filterEfectividad,
-                        onChange: setFilterEfectividad,
-                        options: [
-                          { value: "TODOS", label: "Todas" },
-                          { value: "EFECTIVA", label: "Efectiva" },
-                          { value: "NO_EFECTIVA", label: "No Efectiva" },
-                        ],
-                      },
-                    ]}
-                    resultsCount={filteredData.length}
-                    totalCount={historicalData?.length || 0}
-                    onClearFilters={() => {
-                      setSearchNotes("");
-                      setDateRange("7days");
-                      setFilterEfectividad("TODOS");
-                    }}
-                  />
-                </div>
+                <FilterBar
+                  dataTour="hp-filters"
+                  searchPlaceholder="Buscar por notas de sesión o actividad..."
+                  searchValue={searchNotes}
+                  onSearch={setSearchNotes}
+                  activeCount={tab1FilterChips.length}
+                  chips={tab1FilterChips}
+                  onClearAll={() => {
+                    setSearchNotes("");
+                    clearDateRange();
+                    setFilterEfectividad("TODOS");
+                  }}
+                >
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Período
+                    </label>
+                    <select
+                      value={dateRange}
+                      onChange={(e) => setDateRange(e.target.value)}
+                      className="w-full h-10 px-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                    >
+                      {DATE_RANGE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {dateRange === "custom" && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Desde
+                        </label>
+                        <input
+                          type="date"
+                          value={customStartDate}
+                          onChange={(e) => setCustomStartDate(e.target.value)}
+                          className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Hasta
+                        </label>
+                        <input
+                          type="date"
+                          value={customEndDate}
+                          onChange={(e) => setCustomEndDate(e.target.value)}
+                          className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Efectividad
+                    </label>
+                    <select
+                      value={filterEfectividad}
+                      onChange={(e) => setFilterEfectividad(e.target.value)}
+                      className="w-full h-10 px-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                    >
+                      <option value="TODOS">Todas</option>
+                      <option value="EFECTIVA">Efectiva</option>
+                      <option value="NO_EFECTIVA">No Efectiva</option>
+                    </select>
+                  </div>
+                </FilterBar>
 
                 {/* Tabla de Sesiones */}
                 <div
@@ -1536,19 +1617,25 @@ export default function HistoryProgress({
 
                 {/* Gráfica de Tendencia de Calma y Sobrecarga del Hogar */}
                 {homeWeeklyChartData.length > 0 && (
-                  <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200/80 dark:border-slate-700 shadow-sm flex flex-col min-h-[280px]">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200/80 dark:border-slate-700 shadow-sm flex flex-col min-w-0">
                     <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide flex items-center gap-2">
                           <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                          Balance Emocional en Casa (Últimos Días Registrados)
+                          Balance Emocional en Casa
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Evolución del estado de calma vs sobrecarga sensorial
-                          reportado por los padres
+                          {formatRangeSubtitle(
+                            dateRange,
+                            customStartDate,
+                            customEndDate,
+                            homeWeeklyChartData.length,
+                            "día",
+                            "días",
+                          )}
                         </p>
                       </div>
-                      <div className="flex gap-4 text-xs font-semibold">
+                      <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
                         <span className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
                           <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
                           Calma (%)
@@ -1559,12 +1646,55 @@ export default function HistoryProgress({
                         </span>
                       </div>
                     </div>
-                    <div className="w-full h-48 sm:h-56">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
+                    <div className="w-full h-[220px] sm:h-[250px]">
+                      <ResponsiveContainer
+                        width="100%"
+                        height="100%"
+                        minWidth={0}
+                        minHeight={200}
+                      >
+                        <AreaChart
                           data={homeWeeklyChartData}
                           margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
                         >
+                          <defs>
+                            <linearGradient
+                              id="homeCalmGrad"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="#3B82F6"
+                                stopOpacity={0.35}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="#3B82F6"
+                                stopOpacity={0.02}
+                              />
+                            </linearGradient>
+                            <linearGradient
+                              id="homeOverloadGrad"
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="5%"
+                                stopColor="#F43F5E"
+                                stopOpacity={0.28}
+                              />
+                              <stop
+                                offset="95%"
+                                stopColor="#F43F5E"
+                                stopOpacity={0.02}
+                              />
+                            </linearGradient>
+                          </defs>
                           <CartesianGrid
                             strokeDasharray="3 3"
                             vertical={false}
@@ -1580,6 +1710,7 @@ export default function HistoryProgress({
                             }}
                           />
                           <YAxis
+                            domain={[0, 100]}
                             axisLine={false}
                             tickLine={false}
                             tick={{
@@ -1601,19 +1732,23 @@ export default function HistoryProgress({
                               name === "calma" ? "Calma" : "Sobrecarga",
                             ]}
                           />
-                          <Bar
+                          <Area
+                            type="monotone"
                             dataKey="calma"
-                            fill="#3B82F6"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={32}
+                            stroke="#3B82F6"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#homeCalmGrad)"
                           />
-                          <Bar
+                          <Area
+                            type="monotone"
                             dataKey="sobrecarga"
-                            fill="#F43F5E"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={32}
+                            stroke="#F43F5E"
+                            strokeWidth={2}
+                            fillOpacity={1}
+                            fill="url(#homeOverloadGrad)"
                           />
-                        </BarChart>
+                        </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
@@ -1621,44 +1756,95 @@ export default function HistoryProgress({
 
                 {/* Filtros de Bitácora */}
                 <FilterBar
-                  searchPlaceholder="Buscar por observación, detonante, positivo..."
+                  searchPlaceholder="Buscar por observación, logro, detonante, terapia..."
                   searchValue={searchBitacora}
-                  onSearchChange={setSearchBitacora}
-                  filters={[
-                    {
-                      key: "animo",
-                      label: "Estado de Ánimo",
-                      value: filterMood,
-                      onChange: setFilterMood,
-                      options: [
-                        { value: "TODOS", label: "Todos los estados" },
-                        { value: "Muy Calmo", label: "😊 Muy Calmo" },
-                        { value: "Estable", label: "🙂 Estable" },
-                        { value: "Irritable", label: "😤 Irritable" },
-                        { value: "Ansioso", label: "😰 Ansioso" },
-                        { value: "Triste", label: "😢 Triste" },
-                      ],
-                    },
-                    {
-                      key: "crisis",
-                      label: "Episodios / Crisis",
-                      value: filterCrisis,
-                      onChange: setFilterCrisis,
-                      options: [
-                        { value: "TODAS", label: "Todas las bitácoras" },
-                        { value: "CON_CRISIS", label: "⚠️ Con Crisis" },
-                        { value: "SIN_CRISIS", label: "✅ Sin Crisis" },
-                      ],
-                    },
-                  ]}
-                  resultsCount={filteredBitacoras.length}
-                  totalCount={clinicalBitacoras?.length || 0}
-                  onClearFilters={() => {
+                  onSearch={setSearchBitacora}
+                  activeCount={tab2FilterChips.length}
+                  chips={tab2FilterChips}
+                  onClearAll={() => {
                     setSearchBitacora("");
+                    clearDateRange();
                     setFilterMood("TODOS");
                     setFilterCrisis("TODAS");
                   }}
-                />
+                >
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Período
+                    </label>
+                    <select
+                      value={dateRange}
+                      onChange={(e) => setDateRange(e.target.value)}
+                      className="w-full h-10 px-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                    >
+                      {DATE_RANGE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {dateRange === "custom" && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Desde
+                        </label>
+                        <input
+                          type="date"
+                          value={customStartDate}
+                          onChange={(e) => setCustomStartDate(e.target.value)}
+                          className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Hasta
+                        </label>
+                        <input
+                          type="date"
+                          value={customEndDate}
+                          onChange={(e) => setCustomEndDate(e.target.value)}
+                          className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Estado de Ánimo
+                    </label>
+                    <select
+                      value={filterMood}
+                      onChange={(e) => setFilterMood(e.target.value)}
+                      className="w-full h-10 px-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                    >
+                      <option value="TODOS">Todos los estados</option>
+                      <option value="Muy Calmo">😊 Muy Calmo</option>
+                      <option value="Estable">🙂 Estable</option>
+                      <option value="Irritable">😤 Irritable</option>
+                      <option value="Ansioso">😰 Ansioso</option>
+                      <option value="Triste">😢 Triste</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Episodios / Crisis
+                    </label>
+                    <select
+                      value={filterCrisis}
+                      onChange={(e) => setFilterCrisis(e.target.value)}
+                      className="w-full h-10 px-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                    >
+                      <option value="TODAS">Todas las bitácoras</option>
+                      <option value="CON_CRISIS">⚠️ Con Crisis</option>
+                      <option value="SIN_CRISIS">✅ Sin Crisis</option>
+                    </select>
+                  </div>
+                </FilterBar>
 
                 {/* Tabla y cards de bitácoras de hogar */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
@@ -1703,6 +1889,8 @@ export default function HistoryProgress({
                                 moodConfig[mood] || moodConfig["Estable"];
                               const crisisCount =
                                 Number(b.bit_crisi || b.bit_cris) || 0;
+                              const positiveNoteText =
+                                b.bit_logro || b.bit_algo;
                               return (
                                 <tr
                                   key={b.bit_codi || idx}
@@ -1724,6 +1912,9 @@ export default function HistoryProgress({
                                       <Moon className="w-3.5 h-3.5 text-indigo-500" />
                                       <span>
                                         {b.bit_suen || b.bit_sueñ || "—"} hrs
+                                        {b.bit_cali && b.bit_cali !== "Normal"
+                                          ? ` (${b.bit_cali})`
+                                          : ""}
                                       </span>
                                     </div>
                                   </td>
@@ -1746,24 +1937,45 @@ export default function HistoryProgress({
                                     )}
                                   </td>
                                   <td
-                                    className="px-4 py-3 max-w-xs truncate"
+                                    className="px-4 py-3 max-w-xs"
                                     title={
-                                      b.bit_algo || b.bit_obse || b.bit_text
+                                      positiveNoteText ||
+                                      b.bit_obse ||
+                                      b.bit_text
                                     }
                                   >
-                                    {b.bit_algo ? (
+                                    {positiveNoteText ? (
                                       <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                                         <Sparkles className="w-3 h-3 shrink-0" />
                                         <span className="truncate">
-                                          {b.bit_algo}
+                                          {positiveNoteText}
                                         </span>
                                       </span>
                                     ) : (
-                                      <span>
+                                      <span className="block truncate">
                                         {b.bit_obse ||
                                           b.bit_text ||
                                           "Sin observaciones"}
                                       </span>
+                                    )}
+                                    {(b.bit_terap ||
+                                      (b.bit_medi !== null &&
+                                        b.bit_medi !== undefined)) && (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {b.bit_terap && (
+                                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                                            {THERAPY_STATUS_LABELS[
+                                              b.bit_terap
+                                            ] || b.bit_terap}
+                                          </span>
+                                        )}
+                                        {b.bit_medi !== null &&
+                                          b.bit_medi !== undefined && (
+                                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                                              Med: {b.bit_medi ? "Sí" : "No"}
+                                            </span>
+                                          )}
+                                      </div>
                                     )}
                                   </td>
                                   <td className="px-4 py-3 text-right">
@@ -1799,6 +2011,7 @@ export default function HistoryProgress({
                           const cfg = moodConfig[mood] || moodConfig["Estable"];
                           const crisisCount =
                             Number(b.bit_crisi || b.bit_cris) || 0;
+                          const positiveNoteText = b.bit_logro || b.bit_algo;
                           return (
                             <div
                               key={b.bit_codi || idx}
@@ -1847,11 +2060,30 @@ export default function HistoryProgress({
                                 </div>
                               </div>
 
-                              {b.bit_algo && (
+                              {positiveNoteText && (
                                 <p className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 p-2 rounded-lg flex items-start gap-1.5">
                                   <Sparkles className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                  <span>{b.bit_algo}</span>
+                                  <span>{positiveNoteText}</span>
                                 </p>
+                              )}
+
+                              {(b.bit_terap ||
+                                (b.bit_medi !== null &&
+                                  b.bit_medi !== undefined)) && (
+                                <div className="flex flex-wrap gap-1.5 text-[11px]">
+                                  {b.bit_terap && (
+                                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold">
+                                      {THERAPY_STATUS_LABELS[b.bit_terap] ||
+                                        b.bit_terap}
+                                    </span>
+                                  )}
+                                  {b.bit_medi !== null &&
+                                    b.bit_medi !== undefined && (
+                                      <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold">
+                                        Medicación: {b.bit_medi ? "Sí" : "No"}
+                                      </span>
+                                    )}
+                                </div>
                               )}
 
                               <button
@@ -1954,50 +2186,97 @@ export default function HistoryProgress({
                 <FilterBar
                   searchPlaceholder="Buscar por tipo, detonante, consecuencia..."
                   searchValue={searchIncidente}
-                  onSearchChange={setSearchIncidente}
-                  filters={[
-                    {
-                      key: "severidad",
-                      label: "Severidad",
-                      value: filterSeveridad,
-                      onChange: setFilterSeveridad,
-                      options: [
-                        { value: "TODAS", label: "Todas" },
-                        { value: "Leve", label: "Leve" },
-                        { value: "Moderada", label: "Moderada" },
-                        { value: "Severa", label: "Severa / Grave" },
-                      ],
-                    },
-                    {
-                      key: "tipo",
-                      label: "Tipo",
-                      value: filterTipoIncidente,
-                      onChange: setFilterTipoIncidente,
-                      options: [
-                        { value: "TODOS", label: "Todos los tipos" },
-                        { value: "Berrinche", label: "Berrinche" },
-                        {
-                          value: "Crisis Sensorial",
-                          label: "Crisis Sensorial",
-                        },
-                        { value: "Agresión", label: "Agresión" },
-                        { value: "Autoagresión", label: "Autoagresión" },
-                        {
-                          value: "Bloqueo / Shutdown",
-                          label: "Bloqueo / Shutdown",
-                        },
-                        { value: "Desregulación", label: "Desregulación" },
-                      ],
-                    },
-                  ]}
-                  resultsCount={filteredIncidentes.length}
-                  totalCount={incidentes.length}
-                  onClearFilters={() => {
+                  onSearch={setSearchIncidente}
+                  activeCount={tab3FilterChips.length}
+                  chips={tab3FilterChips}
+                  onClearAll={() => {
                     setSearchIncidente("");
+                    clearDateRange();
                     setFilterSeveridad("TODAS");
                     setFilterTipoIncidente("TODOS");
                   }}
-                />
+                >
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Período
+                    </label>
+                    <select
+                      value={dateRange}
+                      onChange={(e) => setDateRange(e.target.value)}
+                      className="w-full h-10 px-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                    >
+                      {DATE_RANGE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {dateRange === "custom" && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Desde
+                        </label>
+                        <input
+                          type="date"
+                          value={customStartDate}
+                          onChange={(e) => setCustomStartDate(e.target.value)}
+                          className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Hasta
+                        </label>
+                        <input
+                          type="date"
+                          value={customEndDate}
+                          onChange={(e) => setCustomEndDate(e.target.value)}
+                          className="w-full h-10 px-3 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Severidad
+                    </label>
+                    <select
+                      value={filterSeveridad}
+                      onChange={(e) => setFilterSeveridad(e.target.value)}
+                      className="w-full h-10 px-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                    >
+                      <option value="TODAS">Todas</option>
+                      <option value="Leve">Leve</option>
+                      <option value="Moderada">Moderada</option>
+                      <option value="Severa">Severa / Grave</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Tipo
+                    </label>
+                    <select
+                      value={filterTipoIncidente}
+                      onChange={(e) => setFilterTipoIncidente(e.target.value)}
+                      className="w-full h-10 px-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-200"
+                    >
+                      <option value="TODOS">Todos los tipos</option>
+                      <option value="Berrinche">Berrinche</option>
+                      <option value="Crisis Sensorial">Crisis Sensorial</option>
+                      <option value="Agresión">Agresión</option>
+                      <option value="Autoagresión">Autoagresión</option>
+                      <option value="Bloqueo / Shutdown">
+                        Bloqueo / Shutdown
+                      </option>
+                      <option value="Desregulación">Desregulación</option>
+                    </select>
+                  </div>
+                </FilterBar>
 
                 {/* Tabla y Acordeón de Incidentes */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
@@ -2179,9 +2458,9 @@ export default function HistoryProgress({
                 {totalIncPages > 1 && (
                   <div className="pt-2">
                     <Pagination
-                      currentPage={incidentePage + 1}
+                      currentPage={incidentePage}
                       totalPages={totalIncPages}
-                      onPageChange={(p) => setIncidentePage(p - 1)}
+                      onPageChange={setIncidentePage}
                     />
                   </div>
                 )}
@@ -2397,6 +2676,11 @@ export default function HistoryProgress({
                           "—"}{" "}
                         hrs
                       </p>
+                      {selectedBitacoraDetail.bit_cali && (
+                        <span className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80 font-medium">
+                          Calidad: {selectedBitacoraDetail.bit_cali}
+                        </span>
+                      )}
                     </div>
 
                     <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30">
@@ -2432,14 +2716,70 @@ export default function HistoryProgress({
                     </div>
                   </div>
 
-                  {selectedBitacoraDetail.bit_algo && (
+                  {(selectedBitacoraDetail.bit_medi !== null &&
+                    selectedBitacoraDetail.bit_medi !== undefined) ||
+                  selectedBitacoraDetail.bit_terap ||
+                  selectedBitacoraDetail.bit_diges ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {selectedBitacoraDetail.bit_medi !== null &&
+                        selectedBitacoraDetail.bit_medi !== undefined && (
+                          <div className="p-3 rounded-xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30">
+                            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1 mb-1">
+                              <Pill className="w-3.5 h-3.5" /> Medicación
+                            </span>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">
+                              {selectedBitacoraDetail.bit_medi
+                                ? "Administrada"
+                                : "No administrada"}
+                            </p>
+                          </div>
+                        )}
+                      {selectedBitacoraDetail.bit_terap && (
+                        <div className="p-3 rounded-xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30">
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">
+                            Terapia en Casa
+                          </span>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">
+                            {THERAPY_STATUS_LABELS[
+                              selectedBitacoraDetail.bit_terap
+                            ] || selectedBitacoraDetail.bit_terap}
+                          </p>
+                        </div>
+                      )}
+                      {selectedBitacoraDetail.bit_diges && (
+                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80">
+                          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                            Digestión
+                          </span>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">
+                            {selectedBitacoraDetail.bit_diges}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {(selectedBitacoraDetail.bit_logro ||
+                    selectedBitacoraDetail.bit_algo) && (
                     <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 space-y-1.5">
                       <h5 className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-emerald-600" />
                         Lo Positivo del Día / Logro Destacado
                       </h5>
                       <p className="text-sm text-emerald-900 dark:text-emerald-100 leading-relaxed">
-                        {selectedBitacoraDetail.bit_algo}
+                        {selectedBitacoraDetail.bit_logro ||
+                          selectedBitacoraDetail.bit_algo}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedBitacoraDetail.bit_senso && (
+                    <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 space-y-1.5">
+                      <h5 className="text-xs font-bold text-purple-800 dark:text-purple-300 uppercase tracking-wider">
+                        Sensibilidad Sensorial Observada
+                      </h5>
+                      <p className="text-sm text-purple-900 dark:text-purple-100 leading-relaxed">
+                        {selectedBitacoraDetail.bit_senso}
                       </p>
                     </div>
                   )}

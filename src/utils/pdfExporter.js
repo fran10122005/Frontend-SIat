@@ -175,6 +175,7 @@ export const createStyledPdf = async (
 
 export const exportEspecialistasToPDF = async (especialistas) => {
   const columns = [
+    "Cédula",
     "Nombre",
     "Especialidad",
     "Clínica",
@@ -185,7 +186,11 @@ export const exportEspecialistasToPDF = async (especialistas) => {
   ];
   const rows = especialistas.map((esp) => {
     const prefix = esp.esp_gner === "M" ? "Dr." : "Dra.";
+    const cedula = esp.esp_cedu
+      ? `${esp.esp_tdoc || "V"}-${esp.esp_cedu}`
+      : "-";
     return [
+      cedula,
       `${prefix} ${esp.esp_nomb} ${esp.esp_apel}`,
       esp.tm_especi?.esc_nomb || "General",
       esp.tm_insti?.ins_nomb || "-",

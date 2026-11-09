@@ -127,12 +127,15 @@ function Login({ onNavigate }) {
       setUserRole("REPRESENTANTE");
       onNavigate("dashboard");
     } else if (user.rol_codi === "ROL_ESP") {
-      setUserRole("ESPECIALISTA");
       setSelectedChildId(null);
       setNomNino(null);
       saveSelectedChild(null, null);
+      setUserRole("ESPECIALISTA");
       onNavigate("dashboard");
     } else if (user.rol_codi === "ROL_ADM") {
+      setSelectedChildId(null);
+      setNomNino(null);
+      saveSelectedChild(null, null);
       setUserRole("ADMIN_INSTITUCION");
       onNavigate("admin");
     } else {
@@ -141,6 +144,9 @@ function Login({ onNavigate }) {
   };
 
   const finalizeSession = (user, token) => {
+    setSelectedChildId(null);
+    setNomNino(null);
+    saveSelectedChild(null, null);
     setAuthSession({ token, user });
 
     const displayName = user.nombre || user.usu_nomb || "Usuario";

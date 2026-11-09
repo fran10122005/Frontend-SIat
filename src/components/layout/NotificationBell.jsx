@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getSocket, subscribeToSocket } from "../../hooks/socket";
 import { useGlobalContext } from "../../context/GlobalState";
 import api from "../../api/axios";
+import { getValidSession } from "../../utils/authStorage";
+import {
+  loadUserNotifications,
+  saveUserNotifications,
+  loadReadNotificationIds,
+  markNotificationIdsRead,
+  loadDismissedNotificationIds,
+  dismissNotificationIds,
+  getNotificationPrefs,
+} from "../../utils/notificationStorage";
 import {
   Bell,
   AlertTriangle,
@@ -11,93 +21,217 @@ import {
   ShieldAlert,
   ServerCrash,
   CheckCircle,
+  ClipboardList,
+  Clock,
+  Home,
 } from "lucide-react";
 
-const STORAGE_KEY = "siat_notifications";
 const MAX_NOTIFICATIONS = 30;
-
-function loadStored() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveStored(list) {
-  try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(list.slice(0, MAX_NOTIFICATIONS)),
-    );
-  } catch {}
-}
 
 const iconMap = {
   crisis: AlertTriangle,
+  indication: ClipboardList,
+  routine_reminder: Clock,
+  home_crisis: Home,
+  assignment: UserPlus,
+  operational_warning: ShieldAlert,
   new_specialist: UserPlus,
   new_representative: UserPlus,
   new_user: UserPlus,
   system: ServerCrash,
   incident: ShieldAlert,
   warning: Activity,
+  info: UserPlus,
 };
 
 const colorMap = {
   crisis: "bg-rose-100 dark:bg-rose-950/30 text-rose-500",
+  indication:
+    "bg-violet-100 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400",
+  routine_reminder:
+    "bg-sky-100 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400",
+  home_crisis:
+    "bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400",
+  assignment:
+    "bg-blue-100 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400",
+  operational_warning:
+    "bg-amber-100 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400",
   new_specialist: "bg-blue-100 dark:bg-blue-950/30 text-blue-500",
   new_representative: "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-500",
   new_user: "bg-indigo-100 dark:bg-indigo-950/30 text-indigo-500",
   system: "bg-amber-100 dark:bg-amber-950/30 text-amber-500",
   incident: "bg-red-100 dark:bg-red-950/30 text-red-500",
-  warning: "bg-yellow-100 dark:bg-yellow-950/30 text-yellow-500",
+  warning: "bg-yellow-100 dark:bg-yellow-950/30 text-yellow-600",
+  info: "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400",
 };
 
+function resolveCurrentUserId() {
+  const session = getValidSession();
+  return session?.isValid && session?.decoded?.usu_codi
+    ? String(session.decoded.usu_codi)
+    : null;
+}
+
 export default function NotificationBell() {
-  const { showToast, userRole } = useGlobalContext();
-  const [notifications, setNotifications] = useState(loadStored);
+  const { showToast, userRole, listaNinos } = useGlobalContext();
+  const [activeUserId, setActiveUserId] = useState(resolveCurrentUserId);
+  const [notifications, setNotifications] = useState(() =>
+    resolveCurrentUserId() ? loadUserNotifications(resolveCurrentUserId()) : [],
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [isVibrating, setIsVibrating] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
   const dropdownRef = useRef(null);
+  const listaNinosRef = useRef(listaNinos || []);
+  const activeUserIdRef = useRef(activeUserId);
 
-  const addNotification = useCallback((notif) => {
+  useEffect(() => {
+    listaNinosRef.current = listaNinos || [];
+  }, [listaNinos]);
+
+  useEffect(() => {
+    activeUserIdRef.current = activeUserId;
+  }, [activeUserId]);
+
+  // Sincronizar usuario activo y limpiar estado al cerrar o cambiar de sesión
+  useEffect(() => {
+    const syncIdentity = () => {
+      const uid = resolveCurrentUserId();
+      setActiveUserId(uid);
+      if (uid && userRole) {
+        const readSet = loadReadNotificationIds(uid);
+        const dismissedSet = loadDismissedNotificationIds(uid);
+        const stored = loadUserNotifications(uid)
+          .filter((n) => !dismissedSet.has(String(n.id)))
+          .map((n) => ({
+            ...n,
+            read: Boolean(n.read || readSet.has(String(n.id))),
+          }));
+        setNotifications(stored);
+      } else {
+        setNotifications([]);
+        setIsOpen(false);
+      }
+    };
+
+    syncIdentity();
+
+    const handleSessionEnded = () => {
+      setActiveUserId(null);
+      setNotifications([]);
+      setIsOpen(false);
+    };
+
+    window.addEventListener("siat:session-started", syncIdentity);
+    window.addEventListener("siat:session-ended", handleSessionEnded);
+    return () => {
+      window.removeEventListener("siat:session-started", syncIdentity);
+      window.removeEventListener("siat:session-ended", handleSessionEnded);
+    };
+  }, [userRole]);
+
+  const addNotificationsBatch = useCallback((incomingList, userIdOverride) => {
+    const uid = userIdOverride || activeUserIdRef.current;
+    if (!uid || !Array.isArray(incomingList) || incomingList.length === 0) {
+      return;
+    }
+
+    const readSet = loadReadNotificationIds(uid);
+    const dismissedSet = loadDismissedNotificationIds(uid);
+
     setNotifications((prev) => {
-      const exists = prev.some((n) => n.id === notif.id);
-      if (exists) return prev;
-      const next = [notif, ...prev].slice(0, MAX_NOTIFICATIONS);
-      saveStored(next);
-      return next;
+      const byId = new Map();
+      prev.forEach((item) => {
+        if (item?.id && !dismissedSet.has(String(item.id))) {
+          byId.set(String(item.id), {
+            ...item,
+            read: Boolean(item.read || readSet.has(String(item.id))),
+          });
+        }
+      });
+
+      incomingList.forEach((raw) => {
+        if (!raw) return;
+        const id = String(raw.id || raw.id_alert || raw.ale_codi || "");
+        if (!id || dismissedSet.has(id)) return;
+        const existing = byId.get(id);
+        const normalized = {
+          ...existing,
+          ...raw,
+          id,
+          time:
+            raw.time ||
+            raw.fec_hora ||
+            existing?.time ||
+            new Date().toISOString(),
+          read: Boolean(existing?.read || raw.read || readSet.has(id)),
+        };
+        byId.set(id, normalized);
+      });
+
+      const merged = Array.from(byId.values())
+        .sort((a, b) => new Date(b.time) - new Date(a.time))
+        .slice(0, MAX_NOTIFICATIONS);
+
+      saveUserNotifications(merged, uid);
+      return merged;
     });
   }, []);
 
+  const addNotification = useCallback(
+    (notif) => {
+      if (!notif) return;
+      addNotificationsBatch([notif]);
+    },
+    [addNotificationsBatch],
+  );
+
   const markAsRead = useCallback((id) => {
+    const uid = activeUserIdRef.current;
+    if (uid && id) {
+      markNotificationIdsRead(id, uid);
+    }
     setNotifications((prev) => {
       const next = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
-      saveStored(next);
+      if (uid) saveUserNotifications(next, uid);
       return next;
     });
   }, []);
 
   const markAllAsRead = useCallback(() => {
+    const uid = activeUserIdRef.current;
     setNotifications((prev) => {
+      if (uid && prev.length > 0) {
+        markNotificationIdsRead(
+          prev.map((n) => n.id),
+          uid,
+        );
+      }
       const next = prev.map((n) => ({ ...n, read: true }));
-      saveStored(next);
+      if (uid) saveUserNotifications(next, uid);
       return next;
     });
   }, []);
 
   const clearAll = useCallback(() => {
-    setNotifications([]);
-    saveStored([]);
+    const uid = activeUserIdRef.current;
+    setNotifications((prev) => {
+      if (uid && prev.length > 0) {
+        dismissNotificationIds(
+          prev.map((n) => n.id),
+          uid,
+        );
+      }
+      if (uid) saveUserNotifications([], uid);
+      return [];
+    });
   }, []);
 
   const playAlertSound = useCallback(() => {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
       const playTone = (freq, startTime, duration) => {
         const osc = ctx.createOscillator();
         const gainNode = ctx.createGain();
@@ -123,111 +257,187 @@ export default function NotificationBell() {
 
   const triggerAlert = useCallback(
     (notif) => {
+      if (!notif || !activeUserIdRef.current) return;
+      const dismissedSet = loadDismissedNotificationIds(
+        activeUserIdRef.current,
+      );
+      const safeId = String(notif.id || notif.id_alert || Date.now());
+      if (dismissedSet.has(safeId)) return;
+
       setIsVibrating(true);
       setTimeout(() => setIsVibrating(false), 1000);
       playAlertSound();
-      addNotification(notif);
-      showToast(`🔔 ${notif.message}`);
+      addNotification({ ...notif, id: safeId });
+      if (typeof showToast === "function") {
+        showToast(`🔔 ${notif.message}`);
+      }
 
-      // Notificación nativa del navegador/sistema operativo si el usuario tiene alertas_push activadas
       if (
         typeof Notification !== "undefined" &&
         Notification.permission === "granted"
       ) {
         try {
-          const raw = localStorage.getItem("siat_notif_prefs");
-          const prefs = raw ? JSON.parse(raw) : { alertas_push: true };
+          const prefs = getNotificationPrefs();
           if (prefs.alertas_push !== false) {
             new Notification("Alerta SIAT", {
               body: notif.message,
               icon: "/favicon.ico",
-              tag: notif.id || "siat-crisis",
+              tag: safeId,
             });
           }
-        } catch (_) {}
+        } catch {}
       }
     },
     [addNotification, playAlertSound, showToast],
   );
 
-  // Cargar historial según rol
+  // Cargar historial REST acotado estrictamente según rol/módulo
   useEffect(() => {
-    if (userRole === "REPRESENTANTE") {
-      api
-        .get("/reportes/alertas-representante")
-        .then((res) => {
-          const list = (res.data.data || []).map((alert) => ({
-            id: `alert_${alert.ale_codi || Date.now()}`,
-            type: "crisis",
-            message: `Alerta: Crisis de ${(alert.ale_meto || "").replace(/_/g, " ")} detectada.`,
-            time: alert.ale_time
-              ? new Date(alert.ale_time).toISOString()
-              : new Date().toISOString(),
-            read: false,
-          }));
-          list.forEach((n) => addNotification(n));
-        })
-        .catch(() => {});
-    }
+    if (!activeUserId || !userRole) return;
+    let active = true;
 
-    if (userRole === "ADMIN_INSTITUCION") {
-      api
-        .get("/admin/users")
-        .then((res) => {
-          const users = res.data.data || [];
-          const recent = users.filter((u) => {
-            const created = u.usu_fcr || u.createdAt;
-            if (!created) return false;
-            return (
-              Date.now() - new Date(created).getTime() < 7 * 24 * 60 * 60 * 1000
-            );
-          });
-          recent.forEach((u) => {
-            const isRep = u.rol_codi === "ROL_REP";
-            const isEsp = u.rol_codi === "ROL_ESP";
-            if (isEsp || isRep) {
-              addNotification({
-                id: `new_${u.usu_codi}`,
-                type: isEsp ? "new_specialist" : "new_representative",
-                message: isEsp
-                  ? `Nuevo especialista registrado: ${u.tm_espec?.esp_nomb || ""} ${u.tm_espec?.esp_apel || ""}`
-                  : `Nuevo representante registrado: ${u.tm_repre?.rep_nomb || ""} ${u.tm_repre?.rep_apel || ""}`,
-                time: u.usu_fcr || u.createdAt,
-                read: false,
-              });
-            }
-          });
-        })
-        .catch(() => {});
-    }
-  }, [userRole, addNotification]);
-
-  // WebSocket y eventos de crisis en tiempo real
-  useEffect(() => {
-    getSocket();
-    const unsubscribe = subscribeToSocket("new_alert", (data) => {
-      const notif = {
-        id: `ws_${data.id_alert || Date.now()}`,
-        type: "crisis",
-        message: `Crisis: ${(data.est_dete || "").replace(/_/g, " ")}${data.niño ? ` en ${data.niño}` : ""}.${data.bpm_max ? ` BPM: ${data.bpm_max}` : ""}${data.stress_index ? ` Estrés: ${data.stress_index}%` : ""}`,
-        time: data.fec_hora || new Date().toISOString(),
-        read: false,
-      };
-      triggerAlert(notif);
-    });
-
-    const handleLocalCrisis = (e) => {
-      if (e.detail) {
-        triggerAlert(e.detail);
-      }
+    const endpointByRole = {
+      REPRESENTANTE: "/reportes/notificaciones-representante",
+      ESPECIALISTA: "/especialista/notificaciones",
+      ADMIN_INSTITUCION: "/admin/notificaciones",
     };
-    window.addEventListener("siat:crisis_alert", handleLocalCrisis);
+
+    const endpoint = endpointByRole[userRole];
+    if (!endpoint) return;
+
+    api
+      .get(endpoint)
+      .then((res) => {
+        if (!active) return;
+        const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+        const normalized = rows.map((item) => ({
+          id: String(item.id || item.ale_codi || Date.now()),
+          type: item.type || "warning",
+          nin_codi: item.nin_codi || null,
+          nin_nomb: item.nin_nomb || null,
+          category: item.category || null,
+          message:
+            item.message ||
+            `Notificación: ${(item.ale_meto || "").replace(/_/g, " ")}`,
+          time: item.time
+            ? new Date(item.time).toISOString()
+            : item.ale_time
+              ? new Date(item.ale_time).toISOString()
+              : new Date().toISOString(),
+          read: Boolean(item.read),
+        }));
+        addNotificationsBatch(normalized, activeUserId);
+      })
+      .catch(() => {});
 
     return () => {
-      if (typeof unsubscribe === "function") unsubscribe();
-      window.removeEventListener("siat:crisis_alert", handleLocalCrisis);
+      active = false;
     };
-  }, [triggerAlert]);
+  }, [activeUserId, userRole, addNotificationsBatch]);
+
+  // Suscripción a WebSockets y eventos locales estrictamente aislada por rol
+  useEffect(() => {
+    if (!activeUserId || !userRole) return;
+
+    const isChildOwnedByUser = (ninCodi) => {
+      if (!ninCodi) return true;
+      const children = listaNinosRef.current;
+      if (!Array.isArray(children) || children.length === 0) return true;
+      return children.some(
+        (n) => String(n.nin_codi || n.id_ninos) === String(ninCodi),
+      );
+    };
+
+    const cleanups = [];
+    getSocket();
+
+    if (userRole === "ADMIN_INSTITUCION") {
+      // El administrador escucha ÚNICAMENTE alertas operativas institucionales (nunca crisis infantiles)
+      const unsubAdmin = subscribeToSocket("admin_notification", (data) => {
+        if (!data) return;
+        triggerAlert({
+          id: String(data.id || `adm_${Date.now()}`),
+          type: data.type || "operational_warning",
+          category: data.category || "Operaciones",
+          message: data.message || "Notificación administrativa del sistema.",
+          time: data.time || new Date().toISOString(),
+          read: false,
+        });
+      });
+      if (typeof unsubAdmin === "function") cleanups.push(unsubAdmin);
+    } else if (userRole === "REPRESENTANTE" || userRole === "ESPECIALISTA") {
+      const unsubNewAlert = subscribeToSocket("new_alert", (data) => {
+        if (!data) return;
+        const ninCodi = data.nin_codi || null;
+        if (!isChildOwnedByUser(ninCodi)) return;
+        const ninName = data.nin_nomb || data.niño || data.nino || null;
+        const notif = {
+          id: String(data.id_alert || `ws_${Date.now()}`),
+          type: "crisis",
+          nin_codi: ninCodi,
+          nin_nomb: ninName,
+          message: `Crisis: ${(data.est_dete || data.metodo || "SOBRECARGA").replace(/_/g, " ")}${ninName ? ` en ${ninName}` : ""}.${data.bpm_max ? ` BPM: ${data.bpm_max}` : ""}${data.stress_index ? ` Estrés: ${data.stress_index}%` : ""}`,
+          time: data.fec_hora || new Date().toISOString(),
+          read: false,
+        };
+        triggerAlert(notif);
+      });
+      if (typeof unsubNewAlert === "function") cleanups.push(unsubNewAlert);
+
+      const handleLocalCrisis = (e) => {
+        if (!e?.detail) return;
+        if (!isChildOwnedByUser(e.detail.nin_codi)) return;
+        triggerAlert(e.detail);
+      };
+      window.addEventListener("siat:crisis_alert", handleLocalCrisis);
+      cleanups.push(() =>
+        window.removeEventListener("siat:crisis_alert", handleLocalCrisis),
+      );
+
+      if (userRole === "REPRESENTANTE") {
+        const unsubParent = subscribeToSocket("parent_notification", (data) => {
+          if (!data) return;
+          triggerAlert({
+            id: String(data.id || `rep_${Date.now()}`),
+            type: data.type || "indication",
+            nin_codi: data.nin_codi || null,
+            nin_nomb: data.nin_nomb || null,
+            message: data.message || "Nueva actualización clínica.",
+            time: data.time || new Date().toISOString(),
+            read: false,
+          });
+        });
+        if (typeof unsubParent === "function") cleanups.push(unsubParent);
+      }
+
+      if (userRole === "ESPECIALISTA") {
+        const unsubSpec = subscribeToSocket(
+          "specialist_notification",
+          (data) => {
+            if (!data) return;
+            triggerAlert({
+              id: String(data.id || `esp_${Date.now()}`),
+              type: data.type || "assignment",
+              nin_codi: data.nin_codi || null,
+              nin_nomb: data.nin_nomb || null,
+              message: data.message || "Nueva notificación clínica.",
+              time: data.time || new Date().toISOString(),
+              read: false,
+            });
+          },
+        );
+        if (typeof unsubSpec === "function") cleanups.push(unsubSpec);
+      }
+    }
+
+    return () => {
+      cleanups.forEach((fn) => {
+        try {
+          fn();
+        } catch {}
+      });
+    };
+  }, [activeUserId, userRole, triggerAlert]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
@@ -317,6 +527,7 @@ export default function NotificationBell() {
               sorted.map((notif) => {
                 const Icon = iconMap[notif.type] || AlertTriangle;
                 const color = colorMap[notif.type] || colorMap.warning;
+                const tag = notif.nin_nomb || notif.category;
                 return (
                   <div
                     key={notif.id}
@@ -332,9 +543,16 @@ export default function NotificationBell() {
                       >
                         {notif.message}
                       </p>
-                      <p className="text-[10px] text-slate-400 mt-1.5 font-medium">
-                        {formatTime(notif.time)}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {formatTime(notif.time)}
+                        </span>
+                        {tag && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            {tag}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {!notif.read && (
                       <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />

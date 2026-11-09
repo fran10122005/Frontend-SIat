@@ -25,7 +25,6 @@ export default function SpecialistGlobalView({
   behaviorData = [],
   sensoryData = [],
   isDark = false,
-  quickActions = [],
 }) {
   const [showAllAlerts, setShowAllAlerts] = useState(false);
   const tooltipStyle = {
@@ -118,19 +117,19 @@ export default function SpecialistGlobalView({
         className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300"
       >
         {/* Incidentes conductuales últimos 7 días */}
-        <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col h-[280px] lg:h-[350px]">
+        <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col min-w-0 h-auto lg:h-[350px]">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide mb-1">
             Incidentes Conductuales (7 días)
           </h2>
           <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 mb-3">
             Distribución de eventos por tipo en la última semana
           </p>
-          <div className="flex-1 w-full min-h-0">
+          <div className="w-full h-[220px] sm:h-[250px] lg:flex-1 lg:h-auto lg:min-h-[200px]">
             <ResponsiveContainer
               width="100%"
               height="100%"
               minWidth={0}
-              minHeight={0}
+              minHeight={200}
             >
               <BarChart
                 data={behaviorData}
@@ -192,19 +191,19 @@ export default function SpecialistGlobalView({
         </div>
 
         {/* Distribución por tipo */}
-        <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col h-[280px] lg:h-[350px]">
+        <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-slate-200 dark:border-slate-800/60 shadow-sm flex flex-col min-w-0 h-auto lg:h-[350px]">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide mb-1">
             Distribución por Tipo de Incidente
           </h2>
           <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 mb-3">
             Proporción de eventos registrados
           </p>
-          <div className="flex-1 w-full min-h-0">
+          <div className="w-full h-[220px] sm:h-[250px] lg:flex-1 lg:h-auto lg:min-h-[200px]">
             <ResponsiveContainer
               width="100%"
               height="100%"
               minWidth={0}
-              minHeight={0}
+              minHeight={200}
             >
               <PieChart>
                 <Pie
@@ -232,30 +231,6 @@ export default function SpecialistGlobalView({
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
-
-      {/* Accesos rápidos compactos */}
-      <div
-        data-tour="sp-global-actions"
-        className="flex flex-wrap gap-2 animate-in fade-in duration-300"
-      >
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <button
-              key={action.id}
-              onClick={action.onClick}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
-                action.highlight
-                  ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white border-blue-500/30 hover:shadow-md"
-                  : "bg-white dark:bg-[#1E293B] text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-brand-300 dark:hover:border-brand-700"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5 shrink-0" />
-              {action.label}
-            </button>
-          );
-        })}
       </div>
 
       {/* Alertas Globales */}

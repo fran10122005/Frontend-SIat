@@ -374,8 +374,13 @@ export default function HardwareInventory() {
                         </p>
                       </div>
 
-                      <div className="h-[250px] md:h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-[250px] md:h-[300px] w-full min-w-0">
+                        <ResponsiveContainer
+                          width="100%"
+                          height="100%"
+                          minWidth={0}
+                          minHeight={220}
+                        >
                           <LineChart
                             data={telemetryHistory}
                             margin={{

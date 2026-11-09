@@ -15,11 +15,17 @@ import { disconnectSocket } from "../hooks/socket";
 import {
   getSavedSelectedChild,
   saveSelectedChild,
+  shouldRestoreSavedChild,
   clearAuthSession,
   setupAuthSync,
   getValidSession,
   normalizeRole,
 } from "../utils/authStorage";
+import {
+  loadUserLocalAlerts,
+  appendUserLocalAlert,
+  saveUserLocalAlerts,
+} from "../utils/notificationStorage";
 
 const GlobalContext = createContext();
 
@@ -63,7 +69,6 @@ export const adminTabPaths = {
   dashboard: "/admin/overview",
   especialistas: "/admin/specialists",
   representantes: "/admin/guardians",
-  historial_clinico: "/admin/clinical-records",
   asignaciones: "/admin/assignments",
   catalogos: "/admin/institution",
   usuarios: "/admin/users",
@@ -80,7 +85,8 @@ export const legacyAliases = {
   "/admin": "/admin/overview",
   "/admin/especialistas": "/admin/specialists",
   "/admin/representantes": "/admin/guardians",
-  "/admin/historial-clinico": "/admin/clinical-records",
+  "/admin/historial-clinico": "/admin/overview",
+  "/admin/clinical-records": "/admin/overview",
   "/admin/asignaciones": "/admin/assignments",
   "/admin/catalogos": "/admin/institution",
   "/admin/usuarios": "/admin/users",
@@ -169,11 +175,12 @@ export const GlobalProvider = ({ children }) => {
   });
 
   const savedChildInit = getSavedSelectedChild();
+  const canRestoreInitialChild = shouldRestoreSavedChild(initialRole);
   const [nomNino, setNomNino] = useState(() =>
-    initialRole === "REPRESENTANTE" ? savedChildInit.name || null : null,
+    canRestoreInitialChild ? savedChildInit.name || null : null,
   );
   const [selectedChildId, setSelectedChildId] = useState(() =>
-    initialRole === "REPRESENTANTE" ? savedChildInit.id || null : null,
+    canRestoreInitialChild ? savedChildInit.id || null : null,
   );
   const [userName, setUserName] = useState(() =>
     session.isValid ? localStorage.getItem("userName") || "" : "",
@@ -398,6 +405,8 @@ export const GlobalProvider = ({ children }) => {
     localStorage.setItem("currentView", currentView);
   }, [currentView]);
 
+  const lastSyncedPathnameRef = useRef(null);
+
   useEffect(() => {
     const path = location.pathname;
     const session = getValidSession();
@@ -428,19 +437,37 @@ export const GlobalProvider = ({ children }) => {
       if (!isPublic && !session.isValid) {
         clearAuthSession();
         setUserRole(null);
+        setSelectedChildId(null);
+        setNomNino(null);
+        window.dispatchEvent(new CustomEvent("siat:session-ended"));
         setCurrentView("login");
         routerNavigate("/auth/login", { replace: true });
         return;
       }
-      setCurrentView((prev) => (prev !== view ? view : prev));
+      // Solo sincronizar currentView cuando location.pathname cambia realmente,
+      // evitando revertir cambios directos hechos con setCurrentView (ej. profile/settings).
+      if (lastSyncedPathnameRef.current !== path) {
+        lastSyncedPathnameRef.current = path;
+        setCurrentView((prev) => (prev !== view ? view : prev));
+      }
     }
   }, [location.pathname, routerNavigate, userRole, currentView]);
 
   useEffect(() => {
     if (userRole) {
       localStorage.setItem("userRole", userRole);
+      const activeSession = getValidSession();
+      if (activeSession.isValid) {
+        window.dispatchEvent(new CustomEvent("siat:session-started"));
+      }
+      if (userRole === "ESPECIALISTA" || userRole === "REPRESENTANTE") {
+        setClinicalAlerts(loadUserLocalAlerts(activeSession.decoded?.usu_codi));
+      } else {
+        setClinicalAlerts([]);
+      }
     } else {
       localStorage.removeItem("userRole");
+      setClinicalAlerts([]);
     }
   }, [userRole]);
 
@@ -452,11 +479,18 @@ export const GlobalProvider = ({ children }) => {
     }
   }, [userName]);
 
-  // Persistir la selección de niño siempre que cambie
+  // Persistir la selección de niño siempre que cambie y notificar cambio de contexto clínico
   useEffect(() => {
     if (selectedChildId) {
       saveSelectedChild(selectedChildId, nomNino);
+    } else {
+      saveSelectedChild(null, null);
     }
+    window.dispatchEvent(
+      new CustomEvent("siat:child-changed", {
+        detail: { childId: selectedChildId || null },
+      }),
+    );
   }, [selectedChildId, nomNino]);
 
   // Idle session timeout (default: 15 min)
@@ -475,6 +509,20 @@ export const GlobalProvider = ({ children }) => {
   const handleIdleTimeout = useCallback(() => {
     disconnectSocket();
     clearAuthSession();
+    setUserRole(null);
+    setUserName("");
+    setSelectedChildId(null);
+    setNomNino(null);
+    setClinicalAlerts([]);
+    setCrisisAlerts([]);
+    setCrisisTelemetryMap({});
+    setClinicalHistory([]);
+    setClinicalReports([]);
+    setClinicalBitacoras([]);
+    setGlobalPeiGoals([]);
+    setListaNinos([]);
+    lastChildFetchedRef.current = null;
+    window.dispatchEvent(new CustomEvent("siat:session-ended"));
     setCurrentView("login");
     routerNavigate("/auth/login", { replace: true });
     showToast("⏱️ Sesión cerrada por inactividad");
@@ -487,6 +535,20 @@ export const GlobalProvider = ({ children }) => {
     const unsubscribe = setupAuthSync({
       onLogout: () => {
         disconnectSocket();
+        setUserRole(null);
+        setUserName("");
+        setSelectedChildId(null);
+        setNomNino(null);
+        setClinicalAlerts([]);
+        setCrisisAlerts([]);
+        setCrisisTelemetryMap({});
+        setClinicalHistory([]);
+        setClinicalReports([]);
+        setClinicalBitacoras([]);
+        setGlobalPeiGoals([]);
+        setListaNinos([]);
+        lastChildFetchedRef.current = null;
+        window.dispatchEvent(new CustomEvent("siat:session-ended"));
         setCurrentView("login");
         routerNavigate("/auth/login", { replace: true });
         showToast("ℹ️ Sesión cerrada desde otra pestaña.");
@@ -625,8 +687,16 @@ export const GlobalProvider = ({ children }) => {
         }));
         setListaNinos(mapped);
 
-        // Si ya hay un niño seleccionado (o recuperado de localStorage)
-        const currentTargetId = selectedChildId || getSavedSelectedChild().id;
+        const effectiveRole =
+          userRole || normalizeRole(localStorage.getItem("userRole"));
+        const isRep = effectiveRole === "REPRESENTANTE";
+        const canRestoreChild = shouldRestoreSavedChild(effectiveRole);
+
+        // Tanto el Representante como el Especialista conservan su niño seleccionado al recargar (F5);
+        // al cerrar sesión o iniciar sesión nueva el estado se limpia y el Especialista inicia en Vista Global.
+        const currentTargetId =
+          selectedChildId ||
+          (canRestoreChild ? getSavedSelectedChild().id : null);
 
         const matched = currentTargetId
           ? mapped.find(
@@ -644,10 +714,14 @@ export const GlobalProvider = ({ children }) => {
             setNomNino(matched.nom_nino);
           }
           saveSelectedChild(matched.id_ninos, matched.nom_nino);
-        } else if (mapped.length > 0) {
+        } else if (isRep && mapped.length > 0) {
           setSelectedChildId(mapped[0].id_ninos);
           setNomNino(mapped[0].nom_nino);
           saveSelectedChild(mapped[0].id_ninos, mapped[0].nom_nino);
+        } else if (!isRep) {
+          if (selectedChildId) setSelectedChildId(null);
+          setNomNino(null);
+          saveSelectedChild(null, null);
         }
       } else {
         setListaNinos([]);
@@ -660,14 +734,16 @@ export const GlobalProvider = ({ children }) => {
 
   const activeChild = useMemo(() => {
     if (!listaNinos || listaNinos.length === 0) return null;
-    const found = listaNinos.find(
-      (n) =>
-        String(n.id_ninos) === String(selectedChildId) ||
-        String(n.nin_codi) === String(selectedChildId),
-    );
-    if (found) return found;
-    return listaNinos[0] || null;
-  }, [selectedChildId, listaNinos]);
+    if (selectedChildId) {
+      const found = listaNinos.find(
+        (n) =>
+          String(n.id_ninos) === String(selectedChildId) ||
+          String(n.nin_codi) === String(selectedChildId),
+      );
+      if (found) return found;
+    }
+    return userRole === "REPRESENTANTE" ? listaNinos[0] || null : null;
+  }, [selectedChildId, listaNinos, userRole]);
 
   useEffect(() => {
     if (activeChild) {
@@ -727,8 +803,9 @@ export const GlobalProvider = ({ children }) => {
         hasFetchedCategoriesRef.current = true;
         fetchCategories();
       }
-      if (lastRoutinesChildRef.current !== selectedChildId) {
-        lastRoutinesChildRef.current = selectedChildId;
+      const routinesKey = `${userRole || ""}:${selectedChildId || "ALL"}`;
+      if (lastRoutinesChildRef.current !== routinesKey) {
+        lastRoutinesChildRef.current = routinesKey;
         fetchRoutines();
       }
     } else if (!token || isPublic) {
@@ -816,6 +893,7 @@ export const GlobalProvider = ({ children }) => {
         inst: act.act_guia || "",
         media: act.act_med || "",
         materials: act.act_meta || "",
+        visibility: act.act_visib || "AMBOS",
         sessionCount: act._count?.tr_sesio || 0,
       }));
       setRoutines(mapped);
@@ -856,6 +934,8 @@ export const GlobalProvider = ({ children }) => {
               .join("\n")
           : "",
         act_time: parseInt(formData.durationStr) || 15,
+        act_visib:
+          formData.visibility === "ESPECIALISTA" ? "ESPECIALISTA" : "AMBOS",
         nin_codi: selectedChildId || null,
       };
 
@@ -889,6 +969,8 @@ export const GlobalProvider = ({ children }) => {
               .join("\n")
           : "",
         act_time: parseInt(formData.durationStr) || 15,
+        act_visib:
+          formData.visibility === "ESPECIALISTA" ? "ESPECIALISTA" : "AMBOS",
       };
 
       await api.put(`/sesiones/actividades/${act_codi}`, payload);
@@ -1013,6 +1095,18 @@ export const GlobalProvider = ({ children }) => {
     );
   }, []);
 
+  useEffect(() => {
+    const handleSimulationStopped = (e) => {
+      unregisterConnectedDevice(e?.detail?.deviceName);
+    };
+    window.addEventListener("siat:simulation-stopped", handleSimulationStopped);
+    return () =>
+      window.removeEventListener(
+        "siat:simulation-stopped",
+        handleSimulationStopped,
+      );
+  }, [unregisterConnectedDevice]);
+
   const [globalAlertas, setGlobalAlertas] = useState([]);
 
   // Telemetría de alta resolución (segundo a segundo) durante la ventana de la crisis (5 min aprox)
@@ -1090,14 +1184,11 @@ export const GlobalProvider = ({ children }) => {
 
   const [clinicalHistory, setClinicalHistory] = useState([]);
   const [clinicalReports, setClinicalReports] = useState([]);
-  const [clinicalAlerts, setClinicalAlerts] = useState(() => {
-    try {
-      const raw = localStorage.getItem("siat_local_alerts");
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [clinicalAlerts, setClinicalAlerts] = useState(() =>
+    initialRole === "ESPECIALISTA" || initialRole === "REPRESENTANTE"
+      ? loadUserLocalAlerts(session.decoded?.usu_codi)
+      : [],
+  );
   const [clinicalBitacoras, setClinicalBitacoras] = useState([]);
 
   const fetchHistorialCompleto = async (childId) => {
@@ -1233,10 +1324,12 @@ export const GlobalProvider = ({ children }) => {
             if (m) proCalm = Number(m[1]);
           }
           if (proCalm == null) {
+            const moodVal = b.bit_anim || b.bit_anmo || "";
             const isStable =
-              b.bit_anmo === "Tranquilo" ||
-              b.bit_anmo === "Estable" ||
-              b.bit_anmo === "Alegre";
+              moodVal === "Muy Calmo" ||
+              moodVal === "Tranquilo" ||
+              moodVal === "Estable" ||
+              moodVal === "Alegre";
             proCalm = isStable ? 88 : 58;
           }
           const dObj = new Date(b.bit_fech);
@@ -1251,7 +1344,7 @@ export const GlobalProvider = ({ children }) => {
             fue_efec: proCalm >= 70,
             com_tend:
               b.bit_obse ||
-              `Registro de hogar: ${b.bit_anmo || "Sin observaciones"}`,
+              `Registro de hogar: ${b.bit_anim || b.bit_anmo || "Sin observaciones"}`,
             activityTitle: "Registro de Hogar",
           };
         });
@@ -1297,13 +1390,16 @@ export const GlobalProvider = ({ children }) => {
         }
       });
 
-      // Sincronizar alertas locales de crisis en tiempo real
+      // Sincronizar alertas locales de crisis en tiempo real (aisladas por usuario y niño)
       try {
-        const raw = localStorage.getItem("siat_local_alerts");
-        const locals = raw ? JSON.parse(raw) : [];
+        const locals = loadUserLocalAlerts();
         const existingIds = new Set(allAlerts.map((a) => a.id_alert));
         locals.forEach((l) => {
-          if (!existingIds.has(l.id_alert)) allAlerts.push(l);
+          const belongsToChild =
+            !l.nin_codi || String(l.nin_codi) === String(childId);
+          if (belongsToChild && !existingIds.has(l.id_alert)) {
+            allAlerts.push(l);
+          }
         });
       } catch {}
 
@@ -1316,25 +1412,42 @@ export const GlobalProvider = ({ children }) => {
   // Listener para alertas de crisis emitidas por smartwatch o simulación
   useEffect(() => {
     const handleLocalCrisis = (e) => {
-      if (e.detail) {
-        setClinicalAlerts((prev) => {
-          const exists = prev.some((a) => a.id_alert === e.detail.id_alert);
-          if (exists) return prev;
-          const updated = [e.detail, ...prev];
-          try {
-            localStorage.setItem(
-              "siat_local_alerts",
-              JSON.stringify(updated.slice(0, 50)),
-            );
-          } catch {}
-          return updated;
-        });
+      if (!e.detail) return;
+      const activeSession = getValidSession();
+      if (
+        !activeSession.isValid ||
+        (activeSession.role !== "ESPECIALISTA" &&
+          activeSession.role !== "REPRESENTANTE")
+      ) {
+        return;
       }
+
+      const usuCodi = activeSession.decoded?.usu_codi || null;
+      const alertWithChild =
+        e.detail.nin_codi || !selectedChildId
+          ? e.detail
+          : { ...e.detail, nin_codi: selectedChildId };
+
+      appendUserLocalAlert(alertWithChild, usuCodi);
+
+      if (
+        alertWithChild.nin_codi &&
+        selectedChildId &&
+        String(alertWithChild.nin_codi) !== String(selectedChildId)
+      ) {
+        return;
+      }
+
+      setClinicalAlerts((prev) => {
+        const exists = prev.some((a) => a.id_alert === alertWithChild.id_alert);
+        if (exists) return prev;
+        return [alertWithChild, ...prev];
+      });
     };
     window.addEventListener("siat:crisis_alert", handleLocalCrisis);
     return () =>
       window.removeEventListener("siat:crisis_alert", handleLocalCrisis);
-  }, []);
+  }, [selectedChildId]);
 
   const [globalPeiGoals, setGlobalPeiGoals] = useState([]);
 
@@ -1552,6 +1665,13 @@ export const GlobalProvider = ({ children }) => {
       fetchSessions(selectedChildId);
     } else if (!selectedChildId) {
       lastChildFetchedRef.current = null;
+      setClinicalHistory([]);
+      setClinicalReports([]);
+      setClinicalBitacoras([]);
+      setGlobalPeiGoals([]);
+      setCrisisAlerts([]);
+      setCrisisTelemetryMap({});
+      setClinicalAlerts([]);
     }
   }, [selectedChildId]);
 
@@ -1584,13 +1704,12 @@ export const GlobalProvider = ({ children }) => {
           ),
         );
         try {
-          const raw = localStorage.getItem("siat_local_alerts");
-          if (raw) {
-            const arr = JSON.parse(raw);
+          const arr = loadUserLocalAlerts();
+          if (arr.length > 0) {
             const upd = arr.map((a) =>
               a.id_alert === id_alert ? { ...a, fue_efec, com_padr } : a,
             );
-            localStorage.setItem("siat_local_alerts", JSON.stringify(upd));
+            saveUserLocalAlerts(upd);
           }
         } catch {}
         showToast(
@@ -1663,6 +1782,16 @@ export const GlobalProvider = ({ children }) => {
     setUserName("");
     setSelectedChildId(null);
     setNomNino(null);
+    setClinicalAlerts([]);
+    setCrisisAlerts([]);
+    setCrisisTelemetryMap({});
+    setClinicalHistory([]);
+    setClinicalReports([]);
+    setClinicalBitacoras([]);
+    setGlobalPeiGoals([]);
+    setListaNinos([]);
+    lastChildFetchedRef.current = null;
+    window.dispatchEvent(new CustomEvent("siat:session-ended"));
     setCurrentView("login");
     routerNavigate("/auth/login", { replace: true });
   }, [routerNavigate]);
@@ -1674,6 +1803,12 @@ export const GlobalProvider = ({ children }) => {
       if (!isPublic && !session.isValid) {
         clearAuthSession();
         setUserRole(null);
+        setSelectedChildId(null);
+        setNomNino(null);
+        setClinicalAlerts([]);
+        setListaNinos([]);
+        lastChildFetchedRef.current = null;
+        window.dispatchEvent(new CustomEvent("siat:session-ended"));
         setCurrentView("login");
         routerNavigate("/auth/login", { replace: true });
         return;

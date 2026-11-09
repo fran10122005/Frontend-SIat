@@ -127,7 +127,7 @@ export default function ParentProfile() {
   }
 
   return (
-    <div className="flex h-[100dvh] w-full bg-[#F4F7F9] dark:bg-slate-900 font-sans overflow-hidden transition-colors duration-200">
+    <div className="flex h-[100dvh] w-full bg-[#F4F7F9] dark:bg-[#0B1120] font-sans overflow-hidden transition-colors duration-200">
       <Sidebar />
 
       {/* Lienzo Derecho */}

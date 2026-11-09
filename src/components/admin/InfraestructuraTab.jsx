@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Server, Database, Clock, Wifi, FileText } from "lucide-react";
+import { Server, Database, Clock, Wifi } from "lucide-react";
+import pdfIcon from "../../assets/pdf.png";
 import {
   ResponsiveContainer,
   LineChart,
@@ -159,7 +160,11 @@ export default function InfraestructuraTab({ isDark }) {
               title="Reporte técnico (PDF)"
               className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
-              <FileText className="w-4 h-4" />
+              <img
+                src={pdfIcon}
+                alt="PDF"
+                className="w-4 h-4 object-contain shrink-0"
+              />
             </button>
           </div>
         </div>
@@ -175,8 +180,13 @@ export default function InfraestructuraTab({ isDark }) {
             </p>
           </div>
         ) : (
-          <div className="h-[240px] lg:h-[320px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[240px] lg:h-[320px] w-full min-w-0">
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={0}
+              minHeight={200}
+            >
               <LineChart
                 data={chartData}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import AdminSidebar from "@/components/layout/AdminSidebar";
-import { useGlobalContext } from "@/context/GlobalState";
+import { useGlobalContext, adminTabPaths } from "@/context/GlobalState";
 import api from "@/api/axios";
 import { jsPDF } from "jspdf";
 import {
@@ -51,6 +52,7 @@ import {
 } from "@/api/passkey";
 import { getErrorMessage } from "@/utils/errorHandler";
 import FotoUpload from "@/components/shared/FotoUpload";
+import pdfIcon from "@/assets/pdf.png";
 
 const TEXTO_CONSENTIMIENTO = `Al aceptar este documento, usted, en su condición de representante legal, autoriza de forma expresa, libre e inequívoca al Sistema Inteligente de Asistencia Terapéutica (SIAT) y a la institución vinculada a:
 
@@ -467,13 +469,15 @@ function PreferenciasPanel() {
 }
 
 export default function UserProfile({ initialTab }) {
+  const routerNavigate = useNavigate();
   const {
     userRole,
     showToast,
     currentView,
-    setCurrentView,
+    navigate,
     setAdminActiveTab,
     setUserName,
+    setUserFoto,
   } = useGlobalContext();
 
   const isSettingsMode =
@@ -706,6 +710,7 @@ export default function UserProfile({ initialTab }) {
           apel = userData.tm_espec.esp_apel;
           telf = userData.tm_espec.esp_telf || "";
           tdoc = userData.tm_espec.esp_tdoc || "V";
+          cedu = userData.tm_espec.esp_cedu || "";
           fecnac = userData.tm_espec.esp_fnac
             ? String(userData.tm_espec.esp_fnac).slice(0, 10)
             : "";
@@ -714,7 +719,7 @@ export default function UserProfile({ initialTab }) {
           foto = userData.tm_espec.esp_foto || "";
           especialidad = userData.tm_espec.esc_codi || "";
           especialidadLabel = userData.tm_espec.tm_especi?.esc_nomb || "";
-          institucion = userData.tm_espec.tm_instit?.ins_nomb || "";
+          institucion = userData.tm_espec.tm_insti?.ins_nomb || "";
           ins_codi = userData.tm_espec.ins_codi || "";
           cargo = "Especialista Terapéutico";
         } else if (userData.rol_codi === "ROL_REP" && userData.tm_repre) {
@@ -866,7 +871,6 @@ export default function UserProfile({ initialTab }) {
       }
       if (userRole === "ESPECIALISTA") {
         payload.licencia = profile.licencia;
-        payload.tdoc = profile.tdoc;
         payload.fnac = profile.fecnac || null;
       } else if (userRole !== "ADMIN_INSTITUCION" && !isAdmin) {
         payload.rela = profile.rela;
@@ -877,6 +881,7 @@ export default function UserProfile({ initialTab }) {
         updatedName = `${profile.gner === "M" ? "Dr." : "Dra."} ${profile.nomb} ${profile.apel}`;
       }
       setUserName(updatedName);
+      setUserFoto(profile.foto || "");
       savedProfileRef.current = profile;
       showToast("✅ Perfil actualizado correctamente");
     } catch (error) {
@@ -1101,10 +1106,10 @@ export default function UserProfile({ initialTab }) {
     <div className="flex h-[100dvh] w-full bg-[#F4F7F9] dark:bg-slate-900 font-sans overflow-hidden transition-colors duration-200">
       {userRole === "ADMIN_INSTITUCION" ? (
         <AdminSidebar
-          activeTab=""
+          activeTab={isSettingsMode ? "settings" : "profile"}
           setActiveTab={(tab) => {
             setAdminActiveTab(tab);
-            setCurrentView("admin");
+            routerNavigate(adminTabPaths[tab] || "/admin/overview");
           }}
         />
       ) : (
@@ -1115,15 +1120,43 @@ export default function UserProfile({ initialTab }) {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[1100px] mx-auto p-4 md:p-6 flex flex-col gap-6 pb-[max(3rem,env(safe-area-inset-bottom))] sm:pb-12">
-            <header>
-              <PageTitle icon={isSettingsMode ? Settings2 : UserCircle}>
-                {isSettingsMode ? "Configuración del Sistema" : "Mi Perfil"}
-              </PageTitle>
-              <p className="hidden sm:block text-sm text-slate-500 dark:text-slate-400 mt-1">
-                {isSettingsMode
-                  ? "Personaliza el tema visual, color de acento, tipografía, densidad y notificaciones."
-                  : "Gestiona tu información personal, contraseña, biometría y seguridad en SIAT."}
-              </p>
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <PageTitle icon={isSettingsMode ? Settings2 : UserCircle}>
+                  {isSettingsMode ? "Configuración del Sistema" : "Mi Perfil"}
+                </PageTitle>
+                <p className="hidden sm:block text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  {isSettingsMode
+                    ? "Personaliza el tema visual, color de acento, tipografía, densidad y notificaciones."
+                    : "Gestiona tu información personal, contraseña, biometría y seguridad en SIAT."}
+                </p>
+              </div>
+              <div className="flex items-center bg-slate-200/70 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 self-start sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate("profile")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    !isSettingsMode
+                      ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  <UserCircle className="w-3.5 h-3.5" />
+                  Mi Perfil
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("settings")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    isSettingsMode
+                      ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                  Preferencias
+                </button>
+              </div>
             </header>
 
             {loading ? (
@@ -1409,8 +1442,8 @@ export default function UserProfile({ initialTab }) {
                                   <select
                                     name="tdoc"
                                     value={profile.tdoc}
-                                    onChange={handleProfileChange}
-                                    className="w-24 px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-xs font-bold text-slate-900 dark:text-white"
+                                    disabled
+                                    className="w-24 px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none text-xs font-bold text-slate-900 dark:text-white opacity-70 cursor-not-allowed"
                                   >
                                     <option value="V">V-</option>
                                     <option value="E">E-</option>
@@ -1419,12 +1452,16 @@ export default function UserProfile({ initialTab }) {
                                   <input
                                     type="text"
                                     name="cedu"
-                                    value={profile.cedu}
-                                    onChange={handleProfileChange}
-                                    placeholder="Cédula profesional"
-                                    className={inputClass}
+                                    value={profile.cedu || ""}
+                                    placeholder="Sin cédula registrada (contactar al administrador)"
+                                    readOnly
+                                    disabled
+                                    className={`${inputClass} opacity-70 cursor-not-allowed`}
                                   />
                                 </div>
+                                <p className="text-[10px] text-slate-400">
+                                  Identificador legal único en el sistema.
+                                </p>
                               </div>
                               <div className="space-y-2">
                                 <label
@@ -2152,7 +2189,13 @@ export default function UserProfile({ initialTab }) {
                             type="button"
                             variant="primary"
                             size="md"
-                            leftIcon={<Download className="w-4 h-4" />}
+                            leftIcon={
+                              <img
+                                src={pdfIcon}
+                                alt="PDF"
+                                className="w-4 h-4 object-contain shrink-0"
+                              />
+                            }
                             onClick={descargarConsentimiento}
                             className="w-full sm:w-auto"
                           >
