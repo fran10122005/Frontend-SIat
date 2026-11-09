@@ -7,6 +7,7 @@ import {
   clearAuthSession,
   getSavedSelectedChild,
   saveSelectedChild,
+  shouldRestoreSavedChild,
   setupAuthSync,
   normalizeRole,
   getValidSession,
@@ -194,5 +195,49 @@ describe("authStorage - normalizeRole y getValidSession", () => {
     expect(session.role).toBe("ADMIN_INSTITUCION");
     expect(session.token).toBe(validToken);
     expect(localStorage.getItem("userRole")).toBe("ADMIN_INSTITUCION");
+  });
+});
+
+describe("authStorage - shouldRestoreSavedChild y persistencia al recargar vs cerrar sesión", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("permite restaurar el niño al recargar (F5) para Especialista y Representante, pero no para Admin", () => {
+    expect(shouldRestoreSavedChild("ESPECIALISTA")).toBe(true);
+    expect(shouldRestoreSavedChild("ROL_ESP")).toBe(true);
+    expect(shouldRestoreSavedChild("REPRESENTANTE")).toBe(true);
+    expect(shouldRestoreSavedChild("ROL_REP")).toBe(true);
+    expect(shouldRestoreSavedChild("ADMIN_INSTITUCION")).toBe(false);
+    expect(shouldRestoreSavedChild("ROL_ADM")).toBe(false);
+    expect(shouldRestoreSavedChild(null)).toBe(false);
+    expect(shouldRestoreSavedChild("")).toBe(false);
+  });
+
+  it("conserva el paciente del especialista mientras la sesión siga válida, y lo limpia al cerrar sesión", () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const espToken = createMockJwt({
+      usu_codi: "USU_ESP",
+      rol_codi: "ROL_ESP",
+      exp: futureExp,
+    });
+    setAuthSession({
+      token: espToken,
+      user: { rol_codi: "ROL_ESP", usu_nomb: "Dr. Juan", usu_apel: "Pérez" },
+    });
+    saveSelectedChild("NIN_07", "Mateo Pérez");
+
+    // Simular recarga (F5): la sesión sigue válida y se debe restaurar el niño
+    const sessionOnReload = getValidSession();
+    expect(sessionOnReload.isValid).toBe(true);
+    expect(shouldRestoreSavedChild(sessionOnReload.role)).toBe(true);
+    expect(getSavedSelectedChild()).toEqual({
+      id: "NIN_07",
+      name: "Mateo Pérez",
+    });
+
+    // Simular cierre de sesión: se limpia todo el niño seleccionado
+    clearAuthSession();
+    expect(getSavedSelectedChild()).toEqual({ id: null, name: null });
   });
 });
