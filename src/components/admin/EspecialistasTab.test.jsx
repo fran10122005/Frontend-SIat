@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import EspecialistasTab from "./EspecialistasTab";
+import { getAdultOrYouthDateBounds } from "../../utils/validators";
 
 const baseProps = {
   especialistas: [
@@ -91,5 +93,86 @@ describe("EspecialistasTab - Cédula separada de Código Interno e íconos de ex
     expect(setNewEsp).toHaveBeenCalledWith(
       expect.objectContaining({ esp_cedu: "20445566" }),
     );
+  });
+
+  it("sanitiza 'ik' en cédula V, permite alfanuméricos en Pasaporte P, normaliza teléfono VE y aplica rango 12-75 años", () => {
+    const handleCreateEspecialista = vi.fn();
+
+    function ControlledHarness() {
+      const [newEsp, setNewEsp] = useState({
+        ...baseProps.newEsp,
+        esp_fnac: "",
+      });
+      return (
+        <EspecialistasTab
+          {...baseProps}
+          newEsp={newEsp}
+          setNewEsp={setNewEsp}
+          handleCreateEspecialista={handleCreateEspecialista}
+        />
+      );
+    }
+
+    render(<ControlledHarness />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Nuevo Especialista/i }),
+    );
+
+    const cedulaInput = document.querySelector('input[name="esp_cedu"]');
+    const tdocSelect = document.querySelector('select[name="esp_tdoc"]');
+    const telInput = document.querySelector('input[name="esp_telf"]');
+    const fnacInput = document.querySelector('input[name="esp_fnac"]');
+
+    // Bloquea "ik" cuando es cédula V
+    fireEvent.change(cedulaInput, { target: { value: "ik" } });
+    expect(cedulaInput.value).toBe("");
+
+    // Cambia a Pasaporte (P) y permite letras en mayúscula
+    fireEvent.change(tdocSelect, { target: { value: "P" } });
+    fireEvent.change(cedulaInput, { target: { value: "p123ab" } });
+    expect(cedulaInput.value).toBe("P123AB");
+
+    // Normaliza teléfono móvil VE sin espacios ni guiones
+    fireEvent.change(telInput, { target: { value: "+58 412-1234567" } });
+    expect(telInput.value).toBe("+584121234567");
+
+    // Límites min y max del calendario de nacimiento (12-75 años)
+    const expectedBounds = getAdultOrYouthDateBounds(12, 75);
+    expect(fnacInput).toHaveAttribute("min", expectedBounds.min);
+    expect(fnacInput).toHaveAttribute("max", expectedBounds.max);
+  });
+
+  it("señala errores inline y bloquea envío cuando faltan campos obligatorios", () => {
+    const handleCreateEspecialista = vi.fn();
+    render(
+      <EspecialistasTab
+        {...baseProps}
+        newEsp={{
+          ...baseProps.newEsp,
+          esp_cedu: "",
+          esp_nomb: "",
+          esp_apel: "",
+          usu_crro: "",
+          esp_fnac: "",
+        }}
+        handleCreateEspecialista={handleCreateEspecialista}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Nuevo Especialista/i }),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Registrar Especialista/i }),
+    );
+
+    expect(handleCreateEspecialista).not.toHaveBeenCalled();
+    const alerts = screen.getAllByRole("alert");
+    expect(alerts.length).toBeGreaterThanOrEqual(4);
+    expect(
+      screen.getByText(/número de documento es obligatorio/i),
+    ).toBeInTheDocument();
   });
 });

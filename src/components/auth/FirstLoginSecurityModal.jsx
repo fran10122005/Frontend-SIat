@@ -1,19 +1,26 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   KeyRound,
   Fingerprint,
   ShieldCheck,
   CheckCircle2,
-  Lock,
   Eye,
   EyeOff,
   ArrowRight,
   Sparkles,
   AlertTriangle,
+  AlertCircle,
+  Check,
+  X,
 } from "lucide-react";
 import api from "../../api/axios";
 import { registerFingerprint } from "../../api/passkey";
-import { getErrorMessage } from "../../utils/errorHandler";
+import { getErrorMessage, extractFieldErrors } from "../../utils/errorHandler";
+import {
+  getPasswordStrength,
+  validatePasswordStrong,
+  focusFirstError,
+} from "../../utils/validators";
 
 export default function FirstLoginSecurityModal({ open, user, onComplete }) {
   const [currentStep, setCurrentStep] = useState(1); // 1: Password, 2: Passkey, 3: Done
@@ -22,10 +29,13 @@ export default function FirstLoginSecurityModal({ open, user, onComplete }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const formRef = useRef(null);
 
   const [registeringFp, setRegisteringFp] = useState(false);
   const [fpError, setFpError] = useState("");
@@ -35,42 +45,39 @@ export default function FirstLoginSecurityModal({ open, user, onComplete }) {
   const isWebAuthnSupported =
     typeof window !== "undefined" && Boolean(window.PublicKeyCredential);
 
-  // Análisis de fortaleza de la contraseña
-  const passwordStrength = useMemo(() => {
-    let score = 0;
-    if (newPassword.length >= 8) score++;
-    if (/[A-Z]/.test(newPassword)) score++;
-    if (/[a-z]/.test(newPassword)) score++;
-    if (/[0-9]/.test(newPassword)) score++;
-    if (/[^A-Za-z0-9]/.test(newPassword)) score++;
-    return score;
-  }, [newPassword]);
+  // Análisis unificado de fortaleza de la contraseña (idéntico a UserProfile y backend)
+  const strength = useMemo(
+    () => getPasswordStrength(newPassword),
+    [newPassword],
+  );
 
   if (!open) return null;
 
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     setPasswordError("");
+    setFieldErrors({});
 
-    if (!currentPassword) {
-      setPasswordError("Ingresa tu contraseña actual.");
-      return;
+    const errs = {};
+    if (!currentPassword || !currentPassword.trim()) {
+      errs.currentPassword = "Ingresa tu contraseña actual";
+    }
+    const pwdErr = validatePasswordStrong(newPassword);
+    if (pwdErr) {
+      errs.newPassword = pwdErr;
+    }
+    if (!confirmPassword) {
+      errs.confirmPassword = "Confirma la nueva contraseña";
+    } else if (newPassword !== confirmPassword) {
+      errs.confirmPassword = "Las nuevas contraseñas no coinciden";
     }
 
-    if (newPassword.length < 8) {
-      setPasswordError("La nueva contraseña debe tener al menos 8 caracteres.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Las nuevas contraseñas no coinciden.");
-      return;
-    }
-
-    if (passwordStrength < 3) {
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
       setPasswordError(
-        "Por seguridad, la contraseña debe incluir mayúsculas, minúsculas y números o símbolos.",
+        errs.currentPassword || errs.newPassword || errs.confirmPassword,
       );
+      requestAnimationFrame(() => focusFirstError(errs, formRef));
       return;
     }
 
@@ -86,6 +93,11 @@ export default function FirstLoginSecurityModal({ open, user, onComplete }) {
       }, 1000);
     } catch (err) {
       console.error(err);
+      const fe = extractFieldErrors(err, { password: "newPassword" });
+      if (Object.keys(fe).length > 0) {
+        setFieldErrors(fe);
+        requestAnimationFrame(() => focusFirstError(fe, formRef));
+      }
       setPasswordError(
         getErrorMessage(
           err,
@@ -125,20 +137,6 @@ export default function FirstLoginSecurityModal({ open, user, onComplete }) {
       setRegisteringFp(false);
     }
   };
-
-  const strengthColor =
-    passwordStrength <= 2
-      ? "bg-rose-500"
-      : passwordStrength <= 3
-        ? "bg-amber-500"
-        : "bg-emerald-500";
-
-  const strengthText =
-    passwordStrength <= 2
-      ? "Débil"
-      : passwordStrength <= 3
-        ? "Moderada"
-        : "Segura";
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300">
@@ -206,24 +204,50 @@ export default function FirstLoginSecurityModal({ open, user, onComplete }) {
                 </div>
               )}
 
-              <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <form
+                ref={formRef}
+                onSubmit={handleUpdatePassword}
+                noValidate
+                className="space-y-4"
+              >
                 {/* Contraseña Actual */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Contraseña actual (provisional)
+                <div data-field="currentPassword">
+                  <label
+                    htmlFor="first-login-current-pwd"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+                  >
+                    Contraseña actual (provisional){" "}
+                    <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <input
+                      id="first-login-current-pwd"
+                      name="currentPassword"
                       type={showCurrent ? "text" : "password"}
                       value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      onChange={(e) => {
+                        setCurrentPassword(e.target.value);
+                        if (fieldErrors.currentPassword) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            currentPassword: "",
+                          }));
+                        }
+                      }}
                       placeholder="Tu contraseña actual"
                       required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10"
+                      aria-invalid={!!fieldErrors.currentPassword || undefined}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10 ${fieldErrors.currentPassword ? "form-input-invalid" : ""}`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrent(!showCurrent)}
+                      tabIndex={-1}
+                      aria-label={
+                        showCurrent
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
                       {showCurrent ? (
@@ -233,25 +257,52 @@ export default function FirstLoginSecurityModal({ open, user, onComplete }) {
                       )}
                     </button>
                   </div>
+                  {fieldErrors.currentPassword && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.currentPassword}</span>
+                    </p>
+                  )}
                 </div>
 
                 {/* Nueva Contraseña */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Nueva contraseña
+                <div data-field="newPassword">
+                  <label
+                    htmlFor="first-login-new-pwd"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+                  >
+                    Nueva contraseña <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <input
+                      id="first-login-new-pwd"
+                      name="newPassword"
                       type={showNew ? "text" : "password"}
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      maxLength={60}
+                      autoComplete="new-password"
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        if (fieldErrors.newPassword) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            newPassword: "",
+                            confirmPassword: "",
+                          }));
+                        }
+                      }}
                       placeholder="Mínimo 8 caracteres"
                       required
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10"
+                      aria-invalid={!!fieldErrors.newPassword || undefined}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10 ${fieldErrors.newPassword ? "form-input-invalid" : ""}`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowNew(!showNew)}
+                      tabIndex={-1}
+                      aria-label={
+                        showNew ? "Ocultar contraseña" : "Mostrar contraseña"
+                      }
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
                       {showNew ? (
@@ -261,24 +312,75 @@ export default function FirstLoginSecurityModal({ open, user, onComplete }) {
                       )}
                     </button>
                   </div>
+                  {fieldErrors.newPassword && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.newPassword}</span>
+                    </p>
+                  )}
 
-                  {/* Medidor visual de fortaleza */}
+                  {/* Medidor visual y requisitos exactos */}
                   {newPassword && (
-                    <div className="mt-2 space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="mt-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                         <span>Seguridad:</span>
-                        <span className="font-semibold">{strengthText}</span>
+                        <span
+                          className={
+                            strength.score <= 1
+                              ? "text-rose-500 font-bold"
+                              : strength.score === 2
+                                ? "text-orange-500 font-bold"
+                                : strength.score === 3
+                                  ? "text-amber-500 font-bold"
+                                  : "text-emerald-500 font-bold"
+                          }
+                        >
+                          {strength.label}
+                        </span>
                       </div>
-                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden flex gap-1">
-                        {[1, 2, 3, 4, 5].map((lvl) => (
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 rounded-full ${strength.color}`}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
+                        {[
+                          {
+                            ok: strength.criteria.minLength,
+                            texto: "8+ caracteres",
+                          },
+                          {
+                            ok: strength.criteria.lowercase,
+                            texto: "Minúscula (a-z)",
+                          },
+                          {
+                            ok: strength.criteria.uppercase,
+                            texto: "Mayúscula (A-Z)",
+                          },
+                          {
+                            ok: strength.criteria.number,
+                            texto: "Número (0-9)",
+                          },
+                        ].map((c) => (
                           <div
-                            key={lvl}
-                            className={`h-full flex-1 transition-all duration-300 ${
-                              passwordStrength >= lvl
-                                ? strengthColor
-                                : "bg-transparent"
-                            }`}
-                          />
+                            key={c.texto}
+                            className="flex items-center gap-1"
+                          >
+                            {c.ok ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            ) : (
+                              <X className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0" />
+                            )}
+                            <span
+                              className={
+                                c.ok
+                                  ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                                  : ""
+                              }
+                            >
+                              {c.texto}
+                            </span>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -286,18 +388,60 @@ export default function FirstLoginSecurityModal({ open, user, onComplete }) {
                 </div>
 
                 {/* Confirmar Nueva Contraseña */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Confirmar nueva contraseña
+                <div data-field="confirmPassword">
+                  <label
+                    htmlFor="first-login-confirm-pwd"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+                  >
+                    Confirmar nueva contraseña{" "}
+                    <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repite la nueva contraseña"
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      id="first-login-confirm-pwd"
+                      name="confirmPassword"
+                      type={showConfirm ? "text" : "password"}
+                      value={confirmPassword}
+                      maxLength={60}
+                      autoComplete="new-password"
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (fieldErrors.confirmPassword) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            confirmPassword: "",
+                          }));
+                        }
+                      }}
+                      placeholder="Repite la nueva contraseña"
+                      required
+                      aria-invalid={!!fieldErrors.confirmPassword || undefined}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none pr-10 ${fieldErrors.confirmPassword ? "form-input-invalid" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      tabIndex={-1}
+                      aria-label={
+                        showConfirm
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showConfirm ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  {fieldErrors.confirmPassword && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{fieldErrors.confirmPassword}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between pt-3 gap-3 border-t border-slate-100 dark:border-slate-800">

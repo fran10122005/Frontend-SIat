@@ -1,5 +1,7 @@
-import { FilePlus, X, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { FilePlus, X, Sparkles, AlertCircle } from "lucide-react";
 import Button from "../ui/Button";
+import { validateRequiredText, focusFirstError } from "../../utils/validators";
 
 const TIPOS = [
   { value: "Terapéutica", label: "🩺 Terapéutica" },
@@ -34,11 +36,74 @@ export default function IndicacionModal({
   handleIndicacionSubmit,
   activeChild,
 }) {
+  const formRef = useRef(null);
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (showIndicacionModal) {
+      setErrors({});
+      setIsSubmitting(false);
+    }
+  }, [showIndicacionModal]);
+
+  const handleClose = useCallback(() => {
+    if (isSubmitting) return;
+    setErrors({});
+    setShowIndicacionModal(false);
+  }, [isSubmitting, setShowIndicacionModal]);
+
+  useEffect(() => {
+    if (!showIndicacionModal) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showIndicacionModal, handleClose]);
+
   if (!showIndicacionModal) return null;
 
+  const descValue = indicacionText.ind_desc || "";
+
+  const onLocalSubmit = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    const descErr = validateRequiredText(descValue, "La instrucción", {
+      min: 5,
+      max: 1000,
+    });
+    if (descErr) {
+      const errs = { ind_desc: descErr };
+      setErrors(errs);
+      focusFirstError(errs, formRef);
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+    try {
+      await handleIndicacionSubmit?.(e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+    <div
+      onClick={handleClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="px-6 py-4 bg-blue-600 text-white flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
@@ -55,7 +120,9 @@ export default function IndicacionModal({
             </div>
           </div>
           <button
-            onClick={() => setShowIndicacionModal(false)}
+            type="button"
+            onClick={handleClose}
+            aria-label="Cerrar modal"
             className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -64,7 +131,9 @@ export default function IndicacionModal({
 
         {/* Form */}
         <form
-          onSubmit={handleIndicacionSubmit}
+          ref={formRef}
+          noValidate
+          onSubmit={onLocalSubmit}
           className="p-6 space-y-4 overflow-y-auto flex-1"
         >
           {/* Tipo de Indicación */}
@@ -124,33 +193,65 @@ export default function IndicacionModal({
           </div>
 
           {/* Instrucciones principales */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-              Instrucción o Tarea para el Representante
-            </label>
+          <div data-field="ind_desc">
+            <div className="flex items-center justify-between mb-1.5">
+              <label
+                htmlFor="ind-desc"
+                className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                <span>Instrucción o Tarea para el Representante</span>
+                <span className="text-rose-500 font-bold" aria-hidden="true">
+                  *
+                </span>
+              </label>
+              <span
+                className={`text-[10px] font-semibold tabular-nums ${
+                  descValue.length >= 1000
+                    ? "text-rose-500"
+                    : "text-slate-400 dark:text-slate-500"
+                }`}
+              >
+                {descValue.length}/1000
+              </span>
+            </div>
             <textarea
-              required
+              id="ind-desc"
+              name="ind_desc"
               rows={4}
-              value={indicacionText.ind_desc || ""}
-              onChange={(e) =>
+              maxLength={1000}
+              value={descValue}
+              onChange={(e) => {
                 setIndicacionText((prev) => ({
                   ...prev,
                   ind_desc: e.target.value,
-                }))
-              }
+                }));
+                if (errors.ind_desc) setErrors({});
+              }}
               placeholder="Escribe claramente la indicación, pasos o ejercicios que el representante debe realizar en casa con el niño..."
-              className="w-full p-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 resize-none transition-colors"
+              className={`w-full p-3 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 resize-none transition-colors ${
+                errors.ind_desc ? "form-input-invalid" : ""
+              }`}
             />
+            {errors.ind_desc && (
+              <p role="alert" className="form-error">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{errors.ind_desc}</span>
+              </p>
+            )}
           </div>
 
           {/* Detalles opcionales rápidos */}
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+              <label
+                htmlFor="ind-frec"
+                className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1"
+              >
                 Frecuencia (opcional)
               </label>
               <select
+                id="ind-frec"
                 value={indicacionText.ind_frec || "Diaria"}
                 onChange={(e) =>
                   setIndicacionText((prev) => ({
@@ -168,10 +269,14 @@ export default function IndicacionModal({
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+              <label
+                htmlFor="ind-area"
+                className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1"
+              >
                 Área (opcional)
               </label>
               <select
+                id="ind-area"
                 value={indicacionText.ind_area || "General"}
                 onChange={(e) =>
                   setIndicacionText((prev) => ({
@@ -198,16 +303,19 @@ export default function IndicacionModal({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setShowIndicacionModal(false)}
+              onClick={handleClose}
+              disabled={isSubmitting}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               size="sm"
+              disabled={isSubmitting}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl shadow-sm shadow-blue-500/25 transition-all flex items-center gap-2"
             >
-              <FilePlus className="w-4 h-4" /> Guardar y Enviar
+              <FilePlus className="w-4 h-4" />{" "}
+              {isSubmitting ? "Guardando..." : "Guardar y Enviar"}
             </Button>
           </div>
         </form>

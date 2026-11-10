@@ -40,6 +40,7 @@ import {
   LayoutGrid,
   Palette,
   Settings2,
+  AlertCircle,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import LoadingState from "@/components/dashboard/LoadingState";
@@ -50,7 +51,24 @@ import {
   listPasskeys,
   deletePasskey,
 } from "@/api/passkey";
-import { getErrorMessage } from "@/utils/errorHandler";
+import { getErrorMessage, extractFieldErrors } from "@/utils/errorHandler";
+import {
+  sanitizeDocumento,
+  sanitizeTelefonoVE,
+  sanitizeNombrePersona,
+  sanitizeLicencia,
+  validateDocumento,
+  validateTelefonoMovilVE,
+  validateNombrePersona,
+  validateEmail,
+  validateLicencia,
+  validateFechaRangoEdad,
+  getAdultOrYouthDateBounds,
+  getPasswordStrength,
+  validatePasswordStrong,
+  focusFirstError,
+  formatYmdForInput,
+} from "@/utils/validators";
 import FotoUpload from "@/components/shared/FotoUpload";
 import pdfIcon from "@/assets/pdf.png";
 
@@ -73,47 +91,6 @@ const NOTIF_DEFAULTS = {
   recordatorios_sesiones: true,
   novedades: false,
 };
-
-function getPasswordStrength(pwd) {
-  let score = 0;
-  if (!pwd) return { score, label: "Muy débil", color: "bg-slate-200 w-0" };
-
-  const hasMinLength = pwd.length >= 8;
-  const hasLowercase = /[a-z]/.test(pwd);
-  const hasUppercase = /[A-Z]/.test(pwd);
-  const hasNumber = /[0-9]/.test(pwd);
-
-  if (hasMinLength) score += 1;
-  if (hasLowercase) score += 1;
-  if (hasUppercase) score += 1;
-  if (hasNumber) score += 1;
-
-  let label = "Débil";
-  let color = "bg-red-500 w-1/4";
-
-  if (score === 2) {
-    label = "Regular";
-    color = "bg-orange-500 w-2/4";
-  } else if (score === 3) {
-    label = "Buena";
-    color = "bg-yellow-500 w-3/4";
-  } else if (score === 4) {
-    label = "Excelente";
-    color = "bg-emerald-500 w-full";
-  }
-
-  return {
-    score,
-    label,
-    color,
-    criteria: {
-      minLength: hasMinLength,
-      lowercase: hasLowercase,
-      uppercase: hasUppercase,
-      number: hasNumber,
-    },
-  };
-}
 
 function detectarDispositivo() {
   const ua = navigator.userAgent;
@@ -191,39 +168,54 @@ function CollapsibleNote({
 }
 
 function PasswordInput({
+  id,
   name,
   value,
   onChange,
   placeholder,
   visible,
   onToggle,
+  hasError = false,
+  error = "",
+  maxLength = 60,
   autoComplete = "current-password",
 }) {
   return (
-    <div className="relative">
-      <input
-        type={visible ? "text" : "password"}
-        name={name}
-        value={value}
-        onChange={onChange}
-        required
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        className="w-full pl-4 pr-12 py-3 sm:py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all placeholder:text-slate-400 placeholder:font-normal"
-      />
-      <button
-        type="button"
-        onClick={onToggle}
-        tabIndex={-1}
-        aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
-        className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 sm:p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-      >
-        {visible ? (
-          <EyeOff className="w-5 h-5 sm:w-4 sm:h-4" />
-        ) : (
-          <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
-        )}
-      </button>
+    <div data-field={name}>
+      <div className="relative">
+        <input
+          id={id || name}
+          type={visible ? "text" : "password"}
+          name={name}
+          value={value}
+          onChange={onChange}
+          required
+          maxLength={maxLength}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          aria-invalid={hasError || undefined}
+          className={`w-full pl-4 pr-12 py-3 sm:py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all placeholder:text-slate-400 placeholder:font-normal ${hasError ? "form-input-invalid" : ""}`}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          tabIndex={-1}
+          aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 sm:p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          {visible ? (
+            <EyeOff className="w-5 h-5 sm:w-4 sm:h-4" />
+          ) : (
+            <Eye className="w-5 h-5 sm:w-4 sm:h-4" />
+          )}
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="form-error">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{error}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -520,9 +512,39 @@ export default function UserProfile({ initialTab }) {
     cargo: "",
   });
 
+  const [profileErrors, setProfileErrors] = useState({});
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const profileFormRef = useRef(null);
+  const passwordFormRef = useRef(null);
+  const ageBounds = useMemo(() => getAdultOrYouthDateBounds(12, 75), []);
+
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
-    setProfile((prev) => ({ ...prev, [name]: value }));
+    setProfile((prev) => {
+      if (name === "nomb" || name === "apel") {
+        return { ...prev, [name]: sanitizeNombrePersona(value, 50) };
+      }
+      if (name === "tdoc") {
+        const nextDoc = sanitizeDocumento(prev.cedu, value);
+        return { ...prev, tdoc: value, cedu: nextDoc };
+      }
+      if (name === "cedu") {
+        return { ...prev, cedu: sanitizeDocumento(value, prev.tdoc || "V") };
+      }
+      if (name === "telf" || name === "telf_alt") {
+        return { ...prev, [name]: sanitizeTelefonoVE(value) };
+      }
+      if (name === "licencia") {
+        return { ...prev, licencia: sanitizeLicencia(value, 20) };
+      }
+      return { ...prev, [name]: value };
+    });
+    setProfileErrors((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      if (name === "tdoc") delete next.cedu;
+      return next;
+    });
   };
 
   const profileTabs = useMemo(() => {
@@ -711,9 +733,7 @@ export default function UserProfile({ initialTab }) {
           telf = userData.tm_espec.esp_telf || "";
           tdoc = userData.tm_espec.esp_tdoc || "V";
           cedu = userData.tm_espec.esp_cedu || "";
-          fecnac = userData.tm_espec.esp_fnac
-            ? String(userData.tm_espec.esp_fnac).slice(0, 10)
-            : "";
+          fecnac = formatYmdForInput(userData.tm_espec.esp_fnac);
           licencia = userData.tm_espec.esp_licencia || "";
           gner = userData.tm_espec.esp_gner || "F";
           foto = userData.tm_espec.esp_foto || "";
@@ -727,6 +747,7 @@ export default function UserProfile({ initialTab }) {
           apel = userData.tm_repre.rep_apel;
           telf = userData.tm_repre.rep_telf || "";
           cedu = userData.tm_repre.rep_cedu || "";
+          fecnac = formatYmdForInput(userData.tm_repre.rep_fnac);
           rela = userData.tm_repre.rep_rela || "";
           foto = userData.tm_repre.rep_foto || "";
           cargo = "Representante Legal";
@@ -734,7 +755,9 @@ export default function UserProfile({ initialTab }) {
           nomb = userData.tm_admin.adm_nomb;
           apel = userData.tm_admin.adm_apel;
           telf = userData.tm_admin.adm_telf || "";
-          tdoc = userData.tm_admin.adm_tdoc || "V";
+          tdoc = ["V", "E", "P"].includes(userData.tm_admin.adm_tdoc)
+            ? userData.tm_admin.adm_tdoc
+            : "V";
           cedu =
             userData.tm_admin.adm_cedu ||
             userData.usu_cedu ||
@@ -749,6 +772,7 @@ export default function UserProfile({ initialTab }) {
           nomb,
           apel,
           telf,
+          telf_alt: "",
           tdoc,
           fecnac,
           cedu,
@@ -792,12 +816,19 @@ export default function UserProfile({ initialTab }) {
 
   const cancelProfile = () => {
     setProfile(savedProfileRef.current);
+    setProfileErrors({});
     showToast("Cambios descartados");
   };
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordData((prev) => ({ ...prev, [name]: value }));
+    setPasswordErrors((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      if (name === "newPassword") delete next.confirmPassword;
+      return next;
+    });
   };
 
   const togglePasswordVisibility = (field) => {
@@ -837,54 +868,119 @@ export default function UserProfile({ initialTab }) {
 
   const submitProfile = async (e) => {
     e.preventDefault();
+    setProfileErrors({});
 
-    // Validación de Cédula para Administrador si fue ingresada
-    if ((userRole === "ADMIN_INSTITUCION" || isAdmin) && profile.cedu) {
-      const cleanDigits = String(profile.cedu).replace(/\D/g, "");
-      if (cleanDigits.length < 6 || cleanDigits.length > 8) {
-        showToast("⚠️ La cédula debe contener entre 6 y 8 dígitos.");
-        return;
+    const errs = {};
+    const nombErr = validateNombrePersona(profile.nomb, "El nombre");
+    if (nombErr) errs.nomb = nombErr;
+
+    const apelErr = validateNombrePersona(profile.apel, "El apellido");
+    if (apelErr) errs.apel = apelErr;
+
+    if (isAdmin) {
+      const emailErr = validateEmail(profile.email, { required: true });
+      if (emailErr) errs.email = emailErr;
+
+      const tdocSafe = ["V", "E", "P"].includes(profile.tdoc)
+        ? profile.tdoc
+        : "V";
+      const docErr = validateDocumento(profile.cedu, tdocSafe, {
+        required: false,
+      });
+      if (docErr) errs.cedu = docErr;
+    }
+
+    const telfErr = validateTelefonoMovilVE(profile.telf, { required: false });
+    if (telfErr) errs.telf = telfErr;
+
+    if (isEspecialista) {
+      const licErr = validateLicencia(profile.licencia, { required: false });
+      if (licErr) errs.licencia = licErr;
+
+      const fnacErr = validateFechaRangoEdad(profile.fecnac, {
+        minAge: 12,
+        maxAge: 75,
+        required: false,
+      });
+      if (fnacErr) errs.fecnac = fnacErr;
+    } else if (isRepresentante) {
+      const fnacErr = validateFechaRangoEdad(profile.fecnac, {
+        minAge: 12,
+        maxAge: 75,
+        required: false,
+      });
+      if (fnacErr) errs.fecnac = fnacErr;
+
+      if (profile.telf_alt && profile.telf_alt.trim()) {
+        const altErr = validateTelefonoMovilVE(profile.telf_alt, {
+          required: false,
+        });
+        if (altErr) errs.telf_alt = altErr;
       }
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setProfileErrors(errs);
+      requestAnimationFrame(() => focusFirstError(errs, profileFormRef));
+      showToast("⚠️ Revisa los campos marcados en rojo.");
+      return;
     }
 
     setSaving(true);
     try {
+      const cleanNomb = profile.nomb.trim();
+      const cleanApel = profile.apel.trim();
+      const cleanTelf = profile.telf.trim();
       const payload = {
-        nomb: profile.nomb,
-        apel: profile.apel,
-        telf: profile.telf,
+        nomb: cleanNomb,
+        apel: cleanApel,
+        telf: cleanTelf || null,
         foto: profile.foto || null,
       };
-      if (userRole === "ADMIN_INSTITUCION" || isAdmin) {
+      if (isAdmin) {
+        const tdocSafe = ["V", "E", "P"].includes(profile.tdoc)
+          ? profile.tdoc
+          : "V";
         payload.email =
           profile.email && profile.email.trim() !== ""
             ? profile.email.trim()
             : undefined;
-        const cleanCedu = profile.cedu
-          ? String(profile.cedu).replace(/\D/g, "")
+        payload.tdoc = tdocSafe;
+        payload.cedu = profile.cedu
+          ? sanitizeDocumento(profile.cedu, tdocSafe) || null
           : null;
-        payload.cedu = cleanCedu;
-        payload.adm_cedu = cleanCedu;
-        payload.cedula = cleanCedu;
-        payload.tdoc = profile.tdoc || "V";
-        payload.adm_tdoc = profile.tdoc || "V";
       }
-      if (userRole === "ESPECIALISTA") {
-        payload.licencia = profile.licencia;
+      if (isEspecialista) {
+        payload.licencia = profile.licencia
+          ? profile.licencia.trim().toUpperCase()
+          : null;
         payload.fnac = profile.fecnac || null;
-      } else if (userRole !== "ADMIN_INSTITUCION" && !isAdmin) {
+      } else if (isRepresentante) {
         payload.rela = profile.rela;
+        payload.fnac = profile.fecnac || null;
       }
       await api.put("/auth/me", payload);
-      let updatedName = `${profile.nomb} ${profile.apel}`;
-      if (userRole === "ESPECIALISTA") {
-        updatedName = `${profile.gner === "M" ? "Dr." : "Dra."} ${profile.nomb} ${profile.apel}`;
+      let updatedName = `${cleanNomb} ${cleanApel}`;
+      if (isEspecialista) {
+        updatedName = `${profile.gner === "M" ? "Dr." : "Dra."} ${cleanNomb} ${cleanApel}`;
       }
       setUserName(updatedName);
       setUserFoto(profile.foto || "");
-      savedProfileRef.current = profile;
+      const savedNext = {
+        ...profile,
+        nomb: cleanNomb,
+        apel: cleanApel,
+        telf: cleanTelf,
+      };
+      setProfile(savedNext);
+      savedProfileRef.current = savedNext;
       showToast("✅ Perfil actualizado correctamente");
     } catch (error) {
+      const fe = extractFieldErrors(error, { fnac: "fecnac" });
+      if (Object.keys(fe).length > 0) {
+        setProfileErrors(fe);
+        requestAnimationFrame(() => focusFirstError(fe, profileFormRef));
+      }
       showToast(
         getErrorMessage(error, "⚠️ Ocurrió un error al actualizar el perfil"),
       );
@@ -895,21 +991,26 @@ export default function UserProfile({ initialTab }) {
 
   const submitPassword = async (e) => {
     e.preventDefault();
+    setPasswordErrors({});
+
+    const errs = {};
     if (!passwordData.currentPassword) {
-      showToast("⚠️ La contraseña actual es requerida");
-      return;
+      errs.currentPassword = "La contraseña actual es obligatoria";
+    }
+    const pwdErr = validatePasswordStrong(passwordData.newPassword);
+    if (pwdErr) {
+      errs.newPassword = pwdErr;
+    }
+    if (!passwordData.confirmPassword) {
+      errs.confirmPassword = "Confirma la nueva contraseña";
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errs.confirmPassword = "Las contraseñas nuevas no coinciden";
     }
 
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      showToast("⚠️ Las contraseñas nuevas no coinciden");
-      return;
-    }
-
-    const strength = getPasswordStrength(passwordData.newPassword);
-    if (strength.score < 4) {
-      showToast(
-        "⚠️ La nueva contraseña debe cumplir con todos los requisitos de seguridad",
-      );
+    if (Object.keys(errs).length > 0) {
+      setPasswordErrors(errs);
+      requestAnimationFrame(() => focusFirstError(errs, passwordFormRef));
+      showToast("⚠️ Revisa los campos marcados en rojo.");
       return;
     }
 
@@ -925,7 +1026,13 @@ export default function UserProfile({ initialTab }) {
         newPassword: "",
         confirmPassword: "",
       });
+      setPasswordErrors({});
     } catch (error) {
+      const fe = extractFieldErrors(error, { password: "newPassword" });
+      if (Object.keys(fe).length > 0) {
+        setPasswordErrors(fe);
+        requestAnimationFrame(() => focusFirstError(fe, passwordFormRef));
+      }
       showToast(
         getErrorMessage(
           error,
@@ -1229,7 +1336,11 @@ export default function UserProfile({ initialTab }) {
 
                 {/* ═══ PESTAÑA: INFORMACIÓN PERSONAL ═══ */}
                 {activeTab === "personal" && (
-                  <form onSubmit={submitProfile}>
+                  <form
+                    ref={profileFormRef}
+                    onSubmit={submitProfile}
+                    noValidate
+                  >
                     <Card>
                       <CardHeader
                         icon={User}
@@ -1244,58 +1355,105 @@ export default function UserProfile({ initialTab }) {
                       />
                       <div className="p-4 sm:p-6 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                          <div className="space-y-2">
-                            <label className={labelClass}>Nombres</label>
+                          <div className="space-y-2" data-field="nomb">
+                            <label
+                              htmlFor="profile-nomb"
+                              className={labelClass}
+                            >
+                              Nombres <span className="text-rose-500">*</span>
+                            </label>
                             <input
+                              id="profile-nomb"
                               type="text"
                               name="nomb"
                               value={profile.nomb}
                               onChange={handleProfileChange}
                               required
-                              className={inputClass}
+                              maxLength={50}
+                              aria-invalid={!!profileErrors.nomb || undefined}
+                              className={`${inputClass} ${profileErrors.nomb ? "form-input-invalid" : ""}`}
                             />
+                            {profileErrors.nomb && (
+                              <p role="alert" className="form-error">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{profileErrors.nomb}</span>
+                              </p>
+                            )}
                           </div>
-                          <div className="space-y-2">
-                            <label className={labelClass}>Apellidos</label>
+                          <div className="space-y-2" data-field="apel">
+                            <label
+                              htmlFor="profile-apel"
+                              className={labelClass}
+                            >
+                              Apellidos <span className="text-rose-500">*</span>
+                            </label>
                             <input
+                              id="profile-apel"
                               type="text"
                               name="apel"
                               value={profile.apel}
                               onChange={handleProfileChange}
                               required
-                              className={inputClass}
+                              maxLength={50}
+                              aria-invalid={!!profileErrors.apel || undefined}
+                              className={`${inputClass} ${profileErrors.apel ? "form-input-invalid" : ""}`}
                             />
+                            {profileErrors.apel && (
+                              <p role="alert" className="form-error">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{profileErrors.apel}</span>
+                              </p>
+                            )}
                           </div>
                         </div>
 
                         {/* Correo Electrónico según Rol */}
-                        <div className="space-y-2">
+                        <div className="space-y-2" data-field="email">
                           <label
+                            htmlFor="profile-email"
                             className={`${labelClass} flex items-center gap-1`}
                           >
                             <Mail className="w-3 h-3" /> Correo Electrónico{" "}
-                            {isAdmin
-                              ? "Institucional (Editable)"
-                              : "Registrado"}
+                            {isAdmin ? (
+                              <>
+                                Institucional (Editable){" "}
+                                <span className="text-rose-500">*</span>
+                              </>
+                            ) : (
+                              "Registrado"
+                            )}
                           </label>
                           {isAdmin ? (
                             <>
                               <input
+                                id="profile-email"
                                 type="email"
                                 name="email"
                                 value={profile.email}
                                 onChange={handleProfileChange}
                                 required
-                                className={inputClass}
+                                maxLength={50}
+                                aria-invalid={
+                                  !!profileErrors.email || undefined
+                                }
+                                className={`${inputClass} ${profileErrors.email ? "form-input-invalid" : ""}`}
                               />
-                              <p className="text-[10px] text-slate-400 leading-relaxed">
-                                Como Administrador, puedes actualizar tu correo
-                                corporativo institucional libremente.
-                              </p>
+                              {profileErrors.email ? (
+                                <p role="alert" className="form-error">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{profileErrors.email}</span>
+                                </p>
+                              ) : (
+                                <p className="text-[10px] text-slate-400 leading-relaxed">
+                                  Como Administrador, puedes actualizar tu
+                                  correo corporativo institucional libremente.
+                                </p>
+                              )}
                             </>
                           ) : (
                             <>
                               <input
+                                id="profile-email"
                                 type="email"
                                 name="email"
                                 value={profile.email}
@@ -1320,8 +1478,9 @@ export default function UserProfile({ initialTab }) {
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                               {/* Cédula del Administrador */}
-                              <div className="space-y-2">
+                              <div className="space-y-2" data-field="cedu">
                                 <label
+                                  htmlFor="profile-cedu"
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
                                   <IdCard className="w-3 h-3" /> Cédula de
@@ -1332,53 +1491,77 @@ export default function UserProfile({ initialTab }) {
                                     name="tdoc"
                                     value={profile.tdoc || "V"}
                                     onChange={handleProfileChange}
+                                    aria-label="Tipo de documento"
                                     className="w-20 px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-xs font-bold text-slate-900 dark:text-white"
                                   >
                                     <option value="V">V-</option>
                                     <option value="E">E-</option>
-                                    <option value="J">J-</option>
                                     <option value="P">P-</option>
                                   </select>
                                   <input
+                                    id="profile-cedu"
                                     type="text"
                                     name="cedu"
                                     value={profile.cedu || ""}
-                                    onChange={(e) => {
-                                      const digits = e.target.value
-                                        .replace(/\D/g, "")
-                                        .slice(0, 8);
-                                      setProfile((prev) => ({
-                                        ...prev,
-                                        cedu: digits,
-                                      }));
-                                    }}
-                                    placeholder="Ej: 12345678"
-                                    maxLength={8}
-                                    className={inputClass}
+                                    onChange={handleProfileChange}
+                                    placeholder={
+                                      profile.tdoc === "P"
+                                        ? "Ej: P1234567"
+                                        : "Ej: 12345678"
+                                    }
+                                    inputMode={
+                                      profile.tdoc === "P" ? "text" : "numeric"
+                                    }
+                                    maxLength={profile.tdoc === "P" ? 11 : 8}
+                                    aria-invalid={
+                                      !!profileErrors.cedu || undefined
+                                    }
+                                    className={`${inputClass} ${profileErrors.cedu ? "form-input-invalid" : ""}`}
                                   />
                                 </div>
-                                <p className="text-[10px] text-slate-400">
-                                  Identificador legal del administrador (6 a 8
-                                  dígitos numéricos).
-                                </p>
+                                {profileErrors.cedu ? (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{profileErrors.cedu}</span>
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-slate-400">
+                                    {profile.tdoc === "P"
+                                      ? "Pasaporte: 6 a 11 caracteres alfanuméricos."
+                                      : "Identificador legal del administrador (6 a 8 dígitos numéricos)."}
+                                  </p>
+                                )}
                               </div>
 
                               {/* Teléfono de Contacto */}
-                              <div className="space-y-2">
+                              <div className="space-y-2" data-field="telf">
                                 <label
+                                  htmlFor="profile-adm-telf"
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
                                   <Phone className="w-3 h-3" /> Teléfono de
                                   Contacto Institucional
                                 </label>
                                 <input
+                                  id="profile-adm-telf"
                                   type="tel"
                                   name="telf"
                                   value={profile.telf}
                                   onChange={handleProfileChange}
-                                  className={inputClass}
-                                  placeholder="+58 212-0000000"
+                                  maxLength={13}
+                                  inputMode="tel"
+                                  aria-invalid={
+                                    !!profileErrors.telf || undefined
+                                  }
+                                  className={`${inputClass} ${profileErrors.telf ? "form-input-invalid" : ""}`}
+                                  placeholder="04120000000 o +584120000000"
                                 />
+                                {profileErrors.telf && (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{profileErrors.telf}</span>
+                                  </p>
+                                )}
                               </div>
 
                               <div className="space-y-2">
@@ -1463,21 +1646,33 @@ export default function UserProfile({ initialTab }) {
                                   Identificador legal único en el sistema.
                                 </p>
                               </div>
-                              <div className="space-y-2">
+                              <div className="space-y-2" data-field="licencia">
                                 <label
+                                  htmlFor="profile-licencia"
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
                                   <Hash className="w-3 h-3" /> Registro
                                   Profesional / Licencia MPPS
                                 </label>
                                 <input
+                                  id="profile-licencia"
                                   type="text"
                                   name="licencia"
                                   value={profile.licencia}
                                   onChange={handleProfileChange}
-                                  placeholder="Ej: MPPS-129402"
-                                  className={inputClass}
+                                  maxLength={20}
+                                  placeholder="Ej: MPPS-129402 o CM-90800"
+                                  aria-invalid={
+                                    !!profileErrors.licencia || undefined
+                                  }
+                                  className={`${inputClass} ${profileErrors.licencia ? "form-input-invalid" : ""}`}
                                 />
+                                {profileErrors.licencia && (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{profileErrors.licencia}</span>
+                                  </p>
+                                )}
                               </div>
                               <div className="space-y-2">
                                 <label className={labelClass}>
@@ -1494,37 +1689,69 @@ export default function UserProfile({ initialTab }) {
                                   className={`${inputClass} opacity-70 cursor-not-allowed`}
                                 />
                               </div>
-                              <div className="space-y-2">
+                              <div className="space-y-2" data-field="fecnac">
                                 <label
+                                  htmlFor="profile-esp-fecnac"
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
                                   <CalendarDays className="w-3 h-3" /> Fecha de
                                   Nacimiento
                                 </label>
                                 <input
+                                  id="profile-esp-fecnac"
                                   type="date"
                                   name="fecnac"
-                                  max={new Date().toISOString().split("T")[0]}
+                                  min={ageBounds.min}
+                                  max={ageBounds.max}
                                   value={profile.fecnac}
                                   onChange={handleProfileChange}
-                                  className={inputClass}
+                                  aria-invalid={
+                                    !!profileErrors.fecnac || undefined
+                                  }
+                                  className={`${inputClass} ${profileErrors.fecnac ? "form-input-invalid" : ""}`}
                                 />
+                                {profileErrors.fecnac ? (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{profileErrors.fecnac}</span>
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-slate-400">
+                                    Edad permitida entre 12 y 75 años.
+                                  </p>
+                                )}
                               </div>
-                              <div className="space-y-2 md:col-span-2">
+                              <div
+                                className="space-y-2 md:col-span-2"
+                                data-field="telf"
+                              >
                                 <label
+                                  htmlFor="profile-esp-telf"
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
                                   <Phone className="w-3 h-3" /> Teléfono de
                                   Contacto Profesional
                                 </label>
                                 <input
+                                  id="profile-esp-telf"
                                   type="tel"
                                   name="telf"
                                   value={profile.telf}
                                   onChange={handleProfileChange}
-                                  className={inputClass}
-                                  placeholder="+58 412-0000000"
+                                  maxLength={13}
+                                  inputMode="tel"
+                                  aria-invalid={
+                                    !!profileErrors.telf || undefined
+                                  }
+                                  className={`${inputClass} ${profileErrors.telf ? "form-input-invalid" : ""}`}
+                                  placeholder="04120000000 o +584120000000"
                                 />
+                                {profileErrors.telf && (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{profileErrors.telf}</span>
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1557,58 +1784,128 @@ export default function UserProfile({ initialTab }) {
                                   Identificador legal único en el sistema.
                                 </p>
                               </div>
-                              <div className="space-y-2">
-                                <label className={labelClass}>
+                              <div className="space-y-2" data-field="rela">
+                                <label
+                                  htmlFor="profile-rela"
+                                  className={labelClass}
+                                >
                                   Parentesco / Relación con el Niño
                                 </label>
                                 <select
+                                  id="profile-rela"
                                   name="rela"
                                   value={profile.rela}
                                   onChange={handleProfileChange}
                                   className={inputClass}
                                 >
-                                  <option value="Padre">Padre</option>
                                   <option value="Madre">Madre</option>
+                                  <option value="Padre">Padre</option>
                                   <option value="Tutor Legal">
                                     Tutor Legal
                                   </option>
+                                  <option value="Representante Legal">
+                                    Representante Legal
+                                  </option>
                                   <option value="Abuelo/a">Abuelo/a</option>
+                                  <option value="Tío/a">Tío/a</option>
+                                  <option value="Familiar">Familiar</option>
                                   <option value="Otro Familiar">
                                     Otro Familiar Directo
                                   </option>
                                 </select>
                               </div>
-                              <div className="space-y-2">
+                              <div className="space-y-2" data-field="fecnac">
                                 <label
+                                  htmlFor="profile-rep-fecnac"
+                                  className={`${labelClass} flex items-center gap-1`}
+                                >
+                                  <CalendarDays className="w-3 h-3" /> Fecha de
+                                  Nacimiento
+                                </label>
+                                <input
+                                  id="profile-rep-fecnac"
+                                  type="date"
+                                  name="fecnac"
+                                  min={ageBounds.min}
+                                  max={ageBounds.max}
+                                  value={profile.fecnac}
+                                  onChange={handleProfileChange}
+                                  aria-invalid={
+                                    !!profileErrors.fecnac || undefined
+                                  }
+                                  className={`${inputClass} ${profileErrors.fecnac ? "form-input-invalid" : ""}`}
+                                />
+                                {profileErrors.fecnac ? (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{profileErrors.fecnac}</span>
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-slate-400">
+                                    Edad permitida entre 12 y 75 años.
+                                  </p>
+                                )}
+                              </div>
+                              <div className="space-y-2" data-field="telf">
+                                <label
+                                  htmlFor="profile-rep-telf"
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
                                   <Phone className="w-3 h-3" /> Teléfono
                                   Principal
                                 </label>
                                 <input
+                                  id="profile-rep-telf"
                                   type="tel"
                                   name="telf"
                                   value={profile.telf}
                                   onChange={handleProfileChange}
-                                  placeholder="+58 412-0000000"
-                                  className={inputClass}
+                                  maxLength={13}
+                                  inputMode="tel"
+                                  placeholder="04120000000 o +584120000000"
+                                  aria-invalid={
+                                    !!profileErrors.telf || undefined
+                                  }
+                                  className={`${inputClass} ${profileErrors.telf ? "form-input-invalid" : ""}`}
                                 />
+                                {profileErrors.telf && (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{profileErrors.telf}</span>
+                                  </p>
+                                )}
                               </div>
-                              <div className="space-y-2">
+                              <div
+                                className="space-y-2 md:col-span-2"
+                                data-field="telf_alt"
+                              >
                                 <label
+                                  htmlFor="profile-rep-telf-alt"
                                   className={`${labelClass} flex items-center gap-1`}
                                 >
                                   <Phone className="w-3 h-3 text-rose-500" />{" "}
                                   Teléfono Alternativo de Emergencia
                                 </label>
                                 <input
+                                  id="profile-rep-telf-alt"
                                   type="tel"
                                   name="telf_alt"
                                   value={profile.telf_alt}
                                   onChange={handleProfileChange}
-                                  placeholder="+58 424-0000000"
-                                  className={inputClass}
+                                  maxLength={13}
+                                  inputMode="tel"
+                                  placeholder="04120000000 o +584120000000"
+                                  aria-invalid={
+                                    !!profileErrors.telf_alt || undefined
+                                  }
+                                  className={`${inputClass} ${profileErrors.telf_alt ? "form-input-invalid" : ""}`}
                                 />
+                                {profileErrors.telf_alt && (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{profileErrors.telf_alt}</span>
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1618,18 +1915,18 @@ export default function UserProfile({ initialTab }) {
                           icon={Info}
                           tone="blue"
                           title={
-                            userRole === "ADMIN_INSTITUCION"
+                            isAdmin
                               ? "Indicaciones"
                               : "Correo electrónico bloqueado"
                           }
                         >
-                          {userRole === "ADMIN_INSTITUCION" ? (
+                          {isAdmin ? (
                             <>
                               Guarda los cambios para confirmar. Un cambio de
                               correo cierra las demás sesiones activas por
                               seguridad.
                             </>
-                          ) : userRole === "ESPECIALISTA" ? (
+                          ) : isEspecialista ? (
                             <>
                               El correo <strong>{profile.email}</strong> está
                               vinculado a tu credencial de especialista y no
@@ -1764,7 +2061,11 @@ export default function UserProfile({ initialTab }) {
                     </div>
 
                     {/* Contraseña */}
-                    <form onSubmit={submitPassword}>
+                    <form
+                      ref={passwordFormRef}
+                      onSubmit={submitPassword}
+                      noValidate
+                    >
                       <Card>
                         <CardHeader
                           icon={KeyRound}
@@ -1773,15 +2074,19 @@ export default function UserProfile({ initialTab }) {
                         />
                         <div className="p-4 sm:p-6 space-y-6">
                           <div className="space-y-2">
-                            <label className={labelClass}>
-                              Contraseña Actual
+                            <label htmlFor="pwd-current" className={labelClass}>
+                              Contraseña Actual{" "}
+                              <span className="text-rose-500">*</span>
                             </label>
                             <PasswordInput
+                              id="pwd-current"
                               name="currentPassword"
                               value={passwordData.currentPassword}
                               onChange={handlePasswordChange}
                               placeholder="Ingresa tu contraseña actual"
                               visible={showPassword.current}
+                              hasError={!!passwordErrors.currentPassword}
+                              error={passwordErrors.currentPassword}
                               onToggle={() =>
                                 togglePasswordVisibility("current")
                               }
@@ -1790,29 +2095,40 @@ export default function UserProfile({ initialTab }) {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                             <div className="space-y-2">
-                              <label className={labelClass}>
-                                Nueva Contraseña
+                              <label htmlFor="pwd-new" className={labelClass}>
+                                Nueva Contraseña{" "}
+                                <span className="text-rose-500">*</span>
                               </label>
                               <PasswordInput
+                                id="pwd-new"
                                 name="newPassword"
                                 value={passwordData.newPassword}
                                 onChange={handlePasswordChange}
                                 placeholder="Mínimo 8 caracteres"
                                 visible={showPassword.new}
+                                hasError={!!passwordErrors.newPassword}
+                                error={passwordErrors.newPassword}
                                 onToggle={() => togglePasswordVisibility("new")}
                                 autoComplete="new-password"
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className={labelClass}>
-                                Confirmar Nueva Contraseña
+                              <label
+                                htmlFor="pwd-confirm"
+                                className={labelClass}
+                              >
+                                Confirmar Nueva Contraseña{" "}
+                                <span className="text-rose-500">*</span>
                               </label>
                               <PasswordInput
+                                id="pwd-confirm"
                                 name="confirmPassword"
                                 value={passwordData.confirmPassword}
                                 onChange={handlePasswordChange}
                                 placeholder="Repite la contraseña nueva"
                                 visible={showPassword.confirm}
+                                hasError={!!passwordErrors.confirmPassword}
+                                error={passwordErrors.confirmPassword}
                                 onToggle={() =>
                                   togglePasswordVisibility("confirm")
                                 }
@@ -1897,12 +2213,6 @@ export default function UserProfile({ initialTab }) {
                             size="md"
                             leftIcon={<Lock className="w-4 h-4" />}
                             loading={saving}
-                            disabled={
-                              !passwordData.currentPassword ||
-                              passwordData.newPassword !==
-                                passwordData.confirmPassword ||
-                              strength.score < 4
-                            }
                             className="w-full sm:w-auto"
                           >
                             Actualizar Contraseña

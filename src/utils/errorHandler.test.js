@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   getErrorMessage,
   extractServerMessage,
+  extractFieldErrors,
   friendlyMessage,
   NETWORK_FALLBACK,
   toastError,
@@ -130,5 +131,54 @@ describe("toastError — deduplicación de toasts", () => {
     toastError(errorObj, mockShowToast);
 
     expect(mockShowToast).not.toHaveBeenCalled();
+  });
+});
+
+describe("extractFieldErrors — Mapeo de errores Zod 400 y duplicados 409", () => {
+  it("limpia prefijos body./query./params. de Zod detalles y aplica fieldMap", () => {
+    const errorObj = err({
+      response: {
+        status: 400,
+        data: {
+          error: "Error de validación",
+          detalles: [
+            {
+              campo: "body.usu_clve",
+              mensaje: "La contraseña debe tener al menos 8 caracteres",
+            },
+            { campo: "body.esp_telf", mensaje: "Formato de teléfono inválido" },
+            { campo: "body.usu_clve", mensaje: "Otro error secundario" },
+          ],
+        },
+      },
+    });
+
+    const mapped = extractFieldErrors(errorObj, { usu_clve: "password" });
+
+    expect(mapped).toEqual({
+      password: "La contraseña debe tener al menos 8 caracteres",
+      esp_telf: "Formato de teléfono inválido",
+    });
+  });
+
+  it("extrae el campo único en respuestas 409 con mensaje amigable", () => {
+    const errorObj = err({
+      response: {
+        status: 409,
+        data: {
+          error: "El correo electrónico ya está registrado en el sistema.",
+          campo: "usu_crro",
+        },
+      },
+    });
+
+    expect(extractFieldErrors(errorObj)).toEqual({
+      usu_crro:
+        "El correo electrónico ya está registrado. Prueba con otro o usa la opción «¿Olvidaste tu contraseña?».",
+    });
+  });
+
+  it("devuelve objeto vacío cuando el error no contiene response.data", () => {
+    expect(extractFieldErrors({ message: "Network Error" })).toEqual({});
   });
 });

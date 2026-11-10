@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Building2,
   FileText,
@@ -18,8 +18,19 @@ import {
   Loader2,
   Tag,
   Camera,
+  AlertCircle,
 } from "lucide-react";
 import { uploadToCloudinary, isCloudinaryReady } from "../../config/cloudinary";
+import {
+  sanitizeRifOrCode,
+  sanitizeTelefonoVE,
+  validateRifOrCode,
+  validateRequiredText,
+  validateTelefonoInstVE,
+  validateEmail,
+  validateUrl,
+  focusFirstError,
+} from "../../utils/validators";
 
 export default function CatalogosTab({
   catalogos = {},
@@ -36,13 +47,16 @@ export default function CatalogosTab({
   const [activeSubTab, setActiveSubTab] = useState("info");
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [errors, setErrors] = useState({});
+  const [modalityError, setModalityError] = useState("");
   const fileInputRef = useRef(null);
+  const formRef = useRef(null);
 
   const fallbackInst = catalogos.instituciones?.[0] || {
     ins_codi: "J-50493821-0",
     ins_nomb: "Fundación SIAT",
     ins_dire: "Av. Principal, Edif. SIAT, Caracas",
-    ins_telf: "+58 212-5550100",
+    ins_telf: "+582125550100",
     ins_emai: "contacto@fundacionsiat.org",
     ins_web: "https://fundacionsiat.org",
     ins_pers: "Dra. María Fernández",
@@ -51,11 +65,51 @@ export default function CatalogosTab({
 
   const inst = editingInst || fallbackInst;
 
+  const validateField = (field, nextVal) => {
+    switch (field) {
+      case "ins_codi":
+        return validateRifOrCode(nextVal, { required: true });
+      case "ins_nomb":
+        return validateRequiredText(nextVal, "El nombre oficial", {
+          min: 2,
+          max: 100,
+        });
+      case "ins_pers": {
+        const text = String(nextVal ?? "").trim();
+        if (!text) return "";
+        if (text.length < 2)
+          return "El responsable debe tener al menos 2 caracteres";
+        if (text.length > 50)
+          return "El responsable no puede exceder 50 caracteres";
+        return "";
+      }
+      case "ins_telf":
+        return validateTelefonoInstVE(nextVal, { required: true });
+      case "ins_emai":
+        return validateEmail(nextVal, { required: false, max: 120 });
+      case "ins_web":
+        return validateUrl(nextVal, { required: false });
+      case "ins_dire":
+        return validateRequiredText(nextVal, "La dirección física", {
+          min: 5,
+          max: 255,
+        });
+      default:
+        return "";
+    }
+  };
+
   const updateField = (field, value) => {
     setEditingInst({
       ...inst,
       [field]: value,
     });
+    if (errors[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: validateField(field, value),
+      }));
+    }
   };
 
   // Local clinical state
@@ -78,6 +132,66 @@ export default function CatalogosTab({
       "Esta institución cumple con los protocolos de seguridad y estándares internacionales de terapia del neurodesarrollo infantil SIAT.",
   );
 
+  useEffect(() => {
+    const currentInst = catalogos.instituciones?.[0];
+    const conf = currentInst?.ins_conf;
+    if (conf && typeof conf === "object") {
+      if (Array.isArray(conf.modalities)) setModalities(conf.modalities);
+      if (conf.schedule && typeof conf.schedule === "object") {
+        setSchedule((prev) => ({ ...prev, ...conf.schedule }));
+      }
+      if (typeof conf.protocolNotes === "string") {
+        setProtocolNotes(conf.protocolNotes);
+      }
+    }
+  }, [catalogos.instituciones]);
+
+  const validateAllInst = () => {
+    const fields = [
+      "ins_codi",
+      "ins_nomb",
+      "ins_pers",
+      "ins_telf",
+      "ins_emai",
+      "ins_web",
+      "ins_dire",
+    ];
+    const errs = {};
+    for (const f of fields) {
+      const msg = validateField(f, inst?.[f]);
+      if (msg) errs[f] = msg;
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      if (activeSubTab !== "info") setActiveSubTab("info");
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => focusFirstError(errs, formRef)),
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const submitInstitucion = async (e) => {
+    e?.preventDefault?.();
+    if (!validateAllInst()) return;
+    const res = await handleUpdateInstitucion(e, {
+      modalities,
+      schedule,
+      protocolNotes,
+    });
+    const ok = res === true || res?.ok === true;
+    if (ok) {
+      setErrors({});
+    } else if (res?.fieldErrors && Object.keys(res.fieldErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...res.fieldErrors }));
+      if (activeSubTab !== "info") setActiveSubTab("info");
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => focusFirstError(res.fieldErrors, formRef)),
+      );
+    }
+  };
+
   const handleToggleModality = (mod) => {
     setModalities((prev) =>
       prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod],
@@ -86,11 +200,22 @@ export default function CatalogosTab({
 
   const handleAddModality = (e) => {
     e.preventDefault();
-    if (!newModality.trim()) return;
-    if (!modalities.includes(newModality.trim())) {
-      setModalities((prev) => [...prev, newModality.trim()]);
+    const cleaned = newModality.trim();
+    if (!cleaned) {
+      setModalityError("Escribe el nombre de la especialidad");
+      return;
     }
+    if (cleaned.length < 2 || cleaned.length > 60) {
+      setModalityError("Debe tener entre 2 y 60 caracteres");
+      return;
+    }
+    if (modalities.some((m) => m.toLowerCase() === cleaned.toLowerCase())) {
+      setModalityError("Esta especialidad ya está en la lista");
+      return;
+    }
+    setModalities((prev) => [...prev, cleaned]);
     setNewModality("");
+    setModalityError("");
   };
 
   const handleLogoUpload = async (e) => {
@@ -228,7 +353,7 @@ export default function CatalogosTab({
             <button
               type="button"
               data-tour="admin-cat-save"
-              onClick={handleUpdateInstitucion}
+              onClick={submitInstitucion}
               disabled={loading}
               className="w-full md:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
             >
@@ -286,12 +411,21 @@ export default function CatalogosTab({
       </div>
 
       {/* FORMULARIO Y CONTENIDO DE PESTAÑAS */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleUpdateInstitucion(e);
-        }}
-      >
+      <form ref={formRef} noValidate onSubmit={submitInstitucion}>
+        {Object.values(errors).some(Boolean) && (
+          <div
+            role="alert"
+            className="mb-5 flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+            <span>
+              Revisa los campos señalados (
+              {Object.values(errors).filter(Boolean).length}) antes de guardar
+              la configuración institucional.
+            </span>
+          </div>
+        )}
+
         {/* PESTAÑA 1: INFORMACIÓN GENERAL */}
         {activeSubTab === "info" && (
           <div className="space-y-6 animate-in fade-in duration-200">
@@ -320,13 +454,29 @@ export default function CatalogosTab({
                   </label>
                   <input
                     required
+                    data-field="ins_codi"
+                    name="ins_codi"
                     type="text"
                     maxLength={15}
                     value={inst.ins_codi || ""}
-                    onChange={(e) => updateField("ins_codi", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    onChange={(e) =>
+                      updateField("ins_codi", sanitizeRifOrCode(e.target.value))
+                    }
+                    onBlur={() =>
+                      setErrors((prev) => ({
+                        ...prev,
+                        ins_codi: validateField("ins_codi", inst.ins_codi),
+                      }))
+                    }
+                    aria-invalid={Boolean(errors.ins_codi)}
+                    className={`w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all ${errors.ins_codi ? "form-input-invalid" : ""}`}
                     placeholder="J-50000000-0"
                   />
+                  {errors.ins_codi && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.ins_codi}
+                    </p>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
@@ -336,12 +486,27 @@ export default function CatalogosTab({
                   </label>
                   <input
                     required
+                    data-field="ins_nomb"
+                    name="ins_nomb"
                     type="text"
+                    maxLength={100}
                     value={inst.ins_nomb || ""}
                     onChange={(e) => updateField("ins_nomb", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    onBlur={() =>
+                      setErrors((prev) => ({
+                        ...prev,
+                        ins_nomb: validateField("ins_nomb", inst.ins_nomb),
+                      }))
+                    }
+                    aria-invalid={Boolean(errors.ins_nomb)}
+                    className={`w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all ${errors.ins_nomb ? "form-input-invalid" : ""}`}
                     placeholder="Ej: Fundación Una Luz Para el Autismo"
                   />
+                  {errors.ins_nomb && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.ins_nomb}
+                    </p>
+                  )}
                 </div>
 
                 <div className="md:col-span-3">
@@ -349,12 +514,27 @@ export default function CatalogosTab({
                     Representante Legal / Contacto Principal
                   </label>
                   <input
+                    data-field="ins_pers"
+                    name="ins_pers"
                     type="text"
+                    maxLength={50}
                     value={inst.ins_pers || ""}
                     onChange={(e) => updateField("ins_pers", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    onBlur={() =>
+                      setErrors((prev) => ({
+                        ...prev,
+                        ins_pers: validateField("ins_pers", inst.ins_pers),
+                      }))
+                    }
+                    aria-invalid={Boolean(errors.ins_pers)}
+                    className={`w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all ${errors.ins_pers ? "form-input-invalid" : ""}`}
                     placeholder="Nombre completo del director(a) o responsable institucional"
                   />
+                  {errors.ins_pers && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.ins_pers}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -386,12 +566,33 @@ export default function CatalogosTab({
                   </label>
                   <input
                     required
+                    data-field="ins_telf"
+                    name="ins_telf"
                     type="text"
+                    inputMode="tel"
+                    maxLength={(inst.ins_telf || "").startsWith("+") ? 13 : 11}
                     value={inst.ins_telf || ""}
-                    onChange={(e) => updateField("ins_telf", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    placeholder="+58 212-0000000"
+                    onChange={(e) =>
+                      updateField(
+                        "ins_telf",
+                        sanitizeTelefonoVE(e.target.value),
+                      )
+                    }
+                    onBlur={() =>
+                      setErrors((prev) => ({
+                        ...prev,
+                        ins_telf: validateField("ins_telf", inst.ins_telf),
+                      }))
+                    }
+                    aria-invalid={Boolean(errors.ins_telf)}
+                    className={`w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all ${errors.ins_telf ? "form-input-invalid" : ""}`}
+                    placeholder="02120000000 o +582120000000"
                   />
+                  {errors.ins_telf && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.ins_telf}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -400,12 +601,27 @@ export default function CatalogosTab({
                     Electrónico
                   </label>
                   <input
+                    data-field="ins_emai"
+                    name="ins_emai"
                     type="email"
+                    maxLength={120}
                     value={inst.ins_emai || ""}
                     onChange={(e) => updateField("ins_emai", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    onBlur={() =>
+                      setErrors((prev) => ({
+                        ...prev,
+                        ins_emai: validateField("ins_emai", inst.ins_emai),
+                      }))
+                    }
+                    aria-invalid={Boolean(errors.ins_emai)}
+                    className={`w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all ${errors.ins_emai ? "form-input-invalid" : ""}`}
                     placeholder="contacto@fundacion.org"
                   />
+                  {errors.ins_emai && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.ins_emai}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -414,12 +630,27 @@ export default function CatalogosTab({
                     Institucional
                   </label>
                   <input
-                    type="text"
+                    data-field="ins_web"
+                    name="ins_web"
+                    type="url"
+                    maxLength={100}
                     value={inst.ins_web || ""}
                     onChange={(e) => updateField("ins_web", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    onBlur={() =>
+                      setErrors((prev) => ({
+                        ...prev,
+                        ins_web: validateField("ins_web", inst.ins_web),
+                      }))
+                    }
+                    aria-invalid={Boolean(errors.ins_web)}
+                    className={`w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all ${errors.ins_web ? "form-input-invalid" : ""}`}
                     placeholder="https://fundacion.org"
                   />
+                  {errors.ins_web && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.ins_web}
+                    </p>
+                  )}
                 </div>
 
                 <div className="md:col-span-3">
@@ -429,12 +660,27 @@ export default function CatalogosTab({
                   </label>
                   <input
                     required
+                    data-field="ins_dire"
+                    name="ins_dire"
                     type="text"
+                    maxLength={255}
                     value={inst.ins_dire || ""}
                     onChange={(e) => updateField("ins_dire", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    onBlur={() =>
+                      setErrors((prev) => ({
+                        ...prev,
+                        ins_dire: validateField("ins_dire", inst.ins_dire),
+                      }))
+                    }
+                    aria-invalid={Boolean(errors.ins_dire)}
+                    className={`w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all ${errors.ins_dire ? "form-input-invalid" : ""}`}
                     placeholder="Calle, Edificio, Sector, Ciudad, Estado"
                   />
+                  {errors.ins_dire && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.ins_dire}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -470,6 +716,7 @@ export default function CatalogosTab({
                   </label>
                   <input
                     type="text"
+                    maxLength={80}
                     value={schedule.weekday}
                     onChange={(e) =>
                       setSchedule({ ...schedule, weekday: e.target.value })
@@ -484,6 +731,7 @@ export default function CatalogosTab({
                   </label>
                   <input
                     type="text"
+                    maxLength={80}
                     value={schedule.saturday}
                     onChange={(e) =>
                       setSchedule({ ...schedule, saturday: e.target.value })
@@ -498,6 +746,7 @@ export default function CatalogosTab({
                   </label>
                   <input
                     type="text"
+                    maxLength={80}
                     value={schedule.emergency}
                     onChange={(e) =>
                       setSchedule({ ...schedule, emergency: e.target.value })
@@ -548,24 +797,36 @@ export default function CatalogosTab({
                 ))}
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="text"
-                  placeholder="Agregar nueva especialidad clínica..."
-                  value={newModality}
-                  onChange={(e) => setNewModality(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAddModality(e);
-                  }}
-                  className="flex-1 max-w-md rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddModality}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Añadir
-                </button>
+              <div className="pt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    maxLength={60}
+                    placeholder="Agregar nueva especialidad clínica..."
+                    value={newModality}
+                    onChange={(e) => {
+                      setNewModality(e.target.value);
+                      if (modalityError) setModalityError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddModality(e);
+                    }}
+                    aria-invalid={Boolean(modalityError)}
+                    className={`flex-1 max-w-md rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50 px-3.5 py-2 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-blue-500/20 transition-all ${modalityError ? "form-input-invalid" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddModality}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Añadir
+                  </button>
+                </div>
+                {modalityError && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" /> {modalityError}
+                  </p>
+                )}
               </div>
             </div>
 

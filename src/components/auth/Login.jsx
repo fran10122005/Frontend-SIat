@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { AlertCircle } from "lucide-react";
 import funautaLogo from "../../assets/Logo.png";
 import { useGlobalContext } from "../../context/GlobalState";
 import api from "../../api/axios";
 import { loginWithFingerprint } from "../../api/passkey";
-import { getErrorMessage } from "../../utils/errorHandler";
+import { getErrorMessage, extractFieldErrors } from "../../utils/errorHandler";
+import { validateEmail, focusFirstError } from "../../utils/validators";
 import { setAuthSession, saveSelectedChild } from "../../utils/authStorage";
 import FormAlert from "../shared/FormAlert";
 import FirstLoginSecurityModal from "./FirstLoginSecurityModal";
@@ -16,6 +18,8 @@ function Login({ onNavigate }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const formRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFp, setIsFp] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(() => {
@@ -65,22 +69,30 @@ function Login({ onNavigate }) {
       return;
     }
     setError("");
+    setFieldErrors({});
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
-      setError("Ingrese un correo electrónico válido.");
-      return;
+    const cleanEmail = email.trim();
+    const errs = {};
+    const emailErr = validateEmail(cleanEmail, { required: true, max: 100 });
+    if (emailErr) errs.email = emailErr;
+
+    if (!password || !password.trim()) {
+      errs.password = "La contraseña es obligatoria";
+    } else if (password.trim().length < 6) {
+      errs.password = "La contraseña debe tener al menos 6 caracteres";
     }
 
-    if (password.trim().length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      setError(errs.email || errs.password);
+      requestAnimationFrame(() => focusFirstError(errs, formRef));
       return;
     }
 
     try {
       setIsLoading(true);
       const res = await api.post("/auth/login", {
-        usu_crro: email,
+        usu_crro: cleanEmail,
         usu_clve: password,
       });
 
@@ -93,6 +105,15 @@ function Login({ onNavigate }) {
       finalizeSession(user, token);
     } catch (err) {
       console.error(err);
+      const fe = extractFieldErrors(err, {
+        usu_crro: "email",
+        usu_clve: "password",
+      });
+      if (Object.keys(fe).length > 0) {
+        setFieldErrors(fe);
+        requestAnimationFrame(() => focusFirstError(fe, formRef));
+      }
+
       const newAttempts = failedAttempts + 1;
       setFailedAttempts(newAttempts);
       sessionStorage.setItem(
@@ -233,18 +254,19 @@ function Login({ onNavigate }) {
         </div>
 
         <form
+          ref={formRef}
           onSubmit={handleSubmit}
           noValidate
           className="space-y-4 sm:space-y-5"
         >
           <FormAlert variant="error" message={error} />
 
-          <div className="auth-rise auth-d1 space-y-1.5">
+          <div className="auth-rise auth-d1 space-y-1.5" data-field="email">
             <label
               htmlFor="login-email"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300"
             >
-              Correo Electrónico
+              Correo Electrónico <span className="text-rose-500">*</span>
             </label>
             <div className="relative group">
               <input
@@ -258,8 +280,14 @@ function Login({ onNavigate }) {
                 inputMode="email"
                 placeholder="ejemplo@correo.com"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full pl-4 pr-10 py-3.5 sm:py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-base sm:text-sm"
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (fieldErrors.email) {
+                    setFieldErrors((prev) => ({ ...prev, email: "" }));
+                  }
+                }}
+                aria-invalid={!!fieldErrors.email || undefined}
+                className={`w-full pl-4 pr-10 py-3.5 sm:py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-base sm:text-sm ${fieldErrors.email ? "form-input-invalid" : ""}`}
                 required
               />
               <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
@@ -277,15 +305,21 @@ function Login({ onNavigate }) {
                 </svg>
               </div>
             </div>
+            {fieldErrors.email && (
+              <p role="alert" className="form-error">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{fieldErrors.email}</span>
+              </p>
+            )}
           </div>
 
-          <div className="auth-rise auth-d2 space-y-1.5">
+          <div className="auth-rise auth-d2 space-y-1.5" data-field="password">
             <div className="flex justify-between items-center">
               <label
                 htmlFor="login-password"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
               >
-                Contraseña
+                Contraseña <span className="text-rose-500">*</span>
               </label>
               <button
                 type="button"
@@ -303,8 +337,14 @@ function Login({ onNavigate }) {
                 autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full pl-4 pr-12 py-3.5 sm:py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-base sm:text-sm"
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors((prev) => ({ ...prev, password: "" }));
+                  }
+                }}
+                aria-invalid={!!fieldErrors.password || undefined}
+                className={`w-full pl-4 pr-12 py-3.5 sm:py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-base sm:text-sm ${fieldErrors.password ? "form-input-invalid" : ""}`}
                 required
               />
               <button
@@ -345,6 +385,12 @@ function Login({ onNavigate }) {
                 )}
               </button>
             </div>
+            {fieldErrors.password && (
+              <p role="alert" className="form-error">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{fieldErrors.password}</span>
+              </p>
+            )}
           </div>
 
           <button

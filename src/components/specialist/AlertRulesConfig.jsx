@@ -1,7 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Clock, X, Save, Zap, RotateCcw, Activity } from "lucide-react";
+import {
+  Bell,
+  Clock,
+  X,
+  Save,
+  RotateCcw,
+  Activity,
+  AlertCircle,
+} from "lucide-react";
 import Button from "../ui/Button";
+import { sanitizeIntegerInput, focusFirstError } from "../../utils/validators";
 
 const DEFAULT_RULES = {
   bpmHigh: 120,
@@ -24,6 +33,8 @@ export default function AlertRulesConfig({
   onSave,
   onRecalibrate,
 }) {
+  const formRef = useRef(null);
+  const [errors, setErrors] = useState({});
   const [rules, setRules] = useState({
     ...DEFAULT_RULES,
     bpmHigh: config?.bpmHigh ?? valMaxi,
@@ -33,27 +44,73 @@ export default function AlertRulesConfig({
 
   useEffect(() => {
     if (showModal) {
-      setRules((prev) => ({
+      setErrors({});
+      setRules({
         ...DEFAULT_RULES,
         ...config,
-        bpmHigh: config?.bpmHigh ?? valMaxi,
-        bpmLow: config?.bpmLow ?? valMini,
-      }));
+        bpmHigh: String(config?.bpmHigh ?? valMaxi),
+        bpmLow: String(config?.bpmLow ?? valMini),
+        movementThreshold: String(
+          config?.movementThreshold ?? DEFAULT_RULES.movementThreshold,
+        ),
+        noiseThreshold: String(
+          config?.noiseThreshold ?? DEFAULT_RULES.noiseThreshold,
+        ),
+      });
     }
   }, [showModal, valMini, valMaxi, config]);
+
+  const handleClose = useCallback(() => {
+    setErrors({});
+    setShowModal(false);
+  }, [setShowModal]);
+
+  useEffect(() => {
+    if (!showModal) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showModal, handleClose]);
+
+  const clearError = (field) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const set = (key) => (e) => {
     const val =
       e.target.type === "checkbox" ? e.target.checked : e.target.value;
     setRules((prev) => ({ ...prev, [key]: val }));
+    clearError(key);
+    if (key === "quietHoursEnabled" && !val) {
+      clearError("quietStart");
+      clearError("quietEnd");
+    }
+  };
+
+  const setInt = (key) => (e) => {
+    const val = sanitizeIntegerInput(e.target.value, 3);
+    setRules((prev) => ({ ...prev, [key]: val }));
+    clearError(key);
   };
 
   const handleResetToCalibrated = () => {
     setRules((prev) => ({
       ...prev,
-      bpmLow: valMini,
-      bpmHigh: valMaxi,
+      bpmLow: String(valMini),
+      bpmHigh: String(valMaxi),
     }));
+    clearError("bpmLow");
+    clearError("bpmHigh");
   };
 
   const toggleAlertType = (type) => {
@@ -65,16 +122,79 @@ export default function AlertRulesConfig({
     }));
   };
 
-  const handleSave = () => {
-    onSave?.(rules);
+  const validateRules = () => {
+    const errs = {};
+    const highStr = String(rules.bpmHigh ?? "").trim();
+    const lowStr = String(rules.bpmLow ?? "").trim();
+    const movStr = String(rules.movementThreshold ?? "").trim();
+    const noiseStr = String(rules.noiseThreshold ?? "").trim();
+
+    const high = Number(highStr);
+    const low = Number(lowStr);
+    const mov = Number(movStr);
+    const noise = Number(noiseStr);
+
+    if (!lowStr || Number.isNaN(low) || low < 30 || low > 200) {
+      errs.bpmLow = "Ingresa un BPM mínimo entre 30 y 200";
+    }
+    if (!highStr || Number.isNaN(high) || high < 50 || high > 240) {
+      errs.bpmHigh = "Ingresa un BPM máximo entre 50 y 240";
+    } else if (!errs.bpmLow && high <= low) {
+      errs.bpmHigh = "El BPM máximo debe ser mayor al BPM mínimo";
+    }
+
+    if (!movStr || Number.isNaN(mov) || mov < 1 || mov > 100) {
+      errs.movementThreshold =
+        "El umbral de movimiento debe estar entre 1% y 100%";
+    }
+    if (!noiseStr || Number.isNaN(noise) || noise < 20 || noise > 140) {
+      errs.noiseThreshold = "El umbral de ruido debe estar entre 20 y 140 dB";
+    }
+
+    if (rules.quietHoursEnabled) {
+      if (!rules.quietStart) {
+        errs.quietStart = "Selecciona la hora de inicio";
+      }
+      if (!rules.quietEnd) {
+        errs.quietEnd = "Selecciona la hora de fin";
+      } else if (rules.quietStart && rules.quietStart === rules.quietEnd) {
+        errs.quietEnd = "La hora final debe ser diferente a la inicial";
+      }
+    }
+
+    return errs;
+  };
+
+  const handleSave = (e) => {
+    if (e) e.preventDefault();
+    const errs = validateRules();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      focusFirstError(errs, formRef);
+      return;
+    }
+
+    setErrors({});
+    onSave?.({
+      ...rules,
+      bpmHigh: Number(rules.bpmHigh),
+      bpmLow: Number(rules.bpmLow),
+      movementThreshold: Number(rules.movementThreshold),
+      noiseThreshold: Number(rules.noiseThreshold),
+    });
     setShowModal(false);
   };
 
   if (!showModal) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div
+      onClick={handleClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+    >
       <div
+        role="dialog"
+        aria-modal="true"
         className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700/80 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -87,7 +207,9 @@ export default function AlertRulesConfig({
               <h3 className="text-lg font-bold">Reglas de Alertas</h3>
             </div>
             <button
-              onClick={() => setShowModal(false)}
+              type="button"
+              onClick={handleClose}
+              aria-label="Cerrar modal"
               className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
             >
               <X className="w-5 h-5" />
@@ -95,213 +217,335 @@ export default function AlertRulesConfig({
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 space-y-5">
-          {/* Banner de Calibración Fisiológica Real */}
-          <div className="p-4 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800/60 flex items-start gap-3.5">
-            <div className="p-2.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl shrink-0 mt-0.5">
-              <Activity className="w-5 h-5 animate-pulse" />
-            </div>
-            <div className="space-y-1.5 text-xs flex-1">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                  Línea Base del Smartwatch
-                  <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-full">
-                    Sincronizado
+        <form
+          ref={formRef}
+          noValidate
+          onSubmit={handleSave}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
+          <div className="p-6 overflow-y-auto flex-1 space-y-5">
+            {/* Banner de Calibración Fisiológica Real */}
+            <div className="p-4 bg-blue-50/80 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800/60 flex items-start gap-3.5">
+              <div className="p-2.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl shrink-0 mt-0.5">
+                <Activity className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="space-y-1.5 text-xs flex-1">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    Línea Base del Smartwatch
+                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-full">
+                      Sincronizado
+                    </span>
                   </span>
-                </span>
-                {onRecalibrate && (
+                  {onRecalibrate && (
+                    <button
+                      type="button"
+                      onClick={onRecalibrate}
+                      className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1 transition-colors"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Repetir prueba 15s
+                    </button>
+                  )}
+                </div>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Los umbrales BPM se calculan automáticamente durante la prueba
+                  de pulso en reposo al vincular el sensor de{" "}
+                  <strong className="text-slate-800 dark:text-white font-semibold">
+                    {activeChild?.nombre || "este paciente"}
+                  </strong>{" "}
+                  (Rango fisiológico:{" "}
+                  <span className="font-bold text-blue-600 dark:text-blue-400">
+                    {valMini} - {valMaxi} BPM
+                  </span>
+                  ).
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  El motor de telemetría IoT emite alertas de sobrecarga o
+                  bradicardia comparando las lecturas en vivo contra esta firma
+                  basal.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  Umbrales biométricos
+                </p>
+                {(Number(rules.bpmLow) !== Number(valMini) ||
+                  Number(rules.bpmHigh) !== Number(valMaxi)) && (
                   <button
                     type="button"
-                    onClick={onRecalibrate}
-                    className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1 transition-colors"
+                    onClick={handleResetToCalibrated}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    Repetir prueba 15s
+                    Restablecer a calibración ({valMini} - {valMaxi} BPM)
                   </button>
                 )}
               </div>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
-                Los umbrales BPM se calculan automáticamente durante la prueba
-                de pulso en reposo al vincular el sensor de{" "}
-                <strong className="text-slate-800 dark:text-white font-semibold">
-                  {activeChild?.nombre || "este paciente"}
-                </strong>{" "}
-                (Rango fisiológico:{" "}
-                <span className="font-bold text-blue-600 dark:text-blue-400">
-                  {valMini} - {valMaxi} BPM
-                </span>
-                ).
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                El motor de telemetría IoT emite alertas de sobrecarga o
-                bradicardia comparando las lecturas en vivo contra esta firma
-                basal.
+              <div className="grid grid-cols-2 gap-3">
+                <div data-field="bpmHigh">
+                  <label
+                    htmlFor="ar-bpmHigh"
+                    className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1"
+                  >
+                    BPM máximo{" "}
+                    <span
+                      className="text-rose-500 font-bold"
+                      aria-hidden="true"
+                    >
+                      *
+                    </span>{" "}
+                    <span className="text-[10px] text-blue-500 font-normal">
+                      (50–240)
+                    </span>
+                  </label>
+                  <input
+                    id="ar-bpmHigh"
+                    name="bpmHigh"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={3}
+                    value={rules.bpmHigh}
+                    onChange={setInt("bpmHigh")}
+                    className={`w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 ${
+                      errors.bpmHigh ? "form-input-invalid" : ""
+                    }`}
+                  />
+                  {errors.bpmHigh && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errors.bpmHigh}</span>
+                    </p>
+                  )}
+                </div>
+                <div data-field="bpmLow">
+                  <label
+                    htmlFor="ar-bpmLow"
+                    className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1"
+                  >
+                    BPM mínimo{" "}
+                    <span
+                      className="text-rose-500 font-bold"
+                      aria-hidden="true"
+                    >
+                      *
+                    </span>{" "}
+                    <span className="text-[10px] text-blue-500 font-normal">
+                      (30–200)
+                    </span>
+                  </label>
+                  <input
+                    id="ar-bpmLow"
+                    name="bpmLow"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={3}
+                    value={rules.bpmLow}
+                    onChange={setInt("bpmLow")}
+                    className={`w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 ${
+                      errors.bpmLow ? "form-input-invalid" : ""
+                    }`}
+                  />
+                  {errors.bpmLow && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errors.bpmLow}</span>
+                    </p>
+                  )}
+                </div>
+                <div data-field="movementThreshold">
+                  <label
+                    htmlFor="ar-movementThreshold"
+                    className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1"
+                  >
+                    Movimiento (%){" "}
+                    <span
+                      className="text-rose-500 font-bold"
+                      aria-hidden="true"
+                    >
+                      *
+                    </span>
+                  </label>
+                  <input
+                    id="ar-movementThreshold"
+                    name="movementThreshold"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={3}
+                    value={rules.movementThreshold}
+                    onChange={setInt("movementThreshold")}
+                    className={`w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 ${
+                      errors.movementThreshold ? "form-input-invalid" : ""
+                    }`}
+                  />
+                  {errors.movementThreshold && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errors.movementThreshold}</span>
+                    </p>
+                  )}
+                </div>
+                <div data-field="noiseThreshold">
+                  <label
+                    htmlFor="ar-noiseThreshold"
+                    className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1"
+                  >
+                    Ruido (dB){" "}
+                    <span
+                      className="text-rose-500 font-bold"
+                      aria-hidden="true"
+                    >
+                      *
+                    </span>
+                  </label>
+                  <input
+                    id="ar-noiseThreshold"
+                    name="noiseThreshold"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={3}
+                    value={rules.noiseThreshold}
+                    onChange={setInt("noiseThreshold")}
+                    className={`w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 ${
+                      errors.noiseThreshold ? "form-input-invalid" : ""
+                    }`}
+                  />
+                  {errors.noiseThreshold && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errors.noiseThreshold}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                * Ajuste estos valores manualmente solo en caso de indicación
+                clínica específica (ej. medicación psicoactiva o afecciones
+                cardiovasculares conocidas).
               </p>
             </div>
-          </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="space-y-3">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Umbrales biométricos
+                Tipos de alerta activos
               </p>
-              {(Number(rules.bpmLow) !== Number(valMini) ||
-                Number(rules.bpmHigh) !== Number(valMaxi)) && (
-                <button
-                  type="button"
-                  onClick={handleResetToCalibrated}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Restablecer a calibración ({valMini} - {valMaxi} BPM)
-                </button>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: "crisis", label: "Crisis IoT" },
+                  { id: "indicacion", label: "Indicaciones" },
+                  { id: "sos", label: "Emergencia SOS" },
+                  { id: "comportamiento", label: "Comportamiento" },
+                  { id: "sesion", label: "Sesiones" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => toggleAlertType(t.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                      rules.alertTypes.includes(t.id)
+                        ? "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 ring-1 ring-rose-300 dark:ring-rose-700"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" />
+                Horario silencioso
+              </p>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rules.quietHoursEnabled}
+                  onChange={set("quietHoursEnabled")}
+                  className="w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-300">
+                  Activar horario silencioso
+                </span>
+              </label>
+              {rules.quietHoursEnabled && (
+                <div className="grid grid-cols-2 gap-3 pl-7">
+                  <div data-field="quietStart">
+                    <label
+                      htmlFor="ar-quietStart"
+                      className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1"
+                    >
+                      Desde
+                    </label>
+                    <input
+                      id="ar-quietStart"
+                      name="quietStart"
+                      type="time"
+                      value={rules.quietStart}
+                      onChange={set("quietStart")}
+                      className={`w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none ${
+                        errors.quietStart ? "form-input-invalid" : ""
+                      }`}
+                    />
+                    {errors.quietStart && (
+                      <p role="alert" className="form-error">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{errors.quietStart}</span>
+                      </p>
+                    )}
+                  </div>
+                  <div data-field="quietEnd">
+                    <label
+                      htmlFor="ar-quietEnd"
+                      className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1"
+                    >
+                      Hasta
+                    </label>
+                    <input
+                      id="ar-quietEnd"
+                      name="quietEnd"
+                      type="time"
+                      value={rules.quietEnd}
+                      onChange={set("quietEnd")}
+                      className={`w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none ${
+                        errors.quietEnd ? "form-input-invalid" : ""
+                      }`}
+                    />
+                    {errors.quietEnd && (
+                      <p role="alert" className="form-error">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{errors.quietEnd}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                  BPM máximo{" "}
-                  <span className="text-[10px] text-blue-500 font-normal">
-                    (Sobrecarga/Taquicardia)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  value={rules.bpmHigh}
-                  onChange={set("bpmHigh")}
-                  className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                  BPM mínimo{" "}
-                  <span className="text-[10px] text-blue-500 font-normal">
-                    (Bradicardia/Desconexión)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  value={rules.bpmLow}
-                  onChange={set("bpmLow")}
-                  className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                  Movimiento (%)
-                </label>
-                <input
-                  type="number"
-                  value={rules.movementThreshold}
-                  onChange={set("movementThreshold")}
-                  className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1">
-                  Ruido (dB)
-                </label>
-                <input
-                  type="number"
-                  value={rules.noiseThreshold}
-                  onChange={set("noiseThreshold")}
-                  className="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
-              * Ajuste estos valores manualmente solo en caso de indicación
-              clínica específica (ej. medicación psicoactiva o afecciones
-              cardiovasculares conocidas).
-            </p>
           </div>
 
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Tipos de alerta activos
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { id: "crisis", label: "Crisis IoT" },
-                { id: "indicacion", label: "Indicaciones" },
-                { id: "sos", label: "Emergencia SOS" },
-                { id: "comportamiento", label: "Comportamiento" },
-                { id: "sesion", label: "Sesiones" },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => toggleAlertType(t.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                    rules.alertTypes.includes(t.id)
-                      ? "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 ring-1 ring-rose-300 dark:ring-rose-700"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/30 shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              leftIcon={<Save className="w-4 h-4" />}
+            >
+              Guardar Reglas
+            </Button>
           </div>
-
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              Horario silencioso
-            </p>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={rules.quietHoursEnabled}
-                onChange={set("quietHoursEnabled")}
-                className="w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
-              />
-              <span className="text-sm text-slate-700 dark:text-slate-300">
-                Activar horario silencioso
-              </span>
-            </label>
-            {rules.quietHoursEnabled && (
-              <div className="grid grid-cols-2 gap-3 pl-7">
-                <div>
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
-                    Desde
-                  </label>
-                  <input
-                    type="time"
-                    value={rules.quietStart}
-                    onChange={set("quietStart")}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">
-                    Hasta
-                  </label>
-                  <input
-                    type="time"
-                    value={rules.quietEnd}
-                    onChange={set("quietEnd")}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/30 shrink-0">
-          <Button variant="ghost" size="sm" onClick={() => setShowModal(false)}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<Save className="w-4 h-4" />}
-            onClick={handleSave}
-          >
-            Guardar Reglas
-          </Button>
-        </div>
+        </form>
       </div>
     </div>,
     document.body,

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ChevronDown,
   Archive,
@@ -9,6 +9,8 @@ import {
   User,
   Stethoscope,
   CalendarDays,
+  AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 import pdfIcon from "../../assets/pdf.png";
 import excelIcon from "../../assets/excel.png";
@@ -17,6 +19,7 @@ import FilterBar from "../shared/FilterBar";
 import Pagination from "../shared/Pagination";
 import AdminModal from "../shared/AdminModal";
 import useExpandableRows from "../../hooks/useExpandableRows";
+import { toLocalYMD, focusFirstError } from "../../utils/validators";
 
 export default function AsignacionesTab({
   asignacion,
@@ -36,7 +39,39 @@ export default function AsignacionesTab({
   const [dateTo, setDateTo] = useState("");
   const { expandedId, toggle } = useExpandableRows();
   const [showAsignar, setShowAsignar] = useState(false);
-  const todayStr = new Date().toISOString().split("T")[0];
+  const [asigErrors, setAsigErrors] = useState({});
+  const asigFormRef = useRef(null);
+  const todayStr = toLocalYMD();
+
+  const existingPair = useMemo(() => {
+    if (!asignacion?.nin_codi || !asignacion?.esp_codi) return null;
+    return (asignaciones || []).find(
+      (a) =>
+        String(a.nin_codi || a.tm_ninos?.nin_codi) ===
+          String(asignacion.nin_codi) &&
+        String(a.esp_codi || a.tm_espec?.esp_codi) ===
+          String(asignacion.esp_codi),
+    );
+  }, [asignaciones, asignacion?.nin_codi, asignacion?.esp_codi]);
+
+  const validateAssign = () => {
+    const errs = {};
+    if (!asignacion?.nin_codi) {
+      errs.nin_codi = "Selecciona un paciente";
+    }
+    if (!asignacion?.esp_codi) {
+      errs.esp_codi = "Selecciona un especialista";
+    }
+    if (asignacion?.asi_inic && asignacion.asi_inic > todayStr) {
+      errs.asi_inic = "La fecha de inicio no puede ser futura";
+    }
+    setAsigErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      requestAnimationFrame(() => focusFirstError(errs, asigFormRef));
+      return false;
+    }
+    return true;
+  };
 
   const filtered = useMemo(() => {
     return asignaciones.filter((asi) => {
@@ -102,18 +137,43 @@ export default function AsignacionesTab({
     <div className="space-y-3.5 sm:space-y-4 animate-in fade-in duration-300">
       <AdminModal
         open={showAsignar}
-        onClose={() => setShowAsignar(false)}
+        onClose={() => {
+          setShowAsignar(false);
+          setAsigErrors({});
+        }}
         title="Asignar Paciente a Especialista"
         maxWidth="max-w-xl"
         icon={Link2}
       >
         <form
+          ref={asigFormRef}
+          noValidate
           onSubmit={async (e) => {
-            const ok = await handleAssign(e);
-            if (ok) setShowAsignar(false);
+            e.preventDefault();
+            if (!validateAssign()) return;
+            const res = await handleAssign(e);
+            const ok = res === true || res?.ok === true;
+            if (ok) {
+              setAsigErrors({});
+              setShowAsignar(false);
+            }
           }}
           className="space-y-6"
         >
+          {existingPair && (
+            <div
+              role="status"
+              className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300"
+            >
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <span>
+                {existingPair.asi_stdo === "Activo"
+                  ? "Este paciente ya tiene una asignación activa con este especialista."
+                  : "Ya existe un vínculo histórico (Inactivo) entre este paciente y especialista; puedes reactivarlo desde la tabla."}
+              </span>
+            </div>
+          )}
+
           {/* Datos del Vínculo */}
           <section>
             <div className="form-section-title">
@@ -123,14 +183,26 @@ export default function AsignacionesTab({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="form-label">Paciente</label>
+                <label className="form-label">
+                  Paciente <span className="text-rose-500">*</span>
+                </label>
                 <select
                   required
+                  data-field="nin_codi"
+                  name="nin_codi"
                   value={asignacion.nin_codi}
-                  onChange={(e) =>
-                    setAsignacion({ ...asignacion, nin_codi: e.target.value })
-                  }
-                  className="form-select"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAsignacion({ ...asignacion, nin_codi: val });
+                    if (asigErrors.nin_codi) {
+                      setAsigErrors((prev) => ({
+                        ...prev,
+                        nin_codi: val ? "" : "Selecciona un paciente",
+                      }));
+                    }
+                  }}
+                  aria-invalid={Boolean(asigErrors.nin_codi)}
+                  className={`form-select ${asigErrors.nin_codi ? "form-input-invalid" : ""}`}
                 >
                   <option value="" disabled>
                     Seleccionar paciente...
@@ -141,16 +213,34 @@ export default function AsignacionesTab({
                     </option>
                   ))}
                 </select>
+                {asigErrors.nin_codi && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {asigErrors.nin_codi}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="form-label">Especialista Tratante</label>
+                <label className="form-label">
+                  Especialista Tratante <span className="text-rose-500">*</span>
+                </label>
                 <select
                   required
+                  data-field="esp_codi"
+                  name="esp_codi"
                   value={asignacion.esp_codi}
-                  onChange={(e) =>
-                    setAsignacion({ ...asignacion, esp_codi: e.target.value })
-                  }
-                  className="form-select"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAsignacion({ ...asignacion, esp_codi: val });
+                    if (asigErrors.esp_codi) {
+                      setAsigErrors((prev) => ({
+                        ...prev,
+                        esp_codi: val ? "" : "Selecciona un especialista",
+                      }));
+                    }
+                  }}
+                  aria-invalid={Boolean(asigErrors.esp_codi)}
+                  className={`form-select ${asigErrors.esp_codi ? "form-input-invalid" : ""}`}
                 >
                   <option value="" disabled>
                     Seleccionar médico...
@@ -167,6 +257,12 @@ export default function AsignacionesTab({
                       </option>
                     ))}
                 </select>
+                {asigErrors.esp_codi && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {asigErrors.esp_codi}
+                  </p>
+                )}
               </div>
             </div>
           </section>
@@ -185,13 +281,30 @@ export default function AsignacionesTab({
                 </label>
                 <input
                   type="date"
+                  data-field="asi_inic"
+                  name="asi_inic"
                   max={todayStr}
                   value={asignacion.asi_inic}
-                  onChange={(e) =>
-                    setAsignacion({ ...asignacion, asi_inic: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAsignacion({ ...asignacion, asi_inic: val });
+                    setAsigErrors((prev) => ({
+                      ...prev,
+                      asi_inic:
+                        val && val > todayStr
+                          ? "La fecha de inicio no puede ser futura"
+                          : "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(asigErrors.asi_inic)}
+                  className={`form-input ${asigErrors.asi_inic ? "form-input-invalid" : ""}`}
                 />
+                {asigErrors.asi_inic && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {asigErrors.asi_inic}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="form-label">Estado Inicial</label>
@@ -204,7 +317,7 @@ export default function AsignacionesTab({
 
           <div className="flex justify-end pt-1 border-t border-slate-200 dark:border-slate-700">
             <button
-              disabled={loading}
+              disabled={loading || Boolean(existingPair)}
               type="submit"
               className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
@@ -270,7 +383,10 @@ export default function AsignacionesTab({
             <div className="flex flex-wrap gap-2">
               <button
                 data-tour="admin-asg-form-btn"
-                onClick={() => setShowAsignar(true)}
+                onClick={() => {
+                  setAsigErrors({});
+                  setShowAsignar(true);
+                }}
                 className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
               >
                 <Plus className="w-4 h-4" />

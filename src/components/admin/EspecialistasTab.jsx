@@ -37,41 +37,24 @@ import Pagination from "../shared/Pagination";
 import AdminModal from "../shared/AdminModal";
 import FilterBar from "../shared/FilterBar";
 import useExpandableRows from "../../hooks/useExpandableRows";
-
-const VALIDACIONES = {
-  documento: (value, tdoc) => {
-    if (!value) return "";
-    const doc = String(value).trim();
-    if (tdoc === "P") {
-      return /^[A-Za-z]{1,3}\d{4,8}$/.test(doc)
-        ? ""
-        : "Formato de pasaporte: 1-3 letras + 4-8 dígitos (Ej. P123456)";
-    }
-    return /^\d{6,8}$/.test(doc)
-      ? ""
-      : "La cédula debe contener entre 6 y 8 dígitos (Ej. 12345678)";
-  },
-  telefono: (value) => {
-    if (!value) return "";
-    return /^(\+58|0058|0)?4\d{2}[- ]?\d{3}[- ]?\d{4}$/.test(
-      String(value).trim(),
-    )
-      ? ""
-      : "Formato venezolano: +584121234567";
-  },
-  licencia: (value) => {
-    if (!value) return "";
-    return /^(CM|MPPS|MPP|\d{4,6})[- ]?\d{3,6}$/i.test(String(value).trim())
-      ? ""
-      : "Formato: CM-90800 o MPPS-123456";
-  },
-  fecha: (value) => {
-    if (!value) return "";
-    return new Date(value) <= new Date()
-      ? ""
-      : "La fecha de nacimiento no puede ser futura";
-  },
-};
+import {
+  ESC_CODI_REGEX,
+  getAdultOrYouthDateBounds,
+  formatYmdForInput,
+  sanitizeDocumento,
+  sanitizeTelefonoVE,
+  sanitizeNombrePersona,
+  sanitizeLicencia,
+  sanitizeEscCodi,
+  validateDocumento,
+  validateNombrePersona,
+  validateEmail,
+  validateTelefonoMovilVE,
+  validateFechaRangoEdad,
+  validateLicencia,
+  validateRequiredText,
+  focusFirstError,
+} from "../../utils/validators";
 
 function FotoPerfilZona({
   preview,
@@ -181,6 +164,15 @@ export default function EspecialistasTab({
   const [fotoError, setFotoError] = useState("");
   const [errores, setErrores] = useState({});
   const [editErrores, setEditErrores] = useState({});
+  const [catErrores, setCatErrores] = useState({});
+  const [catEditErrores, setCatEditErrores] = useState({});
+  const regFormRef = useRef(null);
+  const editFormRef = useRef(null);
+  const catRegFormRef = useRef(null);
+  const catEditFormRef = useRef(null);
+  const initialEditEspRef = useRef("");
+  const initialEditEspCatRef = useRef("");
+  const espDateBounds = useMemo(() => getAdultOrYouthDateBounds(12, 75), []);
   const [previewEsp, setPreviewEsp] = useState(null);
   const [searchEsp, setSearchEsp] = useState("");
   const [filterEspecialidad, setFilterEspecialidad] = useState("TODAS");
@@ -329,15 +321,40 @@ export default function EspecialistasTab({
 
   const validarCampo = (
     campo,
-    nextValue = newEsp[campo],
-    nextTdoc = newEsp.esp_tdoc,
+    nextValue = newEsp?.[campo],
+    nextTdoc = newEsp?.esp_tdoc || "V",
   ) => {
-    if (campo === "esp_cedu")
-      return VALIDACIONES.documento(nextValue, nextTdoc);
-    if (campo === "esp_telf") return VALIDACIONES.telefono(nextValue);
-    if (campo === "esp_licencia") return VALIDACIONES.licencia(nextValue);
-    if (campo === "esp_fnac") return VALIDACIONES.fecha(nextValue);
-    return "";
+    switch (campo) {
+      case "esp_cedu":
+        return validateDocumento(nextValue, nextTdoc, { required: true });
+      case "esp_nomb":
+        return validateNombrePersona(nextValue, "El nombre", {
+          required: true,
+        });
+      case "esp_apel":
+        return validateNombrePersona(nextValue, "El apellido", {
+          required: true,
+        });
+      case "esp_fnac":
+        return validateFechaRangoEdad(nextValue, {
+          minAge: 12,
+          maxAge: 75,
+          required: true,
+          label: "La fecha de nacimiento",
+        });
+      case "usu_crro":
+        return validateEmail(nextValue, { required: true, max: 50 });
+      case "esp_telf":
+        return validateTelefonoMovilVE(nextValue, { required: false });
+      case "esp_licencia":
+        return validateLicencia(nextValue, { required: false });
+      case "esc_codi":
+        return !String(nextValue || "").trim()
+          ? "Selecciona una especialidad clínica"
+          : "";
+      default:
+        return "";
+    }
   };
 
   const validarCampoEdit = (
@@ -345,46 +362,132 @@ export default function EspecialistasTab({
     nextValue = editingEsp?.[campo],
     nextTdoc = editingEsp?.esp_tdoc || "V",
   ) => {
-    if (campo === "esp_cedu")
-      return VALIDACIONES.documento(nextValue, nextTdoc);
-    if (campo === "esp_telf") return VALIDACIONES.telefono(nextValue);
-    if (campo === "esp_licencia") return VALIDACIONES.licencia(nextValue);
-    return "";
+    switch (campo) {
+      case "esp_cedu":
+        return validateDocumento(nextValue, nextTdoc, { required: true });
+      case "esp_nomb":
+        return validateNombrePersona(nextValue, "El nombre", {
+          required: true,
+        });
+      case "esp_apel":
+        return validateNombrePersona(nextValue, "El apellido", {
+          required: true,
+        });
+      case "esp_fnac":
+        return validateFechaRangoEdad(nextValue, {
+          minAge: 12,
+          maxAge: 75,
+          required: false,
+          label: "La fecha de nacimiento",
+        });
+      case "usu_crro":
+        return validateEmail(nextValue, { required: true, max: 50 });
+      case "esp_telf":
+        return validateTelefonoMovilVE(nextValue, { required: false });
+      case "esp_licencia":
+        return validateLicencia(nextValue, { required: false });
+      case "esc_codi":
+        return !String(nextValue || "").trim()
+          ? "Selecciona una especialidad clínica"
+          : "";
+      default:
+        return "";
+    }
   };
 
   const validarTodo = () => {
+    const tdoc = newEsp?.esp_tdoc || "V";
+    const campos = [
+      "esp_cedu",
+      "esp_nomb",
+      "esp_apel",
+      "esp_fnac",
+      "usu_crro",
+      "esp_telf",
+      "esp_licencia",
+      "esc_codi",
+    ];
     const nuevos = {};
-    if (!newEsp.esp_cedu?.trim())
-      nuevos.esp_cedu = "El número de documento es requerido";
-    else {
-      const doc = VALIDACIONES.documento(newEsp.esp_cedu, newEsp.esp_tdoc);
-      if (doc) nuevos.esp_cedu = doc;
+    for (const c of campos) {
+      const msg = validarCampo(c, newEsp?.[c], tdoc);
+      if (msg) nuevos[c] = msg;
     }
-    const telf = VALIDACIONES.telefono(newEsp.esp_telf);
-    if (telf) nuevos.esp_telf = telf;
-    const lic = VALIDACIONES.licencia(newEsp.esp_licencia);
-    if (lic) nuevos.esp_licencia = lic;
-    const fec = VALIDACIONES.fecha(newEsp.esp_fnac);
-    if (fec) nuevos.esp_fnac = fec;
     setErrores(nuevos);
-    return Object.keys(nuevos).length === 0;
+    if (Object.keys(nuevos).length > 0) {
+      requestAnimationFrame(() => focusFirstError(nuevos, regFormRef));
+      return false;
+    }
+    return true;
   };
 
   const validarTodoEdit = () => {
+    const tdoc = editingEsp?.esp_tdoc || "V";
+    const campos = [
+      "esp_cedu",
+      "esp_nomb",
+      "esp_apel",
+      "esp_fnac",
+      "usu_crro",
+      "esp_telf",
+      "esp_licencia",
+      "esc_codi",
+    ];
     const nuevos = {};
-    if (editingEsp?.esp_cedu?.trim()) {
-      const doc = VALIDACIONES.documento(
-        editingEsp.esp_cedu,
-        editingEsp.esp_tdoc || "V",
-      );
-      if (doc) nuevos.esp_cedu = doc;
+    for (const c of campos) {
+      const msg = validarCampoEdit(c, editingEsp?.[c], tdoc);
+      if (msg) nuevos[c] = msg;
     }
-    const telf = VALIDACIONES.telefono(editingEsp?.esp_telf);
-    if (telf) nuevos.esp_telf = telf;
-    const lic = VALIDACIONES.licencia(editingEsp?.esp_licencia);
-    if (lic) nuevos.esp_licencia = lic;
     setEditErrores(nuevos);
-    return Object.keys(nuevos).length === 0;
+    if (Object.keys(nuevos).length > 0) {
+      requestAnimationFrame(() => focusFirstError(nuevos, editFormRef));
+      return false;
+    }
+    return true;
+  };
+
+  const validarCatCreate = () => {
+    const nuevos = {};
+    const nomErr = validateRequiredText(
+      newEspCat?.esc_nomb,
+      "La denominación",
+      {
+        min: 2,
+        max: 50,
+      },
+    );
+    if (nomErr) nuevos.esc_nomb = nomErr;
+    const codRaw = String(newEspCat?.esc_codi || "").trim();
+    if (codRaw && !ESC_CODI_REGEX.test(codRaw)) {
+      nuevos.esc_codi = "Usa 2 a 10 caracteres (letras, números, - o _)";
+    }
+    if (String(newEspCat?.esc_desc || "").trim().length > 500) {
+      nuevos.esc_desc = "La descripción no puede exceder 500 caracteres";
+    }
+    setCatErrores(nuevos);
+    if (Object.keys(nuevos).length > 0) {
+      requestAnimationFrame(() => focusFirstError(nuevos, catRegFormRef));
+      return false;
+    }
+    return true;
+  };
+
+  const validarCatEdit = () => {
+    const nuevos = {};
+    const nomErr = validateRequiredText(
+      editingEspCat?.esc_nomb,
+      "La denominación",
+      { min: 2, max: 50 },
+    );
+    if (nomErr) nuevos.esc_nomb = nomErr;
+    if (String(editingEspCat?.esc_desc || "").trim().length > 500) {
+      nuevos.esc_desc = "La descripción no puede exceder 500 caracteres";
+    }
+    setCatEditErrores(nuevos);
+    if (Object.keys(nuevos).length > 0) {
+      requestAnimationFrame(() => focusFirstError(nuevos, catEditFormRef));
+      return false;
+    }
+    return true;
   };
 
   const manejarFoto = async (file, setter, target) => {
@@ -452,7 +555,11 @@ export default function EspecialistasTab({
           {/* Modal Alta */}
           <AdminModal
             open={showRegistro}
-            onClose={() => setShowRegistro(false)}
+            onClose={() => {
+              setShowRegistro(false);
+              setErrores({});
+              setFotoError("");
+            }}
             title="Acreditación de Nuevo Especialista"
             icon={BadgeCheck}
             maxWidth="max-w-xl"
@@ -465,15 +572,44 @@ export default function EspecialistasTab({
             )}
           >
             <form
+              ref={regFormRef}
+              noValidate
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (fotoUploading) return;
                 if (!validarTodo()) return;
-                const ok = await handleCreateEspecialista(e);
-                if (ok) setShowRegistro(false);
+                const result = await handleCreateEspecialista(e);
+                const ok = result === true || result?.ok === true;
+                if (ok) {
+                  setErrores({});
+                  setFotoError("");
+                  setShowRegistro(false);
+                } else if (
+                  result?.fieldErrors &&
+                  Object.keys(result.fieldErrors).length > 0
+                ) {
+                  setErrores((prev) => ({ ...prev, ...result.fieldErrors }));
+                  requestAnimationFrame(() =>
+                    focusFirstError(result.fieldErrors, regFormRef),
+                  );
+                }
               }}
               className="space-y-6"
             >
+              {Object.values(errores).some(Boolean) && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                  <span>
+                    Revisa los campos señalados (
+                    {Object.values(errores).filter(Boolean).length}) antes de
+                    registrar al especialista.
+                  </span>
+                </div>
+              )}
+
               {/* Datos Personales */}
               <section>
                 <div className="form-section-title">
@@ -490,26 +626,38 @@ export default function EspecialistasTab({
                     onRemove={quitarFoto}
                   />
                   {fotoError && (
-                    <p className="form-error">
+                    <p className="form-error" role="alert">
                       <AlertCircle className="w-3.5 h-3.5" /> {fotoError}
                     </p>
                   )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="form-label">Tipo de Documento</label>
+                    <label className="form-label">
+                      Tipo de Documento <span className="text-rose-500">*</span>
+                    </label>
                     <select
                       required
-                      value={newEsp.esp_tdoc}
+                      data-field="esp_tdoc"
+                      name="esp_tdoc"
+                      value={newEsp.esp_tdoc || "V"}
                       onChange={(e) => {
                         const nextTdoc = e.target.value;
-                        setNewEsp({ ...newEsp, esp_tdoc: nextTdoc });
-                        if (newEsp.esp_cedu) {
+                        const nextCedu = sanitizeDocumento(
+                          newEsp.esp_cedu,
+                          nextTdoc,
+                        );
+                        setNewEsp({
+                          ...newEsp,
+                          esp_tdoc: nextTdoc,
+                          esp_cedu: nextCedu,
+                        });
+                        if (nextCedu || errores.esp_cedu) {
                           setErrores((prev) => ({
                             ...prev,
                             esp_cedu: validarCampo(
                               "esp_cedu",
-                              newEsp.esp_cedu,
+                              nextCedu,
                               nextTdoc,
                             ),
                           }));
@@ -524,26 +672,46 @@ export default function EspecialistasTab({
                   </div>
                   <div>
                     <label className="form-label">
-                      Cédula / Documento de Identidad
+                      Cédula / Documento de Identidad{" "}
+                      <span className="text-rose-500">*</span>
                     </label>
                     <input
                       required
-                      maxLength={12}
+                      data-field="esp_cedu"
+                      name="esp_cedu"
+                      maxLength={newEsp.esp_tdoc === "P" ? 11 : 8}
+                      inputMode={newEsp.esp_tdoc === "P" ? "text" : "numeric"}
                       type="text"
                       value={newEsp.esp_cedu || ""}
                       onChange={(e) => {
-                        const nextVal = e.target.value;
+                        const tdoc = newEsp.esp_tdoc || "V";
+                        const nextVal = sanitizeDocumento(e.target.value, tdoc);
                         setNewEsp({ ...newEsp, esp_cedu: nextVal });
                         setErrores((prev) => ({
                           ...prev,
-                          esp_cedu: validarCampo("esp_cedu", nextVal),
+                          esp_cedu: validarCampo("esp_cedu", nextVal, tdoc),
                         }));
                       }}
-                      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${errores.esp_cedu ? "form-input-invalid" : ""}`}
-                      placeholder="Ej. 12345678"
+                      onBlur={() =>
+                        setErrores((prev) => ({
+                          ...prev,
+                          esp_cedu: validarCampo(
+                            "esp_cedu",
+                            newEsp.esp_cedu,
+                            newEsp.esp_tdoc || "V",
+                          ),
+                        }))
+                      }
+                      aria-invalid={Boolean(errores.esp_cedu)}
+                      className={`form-input ${errores.esp_cedu ? "form-input-invalid" : ""}`}
+                      placeholder={
+                        newEsp.esp_tdoc === "P"
+                          ? "Ej. P1234567"
+                          : "Ej. 12345678"
+                      }
                     />
                     {errores.esp_cedu && (
-                      <p className="form-error">
+                      <p className="form-error" role="alert">
                         <AlertCircle className="w-3.5 h-3.5" />{" "}
                         {errores.esp_cedu}
                       </p>
@@ -552,62 +720,139 @@ export default function EspecialistasTab({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
                   <div>
-                    <label className="form-label">Nombres</label>
+                    <label className="form-label">
+                      Nombres <span className="text-rose-500">*</span>
+                    </label>
                     <input
                       required
+                      data-field="esp_nomb"
+                      name="esp_nomb"
                       maxLength={50}
                       type="text"
-                      value={newEsp.esp_nomb}
-                      onChange={(e) =>
-                        setNewEsp({ ...newEsp, esp_nomb: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
-                      placeholder="Ej. Roberto"
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label">Apellidos</label>
-                    <input
-                      required
-                      maxLength={50}
-                      type="text"
-                      value={newEsp.esp_apel}
-                      onChange={(e) =>
-                        setNewEsp({ ...newEsp, esp_apel: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
-                      placeholder="Ej. Sánchez"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-                  <div>
-                    <label className="form-label">Fecha de Nacimiento</label>
-                    <input
-                      required
-                      type="date"
-                      value={newEsp.esp_fnac}
+                      value={newEsp.esp_nomb || ""}
                       onChange={(e) => {
-                        setNewEsp({ ...newEsp, esp_fnac: e.target.value });
+                        const nextVal = sanitizeNombrePersona(
+                          e.target.value,
+                          50,
+                        );
+                        setNewEsp({ ...newEsp, esp_nomb: nextVal });
+                        if (errores.esp_nomb) {
+                          setErrores((prev) => ({
+                            ...prev,
+                            esp_nomb: validarCampo("esp_nomb", nextVal),
+                          }));
+                        }
+                      }}
+                      onBlur={() =>
                         setErrores((prev) => ({
                           ...prev,
-                          esp_fnac: validarCampo("esp_fnac"),
-                        }));
-                      }}
-                      className={`form-input ${errores.esp_fnac ? "form-input-invalid" : ""}`}
+                          esp_nomb: validarCampo("esp_nomb", newEsp.esp_nomb),
+                        }))
+                      }
+                      aria-invalid={Boolean(errores.esp_nomb)}
+                      className={`form-input ${errores.esp_nomb ? "form-input-invalid" : ""}`}
+                      placeholder="Ej. Roberto"
                     />
-                    {errores.esp_fnac && (
-                      <p className="form-error">
+                    {errores.esp_nomb && (
+                      <p className="form-error" role="alert">
                         <AlertCircle className="w-3.5 h-3.5" />{" "}
-                        {errores.esp_fnac}
+                        {errores.esp_nomb}
                       </p>
                     )}
                   </div>
                   <div>
-                    <label className="form-label">Sexo</label>
+                    <label className="form-label">
+                      Apellidos <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      required
+                      data-field="esp_apel"
+                      name="esp_apel"
+                      maxLength={50}
+                      type="text"
+                      value={newEsp.esp_apel || ""}
+                      onChange={(e) => {
+                        const nextVal = sanitizeNombrePersona(
+                          e.target.value,
+                          50,
+                        );
+                        setNewEsp({ ...newEsp, esp_apel: nextVal });
+                        if (errores.esp_apel) {
+                          setErrores((prev) => ({
+                            ...prev,
+                            esp_apel: validarCampo("esp_apel", nextVal),
+                          }));
+                        }
+                      }}
+                      onBlur={() =>
+                        setErrores((prev) => ({
+                          ...prev,
+                          esp_apel: validarCampo("esp_apel", newEsp.esp_apel),
+                        }))
+                      }
+                      aria-invalid={Boolean(errores.esp_apel)}
+                      className={`form-input ${errores.esp_apel ? "form-input-invalid" : ""}`}
+                      placeholder="Ej. Sánchez"
+                    />
+                    {errores.esp_apel && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {errores.esp_apel}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+                  <div>
+                    <label className="form-label">
+                      Fecha de Nacimiento{" "}
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      required
+                      data-field="esp_fnac"
+                      name="esp_fnac"
+                      type="date"
+                      min={espDateBounds.min}
+                      max={espDateBounds.max}
+                      value={newEsp.esp_fnac || ""}
+                      onChange={(e) => {
+                        const nextVal = e.target.value;
+                        setNewEsp({ ...newEsp, esp_fnac: nextVal });
+                        setErrores((prev) => ({
+                          ...prev,
+                          esp_fnac: validarCampo("esp_fnac", nextVal),
+                        }));
+                      }}
+                      onBlur={() =>
+                        setErrores((prev) => ({
+                          ...prev,
+                          esp_fnac: validarCampo("esp_fnac", newEsp.esp_fnac),
+                        }))
+                      }
+                      aria-invalid={Boolean(errores.esp_fnac)}
+                      className={`form-input ${errores.esp_fnac ? "form-input-invalid" : ""}`}
+                    />
+                    {errores.esp_fnac ? (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {errores.esp_fnac}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Edad permitida: 12 a 75 años
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="form-label">
+                      Sexo <span className="text-rose-500">*</span>
+                    </label>
                     <select
                       required
-                      value={newEsp.esp_gner}
+                      data-field="esp_gner"
+                      name="esp_gner"
+                      value={newEsp.esp_gner || "M"}
                       onChange={(e) =>
                         setNewEsp({ ...newEsp, esp_gner: e.target.value })
                       }
@@ -629,37 +874,75 @@ export default function EspecialistasTab({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="form-label">Correo Electrónico</label>
+                    <label className="form-label">
+                      Correo Electrónico{" "}
+                      <span className="text-rose-500">*</span>
+                    </label>
                     <input
                       required
+                      data-field="usu_crro"
+                      name="usu_crro"
                       maxLength={50}
                       type="email"
-                      value={newEsp.usu_crro}
-                      onChange={(e) =>
-                        setNewEsp({ ...newEsp, usu_crro: e.target.value })
+                      value={newEsp.usu_crro || ""}
+                      onChange={(e) => {
+                        const nextVal = e.target.value;
+                        setNewEsp({ ...newEsp, usu_crro: nextVal });
+                        if (errores.usu_crro) {
+                          setErrores((prev) => ({
+                            ...prev,
+                            usu_crro: validarCampo("usu_crro", nextVal),
+                          }));
+                        }
+                      }}
+                      onBlur={() =>
+                        setErrores((prev) => ({
+                          ...prev,
+                          usu_crro: validarCampo("usu_crro", newEsp.usu_crro),
+                        }))
                       }
-                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
+                      aria-invalid={Boolean(errores.usu_crro)}
+                      className={`form-input ${errores.usu_crro ? "form-input-invalid" : ""}`}
                       placeholder="dr@clinica.com"
                     />
+                    {errores.usu_crro && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {errores.usu_crro}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="form-label">Teléfono de Contacto</label>
                     <input
-                      maxLength={15}
-                      type="text"
-                      value={newEsp.esp_telf}
+                      data-field="esp_telf"
+                      name="esp_telf"
+                      maxLength={
+                        (newEsp.esp_telf || "").startsWith("+") ? 13 : 11
+                      }
+                      type="tel"
+                      inputMode="tel"
+                      value={newEsp.esp_telf || ""}
                       onChange={(e) => {
-                        setNewEsp({ ...newEsp, esp_telf: e.target.value });
+                        const nextVal = sanitizeTelefonoVE(e.target.value);
+                        setNewEsp({ ...newEsp, esp_telf: nextVal });
                         setErrores((prev) => ({
                           ...prev,
-                          esp_telf: validarCampo("esp_telf"),
+                          esp_telf: validarCampo("esp_telf", nextVal),
                         }));
                       }}
-                      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${errores.esp_telf ? "form-input-invalid" : ""}`}
-                      placeholder="+58 412 0000000"
+                      onBlur={() =>
+                        setErrores((prev) => ({
+                          ...prev,
+                          esp_telf: validarCampo("esp_telf", newEsp.esp_telf),
+                        }))
+                      }
+                      aria-invalid={Boolean(errores.esp_telf)}
+                      className={`form-input ${errores.esp_telf ? "form-input-invalid" : ""}`}
+                      placeholder="04120000000 o +584120000000"
                     />
                     {errores.esp_telf && (
-                      <p className="form-error">
+                      <p className="form-error" role="alert">
                         <AlertCircle className="w-3.5 h-3.5" />{" "}
                         {errores.esp_telf}
                       </p>
@@ -681,35 +964,58 @@ export default function EspecialistasTab({
                   <div>
                     <label className="form-label">Licencia Médica / CM</label>
                     <input
-                      maxLength={50}
+                      data-field="esp_licencia"
+                      name="esp_licencia"
+                      maxLength={20}
                       type="text"
-                      value={newEsp.esp_licencia}
+                      value={newEsp.esp_licencia || ""}
                       onChange={(e) => {
-                        setNewEsp({ ...newEsp, esp_licencia: e.target.value });
+                        const nextVal = sanitizeLicencia(e.target.value, 20);
+                        setNewEsp({ ...newEsp, esp_licencia: nextVal });
                         setErrores((prev) => ({
                           ...prev,
-                          esp_licencia: validarCampo("esp_licencia"),
+                          esp_licencia: validarCampo("esp_licencia", nextVal),
                         }));
                       }}
-                      className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${errores.esp_licencia ? "form-input-invalid" : ""}`}
-                      placeholder="Ej. CM-90800"
+                      onBlur={() =>
+                        setErrores((prev) => ({
+                          ...prev,
+                          esp_licencia: validarCampo(
+                            "esp_licencia",
+                            newEsp.esp_licencia,
+                          ),
+                        }))
+                      }
+                      aria-invalid={Boolean(errores.esp_licencia)}
+                      className={`form-input ${errores.esp_licencia ? "form-input-invalid" : ""}`}
+                      placeholder="Ej. CM-90800 o MPPS-123456"
                     />
                     {errores.esp_licencia && (
-                      <p className="form-error">
+                      <p className="form-error" role="alert">
                         <AlertCircle className="w-3.5 h-3.5" />{" "}
                         {errores.esp_licencia}
                       </p>
                     )}
                   </div>
                   <div>
-                    <label className="form-label">Especialidad</label>
+                    <label className="form-label">
+                      Especialidad <span className="text-rose-500">*</span>
+                    </label>
                     <select
                       required
-                      value={newEsp.esc_codi}
-                      onChange={(e) =>
-                        setNewEsp({ ...newEsp, esc_codi: e.target.value })
-                      }
-                      className="form-select"
+                      data-field="esc_codi"
+                      name="esc_codi"
+                      value={newEsp.esc_codi || ""}
+                      onChange={(e) => {
+                        const nextVal = e.target.value;
+                        setNewEsp({ ...newEsp, esc_codi: nextVal });
+                        setErrores((prev) => ({
+                          ...prev,
+                          esc_codi: validarCampo("esc_codi", nextVal),
+                        }));
+                      }}
+                      aria-invalid={Boolean(errores.esc_codi)}
+                      className={`form-select ${errores.esc_codi ? "form-input-invalid" : ""}`}
                     >
                       <option value="" disabled>
                         Seleccione especialidad...
@@ -722,6 +1028,12 @@ export default function EspecialistasTab({
                           </option>
                         ))}
                     </select>
+                    {errores.esc_codi && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {errores.esc_codi}
+                      </p>
+                    )}
                   </div>
                 </div>
               </section>
@@ -729,13 +1041,17 @@ export default function EspecialistasTab({
               <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-1 border-t border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
-                  onClick={() => setShowRegistro(false)}
+                  onClick={() => {
+                    setShowRegistro(false);
+                    setErrores({});
+                    setFotoError("");
+                  }}
                   className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
-                  disabled={loading}
+                  disabled={loading || fotoUploading}
                   type="submit"
                   className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
@@ -748,7 +1064,11 @@ export default function EspecialistasTab({
           {/* Modal Editar Especialista */}
           <AdminModal
             open={showEditEsp}
-            onClose={() => setShowEditEsp(false)}
+            onClose={() => {
+              setShowEditEsp(false);
+              setEditErrores({});
+              setFotoError("");
+            }}
             title="Editar Especialista"
             subtitle={[
               `${editingEsp?.esp_nomb || ""} ${editingEsp?.esp_apel || ""}`.trim(),
@@ -760,17 +1080,55 @@ export default function EspecialistasTab({
               .join(" · ")}
             icon={Pencil}
             maxWidth="max-w-xl"
+            hasUnsavedChanges={Boolean(
+              showEditEsp &&
+              editingEsp &&
+              initialEditEspRef.current &&
+              JSON.stringify(editingEsp) !== initialEditEspRef.current,
+            )}
           >
             <form
+              ref={editFormRef}
+              noValidate
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (fotoUploading) return;
                 if (!validarTodoEdit()) return;
-                const ok = await handleUpdateEsp(e);
-                if (ok) setShowEditEsp(false);
+                const result = await handleUpdateEsp(e);
+                const ok = result === true || result?.ok === true;
+                if (ok) {
+                  setEditErrores({});
+                  setFotoError("");
+                  setShowEditEsp(false);
+                } else if (
+                  result?.fieldErrors &&
+                  Object.keys(result.fieldErrors).length > 0
+                ) {
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    ...result.fieldErrors,
+                  }));
+                  requestAnimationFrame(() =>
+                    focusFirstError(result.fieldErrors, editFormRef),
+                  );
+                }
               }}
               className="space-y-6"
             >
+              {Object.values(editErrores).some(Boolean) && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                  <span>
+                    Revisa los campos señalados (
+                    {Object.values(editErrores).filter(Boolean).length}) antes
+                    de guardar los cambios.
+                  </span>
+                </div>
+              )}
+
               <div className="mb-5">
                 <FotoPerfilZona
                   preview={editingEsp?.esp_foto}
@@ -780,25 +1138,37 @@ export default function EspecialistasTab({
                   onRemove={quitarFotoEdit}
                 />
                 {fotoError && (
-                  <p className="form-error">
+                  <p className="form-error" role="alert">
                     <AlertCircle className="w-3.5 h-3.5" /> {fotoError}
                   </p>
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="form-label">Tipo de Documento</label>
+                  <label className="form-label">
+                    Tipo de Documento <span className="text-rose-500">*</span>
+                  </label>
                   <select
+                    data-field="esp_tdoc"
+                    name="esp_tdoc"
                     value={editingEsp?.esp_tdoc || "V"}
                     onChange={(e) => {
                       const nextTdoc = e.target.value;
-                      setEditingEsp({ ...editingEsp, esp_tdoc: nextTdoc });
-                      if (editingEsp?.esp_cedu) {
+                      const nextCedu = sanitizeDocumento(
+                        editingEsp?.esp_cedu,
+                        nextTdoc,
+                      );
+                      setEditingEsp({
+                        ...editingEsp,
+                        esp_tdoc: nextTdoc,
+                        esp_cedu: nextCedu,
+                      });
+                      if (nextCedu || editErrores.esp_cedu) {
                         setEditErrores((prev) => ({
                           ...prev,
                           esp_cedu: validarCampoEdit(
                             "esp_cedu",
-                            editingEsp.esp_cedu,
+                            nextCedu,
                             nextTdoc,
                           ),
                         }));
@@ -813,28 +1183,51 @@ export default function EspecialistasTab({
                 </div>
                 <div>
                   <label className="form-label">
-                    Cédula / Documento de Identidad
+                    Cédula / Documento de Identidad{" "}
+                    <span className="text-rose-500">*</span>
                   </label>
                   <input
-                    maxLength={12}
+                    required
+                    data-field="esp_cedu"
+                    name="esp_cedu"
+                    maxLength={editingEsp?.esp_tdoc === "P" ? 11 : 8}
+                    inputMode={
+                      editingEsp?.esp_tdoc === "P" ? "text" : "numeric"
+                    }
                     type="text"
                     value={editingEsp?.esp_cedu || ""}
                     onChange={(e) => {
-                      const nextVal = e.target.value;
+                      const tdoc = editingEsp?.esp_tdoc || "V";
+                      const nextVal = sanitizeDocumento(e.target.value, tdoc);
                       setEditingEsp({
                         ...editingEsp,
                         esp_cedu: nextVal,
                       });
                       setEditErrores((prev) => ({
                         ...prev,
-                        esp_cedu: validarCampoEdit("esp_cedu", nextVal),
+                        esp_cedu: validarCampoEdit("esp_cedu", nextVal, tdoc),
                       }));
                     }}
+                    onBlur={() =>
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_cedu: validarCampoEdit(
+                          "esp_cedu",
+                          editingEsp?.esp_cedu,
+                          editingEsp?.esp_tdoc || "V",
+                        ),
+                      }))
+                    }
+                    aria-invalid={Boolean(editErrores.esp_cedu)}
                     className={`form-input ${editErrores.esp_cedu ? "form-input-invalid" : ""}`}
-                    placeholder="Ej. 12345678"
+                    placeholder={
+                      editingEsp?.esp_tdoc === "P"
+                        ? "Ej. P1234567"
+                        : "Ej. 12345678"
+                    }
                   />
                   {editErrores.esp_cedu && (
-                    <p className="form-error">
+                    <p className="form-error" role="alert">
                       <AlertCircle className="w-3.5 h-3.5" />{" "}
                       {editErrores.esp_cedu}
                     </p>
@@ -843,106 +1236,136 @@ export default function EspecialistasTab({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="form-label">Nombres</label>
+                  <label className="form-label">
+                    Nombres <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     required
+                    data-field="esp_nomb"
+                    name="esp_nomb"
                     maxLength={50}
                     type="text"
                     value={editingEsp?.esp_nomb || ""}
-                    onChange={(e) =>
-                      setEditingEsp({ ...editingEsp, esp_nomb: e.target.value })
+                    onChange={(e) => {
+                      const nextVal = sanitizeNombrePersona(e.target.value, 50);
+                      setEditingEsp({ ...editingEsp, esp_nomb: nextVal });
+                      if (editErrores.esp_nomb) {
+                        setEditErrores((prev) => ({
+                          ...prev,
+                          esp_nomb: validarCampoEdit("esp_nomb", nextVal),
+                        }));
+                      }
+                    }}
+                    onBlur={() =>
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_nomb: validarCampoEdit(
+                          "esp_nomb",
+                          editingEsp?.esp_nomb,
+                        ),
+                      }))
                     }
-                    className="form-input"
+                    aria-invalid={Boolean(editErrores.esp_nomb)}
+                    className={`form-input ${editErrores.esp_nomb ? "form-input-invalid" : ""}`}
                     placeholder="Ej. Roberto"
                   />
+                  {editErrores.esp_nomb && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {editErrores.esp_nomb}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <label className="form-label">Apellidos</label>
+                  <label className="form-label">
+                    Apellidos <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     required
+                    data-field="esp_apel"
+                    name="esp_apel"
                     maxLength={50}
                     type="text"
                     value={editingEsp?.esp_apel || ""}
-                    onChange={(e) =>
-                      setEditingEsp({ ...editingEsp, esp_apel: e.target.value })
+                    onChange={(e) => {
+                      const nextVal = sanitizeNombrePersona(e.target.value, 50);
+                      setEditingEsp({ ...editingEsp, esp_apel: nextVal });
+                      if (editErrores.esp_apel) {
+                        setEditErrores((prev) => ({
+                          ...prev,
+                          esp_apel: validarCampoEdit("esp_apel", nextVal),
+                        }));
+                      }
+                    }}
+                    onBlur={() =>
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_apel: validarCampoEdit(
+                          "esp_apel",
+                          editingEsp?.esp_apel,
+                        ),
+                      }))
                     }
-                    className="form-input"
+                    aria-invalid={Boolean(editErrores.esp_apel)}
+                    className={`form-input ${editErrores.esp_apel ? "form-input-invalid" : ""}`}
                     placeholder="Ej. Sánchez"
                   />
+                  {editErrores.esp_apel && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {editErrores.esp_apel}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="form-label">Correo Electrónico</label>
+                  <label className="form-label">Fecha de Nacimiento</label>
                   <input
-                    required
-                    maxLength={50}
-                    type="email"
-                    value={editingEsp?.usu_crro || ""}
-                    onChange={(e) =>
-                      setEditingEsp({ ...editingEsp, usu_crro: e.target.value })
+                    data-field="esp_fnac"
+                    name="esp_fnac"
+                    type="date"
+                    min={espDateBounds.min}
+                    max={espDateBounds.max}
+                    value={editingEsp?.esp_fnac || ""}
+                    onChange={(e) => {
+                      const nextVal = e.target.value;
+                      setEditingEsp({ ...editingEsp, esp_fnac: nextVal });
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_fnac: validarCampoEdit("esp_fnac", nextVal),
+                      }));
+                    }}
+                    onBlur={() =>
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_fnac: validarCampoEdit(
+                          "esp_fnac",
+                          editingEsp?.esp_fnac,
+                        ),
+                      }))
                     }
-                    className="form-input"
-                    placeholder="dr@clinica.com"
+                    aria-invalid={Boolean(editErrores.esp_fnac)}
+                    className={`form-input ${editErrores.esp_fnac ? "form-input-invalid" : ""}`}
                   />
-                </div>
-                <div>
-                  <label className="form-label">Teléfono de Contacto</label>
-                  <input
-                    maxLength={15}
-                    type="text"
-                    value={editingEsp?.esp_telf || ""}
-                    onChange={(e) => {
-                      setEditingEsp({
-                        ...editingEsp,
-                        esp_telf: e.target.value,
-                      });
-                      setEditErrores((prev) => ({
-                        ...prev,
-                        esp_telf: validarCampoEdit("esp_telf"),
-                      }));
-                    }}
-                    className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${editErrores.esp_telf ? "form-input-invalid" : ""}`}
-                    placeholder="+58 412 0000000"
-                  />
-                  {editErrores.esp_telf && (
-                    <p className="form-error">
+                  {editErrores.esp_fnac ? (
+                    <p className="form-error" role="alert">
                       <AlertCircle className="w-3.5 h-3.5" />{" "}
-                      {editErrores.esp_telf}
+                      {editErrores.esp_fnac}
                     </p>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                <div>
-                  <label className="form-label">Licencia Médica / CM</label>
-                  <input
-                    maxLength={50}
-                    type="text"
-                    value={editingEsp?.esp_licencia || ""}
-                    onChange={(e) => {
-                      setEditingEsp({
-                        ...editingEsp,
-                        esp_licencia: e.target.value,
-                      });
-                      setEditErrores((prev) => ({
-                        ...prev,
-                        esp_licencia: validarCampoEdit("esp_licencia"),
-                      }));
-                    }}
-                    className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${editErrores.esp_licencia ? "form-input-invalid" : ""}`}
-                    placeholder="Ej. CM-90800"
-                  />
-                  {editErrores.esp_licencia && (
-                    <p className="form-error">
-                      <AlertCircle className="w-3.5 h-3.5" />{" "}
-                      {editErrores.esp_licencia}
+                  ) : (
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Edad permitida: 12 a 75 años
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="form-label">Sexo</label>
+                  <label className="form-label">
+                    Sexo <span className="text-rose-500">*</span>
+                  </label>
                   <select
+                    data-field="esp_gner"
+                    name="esp_gner"
                     value={editingEsp?.esp_gner || "M"}
                     onChange={(e) =>
                       setEditingEsp({ ...editingEsp, esp_gner: e.target.value })
@@ -953,14 +1376,150 @@ export default function EspecialistasTab({
                     <option value="F">Femenino</option>
                   </select>
                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="form-label">Especialidad</label>
-                  <select
-                    value={editingEsp?.esc_codi || ""}
-                    onChange={(e) =>
-                      setEditingEsp({ ...editingEsp, esc_codi: e.target.value })
+                  <label className="form-label">
+                    Correo Electrónico <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    required
+                    data-field="usu_crro"
+                    name="usu_crro"
+                    maxLength={50}
+                    type="email"
+                    value={editingEsp?.usu_crro || ""}
+                    onChange={(e) => {
+                      const nextVal = e.target.value;
+                      setEditingEsp({ ...editingEsp, usu_crro: nextVal });
+                      if (editErrores.usu_crro) {
+                        setEditErrores((prev) => ({
+                          ...prev,
+                          usu_crro: validarCampoEdit("usu_crro", nextVal),
+                        }));
+                      }
+                    }}
+                    onBlur={() =>
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        usu_crro: validarCampoEdit(
+                          "usu_crro",
+                          editingEsp?.usu_crro,
+                        ),
+                      }))
                     }
-                    className="form-select"
+                    aria-invalid={Boolean(editErrores.usu_crro)}
+                    className={`form-input ${editErrores.usu_crro ? "form-input-invalid" : ""}`}
+                    placeholder="dr@clinica.com"
+                  />
+                  {editErrores.usu_crro && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {editErrores.usu_crro}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="form-label">Teléfono de Contacto</label>
+                  <input
+                    data-field="esp_telf"
+                    name="esp_telf"
+                    maxLength={
+                      (editingEsp?.esp_telf || "").startsWith("+") ? 13 : 11
+                    }
+                    type="tel"
+                    inputMode="tel"
+                    value={editingEsp?.esp_telf || ""}
+                    onChange={(e) => {
+                      const nextVal = sanitizeTelefonoVE(e.target.value);
+                      setEditingEsp({
+                        ...editingEsp,
+                        esp_telf: nextVal,
+                      });
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_telf: validarCampoEdit("esp_telf", nextVal),
+                      }));
+                    }}
+                    onBlur={() =>
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_telf: validarCampoEdit(
+                          "esp_telf",
+                          editingEsp?.esp_telf,
+                        ),
+                      }))
+                    }
+                    aria-invalid={Boolean(editErrores.esp_telf)}
+                    className={`form-input ${editErrores.esp_telf ? "form-input-invalid" : ""}`}
+                    placeholder="04120000000 o +584120000000"
+                  />
+                  {editErrores.esp_telf && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {editErrores.esp_telf}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="form-label">Licencia Médica / CM</label>
+                  <input
+                    data-field="esp_licencia"
+                    name="esp_licencia"
+                    maxLength={20}
+                    type="text"
+                    value={editingEsp?.esp_licencia || ""}
+                    onChange={(e) => {
+                      const nextVal = sanitizeLicencia(e.target.value, 20);
+                      setEditingEsp({
+                        ...editingEsp,
+                        esp_licencia: nextVal,
+                      });
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_licencia: validarCampoEdit("esp_licencia", nextVal),
+                      }));
+                    }}
+                    onBlur={() =>
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esp_licencia: validarCampoEdit(
+                          "esp_licencia",
+                          editingEsp?.esp_licencia,
+                        ),
+                      }))
+                    }
+                    aria-invalid={Boolean(editErrores.esp_licencia)}
+                    className={`form-input ${editErrores.esp_licencia ? "form-input-invalid" : ""}`}
+                    placeholder="Ej. CM-90800 o MPPS-123456"
+                  />
+                  {editErrores.esp_licencia && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {editErrores.esp_licencia}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="form-label">
+                    Especialidad <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    data-field="esc_codi"
+                    name="esc_codi"
+                    value={editingEsp?.esc_codi || ""}
+                    onChange={(e) => {
+                      const nextVal = e.target.value;
+                      setEditingEsp({ ...editingEsp, esc_codi: nextVal });
+                      setEditErrores((prev) => ({
+                        ...prev,
+                        esc_codi: validarCampoEdit("esc_codi", nextVal),
+                      }));
+                    }}
+                    aria-invalid={Boolean(editErrores.esc_codi)}
+                    className={`form-select ${editErrores.esc_codi ? "form-input-invalid" : ""}`}
                   >
                     <option value="" disabled>
                       Seleccione especialidad...
@@ -973,19 +1532,29 @@ export default function EspecialistasTab({
                         </option>
                       ))}
                   </select>
+                  {editErrores.esc_codi && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {editErrores.esc_codi}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-1 border-t border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
-                  onClick={() => setShowEditEsp(false)}
+                  onClick={() => {
+                    setShowEditEsp(false);
+                    setEditErrores({});
+                    setFotoError("");
+                  }}
                   className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
-                  disabled={loading}
+                  disabled={loading || fotoUploading}
                   type="submit"
                   className="md:w-auto w-full px-8 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
@@ -1148,6 +1717,7 @@ export default function EspecialistasTab({
                   data-tour="admin-esp-register-btn"
                   onClick={() => {
                     setErrores({});
+                    setFotoError("");
                     setShowRegistro(true);
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
@@ -1273,19 +1843,24 @@ export default function EspecialistasTab({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditErrores({});
-                                setEditingEsp({
+                                setFotoError("");
+                                const nextEdit = {
                                   esp_codi: esp.esp_codi,
                                   esp_tdoc: esp.esp_tdoc || "V",
                                   esp_cedu: esp.esp_cedu || "",
                                   esp_nomb: esp.esp_nomb,
                                   esp_apel: esp.esp_apel,
+                                  esp_fnac: formatYmdForInput(esp.esp_fnac),
                                   usu_crro: esp.tm_usuar?.usu_crro || "",
                                   esp_gner: esp.esp_gner || "M",
                                   esp_telf: esp.esp_telf || "",
                                   esp_licencia: esp.esp_licencia || "",
                                   esp_foto: esp.esp_foto || "",
                                   esc_codi: esp.tm_especi?.esc_codi || "",
-                                });
+                                };
+                                initialEditEspRef.current =
+                                  JSON.stringify(nextEdit);
+                                setEditingEsp(nextEdit);
                                 setShowEditEsp(true);
                               }}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
@@ -1455,14 +2030,13 @@ export default function EspecialistasTab({
                       </span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
                         {previewEsp.esp_fnac
-                          ? new Date(previewEsp.esp_fnac).toLocaleDateString(
-                              "es-VE",
-                              {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              },
-                            )
+                          ? new Date(
+                              `${formatYmdForInput(previewEsp.esp_fnac)}T12:00:00`,
+                            ).toLocaleDateString("es-VE", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })
                           : "-"}
                       </span>
                     </div>
@@ -1501,7 +2075,10 @@ export default function EspecialistasTab({
           {/* Modal Nueva Especialidad */}
           <AdminModal
             open={showCatRegistro}
-            onClose={() => setShowCatRegistro(false)}
+            onClose={() => {
+              setShowCatRegistro(false);
+              setCatErrores({});
+            }}
             title="Registrar Nueva Especialidad"
             icon={Plus}
             maxWidth="max-w-xl"
@@ -1510,9 +2087,25 @@ export default function EspecialistasTab({
             )}
           >
             <form
+              ref={catRegFormRef}
+              noValidate
               onSubmit={async (e) => {
-                const ok = await handleCreateEspecialidad(e);
-                if (ok) setShowCatRegistro(false);
+                e.preventDefault();
+                if (!validarCatCreate()) return;
+                const result = await handleCreateEspecialidad(e);
+                const ok = result === true || result?.ok === true;
+                if (ok) {
+                  setCatErrores({});
+                  setShowCatRegistro(false);
+                } else if (
+                  result?.fieldErrors &&
+                  Object.keys(result.fieldErrors).length > 0
+                ) {
+                  setCatErrores((prev) => ({ ...prev, ...result.fieldErrors }));
+                  requestAnimationFrame(() =>
+                    focusFirstError(result.fieldErrors, catRegFormRef),
+                  );
+                }
               }}
               className="space-y-6"
             >
@@ -1520,44 +2113,87 @@ export default function EspecialistasTab({
                 <div className="md:col-span-2">
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="form-label form-label-inline">
-                      Denominación de la Especialidad
+                      Denominación de la Especialidad{" "}
+                      <span className="text-rose-500">*</span>
                     </label>
                     <span
-                      className={`text-[11px] font-medium ${newEspCat.esc_nomb.length >= 45 ? "text-rose-500" : "text-slate-400"}`}
+                      className={`text-[11px] font-medium ${(newEspCat.esc_nomb || "").length >= 45 ? "text-rose-500" : "text-slate-400"}`}
                     >
-                      {newEspCat.esc_nomb.length}/50
+                      {(newEspCat.esc_nomb || "").length}/50
                     </span>
                   </div>
                   <input
                     required
+                    data-field="esc_nomb"
+                    name="esc_nomb"
                     maxLength={50}
                     type="text"
-                    value={newEspCat.esc_nomb}
-                    onChange={(e) =>
-                      setNewEspCat({ ...newEspCat, esc_nomb: e.target.value })
-                    }
-                    className="form-input"
+                    value={newEspCat.esc_nomb || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewEspCat({ ...newEspCat, esc_nomb: val });
+                      if (catErrores.esc_nomb) {
+                        setCatErrores((prev) => ({
+                          ...prev,
+                          esc_nomb: validateRequiredText(
+                            val,
+                            "La denominación",
+                            {
+                              min: 2,
+                              max: 50,
+                            },
+                          ),
+                        }));
+                      }
+                    }}
+                    aria-invalid={Boolean(catErrores.esc_nomb)}
+                    className={`form-input ${catErrores.esc_nomb ? "form-input-invalid" : ""}`}
                     placeholder="Ej. Psicología Clínica Infantil"
                   />
+                  {catErrores.esc_nomb && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {catErrores.esc_nomb}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="form-label">Código de Clasificación</label>
                   <div className="relative">
                     <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
-                      maxLength={20}
+                      data-field="esc_codi"
+                      name="esc_codi"
+                      maxLength={10}
                       type="text"
-                      value={newEspCat.esc_codi}
-                      onChange={(e) =>
+                      value={newEspCat.esc_codi || ""}
+                      onChange={(e) => {
+                        const val = sanitizeEscCodi(e.target.value);
                         setNewEspCat({
                           ...newEspCat,
-                          esc_codi: e.target.value.toUpperCase(),
-                        })
-                      }
-                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors !pl-9 !pr-4 font-mono"
+                          esc_codi: val,
+                        });
+                        if (catErrores.esc_codi) {
+                          setCatErrores((prev) => ({
+                            ...prev,
+                            esc_codi:
+                              !val || ESC_CODI_REGEX.test(val)
+                                ? ""
+                                : "Usa 2 a 10 caracteres (letras, números, - o _)",
+                          }));
+                        }
+                      }}
+                      aria-invalid={Boolean(catErrores.esc_codi)}
+                      className={`form-input !pl-9 !pr-4 font-mono ${catErrores.esc_codi ? "form-input-invalid" : ""}`}
                       placeholder="PSIC-01"
                     />
                   </div>
+                  {catErrores.esc_codi && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {catErrores.esc_codi}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1566,22 +2202,53 @@ export default function EspecialistasTab({
                   <label className="form-label form-label-inline">
                     Perfil Clínico y Competencias
                   </label>
-                  <span className="text-[11px] text-slate-400">
-                    {newEspCat.esc_desc.length}/1000
+                  <span
+                    className={`text-[11px] font-medium ${(newEspCat.esc_desc || "").length >= 450 ? "text-rose-500" : "text-slate-400"}`}
+                  >
+                    {(newEspCat.esc_desc || "").length}/500
                   </span>
                 </div>
                 <textarea
-                  maxLength={1000}
-                  value={newEspCat.esc_desc}
-                  onChange={(e) =>
-                    setNewEspCat({ ...newEspCat, esc_desc: e.target.value })
-                  }
-                  className="form-textarea h-32"
+                  data-field="esc_desc"
+                  name="esc_desc"
+                  maxLength={500}
+                  value={newEspCat.esc_desc || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewEspCat({ ...newEspCat, esc_desc: val });
+                    if (catErrores.esc_desc) {
+                      setCatErrores((prev) => ({
+                        ...prev,
+                        esc_desc:
+                          val.trim().length > 500
+                            ? "La descripción no puede exceder 500 caracteres"
+                            : "",
+                      }));
+                    }
+                  }}
+                  aria-invalid={Boolean(catErrores.esc_desc)}
+                  className={`form-textarea h-32 ${catErrores.esc_desc ? "form-input-invalid" : ""}`}
                   placeholder="Describa las competencias, población atendida y alcance clínico de la especialidad..."
                 />
+                {catErrores.esc_desc && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {catErrores.esc_desc}
+                  </p>
+                )}
               </div>
 
-              <div className="flex justify-end pt-1 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-1 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCatRegistro(false);
+                    setCatErrores({});
+                  }}
+                  className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancelar
+                </button>
                 <button
                   disabled={loading}
                   type="submit"
@@ -1596,39 +2263,97 @@ export default function EspecialistasTab({
           {/* Modal Editar Especialidad */}
           <AdminModal
             open={showEditEspCat}
-            onClose={() => setShowEditEspCat(false)}
+            onClose={() => {
+              setShowEditEspCat(false);
+              setCatEditErrores({});
+            }}
             title="Editar Especialidad"
             subtitle={editingEspCat?.esc_nomb || ""}
             icon={Pencil}
             maxWidth="max-w-xl"
+            hasUnsavedChanges={Boolean(
+              showEditEspCat &&
+              editingEspCat &&
+              initialEditEspCatRef.current &&
+              JSON.stringify(editingEspCat) !== initialEditEspCatRef.current,
+            )}
           >
             <form
+              ref={catEditFormRef}
+              noValidate
               onSubmit={async (e) => {
                 e.preventDefault();
-                const ok = await handleUpdateEspecialidad(e);
-                if (ok) setShowEditEspCat(false);
+                if (!validarCatEdit()) return;
+                const result = await handleUpdateEspecialidad(e);
+                const ok = result === true || result?.ok === true;
+                if (ok) {
+                  setCatEditErrores({});
+                  setShowEditEspCat(false);
+                } else if (
+                  result?.fieldErrors &&
+                  Object.keys(result.fieldErrors).length > 0
+                ) {
+                  setCatEditErrores((prev) => ({
+                    ...prev,
+                    ...result.fieldErrors,
+                  }));
+                  requestAnimationFrame(() =>
+                    focusFirstError(result.fieldErrors, catEditFormRef),
+                  );
+                }
               }}
               className="space-y-6"
             >
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div className="md:col-span-2">
-                  <label className="form-label">
-                    Denominación de la Especialidad
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="form-label form-label-inline">
+                      Denominación de la Especialidad{" "}
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <span
+                      className={`text-[11px] font-medium ${(editingEspCat?.esc_nomb || "").length >= 45 ? "text-rose-500" : "text-slate-400"}`}
+                    >
+                      {(editingEspCat?.esc_nomb || "").length}/50
+                    </span>
+                  </div>
                   <input
                     required
+                    data-field="esc_nomb"
+                    name="esc_nomb"
                     maxLength={50}
                     type="text"
                     value={editingEspCat?.esc_nomb || ""}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const val = e.target.value;
                       setEditingEspCat({
                         ...editingEspCat,
-                        esc_nomb: e.target.value,
-                      })
-                    }
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
+                        esc_nomb: val,
+                      });
+                      if (catEditErrores.esc_nomb) {
+                        setCatEditErrores((prev) => ({
+                          ...prev,
+                          esc_nomb: validateRequiredText(
+                            val,
+                            "La denominación",
+                            {
+                              min: 2,
+                              max: 50,
+                            },
+                          ),
+                        }));
+                      }
+                    }}
+                    aria-invalid={Boolean(catEditErrores.esc_nomb)}
+                    className={`form-input ${catEditErrores.esc_nomb ? "form-input-invalid" : ""}`}
                     placeholder="Ej. Psicología Clínica Infantil"
                   />
+                  {catEditErrores.esc_nomb && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {catEditErrores.esc_nomb}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="form-label">Código de Clasificación</label>
@@ -1636,36 +2361,65 @@ export default function EspecialistasTab({
                     <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       disabled
-                      maxLength={20}
+                      maxLength={10}
                       type="text"
                       value={editingEspCat?.esc_codi || ""}
-                      className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors !pl-9 !pr-4 font-mono opacity-70 cursor-not-allowed"
+                      className="form-input !pl-9 !pr-4 font-mono opacity-70 cursor-not-allowed"
                     />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="form-label">
-                  Perfil Clínico y Competencias
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="form-label form-label-inline">
+                    Perfil Clínico y Competencias
+                  </label>
+                  <span
+                    className={`text-[11px] font-medium ${(editingEspCat?.esc_desc || "").length >= 450 ? "text-rose-500" : "text-slate-400"}`}
+                  >
+                    {(editingEspCat?.esc_desc || "").length}/500
+                  </span>
+                </div>
                 <textarea
-                  maxLength={1000}
+                  data-field="esc_desc"
+                  name="esc_desc"
+                  maxLength={500}
                   value={editingEspCat?.esc_desc || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setEditingEspCat({
                       ...editingEspCat,
-                      esc_desc: e.target.value,
-                    })
-                  }
-                  className="form-textarea h-32"
+                      esc_desc: val,
+                    });
+                    if (catEditErrores.esc_desc) {
+                      setCatEditErrores((prev) => ({
+                        ...prev,
+                        esc_desc:
+                          val.trim().length > 500
+                            ? "La descripción no puede exceder 500 caracteres"
+                            : "",
+                      }));
+                    }
+                  }}
+                  aria-invalid={Boolean(catEditErrores.esc_desc)}
+                  className={`form-textarea h-32 ${catEditErrores.esc_desc ? "form-input-invalid" : ""}`}
                   placeholder="Describa las competencias, población atendida y alcance clínico de la especialidad..."
                 />
+                {catEditErrores.esc_desc && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {catEditErrores.esc_desc}
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-1 border-t border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
-                  onClick={() => setShowEditEspCat(false)}
+                  onClick={() => {
+                    setShowEditEspCat(false);
+                    setCatEditErrores({});
+                  }}
                   className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
@@ -1735,7 +2489,10 @@ export default function EspecialistasTab({
                 </span>
                 <button
                   data-tour="admin-esp-cat-btn"
-                  onClick={() => setShowCatRegistro(true)}
+                  onClick={() => {
+                    setCatErrores({});
+                    setShowCatRegistro(true);
+                  }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
                 >
                   <Plus className="w-4 h-4" />
@@ -1835,6 +2592,9 @@ export default function EspecialistasTab({
                             <button
                               type="button"
                               onClick={() => {
+                                setCatEditErrores({});
+                                initialEditEspCatRef.current =
+                                  JSON.stringify(esc);
                                 setEditingEspCat(esc);
                                 setShowEditEspCat(true);
                               }}

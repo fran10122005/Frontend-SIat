@@ -1116,12 +1116,44 @@ html {
   cursor: not-allowed;
 }
 
-/* --- Estado inválido (bordea en rosa para destacar) --- */
-.form-input-invalid {
+/* --- Estado inválido (bordea en rosa para destacar en claro y oscuro) --- */
+.form-input-invalid,
+input.form-input-invalid,
+select.form-input-invalid,
+textarea.form-input-invalid {
   border-color: #FB7185 !important;
+  box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.14) !important;
 }
-.dark .form-input-invalid {
+.dark .form-input-invalid,
+.dark input.form-input-invalid,
+.dark select.form-input-invalid,
+.dark textarea.form-input-invalid {
+  border-color: #F43F5E !important;
+  box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.22) !important;
+}
+.form-input-invalid:focus,
+input.form-input-invalid:focus,
+select.form-input-invalid:focus,
+textarea.form-input-invalid:focus,
+.dark input.form-input-invalid:focus,
+.dark select.form-input-invalid:focus,
+.dark textarea.form-input-invalid:focus {
   border-color: #E11D48 !important;
+  box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.25) !important;
+}
+@keyframes form-error-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(244, 63, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+  }
+}
+.form-error-focus {
+  animation: form-error-pulse 0.65s ease-out 2;
 }
 
 /* --- Mensaje de error --- */

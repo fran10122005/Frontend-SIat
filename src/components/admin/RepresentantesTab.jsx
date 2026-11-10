@@ -27,7 +27,24 @@ import FotoUpload from "../shared/FotoUpload";
 import DocumentosClinicos from "../shared/DocumentosClinicos";
 import api from "../../api/axios";
 import useExpandableRows from "../../hooks/useExpandableRows";
-import { toastError } from "../../utils/errorHandler";
+import { toastError, extractFieldErrors } from "../../utils/errorHandler";
+import {
+  getAdultOrYouthDateBounds,
+  getChildDateBounds,
+  formatYmdForInput,
+  calcAgeYears,
+  parseLocalYMD,
+  sanitizeDocumento,
+  sanitizeTelefonoVE,
+  sanitizeNombrePersona,
+  validateNombrePersona,
+  validateDocumento,
+  validateEmail,
+  validateTelefonoMovilVE,
+  validateFechaRangoEdad,
+  validateFechaPaciente,
+  focusFirstError,
+} from "../../utils/validators";
 
 const PAGE_SIZE = 10;
 
@@ -196,13 +213,16 @@ function NinoExpedientePanel({
           <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-3">
             <span className="flex items-center gap-1">
               <Cake className="w-3 h-3" />
-              {nino.nin_fnac
-                ? new Date(nino.nin_fnac).toLocaleDateString("es-VE", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
-                : "Sin fecha"}
+              {(() => {
+                const parsed = parseLocalYMD(nino.nin_fnac);
+                return parsed
+                  ? parsed.date.toLocaleDateString("es-VE", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
+                  : "Sin fecha";
+              })()}
             </span>
             <span className="font-mono">ID: {nino.nin_codi}</span>
           </div>
@@ -302,20 +322,9 @@ function NinoExpedientePanel({
 }
 
 const calcEdad = (fechaNac) => {
-  if (!fechaNac) return "Edad no disponible";
-  const hoy = new Date();
-  const nac = new Date(fechaNac);
-  let años = hoy.getFullYear() - nac.getFullYear();
-  const m = hoy.getMonth() - nac.getMonth();
-  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) años--;
+  const años = calcAgeYears(fechaNac);
+  if (años === null) return "Edad no disponible";
   return `${años} año${años !== 1 ? "s" : ""}`;
-};
-
-const VALIDACIONES_TELF = (value) => {
-  if (!value) return "";
-  return /^(\+58|0058|0)?4\d{2}[- ]?\d{3}[- ]?\d{4}$/.test(String(value).trim())
-    ? ""
-    : "Formato venezolano: +584121234567";
 };
 
 export default function RepresentantesTab({
@@ -340,35 +349,85 @@ export default function RepresentantesTab({
   const [previewRep, setPreviewRep] = useState(null);
   const [previewTab, setPreviewTab] = useState("rep");
   const [editErrores, setEditErrores] = useState({});
+  const [ninoErrores, setNinoErrores] = useState({});
   const [updatingFotoNin, setUpdatingFotoNin] = useState(null);
+  const repFormRef = useRef(null);
+  const ninoFormRef = useRef(null);
+  const initialEditRepRef = useRef("");
+  const initialEditNinoRef = useRef("");
+  const repDateBounds = useMemo(() => getAdultOrYouthDateBounds(12, 75), []);
+  const childDateBounds = useMemo(() => getChildDateBounds(25), []);
 
-  const validarEditCampo = (campo) => {
-    if (campo === "rep_telf") return VALIDACIONES_TELF(editingRep?.rep_telf);
-    if (campo === "rep_cedu") {
-      const cedu = String(editingRep?.rep_cedu || "").trim();
-      if (!cedu) return "";
-      return /^\d{6,8}$/.test(cedu)
-        ? ""
-        : "La cédula debe tener entre 6 y 8 dígitos";
+  const openEditRep = (r) => {
+    const initial = {
+      usu_codi: r.usu_codi,
+      rep_nomb: r.rep_nomb || "",
+      rep_apel: r.rep_apel || "",
+      rep_telf: r.rep_telf || "",
+      rep_rela: r.rep_rela || "",
+      rep_cedu: r.rep_cedu || "",
+      rep_fnac: formatYmdForInput(r.rep_fnac) || "",
+      rep_foto: r.rep_foto || "",
+      usu_crro: r.usu_crro || "",
+    };
+    initialEditRepRef.current = JSON.stringify(initial);
+    setEditErrores({});
+    setEditingRep(initial);
+  };
+
+  const validarEditCampo = (campo, nextValue = editingRep?.[campo]) => {
+    switch (campo) {
+      case "rep_nomb":
+        return validateNombrePersona(nextValue, "El nombre", {
+          required: true,
+        });
+      case "rep_apel":
+        return validateNombrePersona(nextValue, "El apellido", {
+          required: true,
+        });
+      case "rep_cedu":
+        return validateDocumento(nextValue, "V", { required: false });
+      case "rep_rela":
+        return !String(nextValue || "").trim()
+          ? "Selecciona el vínculo legal"
+          : "";
+      case "rep_fnac":
+        return validateFechaRangoEdad(nextValue, {
+          minAge: 12,
+          maxAge: 75,
+          required: false,
+          label: "La fecha de nacimiento",
+        });
+      case "usu_crro":
+        return validateEmail(nextValue, { required: true, max: 50 });
+      case "rep_telf":
+        return validateTelefonoMovilVE(nextValue, { required: false });
+      default:
+        return "";
     }
-    if (campo === "usu_crro") {
-      const correo = String(editingRep?.usu_crro || "").trim();
-      if (!correo) return "El correo es requerido";
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)
-        ? ""
-        : "Correo electrónico inválido";
-    }
-    return "";
   };
 
   const validarEditTodo = () => {
+    const campos = [
+      "rep_nomb",
+      "rep_apel",
+      "rep_cedu",
+      "rep_rela",
+      "rep_fnac",
+      "usu_crro",
+      "rep_telf",
+    ];
     const nuevos = {};
-    ["rep_telf", "rep_cedu", "usu_crro"].forEach((campo) => {
-      const err = validarEditCampo(campo);
+    campos.forEach((campo) => {
+      const err = validarEditCampo(campo, editingRep?.[campo]);
       if (err) nuevos[campo] = err;
     });
     setEditErrores(nuevos);
-    return Object.keys(nuevos).length === 0;
+    if (Object.keys(nuevos).length > 0) {
+      requestAnimationFrame(() => focusFirstError(nuevos, repFormRef));
+      return false;
+    }
+    return true;
   };
 
   const filtered = useMemo(() => {
@@ -532,22 +591,96 @@ export default function RepresentantesTab({
   const [savingNino, setSavingNino] = useState(false);
   const [uploadingPdfNin, setUploadingPdfNin] = useState(false);
 
+  const openEditNino = (ninoItem) => {
+    const initial = {
+      nin_codi: ninoItem.nin_codi,
+      nin_nomb: ninoItem.nin_nomb || "",
+      nin_apel: ninoItem.nin_apel || "",
+      nin_fnac: formatYmdForInput(ninoItem.nin_fnac),
+      nin_gner: ninoItem.nin_gner || "M",
+      nin_nivd: ninoItem.nin_nivd || "Nivel 1",
+      nin_diag: ninoItem.nin_diag || "",
+      sen_tipo: ninoItem.sensibilidad?.sen_tipo || "",
+      sen_nvli: ninoItem.sensibilidad?.sen_nvli || "Leve",
+      sen_nota: ninoItem.sensibilidad?.sen_nota || "",
+    };
+    initialEditNinoRef.current = JSON.stringify(initial);
+    setNinoErrores({});
+    setEditingNino(initial);
+  };
+
+  const validarNinoCampo = (
+    campo,
+    nextValue = editingNino?.[campo],
+    currentNino = editingNino,
+  ) => {
+    switch (campo) {
+      case "nin_nomb":
+        return validateNombrePersona(nextValue, "El nombre", {
+          required: true,
+        });
+      case "nin_apel":
+        return validateNombrePersona(nextValue, "El apellido", {
+          required: true,
+        });
+      case "nin_fnac":
+        return validateFechaPaciente(nextValue, { required: true, maxAge: 25 });
+      case "nin_diag":
+        return String(nextValue || "").trim().length > 255
+          ? "El diagnóstico no puede exceder 255 caracteres"
+          : "";
+      case "sen_nvli":
+        return currentNino?.sen_tipo && !String(nextValue || "").trim()
+          ? "Selecciona la severidad sensorial"
+          : "";
+      case "sen_nota":
+        return String(nextValue || "").trim().length > 255
+          ? "Las notas sensoriales no pueden exceder 255 caracteres"
+          : "";
+      default:
+        return "";
+    }
+  };
+
+  const validarNinoTodo = () => {
+    const campos = [
+      "nin_nomb",
+      "nin_apel",
+      "nin_fnac",
+      "nin_diag",
+      "sen_nvli",
+      "sen_nota",
+    ];
+    const errs = {};
+    campos.forEach((c) => {
+      const msg = validarNinoCampo(c, editingNino?.[c], editingNino);
+      if (msg) errs[c] = msg;
+    });
+    setNinoErrores(errs);
+    if (Object.keys(errs).length > 0) {
+      requestAnimationFrame(() => focusFirstError(errs, ninoFormRef));
+      return false;
+    }
+    return true;
+  };
+
   const handleUpdateNino = async (e) => {
     e.preventDefault();
     if (!editingNino) return;
+    if (!validarNinoTodo()) return;
     setSavingNino(true);
     try {
       const payload = {
-        nin_nomb: editingNino.nin_nomb,
-        nin_apel: editingNino.nin_apel,
+        nin_nomb: String(editingNino.nin_nomb || "").trim(),
+        nin_apel: String(editingNino.nin_apel || "").trim(),
         nin_fnac: editingNino.nin_fnac,
         nin_gner: editingNino.nin_gner,
         nin_nivd: editingNino.nin_nivd,
-        nin_diag: editingNino.nin_diag,
+        nin_diag: String(editingNino.nin_diag || "").trim(),
         ...(editingNino.sen_tipo && {
           sen_tipo: editingNino.sen_tipo,
           sen_nvli: editingNino.sen_nvli || "Leve",
-          sen_nota: editingNino.sen_nota || "",
+          sen_nota: String(editingNino.sen_nota || "").trim(),
         }),
       };
       await api.patch(`/admin/ninos/${editingNino.nin_codi}`, payload);
@@ -579,9 +712,15 @@ export default function RepresentantesTab({
               : prev.tm_ninos || primero,
         };
       });
+      setNinoErrores({});
       setEditingNino(null);
       onRefresh();
     } catch (err) {
+      const fieldErrors = extractFieldErrors(err);
+      if (Object.keys(fieldErrors).length > 0) {
+        setNinoErrores((prev) => ({ ...prev, ...fieldErrors }));
+        requestAnimationFrame(() => focusFirstError(fieldErrors, ninoFormRef));
+      }
       toastError(err, showToast, "Error al actualizar datos del paciente.");
     } finally {
       setSavingNino(false);
@@ -1006,16 +1145,7 @@ export default function RepresentantesTab({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setEditingRep({
-                                usu_codi: r.usu_codi,
-                                rep_nomb: r.rep_nomb || "",
-                                rep_apel: r.rep_apel || "",
-                                rep_telf: r.rep_telf || "",
-                                rep_rela: r.rep_rela || "",
-                                rep_cedu: r.rep_cedu || "",
-                                rep_foto: r.rep_foto || "",
-                                usu_crro: r.usu_crro || "",
-                              });
+                              openEditRep(r);
                             }}
                             title="Editar"
                             className="action-icon-btn text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
@@ -1079,21 +1209,57 @@ export default function RepresentantesTab({
       {/* Modal Editar Representante - estilo compacto tipo vista previa */}
       <AdminModal
         open={!!editingRep}
-        onClose={() => setEditingRep(null)}
+        onClose={() => {
+          setEditingRep(null);
+          setEditErrores({});
+        }}
         title="Editar Representante"
         subtitle={`${editingRep?.rep_nomb || ""} ${editingRep?.rep_apel || ""}`.trim()}
         maxWidth="max-w-xl"
         icon={Pencil}
+        hasUnsavedChanges={Boolean(
+          editingRep &&
+          initialEditRepRef.current &&
+          JSON.stringify(editingRep) !== initialEditRepRef.current,
+        )}
       >
         <form
+          ref={repFormRef}
+          noValidate
           onSubmit={async (e) => {
             e.preventDefault();
             if (!validarEditTodo()) return;
-            const ok = await handleUpdateRepresentante(e);
-            if (ok) setEditingRep(null);
+            const res = await handleUpdateRepresentante(e);
+            const ok = res === true || res?.ok === true;
+            if (ok) {
+              setEditErrores({});
+              setEditingRep(null);
+            } else if (
+              res?.fieldErrors &&
+              Object.keys(res.fieldErrors).length > 0
+            ) {
+              setEditErrores((prev) => ({ ...prev, ...res.fieldErrors }));
+              requestAnimationFrame(() =>
+                focusFirstError(res.fieldErrors, repFormRef),
+              );
+            }
           }}
           className="space-y-4 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-800/80 dark:via-slate-800/40 dark:to-slate-900/50"
         >
+          {Object.values(editErrores).some(Boolean) && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+              <span>
+                Revisa los campos señalados (
+                {Object.values(editErrores).filter(Boolean).length}) antes de
+                guardar.
+              </span>
+            </div>
+          )}
+
           {/* Foto del representante */}
           <FotoUpload
             value={editingRep?.rep_foto || ""}
@@ -1107,35 +1273,83 @@ export default function RepresentantesTab({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Nombres
+                Nombres <span className="text-rose-500">*</span>
               </label>
               <input
                 required
+                data-field="rep_nomb"
+                name="rep_nomb"
                 maxLength={50}
                 type="text"
                 value={editingRep?.rep_nomb || ""}
-                onChange={(e) =>
-                  setEditingRep({ ...editingRep, rep_nomb: e.target.value })
+                onChange={(e) => {
+                  const nextVal = sanitizeNombrePersona(e.target.value, 50);
+                  setEditingRep({ ...editingRep, rep_nomb: nextVal });
+                  if (editErrores.rep_nomb) {
+                    setEditErrores((prev) => ({
+                      ...prev,
+                      rep_nomb: validarEditCampo("rep_nomb", nextVal),
+                    }));
+                  }
+                }}
+                onBlur={() =>
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    rep_nomb: validarEditCampo(
+                      "rep_nomb",
+                      editingRep?.rep_nomb,
+                    ),
+                  }))
                 }
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
+                aria-invalid={Boolean(editErrores.rep_nomb)}
+                className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${editErrores.rep_nomb ? "form-input-invalid" : ""}`}
                 placeholder="Ej. María"
               />
+              {editErrores.rep_nomb && (
+                <p className="form-error" role="alert">
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_nomb}
+                </p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Apellidos
+                Apellidos <span className="text-rose-500">*</span>
               </label>
               <input
                 required
+                data-field="rep_apel"
+                name="rep_apel"
                 maxLength={50}
                 type="text"
                 value={editingRep?.rep_apel || ""}
-                onChange={(e) =>
-                  setEditingRep({ ...editingRep, rep_apel: e.target.value })
+                onChange={(e) => {
+                  const nextVal = sanitizeNombrePersona(e.target.value, 50);
+                  setEditingRep({ ...editingRep, rep_apel: nextVal });
+                  if (editErrores.rep_apel) {
+                    setEditErrores((prev) => ({
+                      ...prev,
+                      rep_apel: validarEditCampo("rep_apel", nextVal),
+                    }));
+                  }
+                }}
+                onBlur={() =>
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    rep_apel: validarEditCampo(
+                      "rep_apel",
+                      editingRep?.rep_apel,
+                    ),
+                  }))
                 }
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
+                aria-invalid={Boolean(editErrores.rep_apel)}
+                className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${editErrores.rep_apel ? "form-input-invalid" : ""}`}
                 placeholder="Ej. Rodríguez"
               />
+              {editErrores.rep_apel && (
+                <p className="form-error" role="alert">
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_apel}
+                </p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1144,41 +1358,63 @@ export default function RepresentantesTab({
                 Cédula de Identidad
               </label>
               <input
-                required
+                data-field="rep_cedu"
+                name="rep_cedu"
                 inputMode="numeric"
                 maxLength={8}
                 type="text"
                 value={editingRep?.rep_cedu || ""}
                 onChange={(e) => {
+                  const nextVal = sanitizeDocumento(e.target.value, "V");
                   setEditingRep({
                     ...editingRep,
-                    rep_cedu: e.target.value.replace(/\D/g, ""),
+                    rep_cedu: nextVal,
                   });
                   setEditErrores((prev) => ({
                     ...prev,
-                    rep_cedu: validarEditCampo("rep_cedu"),
+                    rep_cedu: validarEditCampo("rep_cedu", nextVal),
                   }));
                 }}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors whitespace-nowrap"
+                onBlur={() =>
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    rep_cedu: validarEditCampo(
+                      "rep_cedu",
+                      editingRep?.rep_cedu,
+                    ),
+                  }))
+                }
+                aria-invalid={Boolean(editErrores.rep_cedu)}
+                className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors whitespace-nowrap ${editErrores.rep_cedu ? "form-input-invalid" : ""}`}
                 placeholder="Ej. 12345678"
               />
               {editErrores.rep_cedu && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  <AlertCircle className="w-3.5 h-3.5 inline-block" />{" "}
-                  {editErrores.rep_cedu}
+                <p className="form-error" role="alert">
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_cedu}
                 </p>
               )}
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Vínculo Legal
+                Vínculo Legal <span className="text-rose-500">*</span>
               </label>
               <select
+                required
+                data-field="rep_rela"
+                name="rep_rela"
                 value={editingRep?.rep_rela || ""}
-                onChange={(e) =>
-                  setEditingRep({ ...editingRep, rep_rela: e.target.value })
-                }
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm focus:outline-none focus:border-brand-600"
+                onChange={(e) => {
+                  const nextVal = e.target.value;
+                  setEditingRep({ ...editingRep, rep_rela: nextVal });
+                  if (editErrores.rep_rela) {
+                    setEditErrores((prev) => ({
+                      ...prev,
+                      rep_rela: validarEditCampo("rep_rela", nextVal),
+                    }));
+                  }
+                }}
+                aria-invalid={Boolean(editErrores.rep_rela)}
+                className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm focus:outline-none focus:border-brand-600 ${editErrores.rep_rela ? "form-input-invalid" : ""}`}
               >
                 <option value="" disabled>
                   Seleccione vínculo...
@@ -1192,69 +1428,145 @@ export default function RepresentantesTab({
                 <option value="Hermano">Hermano</option>
                 <option value="Otro">Otro</option>
               </select>
+              {editErrores.rep_rela && (
+                <p className="form-error" role="alert">
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_rela}
+                </p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Correo Electrónico (acceso)
+                Fecha de Nacimiento
               </label>
               <input
-                required
-                maxLength={50}
-                type="email"
-                value={editingRep?.usu_crro || ""}
+                data-field="rep_fnac"
+                name="rep_fnac"
+                type="date"
+                min={repDateBounds.min}
+                max={repDateBounds.max}
+                value={editingRep?.rep_fnac || ""}
                 onChange={(e) => {
-                  setEditingRep({ ...editingRep, usu_crro: e.target.value });
+                  const nextVal = e.target.value;
+                  setEditingRep({ ...editingRep, rep_fnac: nextVal });
                   setEditErrores((prev) => ({
                     ...prev,
-                    usu_crro: validarEditCampo("usu_crro"),
+                    rep_fnac: validarEditCampo("rep_fnac", nextVal),
                   }));
                 }}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
-                placeholder="correo@ejemplo.com"
+                onBlur={() =>
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    rep_fnac: validarEditCampo(
+                      "rep_fnac",
+                      editingRep?.rep_fnac,
+                    ),
+                  }))
+                }
+                aria-invalid={Boolean(editErrores.rep_fnac)}
+                className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm focus:outline-none focus:border-brand-600 transition-colors ${editErrores.rep_fnac ? "form-input-invalid" : ""}`}
               />
-              {editErrores.usu_crro && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  <AlertCircle className="w-3.5 h-3.5 inline-block" />{" "}
-                  {editErrores.usu_crro}
+              {editErrores.rep_fnac ? (
+                <p className="form-error" role="alert">
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_fnac}
+                </p>
+              ) : (
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Edad permitida: 12 a 75 años
                 </p>
               )}
-              <p className="text-[10px] text-slate-400 mt-1">
-                Se usa para iniciar sesión en SIAT.
-              </p>
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Teléfono de Contacto
               </label>
               <input
-                maxLength={15}
+                data-field="rep_telf"
+                name="rep_telf"
+                inputMode="tel"
+                maxLength={
+                  (editingRep?.rep_telf || "").startsWith("+") ? 13 : 11
+                }
                 type="text"
                 value={editingRep?.rep_telf || ""}
                 onChange={(e) => {
-                  setEditingRep({ ...editingRep, rep_telf: e.target.value });
+                  const nextVal = sanitizeTelefonoVE(e.target.value);
+                  setEditingRep({ ...editingRep, rep_telf: nextVal });
                   setEditErrores((prev) => ({
                     ...prev,
-                    rep_telf: validarEditCampo("rep_telf"),
+                    rep_telf: validarEditCampo("rep_telf", nextVal),
                   }));
                 }}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors"
-                placeholder="+58 412 0000000"
+                onBlur={() =>
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    rep_telf: validarEditCampo(
+                      "rep_telf",
+                      editingRep?.rep_telf,
+                    ),
+                  }))
+                }
+                aria-invalid={Boolean(editErrores.rep_telf)}
+                className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${editErrores.rep_telf ? "form-input-invalid" : ""}`}
+                placeholder="04120000000 o +584120000000"
               />
               {editErrores.rep_telf && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  <AlertCircle className="w-3.5 h-3.5 inline-block" />{" "}
-                  {editErrores.rep_telf}
+                <p className="form-error" role="alert">
+                  <AlertCircle className="w-3.5 h-3.5" /> {editErrores.rep_telf}
                 </p>
               )}
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Correo Electrónico (acceso){" "}
+              <span className="text-rose-500">*</span>
+            </label>
+            <input
+              required
+              data-field="usu_crro"
+              name="usu_crro"
+              maxLength={50}
+              type="email"
+              value={editingRep?.usu_crro || ""}
+              onChange={(e) => {
+                const nextVal = e.target.value;
+                setEditingRep({ ...editingRep, usu_crro: nextVal });
+                if (editErrores.usu_crro) {
+                  setEditErrores((prev) => ({
+                    ...prev,
+                    usu_crro: validarEditCampo("usu_crro", nextVal),
+                  }));
+                }
+              }}
+              onBlur={() =>
+                setEditErrores((prev) => ({
+                  ...prev,
+                  usu_crro: validarEditCampo("usu_crro", editingRep?.usu_crro),
+                }))
+              }
+              aria-invalid={Boolean(editErrores.usu_crro)}
+              className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors ${editErrores.usu_crro ? "form-input-invalid" : ""}`}
+              placeholder="correo@ejemplo.com"
+            />
+            {editErrores.usu_crro && (
+              <p className="form-error" role="alert">
+                <AlertCircle className="w-3.5 h-3.5" /> {editErrores.usu_crro}
+              </p>
+            )}
+            <p className="text-[10px] text-slate-400 mt-1">
+              Se usa para iniciar sesión en SIAT.
+            </p>
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-1 border-t border-slate-200 dark:border-slate-700">
             <button
               type="button"
-              onClick={() => setEditingRep(null)}
+              onClick={() => {
+                setEditingRep(null);
+                setEditErrores({});
+              }}
               className="md:w-auto w-full px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
               Cancelar
@@ -1426,6 +1738,30 @@ export default function RepresentantesTab({
                     </span>
                   </div>
                 </div>
+
+                {previewRep.rep_fnac && (
+                  <div className="sm:col-span-2 flex items-center gap-3 p-3 bg-white dark:bg-slate-850/60 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                    <div className="p-2 bg-amber-50 dark:bg-amber-950/60 rounded-lg text-amber-600 dark:text-amber-400 shrink-0 border border-amber-100 dark:border-amber-900/40">
+                      <Cake className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        Fecha de Nacimiento
+                      </span>
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
+                        {(() => {
+                          const parsed = parseLocalYMD(previewRep.rep_fnac);
+                          if (!parsed) return "—";
+                          return `${parsed.date.toLocaleDateString("es-VE", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })} · ${calcEdad(previewRep.rep_fnac)}`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Pacientes Vinculados */}
@@ -1539,16 +1875,7 @@ export default function RepresentantesTab({
                   onClick={() => {
                     const r = previewRep;
                     setPreviewRep(null);
-                    setEditingRep({
-                      usu_codi: r.usu_codi,
-                      rep_nomb: r.rep_nomb || "",
-                      rep_apel: r.rep_apel || "",
-                      rep_telf: r.rep_telf || "",
-                      rep_rela: r.rep_rela || "",
-                      rep_cedu: r.rep_cedu || "",
-                      rep_foto: r.rep_foto || "",
-                      usu_crro: r.usu_crro || "",
-                    });
+                    openEditRep(r);
                   }}
                   className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 shadow-2xs"
                 >
@@ -1608,22 +1935,7 @@ export default function RepresentantesTab({
                   : [previewRep.tm_ninos].filter(Boolean)
               }
               onUpdateFoto={handleUpdateNinoFoto}
-              onEditNino={(ninoItem) => {
-                setEditingNino({
-                  nin_codi: ninoItem.nin_codi,
-                  nin_nomb: ninoItem.nin_nomb || "",
-                  nin_apel: ninoItem.nin_apel || "",
-                  nin_fnac: ninoItem.nin_fnac
-                    ? ninoItem.nin_fnac.split("T")[0]
-                    : "",
-                  nin_gner: ninoItem.nin_gner || "M",
-                  nin_nivd: ninoItem.nin_nivd || "Nivel 1",
-                  nin_diag: ninoItem.nin_diag || "",
-                  sen_tipo: ninoItem.sensibilidad?.sen_tipo || "",
-                  sen_nvli: ninoItem.sensibilidad?.sen_nvli || "Leve",
-                  sen_nota: ninoItem.sensibilidad?.sen_nota || "",
-                });
-              }}
+              onEditNino={openEditNino}
               onAddDocument={handleAddNinoDocumento}
               uploadingPdf={uploadingPdfNin}
             />
@@ -1635,58 +1947,170 @@ export default function RepresentantesTab({
       {editingNino && (
         <AdminModal
           open={!!editingNino}
-          onClose={() => setEditingNino(null)}
+          onClose={() => {
+            setEditingNino(null);
+            setNinoErrores({});
+          }}
           title="Editar Datos del Paciente"
           subtitle={`${editingNino.nin_nomb || ""} ${editingNino.nin_apel || ""}`.trim()}
           maxWidth="max-w-xl"
           icon={Pencil}
+          hasUnsavedChanges={Boolean(
+            editingNino &&
+            initialEditNinoRef.current &&
+            JSON.stringify(editingNino) !== initialEditNinoRef.current,
+          )}
         >
-          <form onSubmit={handleUpdateNino} className="space-y-4">
+          <form
+            ref={ninoFormRef}
+            noValidate
+            onSubmit={handleUpdateNino}
+            className="space-y-4"
+          >
+            {Object.values(ninoErrores).some(Boolean) && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                <span>
+                  Revisa los campos señalados (
+                  {Object.values(ninoErrores).filter(Boolean).length}) antes de
+                  guardar.
+                </span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="form-label">Nombre(s)</label>
+                <label className="form-label">
+                  Nombre(s) <span className="text-rose-500">*</span>
+                </label>
                 <input
                   required
+                  data-field="nin_nomb"
+                  name="nin_nomb"
+                  maxLength={50}
                   type="text"
                   value={editingNino.nin_nomb || ""}
-                  onChange={(e) =>
-                    setEditingNino({ ...editingNino, nin_nomb: e.target.value })
+                  onChange={(e) => {
+                    const nextVal = sanitizeNombrePersona(e.target.value, 50);
+                    setEditingNino({ ...editingNino, nin_nomb: nextVal });
+                    if (ninoErrores.nin_nomb) {
+                      setNinoErrores((prev) => ({
+                        ...prev,
+                        nin_nomb: validarNinoCampo("nin_nomb", nextVal),
+                      }));
+                    }
+                  }}
+                  onBlur={() =>
+                    setNinoErrores((prev) => ({
+                      ...prev,
+                      nin_nomb: validarNinoCampo(
+                        "nin_nomb",
+                        editingNino.nin_nomb,
+                      ),
+                    }))
                   }
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors text-base sm:text-sm"
+                  aria-invalid={Boolean(ninoErrores.nin_nomb)}
+                  className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors text-base sm:text-sm ${ninoErrores.nin_nomb ? "form-input-invalid" : ""}`}
                   placeholder="Ej. José Andrés"
                 />
+                {ninoErrores.nin_nomb && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {ninoErrores.nin_nomb}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="form-label">Apellido(s)</label>
+                <label className="form-label">
+                  Apellido(s) <span className="text-rose-500">*</span>
+                </label>
                 <input
                   required
+                  data-field="nin_apel"
+                  name="nin_apel"
+                  maxLength={50}
                   type="text"
                   value={editingNino.nin_apel || ""}
-                  onChange={(e) =>
-                    setEditingNino({ ...editingNino, nin_apel: e.target.value })
+                  onChange={(e) => {
+                    const nextVal = sanitizeNombrePersona(e.target.value, 50);
+                    setEditingNino({ ...editingNino, nin_apel: nextVal });
+                    if (ninoErrores.nin_apel) {
+                      setNinoErrores((prev) => ({
+                        ...prev,
+                        nin_apel: validarNinoCampo("nin_apel", nextVal),
+                      }));
+                    }
+                  }}
+                  onBlur={() =>
+                    setNinoErrores((prev) => ({
+                      ...prev,
+                      nin_apel: validarNinoCampo(
+                        "nin_apel",
+                        editingNino.nin_apel,
+                      ),
+                    }))
                   }
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors text-base sm:text-sm"
+                  aria-invalid={Boolean(ninoErrores.nin_apel)}
+                  className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors text-base sm:text-sm ${ninoErrores.nin_apel ? "form-input-invalid" : ""}`}
                   placeholder="Ej. Rodríguez Pérez"
                 />
+                {ninoErrores.nin_apel && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {ninoErrores.nin_apel}
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="form-label">Fecha de Nacimiento</label>
+                <label className="form-label">
+                  Fecha de Nacimiento <span className="text-rose-500">*</span>
+                </label>
                 <input
                   required
+                  data-field="nin_fnac"
+                  name="nin_fnac"
                   type="date"
+                  min={childDateBounds.min}
+                  max={childDateBounds.max}
                   value={editingNino.nin_fnac || ""}
-                  onChange={(e) =>
-                    setEditingNino({ ...editingNino, nin_fnac: e.target.value })
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    setEditingNino({ ...editingNino, nin_fnac: nextVal });
+                    setNinoErrores((prev) => ({
+                      ...prev,
+                      nin_fnac: validarNinoCampo("nin_fnac", nextVal),
+                    }));
+                  }}
+                  onBlur={() =>
+                    setNinoErrores((prev) => ({
+                      ...prev,
+                      nin_fnac: validarNinoCampo(
+                        "nin_fnac",
+                        editingNino.nin_fnac,
+                      ),
+                    }))
                   }
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors text-base sm:text-sm"
+                  aria-invalid={Boolean(ninoErrores.nin_fnac)}
+                  className={`w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/30 p-2.5 text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-600 transition-colors text-base sm:text-sm ${ninoErrores.nin_fnac ? "form-input-invalid" : ""}`}
                 />
+                {ninoErrores.nin_fnac && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {ninoErrores.nin_fnac}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="form-label">Sexo Biológico</label>
                 <select
+                  data-field="nin_gner"
+                  name="nin_gner"
                   value={editingNino.nin_gner || "M"}
                   onChange={(e) =>
                     setEditingNino({ ...editingNino, nin_gner: e.target.value })
@@ -1704,6 +2128,8 @@ export default function RepresentantesTab({
                 Nivel de Soporte Requerido (DSM-5)
               </label>
               <select
+                data-field="nin_nivd"
+                name="nin_nivd"
                 value={editingNino.nin_nivd || "Nivel 1"}
                 onChange={(e) =>
                   setEditingNino({ ...editingNino, nin_nivd: e.target.value })
@@ -1721,54 +2147,190 @@ export default function RepresentantesTab({
             </div>
 
             <div>
-              <label className="form-label">Diagnóstico Clínico</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="form-label form-label-inline">
+                  Diagnóstico Clínico
+                </label>
+                <span
+                  className={`text-[11px] font-medium ${(editingNino.nin_diag || "").length >= 230 ? "text-rose-500" : "text-slate-400"}`}
+                >
+                  {(editingNino.nin_diag || "").length}/255
+                </span>
+              </div>
               <textarea
                 rows={3}
+                data-field="nin_diag"
+                name="nin_diag"
+                maxLength={255}
                 value={editingNino.nin_diag || ""}
-                onChange={(e) =>
-                  setEditingNino({ ...editingNino, nin_diag: e.target.value })
-                }
-                className="form-input text-base sm:text-sm"
+                onChange={(e) => {
+                  const nextVal = e.target.value;
+                  setEditingNino({ ...editingNino, nin_diag: nextVal });
+                  if (ninoErrores.nin_diag) {
+                    setNinoErrores((prev) => ({
+                      ...prev,
+                      nin_diag: validarNinoCampo("nin_diag", nextVal),
+                    }));
+                  }
+                }}
+                aria-invalid={Boolean(ninoErrores.nin_diag)}
+                className={`form-input text-base sm:text-sm ${ninoErrores.nin_diag ? "form-input-invalid" : ""}`}
                 placeholder="Describa el diagnóstico médico u observaciones iniciales..."
               />
+              {ninoErrores.nin_diag && (
+                <p className="form-error" role="alert">
+                  <AlertCircle className="w-3.5 h-3.5" /> {ninoErrores.nin_diag}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div>
                 <label className="form-label">Perfil Sensorial</label>
                 <select
+                  data-field="sen_tipo"
+                  name="sen_tipo"
                   value={editingNino.sen_tipo || ""}
-                  onChange={(e) =>
-                    setEditingNino({ ...editingNino, sen_tipo: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const nextTipo = e.target.value;
+                    const updated = {
+                      ...editingNino,
+                      sen_tipo: nextTipo,
+                      sen_nvli: nextTipo ? editingNino.sen_nvli || "Leve" : "",
+                    };
+                    setEditingNino(updated);
+                    if (!nextTipo) {
+                      setNinoErrores((prev) => ({ ...prev, sen_nvli: "" }));
+                    }
+                  }}
                   className="form-select text-base sm:text-sm"
                 >
                   <option value="">Sin especificar</option>
-                  <option value="Hiperesensible">Hiperesensible</option>
-                  <option value="Hiposensible">Hiposensible</option>
-                  <option value="Mixto">Mixto</option>
+                  <optgroup label="Perfiles Generales">
+                    <option value="Hiperesensible">Hiperesensible</option>
+                    <option value="Hiposensible">Hiposensible</option>
+                    <option value="Mixto">Mixto</option>
+                  </optgroup>
+                  <optgroup label="Sensorialidades Específicas">
+                    <option value="Auditiva">
+                      Hipersensibilidad Auditiva (Hiperacusia)
+                    </option>
+                    <option value="Táctil">
+                      Hipersensibilidad Táctil (Táctil Defensiva)
+                    </option>
+                    <option value="Visual">
+                      Hipersensibilidad Visual (Fotofobia)
+                    </option>
+                    <option value="Olfativa">Hipersensibilidad Olfativa</option>
+                    <option value="Vestibular">
+                      Procesamiento Vestibular Atípico
+                    </option>
+                    <option value="Propioceptiva">
+                      Procesamiento Propioceptivo Atípico
+                    </option>
+                  </optgroup>
+                  <optgroup label="Comorbilidades">
+                    <option value="TDAH">TDAH</option>
+                    <option value="Ansiedad">Ansiedad Generalizada</option>
+                    <option value="Epilepsia">
+                      Epilepsia / Trastorno Convulsivo
+                    </option>
+                    <option value="TOC">TOC</option>
+                    <option value="DI">Discapacidad Intelectual</option>
+                    <option value="Otro">Otra condición</option>
+                  </optgroup>
                 </select>
               </div>
               <div>
-                <label className="form-label">Severidad Sensorial</label>
+                <label className="form-label">
+                  Severidad Sensorial{" "}
+                  {editingNino.sen_tipo && (
+                    <span className="text-rose-500">*</span>
+                  )}
+                </label>
                 <select
+                  data-field="sen_nvli"
+                  name="sen_nvli"
+                  disabled={!editingNino.sen_tipo}
                   value={editingNino.sen_nvli || "Leve"}
-                  onChange={(e) =>
-                    setEditingNino({ ...editingNino, sen_nvli: e.target.value })
-                  }
-                  className="form-select text-base sm:text-sm"
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    setEditingNino({ ...editingNino, sen_nvli: nextVal });
+                    if (ninoErrores.sen_nvli) {
+                      setNinoErrores((prev) => ({
+                        ...prev,
+                        sen_nvli: validarNinoCampo(
+                          "sen_nvli",
+                          nextVal,
+                          editingNino,
+                        ),
+                      }));
+                    }
+                  }}
+                  aria-invalid={Boolean(ninoErrores.sen_nvli)}
+                  className={`form-select text-base sm:text-sm ${ninoErrores.sen_nvli ? "form-input-invalid" : ""}`}
                 >
                   <option value="Leve">Leve</option>
                   <option value="Moderado">Moderado</option>
                   <option value="Severo">Severo</option>
                 </select>
+                {ninoErrores.sen_nvli && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {ninoErrores.sen_nvli}
+                  </p>
+                )}
               </div>
             </div>
+
+            {editingNino.sen_tipo && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="form-label form-label-inline">
+                    Notas de Condición Sensorial
+                  </label>
+                  <span
+                    className={`text-[11px] font-medium ${(editingNino.sen_nota || "").length >= 230 ? "text-rose-500" : "text-slate-400"}`}
+                  >
+                    {(editingNino.sen_nota || "").length}/255
+                  </span>
+                </div>
+                <textarea
+                  rows={2}
+                  data-field="sen_nota"
+                  name="sen_nota"
+                  maxLength={255}
+                  value={editingNino.sen_nota || ""}
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    setEditingNino({ ...editingNino, sen_nota: nextVal });
+                    if (ninoErrores.sen_nota) {
+                      setNinoErrores((prev) => ({
+                        ...prev,
+                        sen_nota: validarNinoCampo("sen_nota", nextVal),
+                      }));
+                    }
+                  }}
+                  aria-invalid={Boolean(ninoErrores.sen_nota)}
+                  className={`form-input text-base sm:text-sm ${ninoErrores.sen_nota ? "form-input-invalid" : ""}`}
+                  placeholder="Detonantes o recomendaciones sensoriales específicas..."
+                />
+                {ninoErrores.sen_nota && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {ninoErrores.sen_nota}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
               <button
                 type="button"
-                onClick={() => setEditingNino(null)}
+                onClick={() => {
+                  setEditingNino(null);
+                  setNinoErrores({});
+                }}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-h-[44px]"
               >
                 Cancelar

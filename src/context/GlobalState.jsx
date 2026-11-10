@@ -10,7 +10,7 @@ import React, {
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../api/axios";
 import useIdleTimer from "../hooks/useIdleTimer";
-import { toastError } from "../utils/errorHandler";
+import { toastError, extractFieldErrors } from "../utils/errorHandler";
 import { disconnectSocket } from "../hooks/socket";
 import {
   getSavedSelectedChild,
@@ -913,27 +913,48 @@ export const GlobalProvider = ({ children }) => {
     categories[0] ||
     null;
 
+  const ROUTINE_FIELD_MAP = {
+    act_trea: "title",
+    cat_codi: "category",
+    act_desc: "description",
+    act_time: "durationStr",
+    act_med: "mediaUrl",
+    act_guia: "steps",
+    act_meta: "materials",
+  };
+
   const createRoutine = async (formData) => {
     try {
       const cat = resolveCategory(formData.category);
       if (!cat) {
         showToast("⚠️ No hay categorías disponibles. Crea una primero.");
-        return;
+        return {
+          ok: false,
+          fieldErrors: {
+            category: "No hay categorías disponibles. Crea una primero.",
+          },
+        };
       }
 
       const payload = {
         cat_codi: cat.cat_codi,
-        act_trea: formData.title,
-        act_desc: formData.description || undefined,
+        act_trea: String(formData.title || "").trim(),
+        act_desc: formData.description?.trim() || undefined,
         act_meta: formData.materials?.trim() || undefined,
         act_difi: formData.difficulty || "Baja",
         act_med: formData.mediaUrl?.trim() || undefined,
         act_guia: formData.steps
           ? formData.steps
-              .map((s, index) => `${index + 1}. ${s.text} (${s.time})`)
+              .map(
+                (s, index) =>
+                  `${index + 1}. ${String(s.text || "").trim()} (${String(s.time || "5 min").trim()})`,
+              )
               .join("\n")
           : "",
-        act_time: parseInt(formData.durationStr) || 15,
+        act_time: Math.min(
+          600,
+          Math.max(1, parseInt(formData.durationStr, 10) || 15),
+        ),
         act_visib:
           formData.visibility === "ESPECIALISTA" ? "ESPECIALISTA" : "AMBOS",
         nin_codi: selectedChildId || null,
@@ -942,9 +963,14 @@ export const GlobalProvider = ({ children }) => {
       await api.post("/sesiones/actividades", payload);
       showToast("✨ Terapia creada y guardada en el backend.");
       await fetchRoutines();
+      return { ok: true, fieldErrors: {} };
     } catch (err) {
       console.error("Error creating routine:", err);
       toastError(err, showToast, "Error al guardar la rutina.");
+      return {
+        ok: false,
+        fieldErrors: extractFieldErrors(err, ROUTINE_FIELD_MAP),
+      };
     }
   };
 
@@ -953,22 +979,33 @@ export const GlobalProvider = ({ children }) => {
       const cat = resolveCategory(formData.category);
       if (!cat) {
         showToast("⚠️ No hay categorías disponibles. Crea una primero.");
-        return;
+        return {
+          ok: false,
+          fieldErrors: {
+            category: "No hay categorías disponibles. Crea una primero.",
+          },
+        };
       }
 
       const payload = {
         cat_codi: cat.cat_codi,
-        act_trea: formData.title,
-        act_desc: formData.description || undefined,
+        act_trea: String(formData.title || "").trim(),
+        act_desc: formData.description?.trim() || undefined,
         act_meta: formData.materials?.trim() || undefined,
         act_difi: formData.difficulty || "Baja",
         act_med: formData.mediaUrl?.trim() || undefined,
         act_guia: formData.steps
           ? formData.steps
-              .map((s, index) => `${index + 1}. ${s.text} (${s.time})`)
+              .map(
+                (s, index) =>
+                  `${index + 1}. ${String(s.text || "").trim()} (${String(s.time || "5 min").trim()})`,
+              )
               .join("\n")
           : "",
-        act_time: parseInt(formData.durationStr) || 15,
+        act_time: Math.min(
+          600,
+          Math.max(1, parseInt(formData.durationStr, 10) || 15),
+        ),
         act_visib:
           formData.visibility === "ESPECIALISTA" ? "ESPECIALISTA" : "AMBOS",
       };
@@ -976,9 +1013,14 @@ export const GlobalProvider = ({ children }) => {
       await api.put(`/sesiones/actividades/${act_codi}`, payload);
       showToast("✅ Terapia actualizada correctamente.");
       await fetchRoutines();
+      return { ok: true, fieldErrors: {} };
     } catch (err) {
       console.error("Error updating routine:", err);
       toastError(err, showToast, "Error al actualizar la rutina.");
+      return {
+        ok: false,
+        fieldErrors: extractFieldErrors(err, ROUTINE_FIELD_MAP),
+      };
     }
   };
 
@@ -996,14 +1038,22 @@ export const GlobalProvider = ({ children }) => {
   const createCategory = async (cat_nomb, cat_deta = "") => {
     try {
       await api.post("/sesiones/categorias", {
-        cat_nomb,
-        cat_deta: cat_deta || undefined,
+        cat_nomb: String(cat_nomb || "").trim(),
+        cat_deta: String(cat_deta || "").trim() || undefined,
       });
       showToast("✅ Categoría creada.");
       await fetchCategories();
+      return { ok: true, fieldErrors: {} };
     } catch (err) {
       console.error("Error creating category:", err);
       toastError(err, showToast, "Error al crear la categoría.");
+      return {
+        ok: false,
+        fieldErrors: extractFieldErrors(err, {
+          cat_nomb: "cat_nomb",
+          cat_deta: "cat_deta",
+        }),
+      };
     }
   };
 
@@ -1012,9 +1062,17 @@ export const GlobalProvider = ({ children }) => {
       await api.put(`/sesiones/categorias/${cat_codi}`, data);
       showToast("✅ Categoría actualizada.");
       await fetchCategories();
+      return { ok: true, fieldErrors: {} };
     } catch (err) {
       console.error("Error updating category:", err);
       toastError(err, showToast, "Error al actualizar la categoría.");
+      return {
+        ok: false,
+        fieldErrors: extractFieldErrors(err, {
+          cat_nomb: "cat_nomb",
+          cat_deta: "cat_deta",
+        }),
+      };
     }
   };
 
@@ -1484,16 +1542,27 @@ export const GlobalProvider = ({ children }) => {
 
   const crearPeiGoal = async (childId, goalData) => {
     try {
+      const metDesc = (goalData.met_desc ?? goalData.goal ?? "").trim();
+      const rawBaseline = goalData.met_line ?? goalData.baseline;
+      const parsedBaseline =
+        rawBaseline !== "" &&
+        rawBaseline !== null &&
+        rawBaseline !== undefined &&
+        !isNaN(Number(rawBaseline))
+          ? parseFloat(rawBaseline)
+          : 0;
+
       const payload = {
         nin_codi: childId,
-        met_desc: goalData.goal,
-        met_categ: goalData.category || "General",
-        met_ttria: parseInt(goalData.totalTrials) || 20,
-        met_line: parseFloat(goalData.baseline) || 0,
-        met_crit: goalData.criterio || null,
-        met_obse: goalData.observaciones || null,
-        met_fini: goalData.fechaInicio || new Date(),
-        met_ffin: goalData.fechaFin || null,
+        met_desc: metDesc,
+        met_categ: goalData.met_categ || goalData.category || "General",
+        met_ttria:
+          parseInt(goalData.met_ttria ?? goalData.totalTrials, 10) || 20,
+        met_line: parsedBaseline,
+        met_crit: (goalData.met_crit ?? goalData.criterio) || null,
+        met_obse: (goalData.met_obse ?? goalData.observaciones) || null,
+        met_fini: goalData.met_fini || goalData.fechaInicio || new Date(),
+        met_ffin: goalData.met_ffin || goalData.fechaFin || null,
       };
 
       await api.post("/metas", payload);

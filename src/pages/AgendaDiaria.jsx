@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import {
@@ -9,6 +9,8 @@ import {
   FileText,
   CheckCircle2,
   AlertTriangle,
+  AlertCircle,
+  Loader2,
   Plus,
   Star,
   MessageSquare,
@@ -30,6 +32,8 @@ import {
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 import { useSmartwatch } from "../context/SmartwatchContext";
+import { validateRequiredText, focusFirstError } from "../utils/validators";
+import ConfirmDialog from "../components/shared/ConfirmDialog";
 
 import PageTitle from "../components/ui/PageTitle";
 import TherapySessionPlayer from "../components/shared/TherapySessionPlayer";
@@ -104,6 +108,36 @@ const getEffectiveSteps = (routine) => {
   return [{ text: fallback, time: minutes * 60 }];
 };
 
+const to24HourTime = (raw = "") => {
+  const s = String(raw || "")
+    .trim()
+    .toUpperCase();
+  const m24 = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (m24) return `${m24[1].padStart(2, "0")}:${m24[2]}`;
+  const m12 = s.match(/^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/);
+  if (m12) {
+    let h = parseInt(m12[1], 10);
+    const min = m12[2];
+    const ampm = m12[3];
+    if (ampm === "PM" && h < 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${min}`;
+  }
+  return "09:00";
+};
+
+const formatDisplayTime12h = (hhmm = "") => {
+  const match = String(hhmm || "")
+    .trim()
+    .match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (!match) return hhmm || "09:00 AM";
+  let h = parseInt(match[1], 10);
+  const min = match[2];
+  const suffix = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${String(h).padStart(2, "0")}:${min} ${suffix}`;
+};
+
 export default function AgendaDiaria() {
   const {
     nomNino,
@@ -115,6 +149,7 @@ export default function AgendaDiaria() {
     activeChild,
     listaNinos = [],
     routines,
+    categories = [],
     createRoutine,
     fetchHistorialCompleto,
   } = useGlobalContext();
@@ -185,15 +220,15 @@ export default function AgendaDiaria() {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [taskForm, setTaskForm] = useState({
     title: "",
-    time: "",
+    time: "09:00",
     icon: "food",
   });
+  const [taskErrors, setTaskErrors] = useState({});
+  const taskFormRef = useRef(null);
 
   const handleOpenCreateTask = () => {
-    const defaultTime = new Date().toLocaleTimeString("es-ES", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const now = new Date();
+    const defaultTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     setTaskModalMode("create");
     setEditingTaskId(null);
     setTaskForm({
@@ -201,6 +236,7 @@ export default function AgendaDiaria() {
       time: defaultTime,
       icon: "food",
     });
+    setTaskErrors({});
     setShowTaskModal(true);
   };
 
@@ -210,25 +246,54 @@ export default function AgendaDiaria() {
     setEditingTaskId(taskItem.id);
     setTaskForm({
       title: taskItem.task,
-      time: taskItem.time,
+      time: to24HourTime(taskItem.time),
       icon: taskItem.icon || "food",
     });
+    setTaskErrors({});
     setShowTaskModal(true);
   };
 
+  useEffect(() => {
+    if (!showTaskModal) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowTaskModal(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showTaskModal]);
+
   const handleSaveTask = (e) => {
     e.preventDefault();
-    const title = (taskForm.title || "").trim();
-    if (!title) {
-      showToast("⚠️ Ingresa el nombre de la tarea.");
+    const errs = {};
+    const titleErr = validateRequiredText(
+      taskForm.title,
+      "El nombre de la tarea",
+      { min: 2, max: 80 },
+    );
+    if (titleErr) errs.title = titleErr;
+
+    const timeRaw = String(taskForm.time || "").trim();
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(timeRaw)) {
+      errs.time = "Selecciona una hora válida";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setTaskErrors(errs);
+      focusFirstError(errs, taskFormRef);
       return;
     }
+
+    const title = taskForm.title.trim();
+    const formattedTime = formatDisplayTime12h(timeRaw);
 
     if (taskModalMode === "create") {
       const newTask = {
         id: `custom_${Date.now()}`,
         task: title,
-        time: taskForm.time || "09:00 AM",
+        time: formattedTime,
         done: false,
         icon: taskForm.icon || "food",
       };
@@ -241,7 +306,7 @@ export default function AgendaDiaria() {
             ? {
                 ...item,
                 task: title,
-                time: taskForm.time || item.time,
+                time: formattedTime,
                 icon: taskForm.icon || item.icon,
               }
             : item,
@@ -250,6 +315,7 @@ export default function AgendaDiaria() {
       showToast(`✏️ Tarea "${title}" actualizada.`);
     }
 
+    setTaskErrors({});
     setShowTaskModal(false);
   };
 
@@ -267,8 +333,16 @@ export default function AgendaDiaria() {
   const [notes, setNotes] = useState("");
 
   // 4. Advanced Routine Builder Drawer States
+  const categoryOptions = useMemo(
+    () =>
+      categories.length > 0
+        ? categories.map((c) => c.cat_nomb)
+        : ["Higiene", "Terapéutico", "Alimentación", "Educativo", "Regulación"],
+    [categories],
+  );
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("general"); // 'general', 'steps', 'media'
+  const [activeTab, setActiveTab] = useState("general"); // 'general', 'steps'
   const [formData, setFormData] = useState({
     title: "",
     category: "Higiene",
@@ -278,6 +352,98 @@ export default function AgendaDiaria() {
     steps: [{ id: Date.now(), text: "", time: "5 min" }],
     mediaType: "none",
     mediaUrl: "",
+  });
+  const [routineErrors, setRoutineErrors] = useState({});
+  const [isRoutineSaving, setIsRoutineSaving] = useState(false);
+  const [showDiscardRoutineConfirm, setShowDiscardRoutineConfirm] =
+    useState(false);
+  const routineFormRef = useRef(null);
+  const routineInitialRef = useRef(null);
+
+  const normalizeRoutineSnapshot = (data) =>
+    JSON.stringify({
+      title: String(data?.title || ""),
+      category: String(data?.category || ""),
+      durationStr: String(data?.durationStr || ""),
+      difficulty: String(data?.difficulty || "Baja"),
+      steps: (data?.steps || []).map((s) => ({
+        text: String(s?.text || ""),
+        time: String(s?.time || ""),
+      })),
+    });
+
+  const isRoutineDirty = useMemo(() => {
+    if (!isModalOpen || !routineInitialRef.current) return false;
+    return normalizeRoutineSnapshot(formData) !== routineInitialRef.current;
+  }, [isModalOpen, formData]);
+
+  const routineTabErrors = useMemo(() => {
+    const counts = { general: 0, steps: 0 };
+    Object.entries(routineErrors).forEach(([k, v]) => {
+      if (!v) return;
+      if (k === "steps" || k.startsWith("step_")) counts.steps += 1;
+      else counts.general += 1;
+    });
+    return counts;
+  }, [routineErrors]);
+
+  const clearRoutineError = (field) => {
+    setRoutineErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const openRoutineModal = () => {
+    const initial = {
+      title: "",
+      category: categoryOptions[0] || "Higiene",
+      durationStr: "15 min",
+      difficulty: "Baja",
+      materials: "",
+      steps: [{ id: Date.now(), text: "", time: "5 min" }],
+      mediaType: "none",
+      mediaUrl: "",
+    };
+    setFormData(initial);
+    routineInitialRef.current = normalizeRoutineSnapshot(initial);
+    setRoutineErrors({});
+    setActiveTab("general");
+    setIsModalOpen(true);
+  };
+
+  const handleDirectCloseRoutine = () => {
+    setIsModalOpen(false);
+    setRoutineErrors({});
+    setShowDiscardRoutineConfirm(false);
+    setActiveTab("general");
+  };
+
+  const handleAttemptCloseRoutine = () => {
+    if (isRoutineSaving) return;
+    if (isRoutineDirty) {
+      setShowDiscardRoutineConfirm(true);
+    } else {
+      handleDirectCloseRoutine();
+    }
+  };
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (showDiscardRoutineConfirm) {
+          setShowDiscardRoutineConfirm(false);
+        } else {
+          handleAttemptCloseRoutine();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   });
 
   // Timer Effect
@@ -474,47 +640,142 @@ export default function AgendaDiaria() {
 
   // Builder Drawer Handlers
   const handleAddStep = () => {
-    setFormData({
-      ...formData,
-      steps: [...formData.steps, { id: Date.now(), text: "", time: "5 min" }],
-    });
+    setFormData((prev) => ({
+      ...prev,
+      steps: [...prev.steps, { id: Date.now(), text: "", time: "5 min" }],
+    }));
+    clearRoutineError("steps");
   };
 
   const handleRemoveStep = (idToRemove) => {
-    setFormData({
-      ...formData,
-      steps: formData.steps.filter((s) => s.id !== idToRemove),
+    setFormData((prev) => ({
+      ...prev,
+      steps: prev.steps.filter((s) => s.id !== idToRemove),
+    }));
+    setRoutineErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((k) => {
+        if (k === "steps" || k.startsWith("step_")) delete next[k];
+      });
+      return next;
     });
   };
 
-  const handleStepChange = (id, field, value) => {
-    setFormData({
-      ...formData,
-      steps: formData.steps.map((s) =>
+  const handleStepChange = (id, field, value, index) => {
+    setFormData((prev) => ({
+      ...prev,
+      steps: prev.steps.map((s) =>
         s.id === id ? { ...s, [field]: value } : s,
       ),
-    });
+    }));
+    if (field === "text" && index !== undefined) {
+      clearRoutineError(`step_${index}`);
+    }
+    clearRoutineError("steps");
+  };
+
+  const validateAgendaRoutine = (data) => {
+    const errs = {};
+    const titleErr = validateRequiredText(
+      data.title,
+      "El nombre de la terapia",
+      {
+        min: 3,
+        max: 60,
+      },
+    );
+    if (titleErr) errs.title = titleErr;
+
+    if (!String(data.category || "").trim()) {
+      errs.category = "Selecciona una categoría";
+    }
+
+    const durRaw = String(data.durationStr || "").trim();
+    const durMatch = durRaw.match(/\d+/);
+    const durNum = durMatch ? parseInt(durMatch[0], 10) : NaN;
+    if (!durRaw) {
+      errs.durationStr = "La duración estimada es obligatoria";
+    } else if (Number.isNaN(durNum) || durNum < 1 || durNum > 600) {
+      errs.durationStr = "Ingresa entre 1 y 600 minutos (Ej. 15 min)";
+    }
+
+    if (!Array.isArray(data.steps) || data.steps.length === 0) {
+      errs.steps = "Agrega al menos 1 paso estructurado";
+    } else {
+      data.steps.forEach((step, idx) => {
+        const txt = String(step?.text || "").trim();
+        if (!txt) {
+          errs[`step_${idx}`] = `El paso ${idx + 1} no puede estar vacío`;
+        } else if (txt.length < 2) {
+          errs[`step_${idx}`] =
+            `El paso ${idx + 1} debe tener al menos 2 caracteres`;
+        }
+      });
+    }
+    return errs;
   };
 
   const handleCreateRoutine = async (e) => {
     e.preventDefault();
+    if (isRoutineSaving) return;
     if (userRole === "REPRESENTANTE") {
       showToast("⚠️ Solo el especialista puede crear nuevas terapias.");
       return;
     }
-    await createRoutine(formData);
-    setIsModalOpen(false);
-    setFormData({
-      title: "",
-      category: "Higiene",
-      durationStr: "15 min",
-      difficulty: "Baja",
-      materials: "",
-      steps: [{ id: Date.now(), text: "", time: "5 min" }],
-      mediaType: "none",
-      mediaUrl: "",
-    });
-    setActiveTab("general");
+
+    const errs = validateAgendaRoutine(formData);
+    if (Object.keys(errs).length > 0) {
+      setRoutineErrors(errs);
+      const firstInvalidTab = Object.keys(errs).some(
+        (k) => errs[k] && k !== "steps" && !k.startsWith("step_"),
+      )
+        ? "general"
+        : "steps";
+      setActiveTab(firstInvalidTab);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          focusFirstError(errs, routineFormRef);
+        });
+      });
+      return;
+    }
+
+    setIsRoutineSaving(true);
+    try {
+      const res = await createRoutine(formData);
+      if (res && res.ok === false) {
+        const srvErrors = res.fieldErrors || {};
+        if (Object.keys(srvErrors).length > 0) {
+          setRoutineErrors(srvErrors);
+          const firstServerTab = Object.keys(srvErrors).some(
+            (k) => srvErrors[k] && (k === "steps" || k.startsWith("step_")),
+          )
+            ? "steps"
+            : "general";
+          setActiveTab(firstServerTab);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              focusFirstError(srvErrors, routineFormRef);
+            });
+          });
+        }
+        return;
+      }
+
+      handleDirectCloseRoutine();
+      setFormData({
+        title: "",
+        category: categoryOptions[0] || "Higiene",
+        durationStr: "15 min",
+        difficulty: "Baja",
+        materials: "",
+        steps: [{ id: Date.now(), text: "", time: "5 min" }],
+        mediaType: "none",
+        mediaUrl: "",
+      });
+    } finally {
+      setIsRoutineSaving(false);
+    }
   };
 
   // Persistir agenda en localStorage al cambiar
@@ -556,7 +817,7 @@ export default function AgendaDiaria() {
                   </div>
                   {userRole !== "REPRESENTANTE" && (
                     <button
-                      onClick={() => setIsModalOpen(true)}
+                      onClick={openRoutineModal}
                       className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm flex items-center gap-2 text-sm transition-transform hover:scale-102 shrink-0"
                     >
                       <Plus className="w-5 h-5" /> Crear Nueva Terapia
@@ -1003,8 +1264,14 @@ export default function AgendaDiaria() {
 
             {/* Modal / Drawer para Constructor Avanzado de Rutinas */}
             {isModalOpen && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm transition-all duration-300">
-                <div className="w-full max-w-xl h-full bg-white dark:bg-[#0F172A] shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col border-l border-slate-200 dark:border-slate-850">
+              <div
+                className="fixed inset-0 z-[100] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm transition-all duration-300"
+                onClick={handleAttemptCloseRoutine}
+              >
+                <div
+                  className="w-full max-w-xl h-full bg-white dark:bg-[#0F172A] shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col border-l border-slate-200 dark:border-slate-850"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {/* Drawer Header */}
                   <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-850 flex justify-between items-center bg-slate-50 dark:bg-[#1E293B]">
                     <div>
@@ -1016,8 +1283,10 @@ export default function AgendaDiaria() {
                       </p>
                     </div>
                     <button
-                      onClick={() => setIsModalOpen(false)}
+                      type="button"
+                      onClick={handleAttemptCloseRoutine}
                       className="p-1.5 bg-white dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors"
+                      aria-label="Cerrar constructor"
                     >
                       <svg
                         className="w-5 h-5"
@@ -1037,91 +1306,174 @@ export default function AgendaDiaria() {
 
                   {/* Tabs Nav */}
                   <div className="flex px-6 pt-3 bg-slate-50 dark:bg-[#1E293B] border-b border-slate-200 dark:border-slate-850 gap-4">
-                    <button
-                      onClick={() => setActiveTab("general")}
-                      className={`pb-2.5 text-xs font-bold border-b-2 transition-colors ${activeTab === "general" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500"}`}
-                    >
-                      Detalles Clínicos
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("steps")}
-                      className={`pb-2.5 text-xs font-bold border-b-2 transition-colors ${activeTab === "steps" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500"}`}
-                    >
-                      Paso a Paso
-                    </button>
+                    {[
+                      { id: "general", label: "Detalles Clínicos" },
+                      { id: "steps", label: "Paso a Paso" },
+                    ].map((tab) => {
+                      const errCount = routineTabErrors[tab.id] || 0;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`pb-2.5 text-xs font-bold border-b-2 transition-colors flex items-center gap-1.5 ${
+                            activeTab === tab.id
+                              ? "border-blue-600 text-blue-600"
+                              : errCount > 0
+                                ? "border-transparent text-rose-600 dark:text-rose-400"
+                                : "border-transparent text-slate-500"
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                          {errCount > 0 && (
+                            <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-black leading-none">
+                              {errCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Drawer Body */}
                   <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-[#0F172A]">
                     <form
                       id="create-routine-form"
+                      ref={routineFormRef}
+                      noValidate
                       onSubmit={handleCreateRoutine}
                       className="space-y-6"
                     >
+                      {Object.values(routineErrors).filter(Boolean).length >
+                        0 && (
+                        <div
+                          role="alert"
+                          className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 flex items-center gap-2 text-xs font-semibold text-rose-700 dark:text-rose-300"
+                        >
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>
+                            Revisa los campos señalados en rojo antes de
+                            guardar.
+                          </span>
+                        </div>
+                      )}
+
                       {activeTab === "general" && (
                         <div className="space-y-5 animate-in fade-in">
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                              Nombre de la Terapia
-                            </label>
+                          <div className="space-y-1.5" data-field="title">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                Nombre de la Terapia{" "}
+                                <span className="text-rose-500">*</span>
+                              </label>
+                              <span
+                                className={`text-[10px] font-semibold tabular-nums ${
+                                  formData.title.length >= 60
+                                    ? "text-rose-500"
+                                    : "text-slate-400"
+                                }`}
+                              >
+                                {formData.title.length}/60
+                              </span>
+                            </div>
                             <input
                               type="text"
-                              required
+                              name="title"
+                              maxLength={60}
                               value={formData.title}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setFormData({
                                   ...formData,
                                   title: e.target.value,
-                                })
-                              }
-                              className="w-full px-4 py-3 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-750 rounded-xl outline-none focus:border-blue-500 text-xs font-semibold text-slate-900 dark:text-white"
+                                });
+                                clearRoutineError("title");
+                              }}
+                              aria-invalid={Boolean(routineErrors.title)}
+                              className={`w-full px-4 py-3 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-750 rounded-xl outline-none focus:border-blue-500 text-xs font-semibold text-slate-900 dark:text-white ${
+                                routineErrors.title ? "form-input-invalid" : ""
+                              }`}
                               placeholder="Ej. Terapia Sensorial con Espuma"
                             />
+                            {routineErrors.title && (
+                              <p role="alert" className="form-error">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{routineErrors.title}</span>
+                              </p>
+                            )}
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                Categoría
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5" data-field="category">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">
+                                Categoría{" "}
+                                <span className="text-rose-500">*</span>
                               </label>
                               <select
+                                name="category"
                                 value={formData.category}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   setFormData({
                                     ...formData,
                                     category: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-3 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-750 rounded-xl outline-none focus:border-blue-500 text-xs font-semibold text-slate-900 dark:text-white"
+                                  });
+                                  clearRoutineError("category");
+                                }}
+                                aria-invalid={Boolean(routineErrors.category)}
+                                className={`w-full px-4 py-3 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-750 rounded-xl outline-none focus:border-blue-500 text-xs font-semibold text-slate-900 dark:text-white ${
+                                  routineErrors.category
+                                    ? "form-input-invalid"
+                                    : ""
+                                }`}
                               >
-                                <option value="Higiene">Higiene</option>
-                                <option value="Terapéutico">Terapéutico</option>
-                                <option value="Alimentación">
-                                  Alimentación
-                                </option>
-                                <option value="Educativo">Educativo</option>
-                                <option value="Regulación">
-                                  Regulación Sensorial
-                                </option>
+                                {categoryOptions.map((cat) => (
+                                  <option key={cat} value={cat}>
+                                    {cat}
+                                  </option>
+                                ))}
                               </select>
+                              {routineErrors.category && (
+                                <p role="alert" className="form-error">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{routineErrors.category}</span>
+                                </p>
+                              )}
                             </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                Duración Estimada
+                            <div
+                              className="space-y-1.5"
+                              data-field="durationStr"
+                            >
+                              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">
+                                Duración Estimada{" "}
+                                <span className="text-rose-500">*</span>
                               </label>
                               <input
                                 type="text"
-                                required
+                                name="durationStr"
+                                maxLength={20}
                                 value={formData.durationStr}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   setFormData({
                                     ...formData,
                                     durationStr: e.target.value,
-                                  })
-                                }
-                                className="w-full px-4 py-3 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-750 rounded-xl outline-none focus:border-blue-500 text-xs font-semibold text-slate-900 dark:text-white"
+                                  });
+                                  clearRoutineError("durationStr");
+                                }}
+                                aria-invalid={Boolean(
+                                  routineErrors.durationStr,
+                                )}
+                                className={`w-full px-4 py-3 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-750 rounded-xl outline-none focus:border-blue-500 text-xs font-semibold text-slate-900 dark:text-white ${
+                                  routineErrors.durationStr
+                                    ? "form-input-invalid"
+                                    : ""
+                                }`}
                                 placeholder="Ej. 15 min"
                               />
+                              {routineErrors.durationStr && (
+                                <p role="alert" className="form-error">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{routineErrors.durationStr}</span>
+                                </p>
+                              )}
                             </div>
                           </div>
 
@@ -1151,10 +1503,14 @@ export default function AgendaDiaria() {
                       )}
 
                       {activeTab === "steps" && (
-                        <div className="space-y-5 animate-in fade-in">
+                        <div
+                          className="space-y-5 animate-in fade-in"
+                          data-field="steps"
+                        >
                           <div className="flex justify-between items-center mb-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                              Instrucciones Estructuradas
+                              Instrucciones Estructuradas{" "}
+                              <span className="text-rose-500">*</span>
                             </label>
                             <button
                               type="button"
@@ -1165,59 +1521,95 @@ export default function AgendaDiaria() {
                             </button>
                           </div>
 
+                          {routineErrors.steps && (
+                            <p role="alert" className="form-error">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                              <span>{routineErrors.steps}</span>
+                            </p>
+                          )}
+
                           <div className="space-y-3">
-                            {formData.steps.map((step, index) => (
-                              <div
-                                key={step.id}
-                                className="group flex items-start gap-3 p-3 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-xl"
-                              >
-                                <div className="mt-2.5 cursor-grab text-slate-400">
-                                  <GripVertical className="w-4 h-4" />
-                                </div>
-                                <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 text-xs flex items-center justify-center font-black shrink-0 mt-0.5">
-                                  {index + 1}
-                                </div>
-                                <div className="flex-1 space-y-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Ej. Colocar el material en la mesa"
-                                    value={step.text}
-                                    onChange={(e) =>
-                                      handleStepChange(
-                                        step.id,
-                                        "text",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-full bg-transparent border-b border-slate-350 dark:border-slate-650 px-1 py-1 outline-none focus:border-blue-500 text-xs font-semibold text-slate-900 dark:text-white"
-                                    required
-                                  />
-                                  <div className="flex items-center gap-1.5 px-1">
-                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            {formData.steps.map((step, index) => {
+                              const stepError = routineErrors[`step_${index}`];
+                              return (
+                                <div
+                                  key={step.id}
+                                  data-field={`step_${index}`}
+                                  className={`group flex items-start gap-3 p-3 bg-slate-50 dark:bg-[#1E293B] border rounded-xl transition-colors ${
+                                    stepError
+                                      ? "border-rose-400 dark:border-rose-500"
+                                      : "border-slate-200 dark:border-slate-800"
+                                  }`}
+                                >
+                                  <div className="mt-2.5 cursor-grab text-slate-400">
+                                    <GripVertical className="w-4 h-4" />
+                                  </div>
+                                  <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 text-xs flex items-center justify-center font-black shrink-0 mt-0.5">
+                                    {index + 1}
+                                  </div>
+                                  <div className="flex-1 space-y-2 min-w-0">
                                     <input
                                       type="text"
-                                      placeholder="5 min"
-                                      value={step.time}
+                                      name={`step_${index}`}
+                                      maxLength={300}
+                                      placeholder="Ej. Colocar el material en la mesa"
+                                      value={step.text}
                                       onChange={(e) =>
                                         handleStepChange(
                                           step.id,
-                                          "time",
+                                          "text",
                                           e.target.value,
+                                          index,
                                         )
                                       }
-                                      className="bg-transparent text-[10px] font-semibold text-slate-500 outline-none w-20"
+                                      aria-invalid={Boolean(stepError)}
+                                      className={`w-full bg-transparent border-b px-1 py-1 outline-none text-xs font-semibold text-slate-900 dark:text-white ${
+                                        stepError
+                                          ? "border-rose-500 focus:border-rose-600 form-input-invalid rounded-lg"
+                                          : "border-slate-350 dark:border-slate-650 focus:border-blue-500"
+                                      }`}
                                     />
+                                    {stepError && (
+                                      <p role="alert" className="form-error">
+                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                        <span>{stepError}</span>
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-1.5 px-1">
+                                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                      <input
+                                        type="text"
+                                        maxLength={20}
+                                        placeholder="5 min"
+                                        value={step.time}
+                                        onChange={(e) =>
+                                          handleStepChange(
+                                            step.id,
+                                            "time",
+                                            e.target.value,
+                                            index,
+                                          )
+                                        }
+                                        className="bg-transparent text-[10px] font-semibold text-slate-500 outline-none w-20"
+                                      />
+                                    </div>
                                   </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveStep(step.id)}
+                                    disabled={formData.steps.length <= 1}
+                                    title={
+                                      formData.steps.length <= 1
+                                        ? "Debe haber al menos 1 paso"
+                                        : "Eliminar paso"
+                                    }
+                                    className="mt-2 p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded opacity-60 group-hover:opacity-100 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveStep(step.id)}
-                                  className="mt-2 p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -1228,22 +1620,43 @@ export default function AgendaDiaria() {
                   <div className="p-5 border-t border-slate-100 dark:border-slate-850 bg-white dark:bg-[#0F172A] flex gap-3">
                     <button
                       type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="flex-[1] py-3 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl transition-colors"
+                      onClick={handleAttemptCloseRoutine}
+                      disabled={isRoutineSaving}
+                      className="flex-[1] py-3 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       form="create-routine-form"
-                      className="flex-[2] py-3 text-xs font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md flex justify-center items-center gap-1.5"
+                      disabled={isRoutineSaving}
+                      className="flex-[2] py-3 text-xs font-black text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-xl shadow-md flex justify-center items-center gap-1.5"
                     >
-                      <Plus className="w-4 h-4" /> Guardar Terapia
+                      {isRoutineSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />{" "}
+                          Guardando...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" /> Guardar Terapia
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
               </div>
             )}
+
+            <ConfirmDialog
+              isOpen={showDiscardRoutineConfirm}
+              onClose={() => setShowDiscardRoutineConfirm(false)}
+              onConfirm={handleDirectCloseRoutine}
+              title="¿Descartar cambios de la terapia?"
+              message="Hay cambios sin guardar en el formulario de la terapia que se perderán si sales ahora."
+              confirmLabel="Descartar y salir"
+              cancelLabel="Seguir editando"
+            />
 
             {/* Modal de Tarea Personalizada para la Agenda Visual */}
             {showTaskModal && (
@@ -1267,6 +1680,7 @@ export default function AgendaDiaria() {
                       </h3>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setShowTaskModal(false)}
                       className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
                     >
@@ -1274,45 +1688,87 @@ export default function AgendaDiaria() {
                     </button>
                   </div>
 
-                  <form onSubmit={handleSaveTask} className="p-5 space-y-4">
+                  <form
+                    ref={taskFormRef}
+                    noValidate
+                    onSubmit={handleSaveTask}
+                    className="p-5 space-y-4"
+                  >
                     {/* Nombre de la tarea */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Nombre de la Tarea o Actividad
-                      </label>
+                    <div data-field="title">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                          Nombre de la Tarea o Actividad{" "}
+                          <span className="text-rose-500">*</span>
+                        </label>
+                        <span
+                          className={`text-[10px] font-semibold tabular-nums ${
+                            taskForm.title.length >= 80
+                              ? "text-rose-500"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {taskForm.title.length}/80
+                        </span>
+                      </div>
                       <input
                         type="text"
-                        required
+                        name="title"
+                        maxLength={80}
                         autoFocus
                         placeholder="Ej. Tomar medicamento, Tarea de matemáticas, Merienda..."
                         value={taskForm.title}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setTaskForm((prev) => ({
                             ...prev,
                             title: e.target.value,
-                          }))
-                        }
-                        className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors"
+                          }));
+                          if (taskErrors.title) {
+                            setTaskErrors((prev) => ({ ...prev, title: "" }));
+                          }
+                        }}
+                        aria-invalid={Boolean(taskErrors.title)}
+                        className={`w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors ${
+                          taskErrors.title ? "form-input-invalid" : ""
+                        }`}
                       />
+                      {taskErrors.title && (
+                        <p role="alert" className="form-error">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{taskErrors.title}</span>
+                        </p>
+                      )}
                     </div>
 
                     {/* Hora programada */}
-                    <div>
+                    <div data-field="time">
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                        Hora Sugerida
+                        Hora Sugerida <span className="text-rose-500">*</span>
                       </label>
                       <input
-                        type="text"
-                        placeholder="Ej. 08:30 AM o 15:00"
+                        type="time"
+                        name="time"
                         value={taskForm.time}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setTaskForm((prev) => ({
                             ...prev,
                             time: e.target.value,
-                          }))
-                        }
-                        className="w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors"
+                          }));
+                          if (taskErrors.time) {
+                            setTaskErrors((prev) => ({ ...prev, time: "" }));
+                          }
+                        }}
+                        aria-invalid={Boolean(taskErrors.time)}
+                        className={`w-full p-2.5 text-sm bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200 transition-colors ${
+                          taskErrors.time ? "form-input-invalid" : ""
+                        }`}
                       />
+                      {taskErrors.time && (
+                        <p role="alert" className="form-error">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{taskErrors.time}</span>
+                        </p>
+                      )}
                     </div>
 
                     {/* Categoría / Icono */}

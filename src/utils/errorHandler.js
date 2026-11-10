@@ -165,3 +165,45 @@ export function toastError(err, showToast, fallback) {
   if (!message) return;
   showToast(`❌ ${message}`);
 }
+
+/**
+ * Extrae errores campo-a-campo desde respuestas 400 (Zod `detalles`) o 409 (`campo`)
+ * para pintarlos inline debajo de cada input en los formularios.
+ */
+export function extractFieldErrors(err, fieldMap = {}) {
+  const data = err?.response?.data;
+  if (!data || typeof data !== "object") return {};
+
+  const errors = {};
+  const mapField = (raw) => {
+    const clean = String(raw || "")
+      .replace(/^body\./, "")
+      .replace(/^query\./, "")
+      .replace(/^params\./, "")
+      .trim();
+    return fieldMap[clean] || clean;
+  };
+
+  if (Array.isArray(data.detalles)) {
+    for (const item of data.detalles) {
+      if (!item || typeof item !== "object") continue;
+      const key = mapField(item.campo);
+      const msg = cleanRaw(item.mensaje || item.message || "");
+      if (key && msg && !errors[key]) {
+        errors[key] = msg;
+      }
+    }
+  }
+
+  if (data.campo) {
+    const key = mapField(data.campo);
+    const msg =
+      friendlyMessage(cleanRaw(data.error || data.message || "")) ||
+      cleanRaw(data.error || data.message || "");
+    if (key && msg && !errors[key]) {
+      errors[key] = msg;
+    }
+  }
+
+  return errors;
+}

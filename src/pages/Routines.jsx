@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Lock,
   Users,
+  AlertCircle,
 } from "lucide-react";
 
 import {
@@ -38,7 +39,14 @@ import Button from "@/components/ui/Button";
 import Fab from "@/components/ui/Fab";
 import FilterBar from "@/components/shared/FilterBar";
 import TherapySessionPlayer from "@/components/shared/TherapySessionPlayer";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { useSmartwatch } from "@/context/SmartwatchContext";
+import {
+  validateRequiredText,
+  validateUrl,
+  sanitizeIntegerInput,
+  focusFirstError,
+} from "@/utils/validators";
 
 const EMPTY_FORM = {
   title: "",
@@ -154,8 +162,146 @@ export default function Routines() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [activeTab, setActiveTab] = useState("general"); // 'general', 'steps', 'media'
+  const [activeTab, setActiveTab] = useState("general"); // 'general', 'steps', 'media', 'metas'
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [routineErrors, setRoutineErrors] = useState({});
+  const [isRoutineSaving, setIsRoutineSaving] = useState(false);
+  const [showDiscardRoutineConfirm, setShowDiscardRoutineConfirm] =
+    useState(false);
+  const routineFormRef = useRef(null);
+  const routineInitialRef = useRef(null);
+
+  const normalizeRoutineSnapshot = (data) =>
+    JSON.stringify({
+      title: String(data?.title || ""),
+      category: String(data?.category || ""),
+      durationStr: String(data?.durationStr || ""),
+      difficulty: String(data?.difficulty || "Baja"),
+      visibility: String(data?.visibility || "AMBOS"),
+      description: String(data?.description || ""),
+      materials: String(data?.materials || ""),
+      steps: (data?.steps || []).map((s) => ({
+        text: String(s?.text || ""),
+        time: String(s?.time || ""),
+      })),
+      mediaType: String(data?.mediaType || "none"),
+      mediaUrl: String(data?.mediaUrl || ""),
+      peiGoalDesc: String(data?.peiGoalDesc || ""),
+      peiGoalTrials: String(data?.peiGoalTrials ?? 20),
+    });
+
+  const isRoutineDirty = useMemo(() => {
+    if (!isModalOpen || !routineInitialRef.current) return false;
+    return normalizeRoutineSnapshot(formData) !== routineInitialRef.current;
+  }, [isModalOpen, formData]);
+
+  const ROUTINE_TAB_ORDER = ["general", "steps", "media", "metas"];
+  const getRoutineFieldTab = (key) => {
+    if (key === "steps" || key.startsWith("step_")) return "steps";
+    if (key === "materials" || key === "mediaUrl") return "media";
+    if (key === "peiGoalDesc" || key === "peiGoalTrials") return "metas";
+    return "general";
+  };
+
+  const tabErrorCounts = useMemo(() => {
+    const counts = { general: 0, steps: 0, media: 0, metas: 0 };
+    Object.entries(routineErrors).forEach(([k, v]) => {
+      if (v) counts[getRoutineFieldTab(k)] += 1;
+    });
+    return counts;
+  }, [routineErrors]);
+
+  const totalRoutineErrors = useMemo(
+    () => Object.values(routineErrors).filter(Boolean).length,
+    [routineErrors],
+  );
+
+  const clearRoutineError = (field) => {
+    setRoutineErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const validateRoutineData = (data) => {
+    const errs = {};
+    const titleErr = validateRequiredText(
+      data.title,
+      "El nombre de la terapia",
+      {
+        min: 3,
+        max: 60,
+      },
+    );
+    if (titleErr) errs.title = titleErr;
+
+    const descText = String(data.description || "").trim();
+    if (descText.length > 2000) {
+      errs.description = "La descripción no puede exceder 2000 caracteres";
+    }
+
+    if (!String(data.category || "").trim()) {
+      errs.category = "Selecciona una categoría";
+    }
+
+    const durRaw = String(data.durationStr || "").trim();
+    const durMatch = durRaw.match(/\d+/);
+    const durNum = durMatch ? parseInt(durMatch[0], 10) : NaN;
+    if (!durRaw) {
+      errs.durationStr = "La duración estimada es obligatoria";
+    } else if (Number.isNaN(durNum) || durNum < 1 || durNum > 600) {
+      errs.durationStr =
+        "Ingresa una duración entre 1 y 600 minutos (Ej. 15 min)";
+    }
+
+    if (!Array.isArray(data.steps) || data.steps.length === 0) {
+      errs.steps = "Agrega al menos 1 paso estructurado";
+    } else {
+      data.steps.forEach((step, idx) => {
+        const txt = String(step?.text || "").trim();
+        if (!txt) {
+          errs[`step_${idx}`] = `El paso ${idx + 1} no puede estar vacío`;
+        } else if (txt.length < 2) {
+          errs[`step_${idx}`] =
+            `El paso ${idx + 1} debe tener al menos 2 caracteres`;
+        }
+      });
+    }
+
+    if (String(data.materials || "").length > 2000) {
+      errs.materials = "Los materiales no pueden exceder 2000 caracteres";
+    }
+
+    if (data.mediaType === "video") {
+      const urlErr = validateUrl(data.mediaUrl, { required: true });
+      if (urlErr) errs.mediaUrl = urlErr;
+    }
+
+    const peiDesc = String(data.peiGoalDesc || "").trim();
+    if (peiDesc) {
+      const peiErr = validateRequiredText(
+        peiDesc,
+        "La descripción de la meta PEI",
+        {
+          min: 3,
+          max: 500,
+        },
+      );
+      if (peiErr) errs.peiGoalDesc = peiErr;
+    }
+
+    const trialsRaw = String(data.peiGoalTrials ?? "").trim();
+    if (peiDesc || trialsRaw !== "") {
+      const tNum = parseInt(trialsRaw, 10);
+      if (!trialsRaw || Number.isNaN(tNum) || tNum < 1 || tNum > 100) {
+        errs.peiGoalTrials = "Ingresa entre 1 y 100 ensayos";
+      }
+    }
+
+    return errs;
+  };
 
   // --- Multimedia upload state ---
   const mediaInputRef = useRef(null);
@@ -243,33 +389,66 @@ export default function Routines() {
   const [catForm, setCatForm] = useState({ cat_nomb: "", cat_deta: "" });
   const [editingCat, setEditingCat] = useState(null);
   const [catDeleting, setCatDeleting] = useState(null);
+  const [catErrors, setCatErrors] = useState({});
+  const [isCatSaving, setIsCatSaving] = useState(false);
+  const catFormRef = useRef(null);
 
   const openCatCreate = () => {
     setEditingCat(null);
     setCatForm({ cat_nomb: "", cat_deta: "" });
+    setCatErrors({});
   };
 
   const openCatEdit = (cat) => {
     setEditingCat(cat);
     setCatForm({ cat_nomb: cat.cat_nomb, cat_deta: cat.cat_deta || "" });
+    setCatErrors({});
   };
 
   const handleSaveCategory = async (e) => {
     e.preventDefault();
-    const name = catForm.cat_nomb.trim();
-    if (name.length < 3) {
-      showToast("⚠️ El nombre debe tener al menos 3 caracteres.");
+    if (isCatSaving) return;
+
+    const errs = {};
+    const nameErr = validateRequiredText(
+      catForm.cat_nomb,
+      "El nombre de la categoría",
+      { min: 3, max: 50 },
+    );
+    if (nameErr) errs.cat_nomb = nameErr;
+
+    if (String(catForm.cat_deta || "").trim().length > 2000) {
+      errs.cat_deta = "La descripción no puede exceder 2000 caracteres";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setCatErrors(errs);
+      focusFirstError(errs, catFormRef);
       return;
     }
-    if (editingCat) {
-      await updateCategory(editingCat.cat_codi, {
-        cat_nomb: name,
-        cat_deta: catForm.cat_deta.trim() || null,
-      });
-    } else {
-      await createCategory(name, catForm.cat_deta.trim());
+
+    const name = catForm.cat_nomb.trim();
+    const detail = catForm.cat_deta.trim();
+    setIsCatSaving(true);
+    try {
+      const res = editingCat
+        ? await updateCategory(editingCat.cat_codi, {
+            cat_nomb: name,
+            cat_deta: detail || null,
+          })
+        : await createCategory(name, detail);
+
+      if (res && res.ok === false) {
+        if (res.fieldErrors && Object.keys(res.fieldErrors).length > 0) {
+          setCatErrors(res.fieldErrors);
+          focusFirstError(res.fieldErrors, catFormRef);
+        }
+        return;
+      }
+      openCatCreate();
+    } finally {
+      setIsCatSaving(false);
     }
-    openCatCreate();
   };
 
   const handleDeleteCategory = async (cat) => {
@@ -286,59 +465,181 @@ export default function Routines() {
 
   // Handlers for Builder
   const handleAddStep = () => {
-    setFormData({
-      ...formData,
-      steps: [...formData.steps, { id: Date.now(), text: "", time: "5 min" }],
-    });
+    setFormData((prev) => ({
+      ...prev,
+      steps: [...prev.steps, { id: Date.now(), text: "", time: "5 min" }],
+    }));
+    clearRoutineError("steps");
   };
 
   const handleRemoveStep = (idToRemove) => {
-    setFormData({
-      ...formData,
-      steps: formData.steps.filter((s) => s.id !== idToRemove),
+    setFormData((prev) => ({
+      ...prev,
+      steps: prev.steps.filter((s) => s.id !== idToRemove),
+    }));
+    setRoutineErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((k) => {
+        if (k === "steps" || k.startsWith("step_")) delete next[k];
+      });
+      return next;
     });
   };
 
-  const handleStepChange = (id, field, value) => {
-    setFormData({
-      ...formData,
-      steps: formData.steps.map((s) =>
+  const handleStepChange = (id, field, value, index) => {
+    setFormData((prev) => ({
+      ...prev,
+      steps: prev.steps.map((s) =>
         s.id === id ? { ...s, [field]: value } : s,
       ),
-    });
+    }));
+    if (field === "text" && index !== undefined) {
+      clearRoutineError(`step_${index}`);
+    }
+    clearRoutineError("steps");
   };
 
-  const handleCreateRoutine = async (e) => {
-    e.preventDefault();
-    const isEdit = editingId !== null;
-    if (isEdit) {
-      await updateRoutine(editingId, formData);
-    } else {
-      await createRoutine(formData);
-    }
+  const handleDirectCloseRoutine = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    const peiDesc = formData.peiGoalDesc;
-    setFormData({
-      ...EMPTY_FORM,
-      steps: [{ id: Date.now(), text: "", time: "5 min" }],
-    });
-    if (!isEdit && peiDesc.trim()) {
-      await crearPeiGoal(selectedChildId, {
-        met_desc: peiDesc,
-        met_ttria: formData.peiGoalTrials || 20,
-      });
-    }
+    setRoutineErrors({});
+    setUploadError("");
+    setShowDiscardRoutineConfirm(false);
     setActiveTab("general");
   };
 
+  const handleAttemptCloseRoutine = () => {
+    if (isRoutineSaving) return;
+    if (isRoutineDirty) {
+      setShowDiscardRoutineConfirm(true);
+    } else {
+      handleDirectCloseRoutine();
+    }
+  };
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (showDiscardRoutineConfirm) {
+          setShowDiscardRoutineConfirm(false);
+        } else {
+          handleAttemptCloseRoutine();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
+  useEffect(() => {
+    if (!isCatModalOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setIsCatModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isCatModalOpen]);
+
+  const handleCreateRoutine = async (e) => {
+    e.preventDefault();
+    if (isRoutineSaving) return;
+    if (uploadProgress !== null) {
+      showToast("⏳ Espera a que termine de subir la imagen.");
+      return;
+    }
+
+    const errs = validateRoutineData(formData);
+    if (Object.keys(errs).length > 0) {
+      setRoutineErrors(errs);
+      const firstInvalidTab =
+        ROUTINE_TAB_ORDER.find((tab) =>
+          Object.keys(errs).some(
+            (k) => errs[k] && getRoutineFieldTab(k) === tab,
+          ),
+        ) || "general";
+      setActiveTab(firstInvalidTab);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          focusFirstError(errs, routineFormRef);
+        });
+      });
+      return;
+    }
+
+    const isEdit = editingId !== null;
+    const peiDesc = formData.peiGoalDesc.trim();
+    const peiTrials = parseInt(formData.peiGoalTrials, 10) || 20;
+
+    setIsRoutineSaving(true);
+    try {
+      const res = isEdit
+        ? await updateRoutine(editingId, formData)
+        : await createRoutine(formData);
+
+      if (res && res.ok === false) {
+        const srvErrors = res.fieldErrors || {};
+        if (Object.keys(srvErrors).length > 0) {
+          setRoutineErrors(srvErrors);
+          const firstServerTab =
+            ROUTINE_TAB_ORDER.find((tab) =>
+              Object.keys(srvErrors).some(
+                (k) => srvErrors[k] && getRoutineFieldTab(k) === tab,
+              ),
+            ) || activeTab;
+          setActiveTab(firstServerTab);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              focusFirstError(srvErrors, routineFormRef);
+            });
+          });
+        }
+        return;
+      }
+
+      if (!isEdit && peiDesc && selectedChildId) {
+        try {
+          await crearPeiGoal(selectedChildId, {
+            met_desc: peiDesc,
+            met_ttria: peiTrials,
+          });
+        } catch (peiErr) {
+          console.error("Error al crear meta PEI asociada:", peiErr);
+          showToast(
+            "⚠️ Terapia creada, pero no se pudo asociar la meta PEI automática.",
+          );
+        }
+      }
+
+      setIsModalOpen(false);
+      setEditingId(null);
+      setRoutineErrors({});
+      setUploadError("");
+      setFormData({
+        ...EMPTY_FORM,
+        steps: [{ id: Date.now(), text: "", time: "5 min" }],
+      });
+      setActiveTab("general");
+    } finally {
+      setIsRoutineSaving(false);
+    }
+  };
+
   const openCreateModal = () => {
-    setEditingId(null);
-    setFormData({
+    const initial = {
       ...EMPTY_FORM,
       category: categoryOptions[0] || "Higiene",
       steps: [{ id: Date.now(), text: "", time: "5 min" }],
-    });
+    };
+    setEditingId(null);
+    setFormData(initial);
+    routineInitialRef.current = normalizeRoutineSnapshot(initial);
+    setRoutineErrors({});
+    setUploadError("");
     setActiveTab("general");
     setIsModalOpen(true);
   };
@@ -356,7 +657,7 @@ export default function Routines() {
           time: match ? match[2] : "5 min",
         };
       }) || [{ id: Date.now(), text: "", time: "5 min" }];
-    setFormData({
+    const initial = {
       title: routine.title,
       category: routine.category || categoryOptions[0] || "Higiene",
       durationStr: routine.act_time ? `${routine.act_time} min` : "15 min",
@@ -376,7 +677,11 @@ export default function Routines() {
       mediaUrl: routine.media || "",
       peiGoalDesc: "",
       peiGoalTrials: 20,
-    });
+    };
+    setFormData(initial);
+    routineInitialRef.current = normalizeRoutineSnapshot(initial);
+    setRoutineErrors({});
+    setUploadError("");
     setActiveTab("general");
     setIsModalOpen(true);
   };
@@ -960,8 +1265,14 @@ export default function Routines() {
 
             {/* Modal / Side Drawer para Constructor Avanzado de Rutinas */}
             {isModalOpen && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm transition-all duration-300">
-                <div className="w-full max-w-2xl h-full bg-white dark:bg-[#0F172A] shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col border-l border-slate-200 dark:border-slate-800">
+              <div
+                className="fixed inset-0 z-[100] flex items-center justify-end bg-slate-900/60 backdrop-blur-sm transition-all duration-300"
+                onClick={handleAttemptCloseRoutine}
+              >
+                <div
+                  className="w-full max-w-2xl h-full bg-white dark:bg-[#0F172A] shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col border-l border-slate-200 dark:border-slate-800"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {/* Drawer Header */}
                   <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-[#1E293B]">
                     <div>
@@ -977,8 +1288,10 @@ export default function Routines() {
                       </p>
                     </div>
                     <button
-                      onClick={() => setIsModalOpen(false)}
+                      type="button"
+                      onClick={handleAttemptCloseRoutine}
                       className="p-2 bg-white dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors"
+                      aria-label="Cerrar constructor de terapias"
                     >
                       <svg
                         className="w-5 h-5"
@@ -997,94 +1310,176 @@ export default function Routines() {
                   </div>
 
                   {/* Tabs Nav */}
-                  <div className="flex px-8 pt-4 bg-slate-50 dark:bg-[#1E293B] border-b border-slate-200 dark:border-slate-800 gap-6">
-                    <button
-                      onClick={() => setActiveTab("general")}
-                      className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "general" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
-                    >
-                      Detalles Clínicos
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("steps")}
-                      className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "steps" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
-                    >
-                      Paso a Paso
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("media")}
-                      className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "media" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
-                    >
-                      Materiales
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("metas")}
-                      className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "metas" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
-                    >
-                      <Star className="w-4 h-4" /> Metas PEI
-                    </button>
+                  <div className="flex px-8 pt-4 bg-slate-50 dark:bg-[#1E293B] border-b border-slate-200 dark:border-slate-800 gap-6 overflow-x-auto no-scrollbar">
+                    {[
+                      { id: "general", label: "Detalles Clínicos" },
+                      { id: "steps", label: "Paso a Paso" },
+                      { id: "media", label: "Materiales" },
+                      { id: "metas", label: "Metas PEI", isStar: true },
+                    ].map((tab) => {
+                      const errCount = tabErrorCounts[tab.id] || 0;
+                      const isActive = activeTab === tab.id;
+                      const activeBorder =
+                        tab.id === "metas"
+                          ? "border-amber-500 text-amber-600"
+                          : "border-blue-600 text-blue-600";
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 shrink-0 ${
+                            isActive
+                              ? activeBorder
+                              : errCount > 0
+                                ? "border-transparent text-rose-600 dark:text-rose-400"
+                                : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                          }`}
+                        >
+                          {tab.isStar && <Star className="w-4 h-4" />}
+                          <span>{tab.label}</span>
+                          {errCount > 0 && (
+                            <span
+                              className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black leading-none"
+                              title={`${errCount} campo(s) por corregir en esta pestaña`}
+                            >
+                              {errCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Drawer Body */}
                   <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-[#0F172A]">
                     <form
                       id="create-routine-form"
+                      ref={routineFormRef}
+                      noValidate
                       onSubmit={handleCreateRoutine}
                       className="space-y-8"
                     >
+                      {totalRoutineErrors > 0 && (
+                        <div
+                          role="alert"
+                          className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 flex items-center gap-2.5 text-xs font-semibold text-rose-700 dark:text-rose-300"
+                        >
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>
+                            Revisa {totalRoutineErrors}{" "}
+                            {totalRoutineErrors === 1
+                              ? "campo requerido o con formato inválido"
+                              : "campos requeridos o con formato inválido"}{" "}
+                            antes de guardar.
+                          </span>
+                        </div>
+                      )}
+
                       {/* TAB 1: General */}
                       {activeTab === "general" && (
                         <div className="space-y-6 animate-in fade-in">
-                          <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-500">
-                              Nombre de la Terapia
-                            </label>
+                          <div className="space-y-2" data-field="title">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs font-black uppercase tracking-widest text-slate-500">
+                                Nombre de la Terapia{" "}
+                                <span className="text-rose-500">*</span>
+                              </label>
+                              <span
+                                className={`text-[10px] font-semibold tabular-nums ${
+                                  formData.title.length >= 60
+                                    ? "text-rose-500"
+                                    : "text-slate-400"
+                                }`}
+                              >
+                                {formData.title.length}/60
+                              </span>
+                            </div>
                             <input
                               type="text"
-                              required
+                              name="title"
+                              maxLength={60}
                               value={formData.title}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setFormData({
                                   ...formData,
                                   title: e.target.value,
-                                })
-                              }
-                              className="w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all"
+                                });
+                                clearRoutineError("title");
+                              }}
+                              aria-invalid={Boolean(routineErrors.title)}
+                              className={`w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all ${
+                                routineErrors.title ? "form-input-invalid" : ""
+                              }`}
                               placeholder="Ej. Terapia Sensorial con Espuma"
                             />
+                            {routineErrors.title && (
+                              <p role="alert" className="form-error">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{routineErrors.title}</span>
+                              </p>
+                            )}
                           </div>
 
-                          <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-500">
-                              Descripción Clínica (Opcional)
-                            </label>
+                          <div className="space-y-2" data-field="description">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs font-black uppercase tracking-widest text-slate-500">
+                                Descripción Clínica (Opcional)
+                              </label>
+                              <span className="text-[10px] font-semibold tabular-nums text-slate-400">
+                                {formData.description.length}/2000
+                              </span>
+                            </div>
                             <textarea
                               rows="2"
+                              name="description"
+                              maxLength={2000}
                               value={formData.description}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setFormData({
                                   ...formData,
                                   description: e.target.value,
-                                })
-                              }
-                              className="w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all resize-none"
+                                });
+                                clearRoutineError("description");
+                              }}
+                              aria-invalid={Boolean(routineErrors.description)}
+                              className={`w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all resize-none ${
+                                routineErrors.description
+                                  ? "form-input-invalid"
+                                  : ""
+                              }`}
                               placeholder="Ej. Actividad sensorial orientada a la regulación del sistema propioceptivo mediante texturas."
                             />
+                            {routineErrors.description && (
+                              <p role="alert" className="form-error">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{routineErrors.description}</span>
+                              </p>
+                            )}
                           </div>
 
-                          <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase tracking-widest text-slate-500">
-                                Categoría
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="space-y-2" data-field="category">
+                              <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
+                                Categoría{" "}
+                                <span className="text-rose-500">*</span>
                               </label>
                               <select
+                                name="category"
                                 value={formData.category}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   setFormData({
                                     ...formData,
                                     category: e.target.value,
-                                  })
-                                }
-                                className="w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all"
+                                  });
+                                  clearRoutineError("category");
+                                }}
+                                aria-invalid={Boolean(routineErrors.category)}
+                                className={`w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all ${
+                                  routineErrors.category
+                                    ? "form-input-invalid"
+                                    : ""
+                                }`}
                               >
                                 {categoryOptions.length === 0 && (
                                   <option value="">Sin categorías</option>
@@ -1095,24 +1490,46 @@ export default function Routines() {
                                   </option>
                                 ))}
                               </select>
+                              {routineErrors.category && (
+                                <p role="alert" className="form-error">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{routineErrors.category}</span>
+                                </p>
+                              )}
                             </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase tracking-widest text-slate-500">
-                                Duración Estimada
+                            <div className="space-y-2" data-field="durationStr">
+                              <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
+                                Duración Estimada{" "}
+                                <span className="text-rose-500">*</span>
                               </label>
                               <input
                                 type="text"
-                                required
+                                name="durationStr"
+                                maxLength={20}
                                 value={formData.durationStr}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   setFormData({
                                     ...formData,
                                     durationStr: e.target.value,
-                                  })
-                                }
-                                className="w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all"
+                                  });
+                                  clearRoutineError("durationStr");
+                                }}
+                                aria-invalid={Boolean(
+                                  routineErrors.durationStr,
+                                )}
+                                className={`w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all ${
+                                  routineErrors.durationStr
+                                    ? "form-input-invalid"
+                                    : ""
+                                }`}
                                 placeholder="Ej. 15 min"
                               />
+                              {routineErrors.durationStr && (
+                                <p role="alert" className="form-error">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{routineErrors.durationStr}</span>
+                                </p>
+                              )}
                             </div>
                           </div>
 
@@ -1204,10 +1621,14 @@ export default function Routines() {
 
                       {/* TAB 2: Pasos */}
                       {activeTab === "steps" && (
-                        <div className="space-y-6 animate-in fade-in">
+                        <div
+                          className="space-y-6 animate-in fade-in"
+                          data-field="steps"
+                        >
                           <div className="flex justify-between items-center mb-2">
                             <label className="text-xs font-black uppercase tracking-widest text-slate-500">
-                              Instrucciones Estructuradas
+                              Instrucciones Estructuradas{" "}
+                              <span className="text-rose-500">*</span>
                             </label>
                             <button
                               data-tour="rt-build-steps"
@@ -1219,59 +1640,95 @@ export default function Routines() {
                             </button>
                           </div>
 
+                          {routineErrors.steps && (
+                            <p role="alert" className="form-error">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                              <span>{routineErrors.steps}</span>
+                            </p>
+                          )}
+
                           <div className="space-y-4">
-                            {formData.steps.map((step, index) => (
-                              <div
-                                key={step.id}
-                                className="group flex items-start gap-4 p-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl"
-                              >
-                                <div className="mt-3 cursor-grab text-slate-400 hover:text-slate-600">
-                                  <GripVertical className="w-5 h-5" />
-                                </div>
-                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black shrink-0 mt-1">
-                                  {index + 1}
-                                </div>
-                                <div className="flex-1 space-y-3">
-                                  <input
-                                    type="text"
-                                    placeholder="Instrucción corta (Ej. Colocar el material en la mesa)"
-                                    value={step.text}
-                                    onChange={(e) =>
-                                      handleStepChange(
-                                        step.id,
-                                        "text",
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 px-2 py-2 outline-none focus:border-blue-500 text-sm font-medium text-slate-900 dark:text-white"
-                                    required
-                                  />
-                                  <div className="flex items-center gap-2 px-2">
-                                    <Clock className="w-4 h-4 text-slate-400" />
+                            {formData.steps.map((step, index) => {
+                              const stepError = routineErrors[`step_${index}`];
+                              return (
+                                <div
+                                  key={step.id}
+                                  data-field={`step_${index}`}
+                                  className={`group flex items-start gap-4 p-4 bg-slate-50 dark:bg-[#1E293B] border rounded-2xl transition-colors ${
+                                    stepError
+                                      ? "border-rose-400 dark:border-rose-500"
+                                      : "border-slate-200 dark:border-slate-700"
+                                  }`}
+                                >
+                                  <div className="mt-3 cursor-grab text-slate-400 hover:text-slate-600">
+                                    <GripVertical className="w-5 h-5" />
+                                  </div>
+                                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black shrink-0 mt-1">
+                                    {index + 1}
+                                  </div>
+                                  <div className="flex-1 space-y-2.5 min-w-0">
                                     <input
                                       type="text"
-                                      placeholder="Tiempo (Ej. 2 min)"
-                                      value={step.time}
+                                      name={`step_${index}`}
+                                      maxLength={300}
+                                      placeholder="Instrucción corta (Ej. Colocar el material en la mesa)"
+                                      value={step.text}
                                       onChange={(e) =>
                                         handleStepChange(
                                           step.id,
-                                          "time",
+                                          "text",
                                           e.target.value,
+                                          index,
                                         )
                                       }
-                                      className="bg-transparent text-xs font-semibold text-slate-500 outline-none w-24"
+                                      aria-invalid={Boolean(stepError)}
+                                      className={`w-full bg-transparent border-b px-2 py-2 outline-none text-sm font-medium text-slate-900 dark:text-white ${
+                                        stepError
+                                          ? "border-rose-500 focus:border-rose-600 form-input-invalid rounded-lg"
+                                          : "border-slate-300 dark:border-slate-600 focus:border-blue-500"
+                                      }`}
                                     />
+                                    {stepError && (
+                                      <p role="alert" className="form-error">
+                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                        <span>{stepError}</span>
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-2 px-2">
+                                      <Clock className="w-4 h-4 text-slate-400" />
+                                      <input
+                                        type="text"
+                                        maxLength={20}
+                                        placeholder="Tiempo (Ej. 2 min)"
+                                        value={step.time}
+                                        onChange={(e) =>
+                                          handleStepChange(
+                                            step.id,
+                                            "time",
+                                            e.target.value,
+                                            index,
+                                          )
+                                        }
+                                        className="bg-transparent text-xs font-semibold text-slate-500 outline-none w-24"
+                                      />
+                                    </div>
                                   </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveStep(step.id)}
+                                    disabled={formData.steps.length <= 1}
+                                    title={
+                                      formData.steps.length <= 1
+                                        ? "Debe haber al menos 1 paso"
+                                        : "Eliminar paso"
+                                    }
+                                    className="mt-3 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors opacity-60 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveStep(step.id)}
-                                  className="mt-3 p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -1279,38 +1736,77 @@ export default function Routines() {
                       {/* TAB 3: Media */}
                       {activeTab === "media" && (
                         <div className="space-y-8 animate-in fade-in">
-                          <div className="space-y-2">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
-                              Materiales Requeridos (Separados por comas)
-                            </label>
+                          <div className="space-y-2" data-field="materials">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
+                                Materiales Requeridos (Separados por comas)
+                              </label>
+                              <span className="text-[10px] font-semibold tabular-nums text-slate-400">
+                                {formData.materials.length}/2000
+                              </span>
+                            </div>
                             <textarea
                               rows="2"
+                              name="materials"
+                              maxLength={2000}
                               value={formData.materials}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setFormData({
                                   ...formData,
                                   materials: e.target.value,
-                                })
-                              }
-                              className="w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all resize-none"
+                                });
+                                clearRoutineError("materials");
+                              }}
+                              aria-invalid={Boolean(routineErrors.materials)}
+                              className={`w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all resize-none ${
+                                routineErrors.materials
+                                  ? "form-input-invalid"
+                                  : ""
+                              }`}
                               placeholder="Ej. Pelota de yoga, Arena cinética, Fichas de colores..."
                             />
+                            {routineErrors.materials && (
+                              <p role="alert" className="form-error">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>{routineErrors.materials}</span>
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-4">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
-                              Soporte Multimedia (Pictogramas o Video)
-                            </label>
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
+                                Soporte Multimedia (Pictogramas o Video)
+                              </label>
+                              {formData.mediaType !== "none" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData({
+                                      ...formData,
+                                      mediaType: "none",
+                                      mediaUrl: "",
+                                    });
+                                    clearRoutineError("mediaUrl");
+                                    setUploadError("");
+                                  }}
+                                  className="text-xs font-bold text-slate-500 hover:text-rose-500 transition-colors"
+                                >
+                                  Quitar multimedia
+                                </button>
+                              )}
+                            </div>
 
                             <div className="flex gap-4">
                               <button
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
                                   setFormData({
                                     ...formData,
                                     mediaType: "image",
-                                  })
-                                }
+                                  });
+                                  clearRoutineError("mediaUrl");
+                                }}
                                 className={`flex-1 py-4 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 transition-all ${formData.mediaType === "image" ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600" : "border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-[#1E293B]"}`}
                               >
                                 <ImageIcon className="w-6 h-6" />
@@ -1426,24 +1922,42 @@ export default function Routines() {
 
                             {/* Input de URL Video */}
                             {formData.mediaType === "video" && (
-                              <div className="mt-4 animate-in zoom-in-95 space-y-3">
+                              <div
+                                className="mt-4 animate-in zoom-in-95 space-y-2"
+                                data-field="mediaUrl"
+                              >
                                 <div className="relative">
                                   <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none">
                                     <Link className="h-5 w-5 text-slate-400" />
                                   </div>
                                   <input
                                     type="url"
+                                    name="mediaUrl"
                                     placeholder="https://youtube.com/watch?v=..."
                                     value={formData.mediaUrl}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                       setFormData({
                                         ...formData,
                                         mediaUrl: e.target.value,
-                                      })
-                                    }
-                                    className="w-full pl-5 pr-12 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all"
+                                      });
+                                      clearRoutineError("mediaUrl");
+                                    }}
+                                    aria-invalid={Boolean(
+                                      routineErrors.mediaUrl,
+                                    )}
+                                    className={`w-full pl-5 pr-12 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all ${
+                                      routineErrors.mediaUrl
+                                        ? "form-input-invalid"
+                                        : ""
+                                    }`}
                                   />
                                 </div>
+                                {routineErrors.mediaUrl && (
+                                  <p role="alert" className="form-error">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>{routineErrors.mediaUrl}</span>
+                                  </p>
+                                )}
                                 {formData.mediaUrl && (
                                   <div className="flex items-center justify-between gap-3 px-4 py-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-2xl">
                                     <a
@@ -1459,13 +1973,14 @@ export default function Routines() {
                                     </a>
                                     <button
                                       type="button"
-                                      onClick={() =>
+                                      onClick={() => {
                                         setFormData({
                                           ...formData,
                                           mediaType: "none",
                                           mediaUrl: "",
-                                        })
-                                      }
+                                        });
+                                        clearRoutineError("mediaUrl");
+                                      }}
                                       className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors shrink-0"
                                       title="Quitar video"
                                     >
@@ -1495,44 +2010,87 @@ export default function Routines() {
                           </div>
 
                           <div className="space-y-4">
-                            <div className="space-y-2">
-                              <label
-                                data-tour="rt-build-pei"
-                                className="text-xs font-black uppercase tracking-widest text-slate-500"
-                              >
-                                Descripción de la Meta (PEI)
-                              </label>
+                            <div className="space-y-2" data-field="peiGoalDesc">
+                              <div className="flex items-center justify-between gap-2">
+                                <label
+                                  data-tour="rt-build-pei"
+                                  className="text-xs font-black uppercase tracking-widest text-slate-500"
+                                >
+                                  Descripción de la Meta (PEI)
+                                </label>
+                                <span className="text-[10px] font-semibold tabular-nums text-slate-400">
+                                  {formData.peiGoalDesc.length}/500
+                                </span>
+                              </div>
                               <input
                                 type="text"
+                                name="peiGoalDesc"
+                                maxLength={500}
                                 value={formData.peiGoalDesc}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   setFormData({
                                     ...formData,
                                     peiGoalDesc: e.target.value,
-                                  })
-                                }
-                                className="w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all"
+                                  });
+                                  clearRoutineError("peiGoalDesc");
+                                }}
+                                aria-invalid={Boolean(
+                                  routineErrors.peiGoalDesc,
+                                )}
+                                className={`w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all ${
+                                  routineErrors.peiGoalDesc
+                                    ? "form-input-invalid"
+                                    : ""
+                                }`}
                                 placeholder="Ej. Sostener contacto visual (10s)"
                               />
+                              {routineErrors.peiGoalDesc && (
+                                <p role="alert" className="form-error">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{routineErrors.peiGoalDesc}</span>
+                                </p>
+                              )}
                             </div>
-                            <div className="space-y-2">
+                            <div
+                              className="space-y-2"
+                              data-field="peiGoalTrials"
+                            >
                               <label className="text-xs font-black uppercase tracking-widest text-slate-500">
                                 Criterio de Maestría (Ensayos Exitosos Totales)
                               </label>
                               <input
-                                type="number"
-                                min="1"
-                                max="100"
+                                type="text"
+                                inputMode="numeric"
+                                name="peiGoalTrials"
+                                maxLength={3}
                                 value={formData.peiGoalTrials}
-                                onChange={(e) =>
+                                onChange={(e) => {
+                                  const cleaned = sanitizeIntegerInput(
+                                    e.target.value,
+                                    3,
+                                  );
                                   setFormData({
                                     ...formData,
-                                    peiGoalTrials: parseInt(e.target.value),
-                                  })
-                                }
-                                className="w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all"
-                                placeholder="Ej. 20"
+                                    peiGoalTrials: cleaned,
+                                  });
+                                  clearRoutineError("peiGoalTrials");
+                                }}
+                                aria-invalid={Boolean(
+                                  routineErrors.peiGoalTrials,
+                                )}
+                                className={`w-full px-5 py-4 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all ${
+                                  routineErrors.peiGoalTrials
+                                    ? "form-input-invalid"
+                                    : ""
+                                }`}
+                                placeholder="Ej. 20 (entre 1 y 100)"
                               />
+                              {routineErrors.peiGoalTrials && (
+                                <p role="alert" className="form-error">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{routineErrors.peiGoalTrials}</span>
+                                </p>
+                              )}
                             </div>
                           </div>
 
@@ -1571,18 +2129,25 @@ export default function Routines() {
                   <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#0F172A] flex gap-4">
                     <button
                       type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="flex-[1] py-4 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-colors"
+                      onClick={handleAttemptCloseRoutine}
+                      disabled={isRoutineSaving}
+                      className="flex-[1] py-4 text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-colors disabled:opacity-50"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       form="create-routine-form"
+                      disabled={isRoutineSaving}
                       data-tour="rt-build-generate"
-                      className="flex-[2] py-4 text-sm font-black text-white bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-xl shadow-blue-500/30 transition-all flex justify-center items-center gap-2 hover:-translate-y-1"
+                      className="flex-[2] py-4 text-sm font-black text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-2xl shadow-xl shadow-blue-500/30 transition-all flex justify-center items-center gap-2 hover:-translate-y-1"
                     >
-                      {editingId ? (
+                      {isRoutineSaving ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />{" "}
+                          Guardando...
+                        </>
+                      ) : editingId ? (
                         <>
                           <Pencil className="w-5 h-5" /> Guardar Cambios
                         </>
@@ -1596,6 +2161,16 @@ export default function Routines() {
                 </div>
               </div>
             )}
+
+            <ConfirmDialog
+              isOpen={showDiscardRoutineConfirm}
+              onClose={() => setShowDiscardRoutineConfirm(false)}
+              onConfirm={handleDirectCloseRoutine}
+              title="¿Descartar cambios de la terapia?"
+              message="Hay cambios sin guardar en el constructor de terapias que se perderán si sales ahora."
+              confirmLabel="Descartar y salir"
+              cancelLabel="Seguir editando"
+            />
 
             {/* Vista previa de pasos antes de iniciar la sesión */}
             {previewRoutine && (
@@ -1752,8 +2327,14 @@ export default function Routines() {
 
             {/* Modal de gestión de categorías */}
             {isCatModalOpen && (
-              <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
-                <div className="w-full max-w-lg bg-white dark:bg-[#0F172A] rounded-3xl shadow-2xl p-8 animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
+              <div
+                className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6"
+                onClick={() => setIsCatModalOpen(false)}
+              >
+                <div
+                  className="w-full max-w-lg bg-white dark:bg-[#0F172A] rounded-3xl shadow-2xl p-8 animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex justify-between items-start mb-6">
                     <div>
                       <h3 className="text-xl font-black text-slate-900 dark:text-white">
@@ -1768,6 +2349,7 @@ export default function Routines() {
                       </p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setIsCatModalOpen(false)}
                       className="p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     >
@@ -1775,49 +2357,99 @@ export default function Routines() {
                     </button>
                   </div>
 
-                  <form onSubmit={handleSaveCategory} className="mb-6">
+                  <form
+                    ref={catFormRef}
+                    noValidate
+                    onSubmit={handleSaveCategory}
+                    className="mb-6"
+                  >
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
-                          Nombre de la Categoría
-                        </label>
+                      <div className="space-y-2" data-field="cat_nomb">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
+                            Nombre de la Categoría{" "}
+                            <span className="text-rose-500">*</span>
+                          </label>
+                          <span
+                            className={`text-[10px] font-semibold tabular-nums ${
+                              catForm.cat_nomb.length >= 50
+                                ? "text-rose-500"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            {catForm.cat_nomb.length}/50
+                          </span>
+                        </div>
                         <input
                           type="text"
+                          name="cat_nomb"
+                          maxLength={50}
                           value={catForm.cat_nomb}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setCatForm({
                               ...catForm,
                               cat_nomb: e.target.value,
-                            })
-                          }
+                            });
+                            if (catErrors.cat_nomb) {
+                              setCatErrors((p) => ({ ...p, cat_nomb: "" }));
+                            }
+                          }}
+                          aria-invalid={Boolean(catErrors.cat_nomb)}
                           placeholder="Ej. Sensorial, Motricidad, Cognitiva…"
-                          required
-                          className="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all"
+                          className={`w-full px-5 py-3.5 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all ${
+                            catErrors.cat_nomb ? "form-input-invalid" : ""
+                          }`}
                         />
+                        {catErrors.cat_nomb && (
+                          <p role="alert" className="form-error">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{catErrors.cat_nomb}</span>
+                          </p>
+                        )}
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2" data-field="cat_deta">
                         <label className="text-xs font-black uppercase tracking-widest text-slate-500 block">
                           Descripción (Opcional)
                         </label>
                         <textarea
                           rows="2"
+                          name="cat_deta"
+                          maxLength={2000}
                           value={catForm.cat_deta}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setCatForm({
                               ...catForm,
                               cat_deta: e.target.value,
-                            })
-                          }
+                            });
+                            if (catErrors.cat_deta) {
+                              setCatErrors((p) => ({ ...p, cat_deta: "" }));
+                            }
+                          }}
+                          aria-invalid={Boolean(catErrors.cat_deta)}
                           placeholder="Breve descripción de la categoría…"
-                          className="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all resize-none"
+                          className={`w-full px-5 py-3.5 bg-slate-50 dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm font-medium text-slate-900 dark:text-white transition-all resize-none ${
+                            catErrors.cat_deta ? "form-input-invalid" : ""
+                          }`}
                         />
+                        {catErrors.cat_deta && (
+                          <p role="alert" className="form-error">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{catErrors.cat_deta}</span>
+                          </p>
+                        )}
                       </div>
                       <div className="flex gap-3">
                         <button
                           type="submit"
-                          className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
+                          disabled={isCatSaving}
+                          className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
                         >
-                          {editingCat ? (
+                          {isCatSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />{" "}
+                              Guardando...
+                            </>
+                          ) : editingCat ? (
                             <>
                               <Pencil className="w-4 h-4" /> Guardar Cambios
                             </>

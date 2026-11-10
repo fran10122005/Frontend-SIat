@@ -22,24 +22,36 @@ import {
   Mail,
   IdCard,
   Camera,
+  AlertCircle,
+  Calendar,
 } from "lucide-react";
 import {
   uploadToCloudinary,
   isCloudinaryReady,
   FOLDERS,
 } from "../../config/cloudinary";
-import { toastError } from "../../utils/errorHandler";
+import { toastError, extractFieldErrors } from "../../utils/errorHandler";
+import {
+  getAdultOrYouthDateBounds,
+  getChildDateBounds,
+  formatYmdForInput,
+  calcAgeYears,
+  sanitizeNombrePersona,
+  sanitizeDocumento,
+  sanitizeTelefonoVE,
+  validateNombrePersona,
+  validateFechaPaciente,
+  validateFechaRangoEdad,
+  validateDocumento,
+  validateEmail,
+  validateTelefonoMovilVE,
+  focusFirstError,
+} from "../../utils/validators";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function calcEdad(fechaNac) {
-  if (!fechaNac) return null;
-  const hoy = new Date();
-  const nac = new Date(fechaNac);
-  let años = hoy.getFullYear() - nac.getFullYear();
-  const m = hoy.getMonth() - nac.getMonth();
-  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) años--;
-  return años;
+  return calcAgeYears(fechaNac);
 }
 
 const NIVEL_INFO = {
@@ -407,6 +419,7 @@ const INITIAL_FORM = {
   // Representante
   rep_nomb: "",
   rep_apel: "",
+  rep_fnac: "",
   rep_rela: "Madre",
   rep_telf: "",
   rep_cedu: "",
@@ -422,8 +435,12 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [stepErrors, setStepErrors] = useState({});
+  const modalBodyRef = useRef(null);
+  const childDateBounds = getChildDateBounds(25);
+  const repDateBounds = getAdultOrYouthDateBounds(12, 75);
 
-  // Representante existente detectado por correo (se reutiliza automáticamente)
+  // Representante existente detectado por cédula (se reutiliza automáticamente)
   const [repExistente, setRepExistente] = useState(null);
   const [buscandoRep, setBuscandoRep] = useState(false);
 
@@ -438,14 +455,19 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   const [repPhotoUploading, setRepPhotoUploading] = useState(false);
 
   const isDirty = Boolean(
-    form.nin_nomb ||
-    form.nin_apel ||
-    form.nin_cedu ||
+    form.nin_nomb?.trim() ||
+    form.nin_apel?.trim() ||
     form.nin_fnac ||
-    form.nin_diag ||
-    form.rep_nomb ||
-    form.rep_crro ||
+    form.nin_diag?.trim() ||
+    form.sen_tipo ||
+    form.rep_cedu?.trim() ||
+    form.rep_nomb?.trim() ||
+    form.rep_apel?.trim() ||
+    form.rep_fnac ||
+    form.usu_crro?.trim() ||
+    form.rep_telf?.trim() ||
     photoPreview ||
+    repPhotoPreview ||
     docFiles.length > 0,
   );
 
@@ -472,12 +494,14 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  const set = (field, value) =>
+  const set = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setStepErrors((prev) => (prev[field] ? { ...prev, [field]: "" } : prev));
+  };
 
   // ── Búsqueda de representante existente por cédula (identificador único) ──
   const buscarRep = async (cedula) => {
-    const digits = String(cedula || "").replace(/\D/g, "");
+    const digits = sanitizeDocumento(cedula, "V");
     if (digits.length < 6) return null;
     setBuscandoRep(true);
     try {
@@ -489,9 +513,19 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         setRepExistente(data);
         set("rep_nomb", data.rep_nomb || "");
         set("rep_apel", data.rep_apel || "");
+        set("rep_fnac", formatYmdForInput(data.rep_fnac));
         set("rep_rela", data.rep_rela || form.rep_rela);
         set("rep_telf", data.rep_telf || "");
         set("usu_crro", data.usu_crro || form.usu_crro);
+        setStepErrors((prev) => ({
+          ...prev,
+          rep_nomb: "",
+          rep_apel: "",
+          rep_fnac: "",
+          rep_rela: "",
+          rep_telf: "",
+          usu_crro: "",
+        }));
         return data;
       }
       setRepExistente(null);
@@ -633,60 +667,166 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
   };
 
   // ── Validaciones por paso ──
-  const v1 = () =>
-    form.nin_nomb.trim() &&
-    form.nin_apel.trim() &&
-    form.nin_fnac &&
-    form.nin_gner;
-  const v2 = () => !form.sen_tipo || (form.sen_tipo && form.sen_nvli);
+  const validateStep1 = () => {
+    const errs = {};
+    const nomErr = validateNombrePersona(form.nin_nomb, "El nombre", {
+      required: true,
+      max: 50,
+    });
+    if (nomErr) errs.nin_nomb = nomErr;
+
+    const apelErr = validateNombrePersona(form.nin_apel, "El apellido", {
+      required: true,
+      max: 50,
+    });
+    if (apelErr) errs.nin_apel = apelErr;
+
+    const fnacErr = validateFechaPaciente(form.nin_fnac, {
+      required: true,
+      maxAge: 25,
+    });
+    if (fnacErr) errs.nin_fnac = fnacErr;
+
+    if (!form.nin_gner) errs.nin_gner = "Selecciona el sexo biológico";
+    if (!form.nin_nivd) errs.nin_nivd = "Selecciona el nivel de soporte DSM-5";
+    if (String(form.nin_diag || "").trim().length > 255) {
+      errs.nin_diag = "El diagnóstico no puede exceder 255 caracteres";
+    }
+    return errs;
+  };
+
+  const validateStep2 = () => {
+    const errs = {};
+    if (form.sen_tipo && !form.sen_nvli) {
+      errs.sen_nvli = "Selecciona el nivel de impacto en el funcionamiento";
+    }
+    if (String(form.sen_nota || "").trim().length > 255) {
+      errs.sen_nota = "Las notas clínicas no pueden exceder 255 caracteres";
+    }
+    return errs;
+  };
+
+  const validateStep3 = (repOverride) => {
+    const rep = repOverride !== undefined ? repOverride : repExistente;
+    const errs = {};
+    const ceduDigits = sanitizeDocumento(form.rep_cedu, "V");
+
+    const ceduErr = validateDocumento(ceduDigits, "V", { required: true });
+    if (ceduErr) errs.rep_cedu = ceduErr;
+
+    const correoVal = rep?.encontrado
+      ? rep.usu_crro || form.usu_crro
+      : form.usu_crro;
+    const mailErr = validateEmail(correoVal, { required: true, max: 50 });
+    if (mailErr) errs.usu_crro = mailErr;
+
+    if (!rep?.encontrado) {
+      const repNomErr = validateNombrePersona(form.rep_nomb, "El nombre", {
+        required: true,
+        max: 50,
+      });
+      if (repNomErr) errs.rep_nomb = repNomErr;
+
+      const repApelErr = validateNombrePersona(form.rep_apel, "El apellido", {
+        required: true,
+        max: 50,
+      });
+      if (repApelErr) errs.rep_apel = repApelErr;
+
+      const repFnacErr = validateFechaRangoEdad(form.rep_fnac, {
+        minAge: 12,
+        maxAge: 75,
+        required: true,
+        label: "La fecha de nacimiento",
+      });
+      if (repFnacErr) errs.rep_fnac = repFnacErr;
+
+      if (!form.rep_rela) {
+        errs.rep_rela = "Selecciona el vínculo legal con el paciente";
+      }
+
+      const repTelfErr = validateTelefonoMovilVE(form.rep_telf, {
+        required: true,
+      });
+      if (repTelfErr) errs.rep_telf = repTelfErr;
+    } else if (form.rep_fnac) {
+      const repFnacErr = validateFechaRangoEdad(form.rep_fnac, {
+        minAge: 12,
+        maxAge: 75,
+        required: false,
+        label: "La fecha de nacimiento",
+      });
+      if (repFnacErr) errs.rep_fnac = repFnacErr;
+    }
+
+    if (!form.acepta_lopnna) {
+      errs.acepta_lopnna =
+        "Debes confirmar la autorización verbal conforme al Art. 65 LOPNNA";
+    }
+    return errs;
+  };
 
   const handleNext = () => {
-    if (step === 1 && !v1()) {
-      showToast("⚠️ Completa los datos básicos del paciente");
-      return;
+    if (step === 1) {
+      const errs = validateStep1();
+      if (Object.keys(errs).length > 0) {
+        setStepErrors(errs);
+        requestAnimationFrame(() => focusFirstError(errs, modalBodyRef));
+        return;
+      }
     }
-    if (step === 2 && !v2()) {
-      showToast("⚠️ Selecciona la severidad de la condición clínica");
-      return;
+    if (step === 2) {
+      const errs = validateStep2();
+      if (Object.keys(errs).length > 0) {
+        setStepErrors(errs);
+        requestAnimationFrame(() => focusFirstError(errs, modalBodyRef));
+        return;
+      }
     }
+    setStepErrors({});
     setStep((s) => s + 1);
+    modalBodyRef.current?.scrollTo?.({ top: 0, behavior: "smooth" });
   };
 
   const handleSubmit = async () => {
-    if (!v1() || !v2()) {
-      showToast("⚠️ Hay campos requeridos sin completar");
+    const e1 = validateStep1();
+    if (Object.keys(e1).length > 0) {
+      setStep(1);
+      setStepErrors(e1);
+      requestAnimationFrame(() => focusFirstError(e1, modalBodyRef));
+      return;
+    }
+
+    const e2 = validateStep2();
+    if (Object.keys(e2).length > 0) {
+      setStep(2);
+      setStepErrors(e2);
+      requestAnimationFrame(() => focusFirstError(e2, modalBodyRef));
       return;
     }
 
     // Si la cédula ya está escrita pero aún no se resolvió el representante,
     // buscarlo antes de validar para permitir la reutilización automática.
     let rep = repExistente;
-    const ceduDigits = form.rep_cedu.replace(/\D/g, "");
+    const ceduDigits = sanitizeDocumento(form.rep_cedu, "V");
     if (ceduDigits.length >= 6 && !rep && !buscandoRep) {
       rep = await buscarRep(form.rep_cedu);
     }
 
-    if (
-      !form.acepta_lopnna ||
-      ceduDigits.length < 6 ||
-      !form.usu_crro.includes("@") ||
-      (!rep?.encontrado &&
-        !(
-          form.rep_nomb.trim() &&
-          form.rep_apel.trim() &&
-          form.rep_rela &&
-          form.rep_telf.trim().length >= 7
-        ))
-    ) {
-      showToast("⚠️ Hay campos requeridos sin completar");
+    const e3 = validateStep3(rep);
+    if (Object.keys(e3).length > 0) {
+      setStep(3);
+      setStepErrors(e3);
+      requestAnimationFrame(() => focusFirstError(e3, modalBodyRef));
       return;
     }
 
+    setStepErrors({});
     setLoading(true);
     try {
       const payload = {
-        nin_nomb: form.nin_nomb,
-        nin_apel: form.nin_apel,
+        nin_nomb: String(form.nin_nomb || "").trim(),
+        nin_apel: String(form.nin_apel || "").trim(),
         nin_fnac: form.nin_fnac,
         nin_gner: form.nin_gner,
         nin_nivd: form.nin_nivd,
@@ -698,12 +838,13 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
             ...docFiles.map((d) => d.uploadedUrl || d.url).filter(Boolean),
           ].filter((url, index, self) => self.indexOf(url) === index),
         }),
-        rep_nomb: rep?.rep_nomb || form.rep_nomb,
-        rep_apel: rep?.rep_apel || form.rep_apel,
+        rep_nomb: rep?.rep_nomb || String(form.rep_nomb || "").trim(),
+        rep_apel: rep?.rep_apel || String(form.rep_apel || "").trim(),
+        ...(form.rep_fnac && { rep_fnac: form.rep_fnac }),
         rep_rela: rep?.rep_rela || form.rep_rela,
-        rep_telf: rep?.rep_telf || form.rep_telf,
+        rep_telf: rep?.rep_telf || String(form.rep_telf || "").trim(),
         rep_cedu: rep?.rep_cedu || ceduDigits,
-        usu_crro: rep?.usu_crro || form.usu_crro,
+        usu_crro: rep?.usu_crro || String(form.usu_crro || "").trim(),
         ...(!rep && form.rep_foto && { rep_foto: form.rep_foto }),
         ...(form.sen_tipo && {
           sen_tipo: form.sen_tipo,
@@ -725,6 +866,7 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
         showToast("✅ Registro clínico completado exitosamente");
       }
       setForm(INITIAL_FORM);
+      setStepErrors({});
       setRepExistente(null);
       setPhotoFile(null);
       setPhotoPreview(null);
@@ -733,6 +875,18 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
       setStep(1);
       onClose();
     } catch (err) {
+      const serverErrs = extractFieldErrors(err, { email: "usu_crro" });
+      if (Object.keys(serverErrs).length > 0) {
+        const keys = Object.keys(serverErrs);
+        const targetStep = keys.some((k) => k.startsWith("nin_"))
+          ? 1
+          : keys.some((k) => k.startsWith("sen_"))
+            ? 2
+            : 3;
+        setStep(targetStep);
+        setStepErrors(serverErrs);
+        requestAnimationFrame(() => focusFirstError(serverErrs, modalBodyRef));
+      }
       toastError(err, showToast, "No se pudo completar el registro clínico.");
     } finally {
       setLoading(false);
@@ -825,7 +979,26 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           {/* ── Body ── */}
-          <div className="overflow-y-auto flex-1 px-4 sm:px-7 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6">
+          <div
+            ref={modalBodyRef}
+            className="overflow-y-auto flex-1 px-4 sm:px-7 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6"
+          >
+            {Object.values(stepErrors).some(Boolean) && (
+              <div
+                role="alert"
+                className="mb-4 flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                <span>
+                  Completa o corrige los{" "}
+                  <strong>
+                    {Object.values(stepErrors).filter(Boolean).length}
+                  </strong>{" "}
+                  campo(s) señalados para continuar.
+                </span>
+              </div>
+            )}
+
             {/* ════════════ PASO 1: IDENTIDAD DEL PACIENTE ════════════ */}
             {step === 1 && (
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -849,10 +1022,28 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                     </FieldLabel>
                     <InputField
                       type="text"
+                      data-field="nin_nomb"
+                      name="nin_nomb"
+                      maxLength={50}
                       value={form.nin_nomb}
-                      onChange={(e) => set("nin_nomb", e.target.value)}
+                      onChange={(e) =>
+                        set(
+                          "nin_nomb",
+                          sanitizeNombrePersona(e.target.value, 50),
+                        )
+                      }
+                      aria-invalid={Boolean(stepErrors.nin_nomb)}
+                      className={
+                        stepErrors.nin_nomb ? "form-input-invalid" : ""
+                      }
                       placeholder="Ej. José Andrés"
                     />
+                    {stepErrors.nin_nomb && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.nin_nomb}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <FieldLabel
@@ -863,10 +1054,28 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                     </FieldLabel>
                     <InputField
                       type="text"
+                      data-field="nin_apel"
+                      name="nin_apel"
+                      maxLength={50}
                       value={form.nin_apel}
-                      onChange={(e) => set("nin_apel", e.target.value)}
+                      onChange={(e) =>
+                        set(
+                          "nin_apel",
+                          sanitizeNombrePersona(e.target.value, 50),
+                        )
+                      }
+                      aria-invalid={Boolean(stepErrors.nin_apel)}
+                      className={
+                        stepErrors.nin_apel ? "form-input-invalid" : ""
+                      }
                       placeholder="Ej. Rodríguez Pérez"
                     />
+                    {stepErrors.nin_apel && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.nin_apel}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -880,14 +1089,28 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                     </FieldLabel>
                     <InputField
                       type="date"
+                      data-field="nin_fnac"
+                      name="nin_fnac"
                       value={form.nin_fnac}
-                      max={new Date().toISOString().split("T")[0]}
+                      min={childDateBounds.min}
+                      max={childDateBounds.max}
                       onChange={(e) => set("nin_fnac", e.target.value)}
+                      aria-invalid={Boolean(stepErrors.nin_fnac)}
+                      className={
+                        stepErrors.nin_fnac ? "form-input-invalid" : ""
+                      }
                     />
-                    {edad !== null && (
-                      <p className="text-[10px] text-brand-600 dark:text-brand-400 mt-1 font-semibold">
-                        → {edad} año{edad !== 1 ? "s" : ""} de edad
+                    {stepErrors.nin_fnac ? (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.nin_fnac}
                       </p>
+                    ) : (
+                      edad !== null && (
+                        <p className="text-[10px] text-brand-600 dark:text-brand-400 mt-1 font-semibold">
+                          → {edad} año{edad !== 1 ? "s" : ""} de edad
+                        </p>
+                      )
                     )}
                   </div>
                   <div>
@@ -898,17 +1121,29 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                       Sexo Biológico
                     </FieldLabel>
                     <SelectField
+                      data-field="nin_gner"
+                      name="nin_gner"
                       value={form.nin_gner}
                       onChange={(e) => set("nin_gner", e.target.value)}
+                      aria-invalid={Boolean(stepErrors.nin_gner)}
+                      className={
+                        stepErrors.nin_gner ? "form-input-invalid" : ""
+                      }
                     >
                       <option value="M">Masculino</option>
                       <option value="F">Femenino</option>
                     </SelectField>
+                    {stepErrors.nin_gner && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.nin_gner}
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 {/* Nivel TEA */}
-                <div>
+                <div data-field="nin_nivd">
                   <FieldLabel
                     required
                     tooltip="Nivel de soporte según la evaluación diagnóstica más reciente. Se recomienda seleccionar el nivel indicado en el informe del neuropediatra o psicólogo clínico."
@@ -936,6 +1171,12 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                       </button>
                     ))}
                   </div>
+                  {stepErrors.nin_nivd && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {stepErrors.nin_nivd}
+                    </p>
+                  )}
                   {form.nin_nivd && (
                     <div
                       className={`mt-2 p-3 rounded-xl border text-[10px] leading-relaxed ${nivelInfo.color}`}
@@ -946,18 +1187,36 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 <div>
-                  <FieldLabel tooltip="Descripción breve del diagnóstico (ej. 'TEA con Retraso del Lenguaje', 'TEA + TDAH'). Se mostrará en el expediente clínico del paciente.">
-                    Descripción del Diagnóstico{" "}
-                    <span className="text-slate-400 font-normal">
-                      (Opcional)
+                  <div className="flex items-center justify-between">
+                    <FieldLabel tooltip="Descripción breve del diagnóstico (ej. 'TEA con Retraso del Lenguaje', 'TEA + TDAH'). Se mostrará en el expediente clínico del paciente.">
+                      Descripción del Diagnóstico{" "}
+                      <span className="text-slate-400 font-normal">
+                        (Opcional)
+                      </span>
+                    </FieldLabel>
+                    <span
+                      className={`text-[11px] font-medium ${(form.nin_diag || "").length >= 230 ? "text-rose-500" : "text-slate-400"}`}
+                    >
+                      {(form.nin_diag || "").length}/255
                     </span>
-                  </FieldLabel>
+                  </div>
                   <InputField
                     type="text"
+                    data-field="nin_diag"
+                    name="nin_diag"
+                    maxLength={255}
                     value={form.nin_diag}
                     onChange={(e) => set("nin_diag", e.target.value)}
+                    aria-invalid={Boolean(stepErrors.nin_diag)}
+                    className={stepErrors.nin_diag ? "form-input-invalid" : ""}
                     placeholder="Ej. TEA Nivel 2 con retraso en el lenguaje expresivo"
                   />
+                  {stepErrors.nin_diag && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {stepErrors.nin_diag}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -981,10 +1240,15 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                     Condición Sensorial o Comorbilidad Principal
                   </FieldLabel>
                   <SelectField
+                    data-field="sen_tipo"
+                    name="sen_tipo"
                     value={form.sen_tipo}
                     onChange={(e) => {
                       set("sen_tipo", e.target.value);
-                      if (!e.target.value) set("sen_nvli", "");
+                      if (!e.target.value) {
+                        set("sen_nvli", "");
+                        setStepErrors((prev) => ({ ...prev, sen_nvli: "" }));
+                      }
                     }}
                   >
                     <option value="">No reportada actualmente</option>
@@ -1031,14 +1295,20 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
 
                 {form.sen_tipo && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
-                    <div>
+                    <div data-field="sen_nvli">
                       <FieldLabel
                         required
                         tooltip="Nivel de impacto en el funcionamiento diario del paciente, según la evaluación del especialista."
                       >
                         Nivel de Impacto en el Funcionamiento
                       </FieldLabel>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div
+                        className={`grid grid-cols-3 gap-3 rounded-xl ${
+                          stepErrors.sen_nvli
+                            ? "p-1.5 ring-2 ring-rose-500/80 bg-rose-50/40 dark:bg-rose-950/20"
+                            : ""
+                        }`}
+                      >
                         {[
                           {
                             val: "Leve",
@@ -1078,22 +1348,44 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                           </button>
                         ))}
                       </div>
+                      {stepErrors.sen_nvli && (
+                        <p className="form-error" role="alert">
+                          <AlertCircle className="w-3.5 h-3.5" />{" "}
+                          {stepErrors.sen_nvli}
+                        </p>
+                      )}
                     </div>
 
                     <div>
-                      <FieldLabel tooltip="Observaciones adicionales del clínico sobre la condición. Por ejemplo, desencadenantes conocidos, estrategias que funcionan, etc.">
-                        Notas Clínicas Adicionales{" "}
-                        <span className="text-slate-400 font-normal">
-                          (Opcional)
+                      <div className="flex items-center justify-between">
+                        <FieldLabel tooltip="Observaciones adicionales del clínico sobre la condición. Por ejemplo, desencadenantes conocidos, estrategias que funcionan, etc.">
+                          Notas Clínicas Adicionales{" "}
+                          <span className="text-slate-400 font-normal">
+                            (Opcional)
+                          </span>
+                        </FieldLabel>
+                        <span
+                          className={`text-[11px] font-medium ${(form.sen_nota || "").length >= 230 ? "text-rose-500" : "text-slate-400"}`}
+                        >
+                          {(form.sen_nota || "").length}/255
                         </span>
-                      </FieldLabel>
+                      </div>
                       <textarea
+                        data-field="sen_nota"
+                        name="sen_nota"
+                        maxLength={255}
                         value={form.sen_nota}
                         onChange={(e) => set("sen_nota", e.target.value)}
                         rows={3}
                         placeholder="Ej. Reactivo a sonidos agudos en frecuencias >2kHz. Se calma con música instrumental suave. Estrategia: auriculares de reducción de ruido."
-                        className="form-textarea !py-3 resize-none"
+                        className={`form-textarea !py-3 resize-none ${stepErrors.sen_nota ? "form-input-invalid" : ""}`}
                       />
+                      {stepErrors.sen_nota && (
+                        <p className="form-error" role="alert">
+                          <AlertCircle className="w-3.5 h-3.5" />{" "}
+                          {stepErrors.sen_nota}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1195,16 +1487,29 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                       </FieldLabel>
                       <InputField
                         type="text"
+                        data-field="rep_cedu"
+                        name="rep_cedu"
                         inputMode="numeric"
+                        maxLength={8}
                         value={form.rep_cedu}
                         onChange={(e) => {
-                          set("rep_cedu", e.target.value.replace(/\D/g, ""));
+                          set(
+                            "rep_cedu",
+                            sanitizeDocumento(e.target.value, "V"),
+                          );
                           setRepExistente(null);
                         }}
                         onBlur={(e) => buscarRep(e.target.value)}
+                        aria-invalid={Boolean(stepErrors.rep_cedu)}
                         placeholder="Ej. 12345678"
-                        className="border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
+                        className={`border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10 ${stepErrors.rep_cedu ? "form-input-invalid" : ""}`}
                       />
+                      {stepErrors.rep_cedu && (
+                        <p className="form-error" role="alert">
+                          <AlertCircle className="w-3.5 h-3.5" />{" "}
+                          {stepErrors.rep_cedu}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <FieldLabel
@@ -1216,16 +1521,26 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                       </FieldLabel>
                       <InputField
                         type="email"
+                        data-field="usu_crro"
+                        name="usu_crro"
+                        maxLength={50}
                         value={form.usu_crro}
                         onChange={(e) => set("usu_crro", e.target.value)}
-                        placeholder="correo@ejemplo.com"
                         disabled={!!repExistente}
-                        className={
+                        aria-invalid={Boolean(stepErrors.usu_crro)}
+                        placeholder="correo@ejemplo.com"
+                        className={`${
                           repExistente
                             ? "opacity-70"
                             : "border-emerald-200 dark:border-emerald-800 focus:ring-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10"
-                        }
+                        } ${stepErrors.usu_crro ? "form-input-invalid" : ""}`}
                       />
+                      {stepErrors.usu_crro && (
+                        <p className="form-error" role="alert">
+                          <AlertCircle className="w-3.5 h-3.5" />{" "}
+                          {stepErrors.usu_crro}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1256,48 +1571,116 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <FieldLabel
-                      required
+                      required={!repExistente}
                       tooltip="Nombre(s) del padre, madre o tutor legal responsable del paciente."
                     >
                       <User className="w-3 h-3" /> Nombre(s) del Representante
                     </FieldLabel>
                     <InputField
                       type="text"
+                      data-field="rep_nomb"
+                      name="rep_nomb"
+                      maxLength={50}
                       value={form.rep_nomb}
-                      onChange={(e) => set("rep_nomb", e.target.value)}
+                      onChange={(e) =>
+                        set(
+                          "rep_nomb",
+                          sanitizeNombrePersona(e.target.value, 50),
+                        )
+                      }
                       placeholder="Ej. María Elena"
                       disabled={!!repExistente}
-                      className={repExistente ? "opacity-70" : ""}
+                      aria-invalid={Boolean(stepErrors.rep_nomb)}
+                      className={`${repExistente ? "opacity-70" : ""} ${stepErrors.rep_nomb ? "form-input-invalid" : ""}`}
                     />
+                    {stepErrors.rep_nomb && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.rep_nomb}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <FieldLabel required>Apellido(s)</FieldLabel>
+                    <FieldLabel required={!repExistente}>
+                      Apellido(s)
+                    </FieldLabel>
                     <InputField
                       type="text"
+                      data-field="rep_apel"
+                      name="rep_apel"
+                      maxLength={50}
                       value={form.rep_apel}
-                      onChange={(e) => set("rep_apel", e.target.value)}
+                      onChange={(e) =>
+                        set(
+                          "rep_apel",
+                          sanitizeNombrePersona(e.target.value, 50),
+                        )
+                      }
                       placeholder="Ej. Rodríguez"
                       disabled={!!repExistente}
-                      className={repExistente ? "opacity-70" : ""}
+                      aria-invalid={Boolean(stepErrors.rep_apel)}
+                      className={`${repExistente ? "opacity-70" : ""} ${stepErrors.rep_apel ? "form-input-invalid" : ""}`}
                     />
+                    {stepErrors.rep_apel && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.rep_apel}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <FieldLabel
-                      required
+                      required={!repExistente}
+                      tooltip="Fecha de nacimiento del representante (edad entre 12 y 75 años)."
+                    >
+                      <Calendar className="w-3 h-3" /> Fecha de Nacimiento
+                    </FieldLabel>
+                    <InputField
+                      type="date"
+                      data-field="rep_fnac"
+                      name="rep_fnac"
+                      min={repDateBounds.min}
+                      max={repDateBounds.max}
+                      value={form.rep_fnac || ""}
+                      onChange={(e) => set("rep_fnac", e.target.value)}
+                      disabled={Boolean(repExistente && repExistente.rep_fnac)}
+                      aria-invalid={Boolean(stepErrors.rep_fnac)}
+                      className={`${repExistente && repExistente.rep_fnac ? "opacity-70" : ""} ${stepErrors.rep_fnac ? "form-input-invalid" : ""}`}
+                    />
+                    {stepErrors.rep_fnac ? (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.rep_fnac}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        12 a 75 años
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <FieldLabel
+                      required={!repExistente}
                       tooltip="Vínculo legal con el paciente. Determina el nivel de acceso y responsabilidad en el sistema."
                     >
-                      <IdCard className="w-3 h-3" /> Parentesco / Vínculo Legal
+                      <IdCard className="w-3 h-3" /> Parentesco / Vínculo
                     </FieldLabel>
                     <SelectField
+                      data-field="rep_rela"
+                      name="rep_rela"
                       value={form.rep_rela}
                       onChange={(e) => set("rep_rela", e.target.value)}
                       disabled={!!repExistente}
+                      aria-invalid={Boolean(stepErrors.rep_rela)}
+                      className={
+                        stepErrors.rep_rela ? "form-input-invalid" : ""
+                      }
                     >
                       <option value="Madre">Madre</option>
                       <option value="Padre">Padre</option>
@@ -1312,30 +1695,59 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                         Otro Familiar Directo
                       </option>
                     </SelectField>
+                    {stepErrors.rep_rela && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.rep_rela}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <FieldLabel
-                      required
-                      tooltip="Número de contacto principal. Se usará para notificaciones de emergencia."
+                      required={!repExistente}
+                      tooltip="Número de contacto principal en formato 04120000000 o +584120000000."
                     >
-                      <Phone className="w-3 h-3" /> Teléfono Móvil de Contacto
+                      <Phone className="w-3 h-3" /> Teléfono Móvil
                     </FieldLabel>
                     <InputField
                       type="tel"
+                      data-field="rep_telf"
+                      name="rep_telf"
+                      inputMode="tel"
+                      maxLength={
+                        (form.rep_telf || "").startsWith("+") ? 13 : 11
+                      }
                       value={form.rep_telf}
-                      onChange={(e) => set("rep_telf", e.target.value)}
-                      placeholder="Ej. 0412 1234567 o +58 412 1234567"
+                      onChange={(e) =>
+                        set("rep_telf", sanitizeTelefonoVE(e.target.value))
+                      }
+                      placeholder="04120000000 o +584120000000"
                       disabled={!!repExistente}
-                      className={`border-slate-200 dark:border-slate-700 focus:ring-emerald-500 ${repExistente ? "opacity-70" : ""}`}
+                      aria-invalid={Boolean(stepErrors.rep_telf)}
+                      className={`border-slate-200 dark:border-slate-700 focus:ring-emerald-500 ${repExistente ? "opacity-70" : ""} ${stepErrors.rep_telf ? "form-input-invalid" : ""}`}
                     />
+                    {stepErrors.rep_telf && (
+                      <p className="form-error" role="alert">
+                        <AlertCircle className="w-3.5 h-3.5" />{" "}
+                        {stepErrors.rep_telf}
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 {/* Consentimiento del especialista */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div
+                  data-field="acepta_lopnna"
+                  className={`p-4 rounded-xl border transition-colors ${
+                    stepErrors.acepta_lopnna
+                      ? "bg-rose-50/70 dark:bg-rose-950/25 border-rose-500 ring-2 ring-rose-500/20"
+                      : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700"
+                  }`}
+                >
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
+                      name="acepta_lopnna"
                       checked={form.acepta_lopnna}
                       onChange={(e) => set("acepta_lopnna", e.target.checked)}
                       className="mt-0.5 w-4 h-4 accent-brand-600 shrink-0"
@@ -1356,6 +1768,12 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                       .
                     </span>
                   </label>
+                  {stepErrors.acepta_lopnna && (
+                    <p className="form-error mt-2" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {stepErrors.acepta_lopnna}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -1402,7 +1820,12 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={loading || !form.acepta_lopnna || docsUploading}
+                  disabled={
+                    loading ||
+                    photoUploading ||
+                    repPhotoUploading ||
+                    docsUploading
+                  }
                   className="w-full sm:w-auto min-h-[44px] px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold rounded-xl flex items-center justify-center gap-2 text-sm transition-all shadow-sm shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (

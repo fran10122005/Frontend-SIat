@@ -7,7 +7,12 @@ import {
   legacyAliases,
 } from "../context/GlobalState";
 import { useTourContext } from "../context/TourContext";
-import { toastError } from "../utils/errorHandler";
+import { toastError, extractFieldErrors } from "../utils/errorHandler";
+import {
+  validateEmail,
+  validateEmailList,
+  focusFirstError,
+} from "../utils/validators";
 import { getValidSession } from "../utils/authStorage";
 import AdminSidebar from "../components/layout/AdminSidebar";
 import * as XLSX from "xlsx";
@@ -28,6 +33,9 @@ import {
   Mail,
   CheckSquare,
   Sparkles,
+  AlertCircle,
+  Copy,
+  KeyRound,
 } from "lucide-react";
 import pdfIcon from "../assets/pdf.png";
 
@@ -170,6 +178,8 @@ function AdminDashboard({ onNavigate }) {
   });
   const [sendingTest, setSendingTest] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [scheduleErrors, setScheduleErrors] = useState({});
+  const scheduleFormRef = useRef(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [generatedInvite, setGeneratedInvite] = useState({
     link: "",
@@ -177,8 +187,16 @@ function AdminDashboard({ onNavigate }) {
     passwordGenerada: "",
     emailSent: false,
   });
+  const [showEspCredModal, setShowEspCredModal] = useState(false);
+  const [generatedEspCreds, setGeneratedEspCreds] = useState({
+    nombre: "",
+    email: "",
+    password: "",
+    isReset: false,
+  });
 
   const handleOpenScheduleModal = async () => {
+    setScheduleErrors({});
     setShowScheduleModal(true);
     try {
       const res = await api.get("/admin/reportes/programados");
@@ -189,6 +207,40 @@ function AdminDashboard({ onNavigate }) {
     } catch (err) {
       console.warn("Error cargando programación de reportes:", err);
     }
+  };
+
+  const validateScheduleForm = (requireModulesIfEnabled = true) => {
+    const errs = {};
+    const emailErr = validateEmail(scheduleConfig.email, {
+      required: true,
+      max: 120,
+    });
+    if (emailErr) errs.email = emailErr;
+
+    const addErr = validateEmailList(scheduleConfig.additionalEmails || "");
+    if (addErr) errs.additionalEmails = addErr;
+
+    if (!String(scheduleConfig.subject || "").trim()) {
+      errs.subject = "El asunto del correo es obligatorio";
+    } else if (String(scheduleConfig.subject).trim().length > 150) {
+      errs.subject = "El asunto no puede exceder 150 caracteres";
+    }
+
+    if (requireModulesIfEnabled && scheduleConfig.enabled) {
+      const hasAnyModule = Object.values(scheduleConfig.modules || {}).some(
+        Boolean,
+      );
+      if (!hasAnyModule) {
+        errs.modules = "Selecciona al menos un módulo para el envío programado";
+      }
+    }
+
+    setScheduleErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      requestAnimationFrame(() => focusFirstError(errs, scheduleFormRef));
+      return false;
+    }
+    return true;
   };
 
   window.__navigate = onNavigate;
@@ -338,17 +390,24 @@ function AdminDashboard({ onNavigate }) {
   const handleCreateEspecialista = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
+      const fullName =
+        `${newEsp.esp_gner === "F" ? "Dra." : "Dr."} ${String(newEsp.esp_nomb || "").trim()} ${String(newEsp.esp_apel || "").trim()}`.trim();
+      const emailClean = String(newEsp.usu_crro || "").trim();
+
       // Mapear los campos del formulario a los que espera el backend
       const payload = {
-        esp_cedu: newEsp.esp_cedu ? String(newEsp.esp_cedu).trim() : undefined,
-        nombre: newEsp.esp_nomb,
-        apellido: newEsp.esp_apel,
-        email: newEsp.usu_crro,
+        esp_cedu: newEsp.esp_cedu
+          ? String(newEsp.esp_cedu).trim().toUpperCase()
+          : undefined,
+        nombre: String(newEsp.esp_nomb || "").trim(),
+        apellido: String(newEsp.esp_apel || "").trim(),
+        email: emailClean,
         password: newEsp.usu_clve || undefined,
-        esp_licencia: newEsp.esp_licencia || undefined,
-        esp_telf: newEsp.esp_telf || undefined,
+        esp_licencia: newEsp.esp_licencia
+          ? String(newEsp.esp_licencia).trim().toUpperCase()
+          : undefined,
+        esp_telf: newEsp.esp_telf ? String(newEsp.esp_telf).trim() : undefined,
         esc_codi: newEsp.esc_codi,
         esp_gner: newEsp.esp_gner || "M",
         esp_tdoc: newEsp.esp_tdoc || "V",
@@ -358,11 +417,16 @@ function AdminDashboard({ onNavigate }) {
       };
       const res = await api.post("/admin/especialistas", payload);
       const nuevaClave = res.data?.data?.password_generada;
-      showToast(
-        nuevaClave
-          ? `✅ Especialista creado. Contraseña provisional: ${nuevaClave}`
-          : "✅ Especialista creado exitosamente.",
-      );
+      showToast("✅ Especialista creado exitosamente.");
+      if (nuevaClave) {
+        setGeneratedEspCreds({
+          nombre: fullName,
+          email: emailClean,
+          password: nuevaClave,
+          isReset: false,
+        });
+        setShowEspCredModal(true);
+      }
       setNewEsp({
         usu_crro: "",
         esp_nomb: "",
@@ -382,10 +446,15 @@ function AdminDashboard({ onNavigate }) {
             : "",
       });
       fetchData();
-      return true;
+      return { ok: true };
     } catch (err) {
+      const fieldErrors = extractFieldErrors(err, {
+        email: "usu_crro",
+        nombre: "esp_nomb",
+        apellido: "esp_apel",
+      });
       toastError(err, showToast, "No se pudo registrar el especialista.");
-      return false;
+      return { ok: false, fieldErrors };
     } finally {
       setLoading(false);
     }
@@ -485,11 +554,16 @@ function AdminDashboard({ onNavigate }) {
         {},
       );
       const nuevaClave = res.data?.data?.password_generada;
-      showToast(
-        nuevaClave
-          ? `✅ Contraseña restablecida para ${email}. Nueva contraseña: ${nuevaClave}`
-          : `✅ Contraseña restablecida para ${email}.`,
-      );
+      showToast(`✅ Contraseña restablecida para ${email}.`);
+      if (nuevaClave) {
+        setGeneratedEspCreds({
+          nombre: email,
+          email,
+          password: nuevaClave,
+          isReset: true,
+        });
+        setShowEspCredModal(true);
+      }
     } catch (err) {
       toastError(err, showToast, "Error al restablecer la contraseña.");
     }
@@ -500,23 +574,31 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
     try {
       await api.put(`/admin/representantes/${editingRep.usu_codi}`, {
-        rep_nomb: editingRep.rep_nomb,
-        rep_apel: editingRep.rep_apel,
-        rep_telf: editingRep.rep_telf,
+        rep_nomb: String(editingRep.rep_nomb || "").trim(),
+        rep_apel: String(editingRep.rep_apel || "").trim(),
+        rep_telf: editingRep.rep_telf ? String(editingRep.rep_telf).trim() : "",
         rep_rela: editingRep.rep_rela,
+        ...(editingRep.rep_fnac !== undefined && {
+          rep_fnac: editingRep.rep_fnac || null,
+        }),
         ...(editingRep.rep_foto !== undefined && {
           rep_foto: editingRep.rep_foto || null,
         }),
-        ...(editingRep.rep_cedu && { rep_cedu: editingRep.rep_cedu }),
-        ...(editingRep.usu_crro && { usu_crro: editingRep.usu_crro }),
+        ...(editingRep.rep_cedu && {
+          rep_cedu: String(editingRep.rep_cedu).trim(),
+        }),
+        ...(editingRep.usu_crro && {
+          usu_crro: String(editingRep.usu_crro).trim(),
+        }),
       });
       showToast("✅ Representante actualizado con éxito.");
       setEditingRep(null);
       fetchData();
-      return true;
+      return { ok: true };
     } catch (err) {
+      const fieldErrors = extractFieldErrors(err);
       toastError(err, showToast, "Error al actualizar el representante.");
-      return false;
+      return { ok: false, fieldErrors };
     } finally {
       setLoading(false);
     }
@@ -553,31 +635,35 @@ function AdminDashboard({ onNavigate }) {
       await api.put(`/admin/especialistas/${editingEsp.esp_codi}`, {
         esp_tdoc: editingEsp.esp_tdoc || "V",
         esp_cedu: editingEsp.esp_cedu
-          ? String(editingEsp.esp_cedu).trim()
+          ? String(editingEsp.esp_cedu).trim().toUpperCase()
           : undefined,
-        esp_nomb: editingEsp.esp_nomb,
-        esp_apel: editingEsp.esp_apel,
-        usu_crro: editingEsp.usu_crro,
+        esp_nomb: String(editingEsp.esp_nomb || "").trim(),
+        esp_apel: String(editingEsp.esp_apel || "").trim(),
+        usu_crro: String(editingEsp.usu_crro || "").trim(),
+        esp_fnac: editingEsp.esp_fnac || undefined,
         esp_gner: editingEsp.esp_gner,
-        esp_telf: editingEsp.esp_telf,
-        esp_licencia: editingEsp.esp_licencia,
+        esp_telf: editingEsp.esp_telf ? String(editingEsp.esp_telf).trim() : "",
+        esp_licencia: editingEsp.esp_licencia
+          ? String(editingEsp.esp_licencia).trim().toUpperCase()
+          : "",
         esp_foto: editingEsp.esp_foto,
         esc_codi: editingEsp.esc_codi,
       });
       showToast("✅ Especialista actualizado con éxito.");
       setEditingEsp(null);
       fetchData();
-      return true;
+      return { ok: true };
     } catch (err) {
+      const fieldErrors = extractFieldErrors(err);
       toastError(err, showToast, "Error al actualizar el especialista.");
-      return false;
+      return { ok: false, fieldErrors };
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateInstitucion = async (e) => {
-    e.preventDefault();
+  const handleUpdateInstitucion = async (e, extraConf = undefined) => {
+    if (e?.preventDefault) e.preventDefault();
     setLoading(true);
     try {
       // El RIF se puede editar (es el ID fiscal, no se genera). La URL lleva el
@@ -586,26 +672,34 @@ function AdminDashboard({ onNavigate }) {
         catalogos.instituciones?.[0]?.ins_codi || editingInst?.ins_codi;
       const body = {
         ins_codi: (editingInst.ins_codi || originalCodi || "").trim(),
-        ins_nomb: editingInst.ins_nomb,
-        ins_dire: editingInst.ins_dire,
-        ins_telf: editingInst.ins_telf,
-        ins_pers: editingInst.ins_pers || "",
-        ins_emai: editingInst.ins_emai || "",
-        ins_web: editingInst.ins_web || "",
+        ins_nomb: String(editingInst.ins_nomb || "").trim(),
+        ins_dire: String(editingInst.ins_dire || "").trim(),
+        ins_telf: String(editingInst.ins_telf || "").trim(),
+        ins_pers: editingInst.ins_pers
+          ? String(editingInst.ins_pers).trim()
+          : "",
+        ins_emai: editingInst.ins_emai
+          ? String(editingInst.ins_emai).trim()
+          : "",
+        ins_web: editingInst.ins_web ? String(editingInst.ins_web).trim() : "",
+        ...(editingInst.ins_logo !== undefined && {
+          ins_logo: editingInst.ins_logo || "",
+        }),
+        ...(extraConf !== undefined
+          ? { ins_conf: extraConf }
+          : editingInst.ins_conf !== undefined
+            ? { ins_conf: editingInst.ins_conf }
+            : {}),
       };
-      console.log("PUT institucion — body enviado:", JSON.stringify(body));
       await api.put(`/admin/instituciones/${originalCodi}`, body);
       showToast("✅ Institución actualizada con éxito.");
       setEditingInst(null);
       fetchData();
+      return { ok: true };
     } catch (err) {
-      const errResp = err.response?.data;
+      const fieldErrors = extractFieldErrors(err);
       toastError(err, showToast, "Error al actualizar la institución.");
-      console.error(
-        "PUT institucion error — full response:",
-        JSON.stringify(errResp, null, 2),
-      );
-      console.error("PUT institucion error — status:", err.response?.status);
+      return { ok: false, fieldErrors };
     } finally {
       setLoading(false);
     }
@@ -616,17 +710,25 @@ function AdminDashboard({ onNavigate }) {
     setLoading(true);
 
     try {
-      const esc_codi =
+      const esc_codi = (
         (newEspCat.esc_codi || "").trim() ||
-        `E${Date.now().toString(36).toUpperCase()}`;
-      await api.post("/admin/especialidades", { ...newEspCat, esc_codi });
+        `E${Date.now().toString(36).toUpperCase()}`
+      )
+        .toUpperCase()
+        .slice(0, 10);
+      await api.post("/admin/especialidades", {
+        esc_codi,
+        esc_nomb: String(newEspCat.esc_nomb || "").trim(),
+        esc_desc: String(newEspCat.esc_desc || "").trim(),
+      });
       showToast(`✅ Especialidad registrada con éxito. Código: ${esc_codi}`);
       setNewEspCat({ esc_codi: "", esc_nomb: "", esc_desc: "" });
       fetchData();
-      return true;
+      return { ok: true };
     } catch (err) {
+      const fieldErrors = extractFieldErrors(err);
       toastError(err, showToast, "No se pudo registrar la especialidad.");
-      return false;
+      return { ok: false, fieldErrors };
     } finally {
       setLoading(false);
     }
@@ -636,17 +738,18 @@ function AdminDashboard({ onNavigate }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.put(
-        `/admin/especialidades/${editingEspCat.esc_codi}`,
-        editingEspCat,
-      );
+      await api.put(`/admin/especialidades/${editingEspCat.esc_codi}`, {
+        esc_nomb: String(editingEspCat.esc_nomb || "").trim(),
+        esc_desc: String(editingEspCat.esc_desc || "").trim(),
+      });
       showToast("✅ Especialidad actualizada con éxito.");
       setEditingEspCat(null);
       fetchData();
-      return true;
+      return { ok: true };
     } catch (err) {
+      const fieldErrors = extractFieldErrors(err);
       toastError(err, showToast, "Error al actualizar la especialidad.");
-      return false;
+      return { ok: false, fieldErrors };
     } finally {
       setLoading(false);
     }
@@ -1265,17 +1368,132 @@ function AdminDashboard({ onNavigate }) {
         </div>
       )}
 
+      {/* MODAL: Credenciales Provisionales de Especialista */}
+      {showEspCredModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#f8fafc] dark:bg-[#1a2332] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700/80 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-700/60 dark:border-slate-800 shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 text-blue-300 rounded-xl shrink-0 border border-blue-400/20">
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white tracking-tight">
+                    {generatedEspCreds.isReset
+                      ? "Contraseña Restablecida"
+                      : "¡Especialista Registrado!"}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEspCredModal(false)}
+                  className="text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                {generatedEspCreds.isReset
+                  ? "Se generó una nueva contraseña provisional para el especialista. Compártela de forma segura:"
+                  : "El especialista fue acreditado correctamente. Guarda o comparte sus credenciales provisionales de acceso:"}
+              </p>
+
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 text-xs text-slate-700 dark:text-slate-200 space-y-2">
+                {generatedEspCreds.nombre && !generatedEspCreds.isReset && (
+                  <p>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Profesional:{" "}
+                    </span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {generatedEspCreds.nombre}
+                    </span>
+                  </p>
+                )}
+                {generatedEspCreds.email && (
+                  <p>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Correo:{" "}
+                    </span>
+                    <span className="font-mono font-semibold select-all">
+                      {generatedEspCreds.email}
+                    </span>
+                  </p>
+                )}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-blue-200/70 dark:border-blue-800/50">
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-[11px]">
+                      Contraseña provisional
+                    </span>
+                    <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-300 select-all">
+                      {generatedEspCreds.password}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(
+                        generatedEspCreds.password,
+                      );
+                      showToast("📋 Contraseña copiada al portapapeles");
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-[11px] font-semibold hover:bg-blue-100/60 dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Copiar clave
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEspCredModal(false)}
+                  className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-semibold transition-colors"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const summary = [
+                      generatedEspCreds.nombre && !generatedEspCreds.isReset
+                        ? `Especialista: ${generatedEspCreds.nombre}`
+                        : null,
+                      `Correo: ${generatedEspCreds.email}`,
+                      `Contraseña provisional: ${generatedEspCreds.password}`,
+                    ]
+                      .filter(Boolean)
+                      .join("\n");
+                    navigator.clipboard?.writeText(summary);
+                    showToast("📋 Credenciales copiadas al portapapeles");
+                  }}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm shadow-blue-600/25 transition-all flex items-center gap-1.5"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copiar Todo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: Programar Reporte Profesional */}
       {showScheduleModal && (
         <AdminModal
           open={showScheduleModal}
-          onClose={() => setShowScheduleModal(false)}
+          onClose={() => {
+            setShowScheduleModal(false);
+            setScheduleErrors({});
+          }}
           title="Programador de Reportes Ejecutivos"
           subtitle="Configura el envío automático periódico y el contenido por correo electrónico"
           icon={Clock}
           maxWidth="max-w-xl"
         >
-          <div className="space-y-5">
+          <div ref={scheduleFormRef} className="space-y-5">
             {/* Activar/Desactivar */}
             <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
               <div className="min-w-0">
@@ -1290,12 +1508,16 @@ function AdminDashboard({ onNavigate }) {
                 <input
                   type="checkbox"
                   checked={scheduleConfig.enabled}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
                     setScheduleConfig({
                       ...scheduleConfig,
-                      enabled: e.target.checked,
-                    })
-                  }
+                      enabled,
+                    });
+                    if (!enabled && scheduleErrors.modules) {
+                      setScheduleErrors((prev) => ({ ...prev, modules: "" }));
+                    }
+                  }}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-slate-600 peer-checked:bg-blue-600"></div>
@@ -1329,11 +1551,17 @@ function AdminDashboard({ onNavigate }) {
             )}
 
             {/* Módulos / Contenido del Reporte */}
-            <div>
+            <div data-field="modules">
               <label className="form-label mb-2 block">
                 Módulos e Información a Incluir en el Correo
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div
+                className={`grid grid-cols-1 sm:grid-cols-2 gap-2.5 rounded-xl p-1 ${
+                  scheduleErrors.modules
+                    ? "ring-2 ring-rose-500/70 bg-rose-50/40 dark:bg-rose-950/20"
+                    : ""
+                }`}
+              >
                 {[
                   { key: "metricas", label: "Indicadores Generales (KPIs)" },
                   {
@@ -1356,15 +1584,22 @@ function AdminDashboard({ onNavigate }) {
                     <input
                       type="checkbox"
                       checked={!!scheduleConfig.modules?.[item.key]}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const nextModules = {
+                          ...scheduleConfig.modules,
+                          [item.key]: e.target.checked,
+                        };
                         setScheduleConfig({
                           ...scheduleConfig,
-                          modules: {
-                            ...scheduleConfig.modules,
-                            [item.key]: e.target.checked,
-                          },
-                        })
-                      }
+                          modules: nextModules,
+                        });
+                        if (Object.values(nextModules).some(Boolean)) {
+                          setScheduleErrors((prev) => ({
+                            ...prev,
+                            modules: "",
+                          }));
+                        }
+                      }}
                       className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -1373,6 +1608,12 @@ function AdminDashboard({ onNavigate }) {
                   </label>
                 ))}
               </div>
+              {scheduleErrors.modules && (
+                <p className="form-error" role="alert">
+                  <AlertCircle className="w-3.5 h-3.5" />{" "}
+                  {scheduleErrors.modules}
+                </p>
+              )}
             </div>
 
             {/* Frecuencia y Horarios */}
@@ -1429,6 +1670,8 @@ function AdminDashboard({ onNavigate }) {
                 <label className="form-label">Hora de envío</label>
                 <input
                   type="time"
+                  data-field="time"
+                  name="time"
                   value={scheduleConfig.time || "08:00"}
                   onChange={(e) =>
                     setScheduleConfig({
@@ -1444,39 +1687,77 @@ function AdminDashboard({ onNavigate }) {
             {/* Destinatarios y Asunto */}
             <div className="space-y-3">
               <div>
-                <label className="form-label">Asunto del Correo</label>
+                <label className="form-label">
+                  Asunto del Correo <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
-                  value={
-                    scheduleConfig.subject ||
-                    "Reporte Ejecutivo de Gestión Clínica — SIAT"
-                  }
-                  onChange={(e) =>
+                  data-field="subject"
+                  name="subject"
+                  maxLength={150}
+                  value={scheduleConfig.subject ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setScheduleConfig({
                       ...scheduleConfig,
-                      subject: e.target.value,
-                    })
-                  }
-                  className="form-input text-xs"
+                      subject: val,
+                    });
+                    if (scheduleErrors.subject) {
+                      setScheduleErrors((prev) => ({
+                        ...prev,
+                        subject: val.trim()
+                          ? ""
+                          : "El asunto del correo es obligatorio",
+                      }));
+                    }
+                  }}
+                  className={`form-input text-xs ${scheduleErrors.subject ? "form-input-invalid" : ""}`}
                   placeholder="Ej. Reporte Semanal de la Clínica SIAT"
                 />
+                {scheduleErrors.subject && (
+                  <p className="form-error" role="alert">
+                    <AlertCircle className="w-3.5 h-3.5" />{" "}
+                    {scheduleErrors.subject}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="form-label">Correo Principal</label>
+                  <label className="form-label">
+                    Correo Principal <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="email"
-                    value={scheduleConfig.email}
-                    onChange={(e) =>
+                    data-field="email"
+                    name="email"
+                    maxLength={120}
+                    value={scheduleConfig.email || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
                       setScheduleConfig({
                         ...scheduleConfig,
-                        email: e.target.value,
-                      })
-                    }
-                    className="form-input text-xs"
+                        email: val,
+                      });
+                      if (scheduleErrors.email) {
+                        setScheduleErrors((prev) => ({
+                          ...prev,
+                          email: validateEmail(val, {
+                            required: true,
+                            max: 120,
+                          }),
+                        }));
+                      }
+                    }}
+                    className={`form-input text-xs ${scheduleErrors.email ? "form-input-invalid" : ""}`}
                     placeholder="admin@fundacion.org"
                   />
+                  {scheduleErrors.email && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {scheduleErrors.email}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="form-label">
@@ -1484,16 +1765,32 @@ function AdminDashboard({ onNavigate }) {
                   </label>
                   <input
                     type="text"
+                    data-field="additionalEmails"
+                    name="additionalEmails"
+                    maxLength={500}
                     value={scheduleConfig.additionalEmails || ""}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const val = e.target.value;
                       setScheduleConfig({
                         ...scheduleConfig,
-                        additionalEmails: e.target.value,
-                      })
-                    }
-                    className="form-input text-xs"
-                    placeholder="director@fundacion.org, gerencia@..."
+                        additionalEmails: val,
+                      });
+                      if (scheduleErrors.additionalEmails) {
+                        setScheduleErrors((prev) => ({
+                          ...prev,
+                          additionalEmails: validateEmailList(val),
+                        }));
+                      }
+                    }}
+                    className={`form-input text-xs ${scheduleErrors.additionalEmails ? "form-input-invalid" : ""}`}
+                    placeholder="director@fundacion.org, gerencia@fundacion.org"
                   />
+                  {scheduleErrors.additionalEmails && (
+                    <p className="form-error" role="alert">
+                      <AlertCircle className="w-3.5 h-3.5" />{" "}
+                      {scheduleErrors.additionalEmails}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1504,12 +1801,7 @@ function AdminDashboard({ onNavigate }) {
                 type="button"
                 disabled={sendingTest}
                 onClick={async () => {
-                  if (!scheduleConfig.email) {
-                    showToast(
-                      "⚠️ Ingresa un correo electrónico para enviar la prueba",
-                    );
-                    return;
-                  }
+                  if (!validateScheduleForm(false)) return;
                   setSendingTest(true);
                   try {
                     await api.post(
@@ -1517,9 +1809,16 @@ function AdminDashboard({ onNavigate }) {
                       scheduleConfig,
                     );
                     showToast(
-                      `✅ Reporte de prueba enviado exitosamente a ${scheduleConfig.email}`,
+                      `✅ Reporte de prueba enviado exitosamente a ${scheduleConfig.email.trim()}`,
                     );
                   } catch (err) {
+                    const fErr = extractFieldErrors(err);
+                    if (Object.keys(fErr).length > 0) {
+                      setScheduleErrors((prev) => ({ ...prev, ...fErr }));
+                      requestAnimationFrame(() =>
+                        focusFirstError(fErr, scheduleFormRef),
+                      );
+                    }
                     toastError(
                       err,
                       showToast,
@@ -1542,7 +1841,10 @@ function AdminDashboard({ onNavigate }) {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowScheduleModal(false)}
+                  onClick={() => {
+                    setShowScheduleModal(false);
+                    setScheduleErrors({});
+                  }}
                   className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancelar
@@ -1551,6 +1853,7 @@ function AdminDashboard({ onNavigate }) {
                   type="button"
                   disabled={savingSchedule}
                   onClick={async () => {
+                    if (!validateScheduleForm(true)) return;
                     setSavingSchedule(true);
                     try {
                       await api.post(
@@ -1563,11 +1866,18 @@ function AdminDashboard({ onNavigate }) {
                       );
                       showToast(
                         scheduleConfig.enabled
-                          ? `✅ Programación activada (${scheduleConfig.frequency}) para ${scheduleConfig.email}`
+                          ? `✅ Programación activada (${scheduleConfig.frequency}) para ${scheduleConfig.email.trim()}`
                           : "📋 Programación guardada en estado inactivo.",
                       );
                       setShowScheduleModal(false);
                     } catch (err) {
+                      const fErr = extractFieldErrors(err);
+                      if (Object.keys(fErr).length > 0) {
+                        setScheduleErrors((prev) => ({ ...prev, ...fErr }));
+                        requestAnimationFrame(() =>
+                          focusFirstError(fErr, scheduleFormRef),
+                        );
+                      }
                       toastError(
                         err,
                         showToast,

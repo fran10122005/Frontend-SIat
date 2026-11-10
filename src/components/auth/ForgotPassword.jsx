@@ -1,36 +1,52 @@
 import { useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, AlertCircle } from "lucide-react";
 import api from "../../api/axios";
 import funautaLogo from "../../assets/Logo.png";
-import { getErrorMessage } from "../../utils/errorHandler";
+import { getErrorMessage, extractFieldErrors } from "../../utils/errorHandler";
+import { validateEmail, focusFirstError } from "../../utils/validators";
 import FormAlert from "../shared/FormAlert";
 
 function ForgotPassword({ onNavigate }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [fieldError, setFieldError] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const submittedForm = event.currentTarget;
     setError("");
+    setFieldError("");
     setMessage("");
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
-      setError("Ingrese un correo electrónico válido.");
+    const cleanEmail = email.trim();
+    const emailErr = validateEmail(cleanEmail, { required: true, max: 100 });
+    if (emailErr) {
+      setFieldError(emailErr);
+      setError(emailErr);
+      requestAnimationFrame(() =>
+        focusFirstError({ email: emailErr }, submittedForm),
+      );
       return;
     }
 
     try {
       setIsLoading(true);
-      const res = await api.post("/auth/forgot-password", { email });
+      const res = await api.post("/auth/forgot-password", {
+        email: cleanEmail,
+      });
       setMessage(
         res.data.message ||
           "Si el correo existe, se enviará un enlace de recuperación.",
       );
     } catch (err) {
       console.error(err);
+      const fe = extractFieldErrors(err);
+      if (fe.email) {
+        setFieldError(fe.email);
+        requestAnimationFrame(() => focusFirstError(fe, submittedForm));
+      }
       setError(getErrorMessage(err, "Error al conectar con el servidor."));
     } finally {
       setIsLoading(false);
@@ -82,17 +98,31 @@ function ForgotPassword({ onNavigate }) {
                   <FormAlert variant="error" message={error} />
                   <FormAlert variant="success" message={message} />
 
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Correo Electrónico
+                  <div className="space-y-1.5" data-field="email">
+                    <label
+                      htmlFor="forgot-email-mobile"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Correo Electrónico{" "}
+                      <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative group">
                       <input
+                        id="forgot-email-mobile"
+                        name="email"
                         type="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        inputMode="email"
                         placeholder="ejemplo@correo.com"
                         value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        className="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                        onChange={(event) => {
+                          setEmail(event.target.value);
+                          if (fieldError) setFieldError("");
+                        }}
+                        aria-invalid={!!fieldError || undefined}
+                        className={`w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 ${fieldError ? "form-input-invalid" : ""}`}
                         required
                       />
                       <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
@@ -110,6 +140,12 @@ function ForgotPassword({ onNavigate }) {
                         </svg>
                       </div>
                     </div>
+                    {fieldError && (
+                      <p role="alert" className="form-error">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{fieldError}</span>
+                      </p>
+                    )}
                   </div>
 
                   <button
@@ -192,17 +228,31 @@ function ForgotPassword({ onNavigate }) {
                   <FormAlert variant="error" message={error} />
                   <FormAlert variant="success" message={message} />
 
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Correo Electrónico
+                  <div className="space-y-1.5" data-field="email">
+                    <label
+                      htmlFor="forgot-email-desktop"
+                      className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Correo Electrónico{" "}
+                      <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative group">
                       <input
+                        id="forgot-email-desktop"
+                        name="email"
                         type="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        inputMode="email"
                         placeholder="ejemplo@correo.com"
                         value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        className="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                        onChange={(event) => {
+                          setEmail(event.target.value);
+                          if (fieldError) setFieldError("");
+                        }}
+                        aria-invalid={!!fieldError || undefined}
+                        className={`w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl outline-none transition-all duration-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-slate-800 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 ${fieldError ? "form-input-invalid" : ""}`}
                         required
                       />
                       <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
@@ -220,6 +270,12 @@ function ForgotPassword({ onNavigate }) {
                         </svg>
                       </div>
                     </div>
+                    {fieldError && (
+                      <p role="alert" className="form-error">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{fieldError}</span>
+                      </p>
+                    )}
                   </div>
 
                   <button

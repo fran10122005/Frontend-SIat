@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import api from "../api/axios";
@@ -10,6 +10,7 @@ import {
   Moon,
   Utensils,
   AlertTriangle,
+  AlertCircle,
   Heart,
   Watch,
   Search,
@@ -30,6 +31,14 @@ import {
   isDateInRange,
   calculateConsecutiveStreak,
 } from "../utils/dateRanges";
+import {
+  toLocalYMD,
+  parseLocalYMD,
+  sanitizeIntegerInput,
+  sanitizeDecimalInput,
+  focusFirstError,
+} from "../utils/validators";
+import { extractFieldErrors, toastError } from "../utils/errorHandler";
 
 import PageTitle from "../components/ui/PageTitle";
 
@@ -118,19 +127,15 @@ export default function DiarioHogar() {
   };
 
   // Form states for Bitácora
-  const todayLocal = new Date();
-  const localDate = new Date(
-    todayLocal.getTime() - todayLocal.getTimezoneOffset() * 60000,
-  )
-    .toISOString()
-    .split("T")[0];
+  const diarioFormRef = useRef(null);
+  const localDate = toLocalYMD();
   const [editingBitacoraId, setEditingBitacoraId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reportDate, setReportDate] = useState(localDate);
   const [mood, setMood] = useState("Estable");
-  const [crisisCount, setCrisisCount] = useState(0);
-  const [bpmValue, setBpmValue] = useState(liveBpm || "");
-  const [sleepHours, setSleepHours] = useState(8);
+  const [crisisCount, setCrisisCount] = useState("0");
+  const [bpmValue, setBpmValue] = useState(liveBpm ? String(liveBpm) : "");
+  const [sleepHours, setSleepHours] = useState("8");
   const [sleepQuality, setSleepQuality] = useState("");
   const [appetite, setAppetite] = useState("");
   const [medicationTaken, setMedicationTaken] = useState("");
@@ -141,6 +146,16 @@ export default function DiarioHogar() {
   const [positiveNote, setPositiveNote] = useState("");
   const [therapyDone, setTherapyDone] = useState("");
   const [showExtra, setShowExtra] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
+
+  const clearFieldError = useCallback((field) => {
+    setFormErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   const existingEntryForDate = useMemo(() => {
     if (!reportDate || !Array.isArray(bitacorasList)) return null;
@@ -151,8 +166,8 @@ export default function DiarioHogar() {
 
   const resetForm = useCallback(() => {
     setEditingBitacoraId(null);
-    setCrisisCount(0);
-    setBpmValue(liveBpm || "");
+    setCrisisCount("0");
+    setBpmValue(liveBpm ? String(liveBpm) : "");
     setMood("Estable");
     setNotes("");
     setTriggers("");
@@ -163,8 +178,9 @@ export default function DiarioHogar() {
     setDigestion("");
     setPositiveNote("");
     setTherapyDone("");
-    setSleepHours(8);
+    setSleepHours("8");
     setShowExtra(false);
+    setFormErrors({});
   }, [liveBpm]);
 
   const loadBitacoraIntoForm = useCallback(
@@ -173,12 +189,18 @@ export default function DiarioHogar() {
       setEditingBitacoraId(bitacora.bit_codi);
       setReportDate(toLocalYmd(bitacora.bit_fech) || localDate);
       setMood(bitacora.bit_anim || "Estable");
-      setCrisisCount(Number(bitacora.bit_crisi) || 0);
-      setBpmValue(bitacora.bit_bpm ?? (liveBpm || ""));
+      setCrisisCount(String(Number(bitacora.bit_crisi) || 0));
+      setBpmValue(
+        bitacora.bit_bpm !== undefined && bitacora.bit_bpm !== null
+          ? String(bitacora.bit_bpm)
+          : liveBpm
+            ? String(liveBpm)
+            : "",
+      );
       setSleepHours(
         bitacora.bit_suen !== undefined && bitacora.bit_suen !== null
-          ? bitacora.bit_suen
-          : 8,
+          ? String(bitacora.bit_suen)
+          : "8",
       );
       setSleepQuality(
         bitacora.bit_cali && bitacora.bit_cali !== "Normal"
@@ -205,6 +227,7 @@ export default function DiarioHogar() {
         bitacora.bit_logro || bitacora.positiveNote || bitacora.bit_algo || "",
       );
       setTherapyDone(bitacora.bit_terap || "");
+      setFormErrors({});
       if (
         bitacora.bit_terap ||
         bitacora.bit_dese ||
@@ -221,7 +244,7 @@ export default function DiarioHogar() {
   // Sincronizar automáticamente pulso live del reloj
   useEffect(() => {
     if (liveBpm) {
-      setBpmValue(liveBpm);
+      setBpmValue(String(liveBpm));
     }
   }, [liveBpm]);
 
@@ -235,9 +258,9 @@ export default function DiarioHogar() {
       ) {
         return;
       }
-      setCrisisCount((prev) => (Number(prev) || 0) + 1);
+      setCrisisCount((prev) => String(Math.min(50, (Number(prev) || 0) + 1)));
       if (e.detail?.bpm_max) {
-        setBpmValue(e.detail.bpm_max);
+        setBpmValue(String(e.detail.bpm_max));
       }
       showToast(
         "🚨 Crisis detectada por el sensor. Se ha sumado al reporte de hoy.",
@@ -403,16 +426,94 @@ export default function DiarioHogar() {
     }
   }, [userRole, selectedChildId]);
 
+  const validateDiarioForm = () => {
+    const errs = {};
+    const todayYmd = toLocalYMD();
+
+    if (!reportDate) {
+      errs.reportDate = "La fecha del reporte es obligatoria";
+    } else if (!parseLocalYMD(reportDate)) {
+      errs.reportDate = "La fecha ingresada no es válida";
+    } else if (reportDate > todayYmd) {
+      errs.reportDate = "La fecha del reporte no puede ser futura";
+    }
+
+    if (
+      crisisCount === "" ||
+      crisisCount === null ||
+      crisisCount === undefined
+    ) {
+      errs.crisisCount = "Indica la cantidad de crisis (0 si no hubo)";
+    } else {
+      const c = Number(crisisCount);
+      if (!Number.isInteger(c) || c < 0 || c > 50) {
+        errs.crisisCount = "La cantidad debe estar entre 0 y 50";
+      }
+    }
+
+    if (bpmValue !== "" && bpmValue !== null && bpmValue !== undefined) {
+      const bpm = Number(bpmValue);
+      if (Number.isNaN(bpm) || bpm < 30 || bpm > 240) {
+        errs.bpmValue = "El pulso debe estar entre 30 y 240 BPM";
+      }
+    }
+
+    if (sleepHours !== "" && sleepHours !== null && sleepHours !== undefined) {
+      const sh = Number(sleepHours);
+      if (Number.isNaN(sh) || sh < 0 || sh > 24) {
+        errs.sleepHours = "Las horas de sueño deben estar entre 0 y 24";
+      }
+    }
+
+    if (positiveNote.trim().length > 255) {
+      errs.positiveNote = "Máximo 255 caracteres";
+    }
+    if (notes.trim().length > 1000) {
+      errs.notes = "Máximo 1000 caracteres";
+    }
+    if (triggers.trim().length > 255) {
+      errs.triggers = "Máximo 255 caracteres";
+    }
+    if (sensoryIssues.trim().length > 50) {
+      errs.sensoryIssues = "Máximo 50 caracteres";
+    }
+
+    return errs;
+  };
+
   const handleReportSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
+    if (!selectedChildId) {
+      showToast(
+        "⚠️ Selecciona primero al niño o niña para guardar el reporte.",
+      );
+      return;
+    }
+
+    const errs = validateDiarioForm();
+    if (Object.keys(errs).length > 0) {
+      setFormErrors(errs);
+      if (errs.triggers || errs.sensoryIssues) {
+        setShowExtra(true);
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => focusFirstError(errs, diarioFormRef)),
+        );
+      } else {
+        focusFirstError(errs, diarioFormRef);
+      }
+      return;
+    }
+
+    setFormErrors({});
     try {
       setIsSubmitting(true);
-      const bpmToSave = bpmValue
-        ? Number(bpmValue)
-        : liveBpm
-          ? Number(liveBpm)
-          : null;
+      const bpmToSave =
+        bpmValue !== "" && bpmValue !== null
+          ? Number(bpmValue)
+          : liveBpm
+            ? Number(liveBpm)
+            : null;
       const payload = {
         nin_codi: selectedChildId,
         date: reportDate,
@@ -430,11 +531,11 @@ export default function DiarioHogar() {
             : medicationTaken === "NO"
               ? false
               : null,
-        sensoryIssues: sensoryIssues || null,
+        sensoryIssues: sensoryIssues.trim() || null,
         digestion: digestion || null,
-        text: notes || null,
-        triggers: triggers || null,
-        positiveNote: positiveNote || null,
+        text: notes.trim() || null,
+        triggers: triggers.trim() || null,
+        positiveNote: positiveNote.trim() || null,
         therapyDone: therapyDone || null,
         bpm: bpmToSave,
       };
@@ -452,10 +553,30 @@ export default function DiarioHogar() {
       }
     } catch (err) {
       console.error(err);
-      showToast(
-        "❌ Error al registrar la bitácora: " +
-          (err.response?.data?.message || err.message),
-      );
+      const apiErrs = extractFieldErrors(err, {
+        date: "reportDate",
+        crisisCount: "crisisCount",
+        bpm: "bpmValue",
+        sleepHours: "sleepHours",
+        positiveNote: "positiveNote",
+        text: "notes",
+        triggers: "triggers",
+        sensoryIssues: "sensoryIssues",
+      });
+      if (Object.keys(apiErrs).length > 0) {
+        setFormErrors((prev) => ({ ...prev, ...apiErrs }));
+        if (apiErrs.triggers || apiErrs.sensoryIssues) {
+          setShowExtra(true);
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() =>
+              focusFirstError(apiErrs, diarioFormRef),
+            ),
+          );
+        } else {
+          focusFirstError(apiErrs, diarioFormRef);
+        }
+      }
+      toastError(err, showToast, "Error al registrar la bitácora.");
     } finally {
       setIsSubmitting(false);
     }
@@ -653,26 +774,54 @@ export default function DiarioHogar() {
               )}
 
               <form
+                ref={diarioFormRef}
+                noValidate
                 onSubmit={handleReportSubmit}
                 className="p-5 md:p-8 space-y-5"
               >
                 {/* Fila 1: Fecha, Crisis y Pulso */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Fecha
+                  <div className="space-y-1.5" data-field="reportDate">
+                    <label
+                      htmlFor="dh-reportDate"
+                      className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-1"
+                    >
+                      <span>Fecha</span>
+                      <span
+                        className="text-rose-500 font-bold"
+                        aria-hidden="true"
+                      >
+                        *
+                      </span>
                     </label>
                     <input
+                      id="dh-reportDate"
+                      name="reportDate"
                       type="date"
+                      max={localDate}
                       data-tour="dh-date"
                       value={reportDate}
-                      onChange={(e) => setReportDate(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-800 dark:text-white"
+                      onChange={(e) => {
+                        setReportDate(e.target.value);
+                        clearFieldError("reportDate");
+                      }}
+                      className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-800 dark:text-white ${
+                        formErrors.reportDate ? "form-input-invalid" : ""
+                      }`}
                     />
+                    {formErrors.reportDate && (
+                      <p role="alert" className="form-error">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{formErrors.reportDate}</span>
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5" data-field="crisisCount">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      <label
+                        htmlFor="dh-crisisCount"
+                        className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                      >
                         Crisis hoy
                       </label>
                       <span className="text-[9px] text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
@@ -682,43 +831,62 @@ export default function DiarioHogar() {
                     <div className="flex items-center">
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
                           setCrisisCount((prev) =>
-                            Math.max(0, (Number(prev) || 0) - 1),
-                          )
-                        }
+                            String(Math.max(0, (parseInt(prev, 10) || 0) - 1)),
+                          );
+                          clearFieldError("crisisCount");
+                        }}
                         className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-l-lg border border-r-0 border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300 transition-colors"
                         title="Restar crisis"
                       >
                         −
                       </button>
                       <input
-                        type="number"
-                        min="0"
+                        id="dh-crisisCount"
+                        name="crisisCount"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={2}
                         data-tour="dh-crisis"
                         value={crisisCount}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setCrisisCount(
-                            Math.max(0, parseInt(e.target.value, 10) || 0),
-                          )
-                        }
-                        className="w-full text-center bg-slate-50 dark:bg-slate-900 border-y border-slate-200 dark:border-slate-700 py-2 text-sm font-bold text-rose-600 dark:text-rose-400 outline-none"
+                            sanitizeIntegerInput(e.target.value, 2),
+                          );
+                          clearFieldError("crisisCount");
+                        }}
+                        className={`w-full text-center bg-slate-50 dark:bg-slate-900 border-y border-slate-200 dark:border-slate-700 py-2 text-sm font-bold text-rose-600 dark:text-rose-400 outline-none ${
+                          formErrors.crisisCount ? "form-input-invalid" : ""
+                        }`}
                       />
                       <button
                         type="button"
-                        onClick={() =>
-                          setCrisisCount((prev) => (Number(prev) || 0) + 1)
-                        }
+                        onClick={() => {
+                          setCrisisCount((prev) =>
+                            String(Math.min(50, (parseInt(prev, 10) || 0) + 1)),
+                          );
+                          clearFieldError("crisisCount");
+                        }}
                         className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-r-lg border border-l-0 border-slate-200 dark:border-slate-700 text-sm font-bold text-rose-600 dark:text-rose-400 transition-colors"
                         title="Sumar crisis"
                       >
                         +
                       </button>
                     </div>
+                    {formErrors.crisisCount && (
+                      <p role="alert" className="form-error">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{formErrors.crisisCount}</span>
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5" data-field="bpmValue">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      <label
+                        htmlFor="dh-bpmValue"
+                        className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                      >
                         Pulso (BPM)
                       </label>
                       {liveBpm ? (
@@ -734,16 +902,29 @@ export default function DiarioHogar() {
                     </div>
                     <div className="relative">
                       <input
-                        type="number"
-                        min="30"
-                        max="240"
+                        id="dh-bpmValue"
+                        name="bpmValue"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={3}
                         placeholder={liveBpm ? String(liveBpm) : "Ej. 78"}
                         value={bpmValue}
-                        onChange={(e) => setBpmValue(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold text-slate-800 dark:text-white"
+                        onChange={(e) => {
+                          setBpmValue(sanitizeIntegerInput(e.target.value, 3));
+                          clearFieldError("bpmValue");
+                        }}
+                        className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 pr-9 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold text-slate-800 dark:text-white ${
+                          formErrors.bpmValue ? "form-input-invalid" : ""
+                        }`}
                       />
                       <Heart className="w-4 h-4 text-rose-500 absolute right-3 top-2.5 pointer-events-none fill-rose-500/20" />
                     </div>
+                    {formErrors.bpmValue && (
+                      <p role="alert" className="form-error">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{formErrors.bpmValue}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -776,25 +957,45 @@ export default function DiarioHogar() {
 
                 {/* Fila 3: Sueño, Calidad de Sueño, Apetito y Medicación (visibles por defecto) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-700/70">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <div className="space-y-1.5" data-field="sleepHours">
+                    <label
+                      htmlFor="dh-sleepHours"
+                      className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                    >
                       Horas de sueño
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      max="24"
-                      step="0.5"
+                      id="dh-sleepHours"
+                      name="sleepHours"
+                      type="text"
+                      inputMode="decimal"
+                      maxLength={4}
+                      placeholder="Ej. 8"
                       value={sleepHours}
-                      onChange={(e) => setSleepHours(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                      onChange={(e) => {
+                        setSleepHours(sanitizeDecimalInput(e.target.value, 4));
+                        clearFieldError("sleepHours");
+                      }}
+                      className={`w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white ${
+                        formErrors.sleepHours ? "form-input-invalid" : ""
+                      }`}
                     />
+                    {formErrors.sleepHours && (
+                      <p role="alert" className="form-error">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{formErrors.sleepHours}</span>
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <label
+                      htmlFor="dh-sleepQuality"
+                      className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                    >
                       Calidad del sueño
                     </label>
                     <select
+                      id="dh-sleepQuality"
                       value={sleepQuality}
                       onChange={(e) => setSleepQuality(e.target.value)}
                       className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
@@ -809,10 +1010,14 @@ export default function DiarioHogar() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <label
+                      htmlFor="dh-appetite"
+                      className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                    >
                       Apetito
                     </label>
                     <select
+                      id="dh-appetite"
                       value={appetite}
                       onChange={(e) => setAppetite(e.target.value)}
                       className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
@@ -853,12 +1058,29 @@ export default function DiarioHogar() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Algo positivo de hoy / Logro destacado
-                  </label>
+                <div className="space-y-1.5" data-field="positiveNote">
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor="dh-positiveNote"
+                      className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                    >
+                      Algo positivo de hoy / Logro destacado
+                    </label>
+                    <span
+                      className={`text-[10px] font-semibold tabular-nums ${
+                        positiveNote.length >= 255
+                          ? "text-rose-500"
+                          : "text-slate-400 dark:text-slate-500"
+                      }`}
+                    >
+                      {positiveNote.length}/255
+                    </span>
+                  </div>
                   <input
+                    id="dh-positiveNote"
+                    name="positiveNote"
                     type="text"
+                    maxLength={255}
                     data-tour="dh-positive"
                     placeholder={
                       genero === "femenino"
@@ -866,22 +1088,61 @@ export default function DiarioHogar() {
                         : "Ej: Hoy logró comer solo, se vistió solo..."
                     }
                     value={positiveNote}
-                    onChange={(e) => setPositiveNote(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                    onChange={(e) => {
+                      setPositiveNote(e.target.value);
+                      clearFieldError("positiveNote");
+                    }}
+                    className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white ${
+                      formErrors.positiveNote ? "form-input-invalid" : ""
+                    }`}
                   />
+                  {formErrors.positiveNote && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{formErrors.positiveNote}</span>
+                    </p>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Notas del día (opcional)
-                  </label>
+                <div className="space-y-1.5" data-field="notes">
+                  <div className="flex items-center justify-between gap-2">
+                    <label
+                      htmlFor="dh-notes"
+                      className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                    >
+                      Notas del día (opcional)
+                    </label>
+                    <span
+                      className={`text-[10px] font-semibold tabular-nums ${
+                        notes.length >= 1000
+                          ? "text-rose-500"
+                          : "text-slate-400 dark:text-slate-500"
+                      }`}
+                    >
+                      {notes.length}/1000
+                    </span>
+                  </div>
                   <textarea
+                    id="dh-notes"
+                    name="notes"
                     rows="2"
+                    maxLength={1000}
                     placeholder="Cómo fue el día, eventos importantes..."
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-slate-800 dark:text-white"
+                    onChange={(e) => {
+                      setNotes(e.target.value);
+                      clearFieldError("notes");
+                    }}
+                    className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none text-slate-800 dark:text-white ${
+                      formErrors.notes ? "form-input-invalid" : ""
+                    }`}
                   ></textarea>
+                  {formErrors.notes && (
+                    <p role="alert" className="form-error">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{formErrors.notes}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -898,10 +1159,14 @@ export default function DiarioHogar() {
                   {showExtra && (
                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <label
+                          htmlFor="dh-therapyDone"
+                          className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        >
                           Terapia en casa hoy
                         </label>
                         <select
+                          id="dh-therapyDone"
                           value={therapyDone}
                           onChange={(e) => setTherapyDone(e.target.value)}
                           className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
@@ -912,35 +1177,95 @@ export default function DiarioHogar() {
                           <option value="no">No se realizó</option>
                         </select>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                          Desencadenantes
-                        </label>
+                      <div className="space-y-1.5" data-field="triggers">
+                        <div className="flex items-center justify-between gap-2">
+                          <label
+                            htmlFor="dh-triggers"
+                            className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                          >
+                            Desencadenantes
+                          </label>
+                          <span
+                            className={`text-[10px] font-semibold tabular-nums ${
+                              triggers.length >= 255
+                                ? "text-rose-500"
+                                : "text-slate-400 dark:text-slate-500"
+                            }`}
+                          >
+                            {triggers.length}/255
+                          </span>
+                        </div>
                         <input
+                          id="dh-triggers"
+                          name="triggers"
                           type="text"
+                          maxLength={255}
                           placeholder="Ej: Ruido, cambio de rutina"
                           value={triggers}
-                          onChange={(e) => setTriggers(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                          onChange={(e) => {
+                            setTriggers(e.target.value);
+                            clearFieldError("triggers");
+                          }}
+                          className={`w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white ${
+                            formErrors.triggers ? "form-input-invalid" : ""
+                          }`}
                         />
+                        {formErrors.triggers && (
+                          <p role="alert" className="form-error">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{formErrors.triggers}</span>
+                          </p>
+                        )}
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                          Sensibilidad sensorial
-                        </label>
+                      <div className="space-y-1.5" data-field="sensoryIssues">
+                        <div className="flex items-center justify-between gap-2">
+                          <label
+                            htmlFor="dh-sensoryIssues"
+                            className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                          >
+                            Sensibilidad sensorial
+                          </label>
+                          <span
+                            className={`text-[10px] font-semibold tabular-nums ${
+                              sensoryIssues.length >= 50
+                                ? "text-rose-500"
+                                : "text-slate-400 dark:text-slate-500"
+                            }`}
+                          >
+                            {sensoryIssues.length}/50
+                          </span>
+                        </div>
                         <input
+                          id="dh-sensoryIssues"
+                          name="sensoryIssues"
                           type="text"
+                          maxLength={50}
                           placeholder="Ej: Luces fuertes, texturas"
                           value={sensoryIssues}
-                          onChange={(e) => setSensoryIssues(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
+                          onChange={(e) => {
+                            setSensoryIssues(e.target.value);
+                            clearFieldError("sensoryIssues");
+                          }}
+                          className={`w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white ${
+                            formErrors.sensoryIssues ? "form-input-invalid" : ""
+                          }`}
                         />
+                        {formErrors.sensoryIssues && (
+                          <p role="alert" className="form-error">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{formErrors.sensoryIssues}</span>
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <label
+                          htmlFor="dh-digestion"
+                          className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                        >
                           Digestión
                         </label>
                         <select
+                          id="dh-digestion"
                           value={digestion}
                           onChange={(e) => setDigestion(e.target.value)}
                           className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-800 dark:text-white"
@@ -965,6 +1290,19 @@ export default function DiarioHogar() {
                     <span>
                       Smartwatch vinculado en tiempo real: Se adjuntarán{" "}
                       <strong>{liveBpm} BPM</strong> al reporte del día.
+                    </span>
+                  </div>
+                )}
+
+                {Object.keys(formErrors).length > 0 && (
+                  <div
+                    role="alert"
+                    className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 flex items-center gap-2 text-xs font-medium text-rose-700 dark:text-rose-300"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                    <span>
+                      Revisa los campos marcados en rojo antes de guardar el
+                      reporte.
                     </span>
                   </div>
                 )}
@@ -1066,6 +1404,7 @@ export default function DiarioHogar() {
                           <input
                             type="date"
                             value={filterDateFrom}
+                            max={filterDateTo || localDate}
                             onChange={(e) => setFilterDateFrom(e.target.value)}
                             className="h-10 px-2.5 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                             title="Fecha desde"
@@ -1074,6 +1413,8 @@ export default function DiarioHogar() {
                           <input
                             type="date"
                             value={filterDateTo}
+                            min={filterDateFrom || undefined}
+                            max={localDate}
                             onChange={(e) => setFilterDateTo(e.target.value)}
                             className="h-10 px-2.5 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                             title="Fecha hasta"
