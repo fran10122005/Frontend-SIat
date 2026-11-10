@@ -49,6 +49,8 @@ vi.mock("../services/heartRateTelemetryService", () => ({
   },
 }));
 
+import HeartRateTelemetryService from "../services/heartRateTelemetryService";
+
 function createMockJwt(payload) {
   const btoaFn = (str) => globalThis.btoa(str);
   const exp = Math.floor(Date.now() / 1000) + 3600;
@@ -208,5 +210,64 @@ describe("SmartwatchContext — ciclo de vida seguro de simulación de pulso", (
 
     expect(ctx.isSimulating).toBe(false);
     expect(ctx.simulationRemainingSec).toBe(0);
+  });
+
+  it("mide y emite pulsaciones simuladas cada 5 segundos (5000 ms) en normal y crisis", () => {
+    setAuthSession({
+      token: createMockJwt({ usu_codi: "U_ESP", rol_codi: "ROL_ESP" }),
+    });
+    saveSelectedChild("N001", "Yonny Alejandro");
+
+    let ctx;
+    render(
+      <SmartwatchProvider>
+        <Harness
+          onReady={(v) => {
+            ctx = v;
+          }}
+        />
+      </SmartwatchProvider>,
+    );
+
+    act(() => {
+      ctx.toggleRealisticSimulation("crisis");
+    });
+
+    // 1 lectura inmediata al activar
+    expect(HeartRateTelemetryService.dispatchReading).toHaveBeenCalledTimes(1);
+
+    // Antes de 5s no debe emitir nueva lectura
+    act(() => {
+      vi.advanceTimersByTime(4900);
+    });
+    expect(HeartRateTelemetryService.dispatchReading).toHaveBeenCalledTimes(1);
+
+    // Al cumplirse 5s emite la segunda y a los 10s la tercera
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(HeartRateTelemetryService.dispatchReading).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(HeartRateTelemetryService.dispatchReading).toHaveBeenCalledTimes(3);
+
+    // Cambiar a modo normal mantiene también la frecuencia de 5 segundos
+    HeartRateTelemetryService.dispatchReading.mockClear();
+    act(() => {
+      ctx.toggleRealisticSimulation("normal");
+    });
+    expect(HeartRateTelemetryService.dispatchReading).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersByTime(4999);
+    });
+    expect(HeartRateTelemetryService.dispatchReading).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(HeartRateTelemetryService.dispatchReading).toHaveBeenCalledTimes(2);
   });
 });

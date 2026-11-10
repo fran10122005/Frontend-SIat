@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import { useGlobalContext } from "../context/GlobalState";
 import {
@@ -13,11 +13,18 @@ import {
   Stethoscope,
   UserRound,
   Phone,
+  AlertCircle,
 } from "lucide-react";
 import Topbar from "../components/layout/Topbar";
 import api from "../api/axios";
 import { exportManualPDFEspecialista } from "../utils/exportManualPdfEspecialista";
-import { toastError } from "../utils/errorHandler";
+import { toastError, extractFieldErrors } from "../utils/errorHandler";
+import {
+  getChildDateBounds,
+  validateFechaPaciente,
+  formatYmdForInput,
+  focusFirstError,
+} from "../utils/validators";
 import FotoUpload from "../components/shared/FotoUpload";
 import DocumentosClinicos from "../components/shared/DocumentosClinicos";
 
@@ -26,6 +33,19 @@ import PageTitle from "../components/ui/PageTitle";
 export default function StudentRecord({ onNavigate }) {
   const { showToast, selectedChildId, fetchNinos } = useGlobalContext();
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const formRef = useRef(null);
+  const childDateBounds = getChildDateBounds(25);
+
+  const normalizeNivel = (val) => {
+    const raw = String(val || "").trim();
+    if (!raw) return "";
+    if (raw === "nivel-1") return "Nivel 1";
+    if (raw === "nivel-2") return "Nivel 2";
+    if (raw === "nivel-3") return "Nivel 3";
+    return raw;
+  };
   const [formData, setFormData] = useState({
     id_ninos: "",
     nom_nino: "",
@@ -77,10 +97,7 @@ export default function StudentRecord({ onNavigate }) {
         const res = await api.get(`/ninos/${selectedChildId}/ficha`);
         const data = res.data.data;
 
-        let formattedDate = "";
-        if (data.nin_fnac) {
-          formattedDate = new Date(data.nin_fnac).toISOString().split("T")[0];
-        }
+        const formattedDate = formatYmdForInput(data.nin_fnac);
 
         setFormData({
           id_ninos: data.nin_codi || "",
@@ -88,11 +105,12 @@ export default function StudentRecord({ onNavigate }) {
           ape_nino: data.nin_apel || "",
           fec_naci: formattedDate,
           gen_nino: data.nin_gner || "",
-          niv_desa: data.nin_nivd || "",
+          niv_desa: normalizeNivel(data.nin_nivd),
           Id_sensi: data.sensibilidad?.sen_tipo || "",
           nin_foto: data.nin_foto || "",
           nin_diag: data.nin_diag || "",
         });
+        setFieldErrors({});
         setExtraInfo({
           nin_edad: data.nin_edad || "",
           nin_ingr: data.nin_ingr || "",
@@ -123,6 +141,22 @@ export default function StudentRecord({ onNavigate }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) {
+      let msg = "";
+      if (name === "fec_naci") {
+        msg = validateFechaPaciente(value, { required: true, maxAge: 25 });
+      } else if (name === "gen_nino") {
+        msg = value ? "" : "Selecciona el género del paciente";
+      } else if (name === "niv_desa") {
+        msg = value ? "" : "Selecciona el nivel de soporte";
+      } else if (name === "nin_diag") {
+        msg =
+          String(value || "").trim().length > 255
+            ? "El diagnóstico no puede exceder 255 caracteres"
+            : "";
+      }
+      setFieldErrors((prev) => ({ ...prev, [name]: msg }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -132,23 +166,58 @@ export default function StudentRecord({ onNavigate }) {
       return;
     }
 
+    const errs = {};
+    const fnacErr = validateFechaPaciente(formData.fec_naci, {
+      required: true,
+      maxAge: 25,
+    });
+    if (fnacErr) errs.fec_naci = fnacErr;
+    if (!["M", "F"].includes(formData.gen_nino)) {
+      errs.gen_nino = "Selecciona el género del paciente";
+    }
+    if (!String(formData.niv_desa || "").trim()) {
+      errs.niv_desa = "Selecciona el nivel de desarrollo";
+    }
+    if (String(formData.nin_diag || "").trim().length > 255) {
+      errs.nin_diag = "El diagnóstico no puede exceder 255 caracteres";
+    }
+
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      requestAnimationFrame(() => focusFirstError(errs, formRef));
+      return;
+    }
+
+    setSaving(true);
     try {
       await api.put(`/ninos/${selectedChildId}/ficha`, {
-        nin_nomb: formData.nom_nino,
-        nin_apel: formData.ape_nino,
+        nin_nomb: String(formData.nom_nino || "").trim(),
+        nin_apel: String(formData.ape_nino || "").trim(),
         nin_fnac: formData.fec_naci,
         nin_gner: formData.gen_nino,
         nin_nivd: formData.niv_desa,
-        sen_tipo: formData.Id_sensi,
-        nin_diag: formData.nin_diag,
-        nin_foto: formData.nin_foto,
+        sen_tipo: formData.Id_sensi || "",
+        nin_diag: String(formData.nin_diag || "").trim(),
+        nin_foto: formData.nin_foto || "",
       });
+      setFieldErrors({});
       setIsEditing(false);
       showToast("✅ Ficha clínica actualizada correctamente");
       fetchNinos(); // Refrescar nombres y detalles en el menú contextual
     } catch (err) {
       console.error("Error updating child clinical record:", err);
+      const srvErrors = extractFieldErrors(err, {
+        nin_fnac: "fec_naci",
+        nin_gner: "gen_nino",
+        nin_nivd: "niv_desa",
+      });
+      if (Object.keys(srvErrors).length > 0) {
+        setFieldErrors((prev) => ({ ...prev, ...srvErrors }));
+        requestAnimationFrame(() => focusFirstError(srvErrors, formRef));
+      }
       toastError(err, showToast, "Error al guardar la ficha clínica.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -220,6 +289,8 @@ export default function StudentRecord({ onNavigate }) {
 
             {selectedChildId && (
               <form
+                ref={formRef}
+                noValidate
                 onSubmit={handleSubmit}
                 className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors duration-200"
               >
@@ -294,16 +365,30 @@ export default function StudentRecord({ onNavigate }) {
                   <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
                     <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1.5">
                       <Calendar className="w-3.5 h-3.5" /> Fecha de Nacimiento
+                      {isEditing && (
+                        <span className="text-rose-500 font-bold">*</span>
+                      )}
                     </div>
                     {isEditing ? (
-                      <input
-                        type="date"
-                        name="fec_naci"
-                        data-tour="sr-birth"
-                        value={formData.fec_naci}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none text-sm text-gray-800 dark:text-white [color-scheme:light] dark:[color-scheme:dark]"
-                      />
+                      <>
+                        <input
+                          type="date"
+                          name="fec_naci"
+                          data-field="fec_naci"
+                          data-tour="sr-birth"
+                          min={childDateBounds.min}
+                          max={childDateBounds.max}
+                          value={formData.fec_naci}
+                          onChange={handleChange}
+                          className={`form-input text-sm ${fieldErrors.fec_naci ? "form-input-invalid" : ""}`}
+                        />
+                        {fieldErrors.fec_naci && (
+                          <p className="form-error mt-1" role="alert">
+                            <AlertCircle className="w-3.5 h-3.5" />{" "}
+                            {fieldErrors.fec_naci}
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                         {formData.fec_naci
@@ -323,26 +408,41 @@ export default function StudentRecord({ onNavigate }) {
                   <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
                     <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1.5">
                       <Users className="w-3.5 h-3.5" /> Género
+                      {isEditing && (
+                        <span className="text-rose-500 font-bold">*</span>
+                      )}
                     </div>
                     {isEditing ? (
-                      <div className="flex gap-2" data-tour="sr-gender">
-                        {["M", "F"].map((g) => (
-                          <label
-                            key={g}
-                            className={`flex-1 flex items-center gap-2 px-2.5 py-2 border rounded-lg text-sm cursor-pointer transition-colors ${formData.gen_nino === g ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-blue-300" : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300"}`}
-                          >
-                            <input
-                              type="radio"
-                              name="gen_nino"
-                              value={g}
-                              checked={formData.gen_nino === g}
-                              onChange={handleChange}
-                              className="w-3.5 h-3.5 text-brand-500 focus:ring-brand-500"
-                            />
-                            {g === "M" ? "Masculino" : "Femenino"}
-                          </label>
-                        ))}
-                      </div>
+                      <>
+                        <div
+                          className="flex gap-2"
+                          data-field="gen_nino"
+                          data-tour="sr-gender"
+                        >
+                          {["M", "F"].map((g) => (
+                            <label
+                              key={g}
+                              className={`flex-1 flex items-center gap-2 px-2.5 py-2 border rounded-lg text-sm cursor-pointer transition-colors ${formData.gen_nino === g ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-blue-300" : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300"}`}
+                            >
+                              <input
+                                type="radio"
+                                name="gen_nino"
+                                value={g}
+                                checked={formData.gen_nino === g}
+                                onChange={handleChange}
+                                className="w-3.5 h-3.5 text-brand-500 focus:ring-brand-500"
+                              />
+                              {g === "M" ? "Masculino" : "Femenino"}
+                            </label>
+                          ))}
+                        </div>
+                        {fieldErrors.gen_nino && (
+                          <p className="form-error mt-1" role="alert">
+                            <AlertCircle className="w-3.5 h-3.5" />{" "}
+                            {fieldErrors.gen_nino}
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                         {formatGenero(formData.gen_nino)}
@@ -353,28 +453,41 @@ export default function StudentRecord({ onNavigate }) {
                   <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
                     <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs mb-1.5">
                       <Brain className="w-3.5 h-3.5" /> Nivel de Desarrollo
+                      {isEditing && (
+                        <span className="text-rose-500 font-bold">*</span>
+                      )}
                     </div>
                     {isEditing ? (
-                      <select
-                        name="niv_desa"
-                        data-tour="sr-level"
-                        value={formData.niv_desa}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none text-sm text-gray-800 dark:text-white"
-                      >
-                        <option value="" disabled>
-                          Seleccionar nivel...
-                        </option>
-                        <option value="nivel-1">
-                          Nivel 1 - Necesita Ayuda
-                        </option>
-                        <option value="nivel-2">
-                          Nivel 2 - Necesita Ayuda Notable
-                        </option>
-                        <option value="nivel-3">
-                          Nivel 3 - Necesita Ayuda Muy Notable
-                        </option>
-                      </select>
+                      <>
+                        <select
+                          name="niv_desa"
+                          data-field="niv_desa"
+                          data-tour="sr-level"
+                          value={formData.niv_desa}
+                          onChange={handleChange}
+                          className={`form-select text-sm ${fieldErrors.niv_desa ? "form-input-invalid" : ""}`}
+                        >
+                          <option value="" disabled>
+                            Seleccionar nivel...
+                          </option>
+                          <option value="Por evaluar">Por evaluar</option>
+                          <option value="Nivel 1">
+                            Nivel 1 - Necesita Ayuda
+                          </option>
+                          <option value="Nivel 2">
+                            Nivel 2 - Necesita Ayuda Notable
+                          </option>
+                          <option value="Nivel 3">
+                            Nivel 3 - Necesita Ayuda Muy Notable
+                          </option>
+                        </select>
+                        {fieldErrors.niv_desa && (
+                          <p className="form-error mt-1" role="alert">
+                            <AlertCircle className="w-3.5 h-3.5" />{" "}
+                            {fieldErrors.niv_desa}
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <p
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-semibold ${getTeaLevelColor(formData.niv_desa)}`}
@@ -391,13 +504,30 @@ export default function StudentRecord({ onNavigate }) {
                     {isEditing ? (
                       <select
                         name="Id_sensi"
+                        data-field="Id_sensi"
                         data-tour="sr-sensitivity"
                         value={formData.Id_sensi}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none text-sm text-gray-800 dark:text-white"
+                        className="form-select text-sm"
                       >
-                        <option value="" disabled>
-                          Seleccionar perfil...
+                        <option value="">No reportado / Sin perfil</option>
+                        <option value="Auditiva">
+                          Hipersensibilidad Auditiva (Hiperacusia)
+                        </option>
+                        <option value="Táctil">
+                          Hipersensibilidad Táctil (Táctil Defensiva)
+                        </option>
+                        <option value="Visual">
+                          Hipersensibilidad Visual (Fotofobia)
+                        </option>
+                        <option value="Olfativa">
+                          Hipersensibilidad Olfativa
+                        </option>
+                        <option value="Vestibular">
+                          Procesamiento Vestibular Atípico
+                        </option>
+                        <option value="Propioceptiva">
+                          Procesamiento Propioceptivo Atípico
                         </option>
                         <option value="hipo-auditiva">
                           S1 - Hipo-reactividad Auditiva
@@ -467,20 +597,37 @@ export default function StudentRecord({ onNavigate }) {
                 {/* Diagnóstico */}
                 <div className="px-4 md:px-5 pb-4">
                   <div className="p-4 rounded-xl border border-brand-200 dark:border-blue-800/60 bg-brand-50 dark:bg-blue-950/40">
-                    <div className="flex items-center gap-1.5 text-brand-600 dark:text-blue-300 text-xs font-bold uppercase tracking-wider mb-1.5">
-                      <ClipboardList className="w-3.5 h-3.5" /> Diagnóstico
-                      Clínico
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-1.5 text-brand-600 dark:text-blue-300 text-xs font-bold uppercase tracking-wider">
+                        <ClipboardList className="w-3.5 h-3.5" /> Diagnóstico
+                        Clínico
+                      </div>
+                      {isEditing && (
+                        <span className="text-[11px] font-mono text-slate-400">
+                          {(formData.nin_diag || "").length}/255
+                        </span>
+                      )}
                     </div>
                     {isEditing ? (
-                      <textarea
-                        name="nin_diag"
-                        data-tour="sr-diagnosis"
-                        value={formData.nin_diag}
-                        onChange={handleChange}
-                        rows={2}
-                        placeholder="Ej. Trastorno del Espectro Autista (TEA) — Nivel 2"
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg outline-none text-sm text-gray-800 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 resize-none"
-                      />
+                      <>
+                        <textarea
+                          name="nin_diag"
+                          data-field="nin_diag"
+                          data-tour="sr-diagnosis"
+                          maxLength={255}
+                          value={formData.nin_diag}
+                          onChange={handleChange}
+                          rows={2}
+                          placeholder="Ej. Trastorno del Espectro Autista (TEA) — Nivel 2"
+                          className={`form-textarea text-sm resize-none ${fieldErrors.nin_diag ? "form-input-invalid" : ""}`}
+                        />
+                        {fieldErrors.nin_diag && (
+                          <p className="form-error mt-1" role="alert">
+                            <AlertCircle className="w-3.5 h-3.5" />{" "}
+                            {fieldErrors.nin_diag}
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
                         {formData.nin_diag || "Sin diagnóstico registrado"}
@@ -511,7 +658,10 @@ export default function StudentRecord({ onNavigate }) {
                       <>
                         <button
                           type="button"
-                          onClick={() => setIsEditing(false)}
+                          onClick={() => {
+                            setIsEditing(false);
+                            setFieldErrors({});
+                          }}
                           data-tour="sr-cancel"
                           className="flex-1 md:flex-none px-5 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                         >
@@ -519,10 +669,11 @@ export default function StudentRecord({ onNavigate }) {
                         </button>
                         <button
                           type="submit"
+                          disabled={saving}
                           data-tour="sr-save"
-                          className="flex-1 md:flex-none px-5 py-2 bg-brand-500 text-white font-medium rounded-lg hover:bg-brand-600 transition-colors shadow-sm shadow-[#007BFF]/40"
+                          className="flex-1 md:flex-none px-5 py-2 bg-brand-500 text-white font-medium rounded-lg hover:bg-brand-600 disabled:opacity-50 transition-colors shadow-sm shadow-[#007BFF]/40"
                         >
-                          Guardar Cambios
+                          {saving ? "Guardando..." : "Guardar Cambios"}
                         </button>
                       </>
                     )}

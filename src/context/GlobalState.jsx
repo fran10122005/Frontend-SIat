@@ -885,6 +885,8 @@ export const GlobalProvider = ({ children }) => {
         title: act.act_trea,
         category: act.tm_categ?.cat_nomb || "Monitoreo",
         categoryCode: act.cat_codi,
+        categoryActive: act.tm_categ?.cat_estd !== false,
+        nin_codi: act.nin_codi || null,
         description: act.act_desc || "",
         difficulty: act.act_difi || "Baja",
         status: act.act_estd || "Activa",
@@ -904,14 +906,89 @@ export const GlobalProvider = ({ children }) => {
     }
   };
 
-  const resolveCategory = (name) =>
-    categories.find(
+  const resolveRoutineCategory = (formData) => {
+    const activeCats = categories.filter((c) => c.cat_estd !== false);
+    if (formData?.categoryCode) {
+      const exact = categories.find(
+        (c) => c.cat_codi === formData.categoryCode,
+      );
+      if (!exact) {
+        return {
+          cat: null,
+          error:
+            "La categoría seleccionada ya no existe. Elige una categoría activa.",
+        };
+      }
+      if (exact.cat_estd === false) {
+        return {
+          cat: null,
+          error:
+            "La categoría seleccionada está inactiva. Cambia a una categoría activa.",
+        };
+      }
+      return { cat: exact, error: "" };
+    }
+
+    const byName = activeCats.find(
       (c) =>
-        c.cat_nomb?.trim().toLowerCase() === String(name || "").toLowerCase(),
-    ) ||
-    categories.find((c) => c.cat_codi === "CAT_SIM") ||
-    categories[0] ||
-    null;
+        c.cat_nomb?.trim().toLowerCase() ===
+        String(formData?.category || "")
+          .trim()
+          .toLowerCase(),
+    );
+    const cat =
+      byName ||
+      activeCats.find((c) => c.cat_codi === "CAT_SIM") ||
+      activeCats[0] ||
+      null;
+    if (!cat) {
+      return {
+        cat: null,
+        error: "No hay categorías activas disponibles. Crea una primero.",
+      };
+    }
+    return { cat, error: "" };
+  };
+
+  const formatStepsGuide = (steps) => {
+    if (typeof steps === "string") return steps.trim();
+    if (!Array.isArray(steps) || steps.length === 0) return "";
+    return steps
+      .map((s, index) => {
+        const text = String(s?.text || "").trim();
+        if (!text) return "";
+        if (s?.durationValue != null && s?.durationUnit) {
+          const val = parseInt(s.durationValue, 10) || 5;
+          const unit = s.durationUnit === "seg" ? "seg" : "min";
+          return `${index + 1}. ${text} (${val} ${unit})`;
+        }
+        const legacyTime = String(s?.time || "5 min").trim();
+        return `${index + 1}. ${text} (${legacyTime})`;
+      })
+      .filter(Boolean)
+      .join("\n");
+  };
+
+  const resolveActTime = (formData) => {
+    const raw = formData?.durationMinutes ?? formData?.durationStr;
+    const parsed =
+      typeof raw === "number"
+        ? Math.round(raw)
+        : parseInt(String(raw || "").match(/\d+/)?.[0] || "", 10);
+    const safe = Number.isFinite(parsed) && parsed > 0 ? parsed : 15;
+    return Math.min(600, Math.max(1, safe));
+  };
+
+  const resolveScopeNinCodi = (formData) => {
+    if (formData?.scope === "GLOBAL") return null;
+    if (formData?.scope === "CHILD") {
+      return formData.nin_codi || selectedChildId || null;
+    }
+    if (formData && "nin_codi" in formData) {
+      return formData.nin_codi || null;
+    }
+    return selectedChildId || null;
+  };
 
   const ROUTINE_FIELD_MAP = {
     act_trea: "title",
@@ -921,49 +998,45 @@ export const GlobalProvider = ({ children }) => {
     act_med: "mediaUrl",
     act_guia: "steps",
     act_meta: "materials",
+    nin_codi: "scope",
+    act_estd: "status",
   };
 
   const createRoutine = async (formData) => {
     try {
-      const cat = resolveCategory(formData.category);
+      const { cat, error: catErr } = resolveRoutineCategory(formData);
       if (!cat) {
-        showToast("⚠️ No hay categorías disponibles. Crea una primero.");
+        showToast(`⚠️ ${catErr}`);
         return {
           ok: false,
           fieldErrors: {
-            category: "No hay categorías disponibles. Crea una primero.",
+            category: catErr,
           },
         };
       }
 
+      const guia = formatStepsGuide(formData.steps);
       const payload = {
         cat_codi: cat.cat_codi,
         act_trea: String(formData.title || "").trim(),
-        act_desc: formData.description?.trim() || undefined,
-        act_meta: formData.materials?.trim() || undefined,
+        act_desc: formData.description?.trim()
+          ? formData.description.trim()
+          : null,
+        act_meta: formData.materials?.trim() ? formData.materials.trim() : null,
         act_difi: formData.difficulty || "Baja",
-        act_med: formData.mediaUrl?.trim() || undefined,
-        act_guia: formData.steps
-          ? formData.steps
-              .map(
-                (s, index) =>
-                  `${index + 1}. ${String(s.text || "").trim()} (${String(s.time || "5 min").trim()})`,
-              )
-              .join("\n")
-          : "",
-        act_time: Math.min(
-          600,
-          Math.max(1, parseInt(formData.durationStr, 10) || 15),
-        ),
+        act_estd: formData.status === "Inactiva" ? "Inactiva" : "Activa",
+        act_med: formData.mediaUrl?.trim() ? formData.mediaUrl.trim() : null,
+        act_guia: guia || undefined,
+        act_time: resolveActTime(formData),
         act_visib:
           formData.visibility === "ESPECIALISTA" ? "ESPECIALISTA" : "AMBOS",
-        nin_codi: selectedChildId || null,
+        nin_codi: resolveScopeNinCodi(formData),
       };
 
-      await api.post("/sesiones/actividades", payload);
+      const res = await api.post("/sesiones/actividades", payload);
       showToast("✨ Terapia creada y guardada en el backend.");
       await fetchRoutines();
-      return { ok: true, fieldErrors: {} };
+      return { ok: true, data: res?.data?.data || null, fieldErrors: {} };
     } catch (err) {
       console.error("Error creating routine:", err);
       toastError(err, showToast, "Error al guardar la rutina.");
@@ -976,44 +1049,41 @@ export const GlobalProvider = ({ children }) => {
 
   const updateRoutine = async (act_codi, formData) => {
     try {
-      const cat = resolveCategory(formData.category);
+      const { cat, error: catErr } = resolveRoutineCategory(formData);
       if (!cat) {
-        showToast("⚠️ No hay categorías disponibles. Crea una primero.");
+        showToast(`⚠️ ${catErr}`);
         return {
           ok: false,
           fieldErrors: {
-            category: "No hay categorías disponibles. Crea una primero.",
+            category: catErr,
           },
         };
       }
 
+      const guia = formatStepsGuide(formData.steps);
       const payload = {
         cat_codi: cat.cat_codi,
         act_trea: String(formData.title || "").trim(),
-        act_desc: formData.description?.trim() || undefined,
-        act_meta: formData.materials?.trim() || undefined,
+        act_desc: formData.description?.trim()
+          ? formData.description.trim()
+          : null,
+        act_meta: formData.materials?.trim() ? formData.materials.trim() : null,
         act_difi: formData.difficulty || "Baja",
-        act_med: formData.mediaUrl?.trim() || undefined,
-        act_guia: formData.steps
-          ? formData.steps
-              .map(
-                (s, index) =>
-                  `${index + 1}. ${String(s.text || "").trim()} (${String(s.time || "5 min").trim()})`,
-              )
-              .join("\n")
-          : "",
-        act_time: Math.min(
-          600,
-          Math.max(1, parseInt(formData.durationStr, 10) || 15),
-        ),
+        act_estd: formData.status === "Inactiva" ? "Inactiva" : "Activa",
+        act_med: formData.mediaUrl?.trim() ? formData.mediaUrl.trim() : null,
+        act_guia: guia || null,
+        act_time: resolveActTime(formData),
         act_visib:
           formData.visibility === "ESPECIALISTA" ? "ESPECIALISTA" : "AMBOS",
+        ...(formData.scope !== undefined || "nin_codi" in formData
+          ? { nin_codi: resolveScopeNinCodi(formData) }
+          : {}),
       };
 
-      await api.put(`/sesiones/actividades/${act_codi}`, payload);
+      const res = await api.put(`/sesiones/actividades/${act_codi}`, payload);
       showToast("✅ Terapia actualizada correctamente.");
       await fetchRoutines();
-      return { ok: true, fieldErrors: {} };
+      return { ok: true, data: res?.data?.data || null, fieldErrors: {} };
     } catch (err) {
       console.error("Error updating routine:", err);
       toastError(err, showToast, "Error al actualizar la rutina.");

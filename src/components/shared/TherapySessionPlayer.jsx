@@ -118,29 +118,29 @@ export default function TherapySessionPlayer({
     };
   }, [activeSession?.ses_codi, setActiveSessionId]);
 
-  // Ciclo de simulación cuando está activo el modo demostración
+  // Ciclo de simulación cuando está activo el modo demostración (cada 5 segundos)
   useEffect(() => {
     if (!isSimulating || isPaused || isFinishing) return;
-    const interval = setInterval(() => {
-      setSimulatedBpm((prev) => {
-        const target = stressState === "alert" ? 122 : 82;
-        const jitter = Math.floor(Math.random() * 5) - 2;
-        const newBpm = Math.max(55, Math.min(160, target + jitter));
-        const newStress = stressState === "alert" ? 82 : 24;
-        setSimulatedStress(newStress);
+    const emitSimulatedPulse = () => {
+      const target = stressState === "alert" ? 122 : 82;
+      const jitter = Math.floor(Math.random() * 5) - 2;
+      const newBpm = Math.max(55, Math.min(160, target + jitter));
+      const newStress = stressState === "alert" ? 82 : 24;
+      setSimulatedBpm(newBpm);
+      setSimulatedStress(newStress);
 
-        HeartRateTelemetryService.dispatchReading({
-          bpm: newBpm,
-          timestamp: new Date().toISOString(),
-          source: "SIMULATED",
-          deviceName: "Simulador Sensorial SIAT",
-          stress: newStress,
-          mov: 1.1,
-        });
-
-        return newBpm;
+      HeartRateTelemetryService.dispatchReading({
+        bpm: newBpm,
+        timestamp: new Date().toISOString(),
+        source: "SIMULATED",
+        deviceName: "Simulador Sensorial SIAT",
+        stress: newStress,
+        mov: 1.1,
       });
-    }, 1500);
+    };
+
+    emitSimulatedPulse();
+    const interval = setInterval(emitSimulatedPulse, 5000);
     return () => clearInterval(interval);
   }, [isSimulating, isPaused, isFinishing, stressState]);
 

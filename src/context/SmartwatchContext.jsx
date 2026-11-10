@@ -48,6 +48,7 @@ const STORAGE_KEY_CONNECTED = "siat_smartwatch_connected";
 const STORAGE_KEY_BATTERY = "siat_smartwatch_battery";
 const STORAGE_KEY_STREAM = "siat_smartwatch_stream";
 const MAX_SIMULATION_MS = 5 * 60 * 1000; // 5 minutos de límite máximo de simulación
+const SIMULATION_SAMPLE_INTERVAL_MS = 5000; // Medición cada 5 segundos en simulaciones
 
 // Helper robusto para convertir hex string a DataView
 function hexStringToDataView(hexString) {
@@ -1372,10 +1373,10 @@ export function SmartwatchProvider({ children }) {
       // Emitir primera muestra de inmediato
       emitNextSample();
 
-      // Actualizar continuamente: cada 1200ms en crisis, cada 1600ms en normal
+      // Medición periódica cada 5 segundos en todas las simulaciones
       simulationTimerRef.current = setInterval(
         emitNextSample,
-        isCrisis ? 1200 : 1600,
+        SIMULATION_SAMPLE_INTERVAL_MS,
       );
       return true; // se encendió
     },

@@ -26,7 +26,6 @@ import UserProfile from "./pages/UserProfile";
 import PwaInstallPrompt from "@/components/shared/PwaInstallPrompt";
 import PwaUpdatePrompt from "@/components/shared/PwaUpdatePrompt";
 import OfflineStatusPill from "./components/shared/OfflineStatusPill";
-import SimulationBanner from "./components/shared/SimulationBanner";
 import {
   getValidSession,
   normalizeRole,
@@ -290,7 +289,6 @@ export default function App() {
   return (
     <div className="app-shell relative">
       <OfflineStatusPill />
-      <SimulationBanner />
       {renderPage()}
 
       {/* Auto Logout Modal */}
