@@ -1344,20 +1344,6 @@ export default function AgendaDiaria() {
                       onSubmit={handleCreateRoutine}
                       className="space-y-6"
                     >
-                      {Object.values(routineErrors).filter(Boolean).length >
-                        0 && (
-                        <div
-                          role="alert"
-                          className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 flex items-center gap-2 text-xs font-semibold text-rose-700 dark:text-rose-300"
-                        >
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>
-                            Revisa los campos señalados en rojo antes de
-                            guardar.
-                          </span>
-                        </div>
-                      )}
-
                       {activeTab === "general" && (
                         <div className="space-y-5 animate-in fade-in">
                           <div className="space-y-1.5" data-field="title">

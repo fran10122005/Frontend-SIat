@@ -1246,20 +1246,6 @@ export default function RepresentantesTab({
           }}
           className="space-y-4 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-800/80 dark:via-slate-800/40 dark:to-slate-900/50"
         >
-          {Object.values(editErrores).some(Boolean) && (
-            <div
-              role="alert"
-              className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
-            >
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-              <span>
-                Revisa los campos señalados (
-                {Object.values(editErrores).filter(Boolean).length}) antes de
-                guardar.
-              </span>
-            </div>
-          )}
-
           {/* Foto del representante */}
           <FotoUpload
             value={editingRep?.rep_foto || ""}
@@ -1967,20 +1953,6 @@ export default function RepresentantesTab({
             onSubmit={handleUpdateNino}
             className="space-y-4"
           >
-            {Object.values(ninoErrores).some(Boolean) && (
-              <div
-                role="alert"
-                className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
-              >
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-                <span>
-                  Revisa los campos señalados (
-                  {Object.values(ninoErrores).filter(Boolean).length}) antes de
-                  guardar.
-                </span>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="form-label">

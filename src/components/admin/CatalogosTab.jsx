@@ -412,20 +412,6 @@ export default function CatalogosTab({
 
       {/* FORMULARIO Y CONTENIDO DE PESTAÑAS */}
       <form ref={formRef} noValidate onSubmit={submitInstitucion}>
-        {Object.values(errors).some(Boolean) && (
-          <div
-            role="alert"
-            className="mb-5 flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
-          >
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-            <span>
-              Revisa los campos señalados (
-              {Object.values(errors).filter(Boolean).length}) antes de guardar
-              la configuración institucional.
-            </span>
-          </div>
-        )}
-
         {/* PESTAÑA 1: INFORMACIÓN GENERAL */}
         {activeSubTab === "info" && (
           <div className="space-y-6 animate-in fade-in duration-200">

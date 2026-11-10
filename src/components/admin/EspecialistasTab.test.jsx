@@ -172,6 +172,9 @@ describe("EspecialistasTab - Cédula separada de Código Interno e íconos de ex
     const alerts = screen.getAllByRole("alert");
     expect(alerts.length).toBeGreaterThanOrEqual(4);
     expect(
+      screen.queryByText(/Revisa los campos señalados/i),
+    ).not.toBeInTheDocument();
+    expect(
       screen.getByText(/número de documento es obligatorio/i),
     ).toBeInTheDocument();
   });

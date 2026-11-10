@@ -983,22 +983,6 @@ export default function RegisterChildModal({ isOpen, onClose, onSuccess }) {
             ref={modalBodyRef}
             className="overflow-y-auto flex-1 px-4 sm:px-7 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6"
           >
-            {Object.values(stepErrors).some(Boolean) && (
-              <div
-                role="alert"
-                className="mb-4 flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
-              >
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-                <span>
-                  Completa o corrige los{" "}
-                  <strong>
-                    {Object.values(stepErrors).filter(Boolean).length}
-                  </strong>{" "}
-                  campo(s) señalados para continuar.
-                </span>
-              </div>
-            )}
-
             {/* ════════════ PASO 1: IDENTIDAD DEL PACIENTE ════════════ */}
             {step === 1 && (
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">

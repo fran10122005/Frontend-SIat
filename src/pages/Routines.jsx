@@ -211,11 +211,6 @@ export default function Routines() {
     return counts;
   }, [routineErrors]);
 
-  const totalRoutineErrors = useMemo(
-    () => Object.values(routineErrors).filter(Boolean).length,
-    [routineErrors],
-  );
-
   const clearRoutineError = (field) => {
     setRoutineErrors((prev) => {
       if (!prev[field]) return prev;
@@ -1360,22 +1355,6 @@ export default function Routines() {
                       onSubmit={handleCreateRoutine}
                       className="space-y-8"
                     >
-                      {totalRoutineErrors > 0 && (
-                        <div
-                          role="alert"
-                          className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 flex items-center gap-2.5 text-xs font-semibold text-rose-700 dark:text-rose-300"
-                        >
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>
-                            Revisa {totalRoutineErrors}{" "}
-                            {totalRoutineErrors === 1
-                              ? "campo requerido o con formato inválido"
-                              : "campos requeridos o con formato inválido"}{" "}
-                            antes de guardar.
-                          </span>
-                        </div>
-                      )}
-
                       {/* TAB 1: General */}
                       {activeTab === "general" && (
                         <div className="space-y-6 animate-in fade-in">

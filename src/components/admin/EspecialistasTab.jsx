@@ -596,20 +596,6 @@ export default function EspecialistasTab({
               }}
               className="space-y-6"
             >
-              {Object.values(errores).some(Boolean) && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-                  <span>
-                    Revisa los campos señalados (
-                    {Object.values(errores).filter(Boolean).length}) antes de
-                    registrar al especialista.
-                  </span>
-                </div>
-              )}
-
               {/* Datos Personales */}
               <section>
                 <div className="form-section-title">
@@ -1115,20 +1101,6 @@ export default function EspecialistasTab({
               }}
               className="space-y-6"
             >
-              {Object.values(editErrores).some(Boolean) && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-                  <span>
-                    Revisa los campos señalados (
-                    {Object.values(editErrores).filter(Boolean).length}) antes
-                    de guardar los cambios.
-                  </span>
-                </div>
-              )}
-
               <div className="mb-5">
                 <FotoPerfilZona
                   preview={editingEsp?.esp_foto}

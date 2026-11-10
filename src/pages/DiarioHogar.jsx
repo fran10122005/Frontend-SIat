@@ -1294,19 +1294,6 @@ export default function DiarioHogar() {
                   </div>
                 )}
 
-                {Object.keys(formErrors).length > 0 && (
-                  <div
-                    role="alert"
-                    className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 flex items-center gap-2 text-xs font-medium text-rose-700 dark:text-rose-300"
-                  >
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-                    <span>
-                      Revisa los campos marcados en rojo antes de guardar el
-                      reporte.
-                    </span>
-                  </div>
-                )}
-
                 <div className="flex justify-end pt-2">
                   <button
                     type="submit"
